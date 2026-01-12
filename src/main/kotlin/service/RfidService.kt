@@ -29,6 +29,7 @@ class RfidService(
         val entity = TagEntity(
             tagHash = hash,
             tagReal = req.tag,
+            codigoInterno = req.codigoInterno,
             modelo = req.modelo,
             patrimonio = req.patrimonio,
             numeroSerie = req.numeroSerie
@@ -45,6 +46,7 @@ class RfidService(
         val tag = repo.findByTagHash(hash) ?: return null
 
         return TagResponse(
+            tag.codigoInterno,
             modelo = tag.modelo,
             patrimonio = tag.patrimonio,
             numeroSerie = tag.numeroSerie
@@ -55,6 +57,7 @@ class RfidService(
         repo.findAll().map {
             TagViewAdmin(
                 tag = it.tagReal,
+                codigoInterno = it.codigoInterno,
                 modelo = it.modelo,
                 patrimonio = it.patrimonio,
                 numeroSerie = it.numeroSerie

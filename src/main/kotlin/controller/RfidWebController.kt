@@ -12,7 +12,7 @@ class RfidWebController(private val service: RfidService) {
 
     @GetMapping("/cadastro")
     fun telaCadastro(model: Model): String {
-        model.addAttribute("cadastro", CadastroRequest("", "", "", ""))
+        model.addAttribute("cadastro", CadastroRequest("", "", "", "",""))
         model.addAttribute("lista", service.listarParaAdmin())
         return "cadastro"
     }

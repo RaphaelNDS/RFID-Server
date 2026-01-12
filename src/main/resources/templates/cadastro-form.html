@@ -10,17 +10,34 @@
 
 <form th:action="@{/admin/cadastro/salvar}" method="post">
 
+  <!-- EPC -->
   <label>EPC</label><br>
-  <input type="text" name="tag" th:value="${cadastro.tag}" readonly><br><br>
+  <input type="text" name="tag"
+         th:value="${cadastro.tag}" readonly><br><br>
 
+  <!-- CÓDIGO INTERNO -->
+  <label>Código Interno</label><br>
+  <input type="text" name="codigoInterno"
+         th:value="${cadastro.codigoInterno}"
+         required><br><br>
+
+  <!-- MODELO -->
   <label>Modelo</label><br>
-  <input type="text" name="modelo" required><br><br>
+  <input type="text" name="modelo"
+         th:value="${cadastro.modelo}"
+         required><br><br>
 
+  <!-- PATRIMÔNIO -->
   <label>Patrimônio</label><br>
-  <input type="text" name="patrimonio" required><br><br>
+  <input type="text" name="patrimonio"
+         th:value="${cadastro.patrimonio}"
+         required><br><br>
 
+  <!-- Nº SÉRIE -->
   <label>Nº Série</label><br>
-  <input type="text" name="numeroSerie" required><br><br>
+  <input type="text" name="numeroSerie"
+         th:value="${cadastro.numeroSerie}"
+         required><br><br>
 
   <button type="submit">Salvar</button>
 </form>

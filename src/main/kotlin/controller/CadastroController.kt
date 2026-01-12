@@ -21,6 +21,7 @@ class CadastroController(private val service: RfidService) {
             "cadastro",
             CadastroRequest(
                 tag = tag,
+                codigoInterno = "",
                 modelo = "",
                 patrimonio = "",
                 numeroSerie = ""

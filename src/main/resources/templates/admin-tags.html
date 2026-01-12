@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8">
+  <title>Tags Cadastradas</title>
+
+  <style>
+    body { font-family: Arial, sans-serif; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    th { background: #f3f3f3; }
+    tr:nth-child(even) { background: #fafafa; }
+  </style>
+</head>
+<body>
+
+<h2>Tags Cadastradas</h2>
+
+<a href="/admin/cadastro">➕ Cadastrar nova</a>
+<br><br>
+
+<table>
+  <tr>
+    <th>EPC (Tag)</th>
+    <th>Código Interno</th>
+    <th>Modelo</th>
+    <th>Patrimônio</th>
+    <th>Nº Série</th>
+  </tr>
+
+  <tr th:each="t : ${tags}">
+    <td th:text="${t.tag}"></td>
+    <td th:text="${t.codigoInterno}"></td>
+    <td th:text="${t.modelo}"></td>
+    <td th:text="${t.patrimonio}"></td>
+    <td th:text="${t.numeroSerie}"></td>
+  </tr>
+</table>
+
+</body>
+</html>

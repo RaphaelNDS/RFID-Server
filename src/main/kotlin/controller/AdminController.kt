@@ -12,12 +12,16 @@ class AdminController(private val service: RfidService) {
 
     @GetMapping("/cadastro")
     fun telaCadastro(model: Model): String {
-
         model.addAttribute(
             "pendentes",
             service.listarNaoCadastradas()
         )
-
         return "cadastro"
+    }
+
+    @GetMapping("/tags")
+    fun listarTags(model: Model): String {
+        model.addAttribute("tags", service.listarParaAdmin())
+        return "admin-tags"
     }
 }
