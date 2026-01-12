@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastro de Tags</title>
+</head>
+<body>
+
+<h2>Tags não cadastradas</h2>
+
+<table border="1" cellpadding="6">
+    <tr>
+        <th>EPC</th>
+        <th>Data</th>
+        <th>Ação</th>
+    </tr>
+
+    <tr th:each="t : ${pendentes}">
+        <td th:text="${t.tag}"></td>
+        <td th:text="${t.dataHora}"></td>
+        <td>
+            <a th:href="'/admin/cadastro/form?tag=' + ${t.tag}">
+                Cadastrar
+            </a>
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

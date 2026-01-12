@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel RFID - Home</title>
+  <style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f4f6f8;
+        margin: 0;
+        padding: 40px;
+    }
+
+    h1 {
+        margin-bottom: 10px;
+    }
+
+    .card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 6px rgba(0,0,0,.1);
+    }
+
+    ul {
+        list-style: none;
+        padding-left: 0;
+    }
+
+    li {
+        margin: 8px 0;
+    }
+
+    a {
+        text-decoration: none;
+        color: #1976d2;
+        font-weight: bold;
+    }
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+    .tag {
+        background: #e0e0e0;
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-size: 12px;
+        margin-left: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>📡 Sistema RFID – Painel Principal</h1>
+<p>Servidor rodando em <b>localhost:8082</b></p>
+
+<div class="card">
+  <h2>🔍 Consultas</h2>
+  <ul>
+    <li>
+      <a href="/api/tags/">Buscar tag por EPC</a>
+      <span class="tag">GET</span>
+    </li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>📦 Tags Cadastradas</h2>
+  <ul>
+    <li>
+      <a href="/api/tags/admin">Listar todas as tags</a>
+      <span class="tag">GET</span>
+    </li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>⚠️ Tags Não Cadastradas</h2>
+  <ul>
+    <li>
+      <a href="/api/tags/naocadastradas">Ver pendentes</a>
+      <span class="tag">GET</span>
+    </li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>📝 Cadastro</h2>
+  <ul>
+    <li>
+      <a href="/admin/cadastro">Tela de cadastro manual</a>
+      <span class="tag">WEB</span>
+    </li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>🔧 Utilitários</h2>
+  <ul>
+    <li>
+      <a href="/actuator/health">Status do servidor</a>
+      <span class="tag">SPRING</span>
+    </li>
+  </ul>
+</div>
+
+</body>
+</html>
