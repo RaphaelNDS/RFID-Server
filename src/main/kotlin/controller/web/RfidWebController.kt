@@ -1,4 +1,4 @@
-package org.example.controller
+package org.example.controller.web
 
 import org.example.request.CadastroRequest
 import org.example.service.RfidService
