@@ -39,7 +39,7 @@
 
 <script>
   async function carregar() {
-      const res = await fetch('/api/tags/nao-cadastradas')
+      const res = await fetch('/api/tags/naocadastradas')
       const data = await res.json()
 
       const tbody = document.querySelector('#tbl tbody')

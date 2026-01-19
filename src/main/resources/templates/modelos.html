@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Modelos</title>
+</head>
+<body>
+
+<h2>📑 Modelos</h2>
+
+<table border="1" cellpadding="6">
+  <tr>
+    <th>ID</th>
+    <th>Nome</th>
+    <th>Marca</th>
+    <th>Tipo</th>
+  </tr>
+  <tr th:each="m : ${modelos}">
+    <td th:text="${m.id}"></td>
+    <td th:text="${m.nome}"></td>
+    <td th:text="${m.marca.nome}"></td>
+    <td th:text="${m.marca.tipo.nome}"></td>
+  </tr>
+</table>
+
+</body>
+</html>

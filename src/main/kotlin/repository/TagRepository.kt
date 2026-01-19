@@ -1,7 +1,6 @@
 package org.example.repository
 
-import org.example.model.TagEntity
-import org.example.model.TagNaoCadastradaEntity
+import org.example.model.*
 import org.springframework.data.jpa.repository.JpaRepository
 import java.util.*
 
@@ -12,6 +11,8 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
     fun findByTagReal(epc: String): Optional<TagEntity>
 
     fun existsByTagReal(tag: String): Boolean
+
+    fun findByPatrimonio(patrimonio: String): Optional<TagEntity>
 }
 
 
@@ -20,4 +21,17 @@ interface TagNaoCadastradaRepository :
 
     fun existsByTag(tag: String): Boolean
     fun deleteByTag(tag: String)
+}
+
+
+interface TipoEquipamentoRepository :
+    JpaRepository<TipoEquipamentoEntity, Long>
+
+interface MarcaRepository : JpaRepository<MarcaEntity, Long> {
+    fun findByTipoId(tipoId: Long): List<MarcaEntity>
+}
+
+
+interface ModeloRepository : JpaRepository<ModeloEntity, Long> {
+    fun findByMarcaId(marcaId: Long): List<ModeloEntity>
 }

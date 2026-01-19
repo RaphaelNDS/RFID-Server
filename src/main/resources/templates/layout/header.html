@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="header">
+  <h2>🛠 Sistema de Gestão RFID</h2>
+  <hr>
+  <nav>
+    <a th:href="@{/admin}">Dashboard</a> |
+    <a th:href="@{/admin/tags-cadastradas}">Tags</a> |
+    <a th:href="@{/admin/tags-pendentes}">Tags Pendentes</a> |
+    <a th:href="@{/admin/cadastro}">Cadastro</a>
+  </nav>
+  <hr>
+</div>
+</body>
+</html>

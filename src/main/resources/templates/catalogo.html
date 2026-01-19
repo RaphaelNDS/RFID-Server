@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/base :: layout(~{::title}, ~{::section})">
+
+<title>Catálogo de Equipamentos</title>
+
+<section>
+
+  <h1>📦 Catálogo de Equipamentos</h1>
+
+  <!-- ================= TIPOS ================= -->
+  <div class="card">
+    <h2>Tipos de Equipamento</h2>
+
+    <form th:action="@{/admin/catalogo/tipo}" method="post">
+    <input type="text" name="nome" placeholder="Novo tipo" required>
+      <button type="submit">Adicionar</button>
+    </form>
+
+    <ul>
+      <li th:each="t : ${tipos}" th:text="${t.nome}"></li>
+    </ul>
+  </div>
+
+  <!-- ================= MARCAS ================= -->
+  <div class="card">
+    <h2>Marcas</h2>
+
+    <form th:action="@{/admin/catalogo/marca}" method="post">
+      <select name="tipoId" required>
+        <option value="">Selecione o tipo</option>
+        <option th:each="t : ${tipos}"
+                th:value="${t.id}"
+                th:text="${t.nome}">
+        </option>
+      </select>
+
+      <input type="text" name="nome" placeholder="Nova marca" required>
+      <button type="submit">Adicionar</button>
+    </form>
+
+    <ul>
+      <li th:each="m : ${marcas}">
+        <span th:text="${m.nome}"></span>
+        <small> — <span th:text="${m.tipo.nome}"></span></small>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ================= MODELOS ================= -->
+  <div class="card">
+    <h2>Modelos</h2>
+
+    <form th:action="@{/admin/catalogo/modelo}" method="post">
+      <select name="marcaId" required>
+        <option value="">Selecione a marca</option>
+        <option th:each="m : ${marcas}"
+                th:value="${m.id}"
+                th:text="${m.nome}">
+        </option>
+      </select>
+
+      <input type="text" name="nome" placeholder="Novo modelo" required>
+      <button type="submit">Adicionar</button>
+    </form>
+
+    <ul>
+      <li th:each="m : ${modelos}">
+        <span th:text="${m.nome}"></span>
+        <small> — <span th:text="${m.marca.nome}"></span></small>
+      </li>
+    </ul>
+  </div>
+
+</section>
+</html>

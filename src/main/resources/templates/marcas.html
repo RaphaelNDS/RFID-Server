@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Marcas</title>
+</head>
+<body>
+
+<h2>🏷️ Marcas</h2>
+
+<table border="1" cellpadding="6">
+  <tr>
+    <th>ID</th>
+    <th>Nome</th>
+    <th>Tipo</th>
+  </tr>
+  <tr th:each="m : ${marcas}">
+    <td th:text="${m.id}"></td>
+    <td th:text="${m.nome}"></td>
+    <td th:text="${m.tipo.nome}"></td>
+  </tr>
+</table>
+
+</body>
+</html>

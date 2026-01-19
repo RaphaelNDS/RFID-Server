@@ -1,30 +1,166 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.w3.org/1999/xhtml">
-<head>
-    <meta charset="UTF-8">
-    <title>Cadastro de Tags</title>
-</head>
-<body>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
 
-<h2>Tags não cadastradas</h2>
+<title>Cadastro de Tag</title>
 
-<table border="1" cellpadding="6">
-    <tr>
-        <th>EPC</th>
-        <th>Data</th>
-        <th>Ação</th>
-    </tr>
+<section>
 
-    <tr th:each="t : ${pendentes}">
-        <td th:text="${t.tag}"></td>
-        <td th:text="${t.dataHora}"></td>
-        <td>
-            <a th:href="'/admin/cadastro/form?tag=' + ${t.tag}">
-                Cadastrar
-            </a>
-        </td>
-    </tr>
-</table>
+    <h2>📝 Cadastro de etiqueta</h2>
 
-</body>
+    <form th:action="@{/admin/cadastro/salvar}"
+          th:object="${cadastro}"
+          method="post">
+
+        <label>TAG RFID</label>
+        <input type="text" th:field="*{tag}" readonly>
+
+        <label>Código Interno</label>
+        <input type="text"
+               th:field="*{codigoInterno}"
+               placeholder="Ex: EQ-000123"
+               required>
+
+        <label>Tipo de equipamento</label>
+        <select id="tipoSelect" name="tipoEquipamentoId">
+            <option value="">Selecione o tipo</option>
+            <option th:each="t : ${tipos}"
+                    th:value="${t.id}"
+                    th:text="${t.nome}">
+            </option>
+        </select>
+
+        <span id="tipoStatus" style="margin-left:8px;color:gray;">
+            ⏳ aguardando seleção
+        </span>
+
+        <label>Marca</label>
+        <select id="marcaSelect" name="marcaId" disabled>
+            <option value="">Selecione a marca</option>
+        </select>
+
+        <label>Modelo</label>
+        <select id="modeloSelect" name="modeloId" disabled>
+            <option value="">Selecione o modelo</option>
+        </select>
+
+        <label>Patrimônio</label>
+        <input type="text" th:field="*{patrimonio}">
+
+        <label>Nº Série</label>
+        <input type="text" th:field="*{numeroSerie}">
+
+        <button type="submit">Salvar</button>
+    </form>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            console.log("🚀 JS do cadastro carregado");
+
+            const tipoSelect   = document.getElementById("tipoSelect");
+            const marcaSelect  = document.getElementById("marcaSelect");
+            const modeloSelect = document.getElementById("modeloSelect");
+            const tipoStatus   = document.getElementById("tipoStatus");
+
+            // ================== TIPO ==================
+            tipoSelect.onchange = function () {
+
+                const tipoId = this.value;
+                console.log("👉 Tipo mudou para:", tipoId);
+
+                if (tipoId) {
+                    tipoStatus.textContent = "✔ OK";
+                    tipoStatus.style.color = "green";
+                } else {
+                    tipoStatus.textContent = "⏳ aguardando seleção";
+                    tipoStatus.style.color = "gray";
+                }
+
+                marcaSelect.innerHTML  = '<option value="">Carregando marcas...</option>';
+                marcaSelect.disabled  = true;
+                modeloSelect.innerHTML = '<option value="">Selecione o modelo</option>';
+                modeloSelect.disabled = true;
+
+                if (!tipoId) return;
+
+                fetch("/api/catalogo/marcas?tipoId=" + tipoId)
+                    .then(res => {
+                        if (!res.ok) throw new Error("Erro HTTP: " + res.status);
+                        return res.json();
+                    })
+                    .then(lista => {
+                        console.log("📦 Marcas recebidas:", lista);
+
+                        marcaSelect.innerHTML = '<option value="">Selecione a marca</option>';
+
+                        if (lista.length === 0) {
+                            marcaSelect.innerHTML =
+                                '<option value="">⚠ Nenhuma marca para esse tipo</option>';
+                        } else {
+                            lista.forEach(m => {
+                                const opt = document.createElement("option");
+                                opt.value = m.id;
+                                opt.textContent = m.nome;
+                                marcaSelect.appendChild(opt);
+                            });
+                        }
+
+                        marcaSelect.disabled = false;
+                    })
+                    .catch(err => {
+                        console.error("❌ Erro ao buscar marcas:", err);
+                        marcaSelect.innerHTML =
+                            '<option value="">Erro ao carregar marcas</option>';
+                        marcaSelect.disabled = false;
+                    });
+            };
+
+            // ================== MARCA ==================
+            marcaSelect.onchange = function () {
+
+                const marcaId = this.value;
+                console.log("👉 Marca mudou para:", marcaId);
+
+                modeloSelect.innerHTML = '<option value="">Carregando modelos...</option>';
+                modeloSelect.disabled = true;
+
+                if (!marcaId) return;
+
+                fetch("/api/catalogo/modelos?marcaId=" + marcaId)
+                    .then(res => {
+                        if (!res.ok) throw new Error("Erro HTTP: " + res.status);
+                        return res.json();
+                    })
+                    .then(lista => {
+                        console.log("📦 Modelos recebidos:", lista);
+
+                        modeloSelect.innerHTML = '<option value="">Selecione o modelo</option>';
+
+                        if (lista.length === 0) {
+                            modeloSelect.innerHTML =
+                                '<option value="">⚠ Nenhum modelo para essa marca</option>';
+                        } else {
+                            lista.forEach(m => {
+                                const opt = document.createElement("option");
+                                opt.value = m.id;
+                                opt.textContent = m.nome;
+                                modeloSelect.appendChild(opt);
+                            });
+                        }
+
+                        modeloSelect.disabled = false;
+                    })
+                    .catch(err => {
+                        console.error("❌ Erro ao buscar modelos:", err);
+                        modeloSelect.innerHTML =
+                            '<option value="">Erro ao carregar modelos</option>';
+                        modeloSelect.disabled = false;
+                    });
+            };
+
+        });
+    </script>
+
+</section>
 </html>

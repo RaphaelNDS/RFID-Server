@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/base :: layout(~{::title}, ~{::section})">
+
+<title>Painel Admin</title>
+
+<section>
+  <h1>📊 Painel Administrativo</h1>
+
+  <ul>
+    <li><a th:href="@{/admin/tags-cadastradas}">📋 Ver tags cadastradas</a></li>
+    <li><a th:href="@{/admin/tags-pendentes}">📋 Ver tags não cadastradas</a></li>
+    <li><a th:href="@{/admin/cadastro}">➕ Cadastrar novas tags</a></li>
+  </ul>
+</section>
+</html>

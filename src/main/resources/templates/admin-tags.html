@@ -1,41 +1,41 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.w3.org/1999/xhtml">
-<head>
-  <meta charset="UTF-8">
-  <title>Tags Cadastradas</title>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
 
-  <style>
-    body { font-family: Arial, sans-serif; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ccc; padding: 8px; }
-    th { background: #f3f3f3; }
-    tr:nth-child(even) { background: #fafafa; }
-  </style>
-</head>
-<body>
+<title>Tags Cadastradas</title>
 
-<h2>Tags Cadastradas</h2>
+<section>
 
-<a href="/admin/cadastro">➕ Cadastrar nova</a>
-<br><br>
+  <h2>✅ Tags cadastradas</h2>
 
-<table>
-  <tr>
-    <th>EPC (Tag)</th>
-    <th>Código Interno</th>
-    <th>Modelo</th>
-    <th>Patrimônio</th>
-    <th>Nº Série</th>
-  </tr>
+  <table border="1" cellspacing="0" cellpadding="6" style="width:100%">
+    <thead>
+    <tr>
+      <th>EPC (TAG)</th>
+      <th>Código</th>
+      <th>Tipo</th>
+      <th>Marca</th>
+      <th>Modelo</th>
+      <th>Patrimônio</th>
+      <th>Nº Série</th>
+    </tr>
+    </thead>
 
-  <tr th:each="t : ${tags}">
-    <td th:text="${t.tag}"></td>
-    <td th:text="${t.codigoInterno}"></td>
-    <td th:text="${t.modelo}"></td>
-    <td th:text="${t.patrimonio}"></td>
-    <td th:text="${t.numeroSerie}"></td>
-  </tr>
-</table>
+    <tbody>
+    <tr th:each="t : ${tags}">
+      <td th:text="${t.tag}">EPC</td>
+      <td th:text="${t.codigoInterno}">Código</td>
 
-</body>
+      <!-- 🔥 RELACIONAMENTOS -->
+      <td th:text="${t.tipoNome}">Tipo</td>
+      <td th:text="${t.marcaNome}">Marca</td>
+      <td th:text="${t.modeloNome}">Modelo</td>
+
+      <td th:text="${t.patrimonio}">Patrimônio</td>
+      <td th:text="${t.numeroSerie}">Série</td>
+    </tr>
+    </tbody>
+  </table>
+
+</section>
 </html>

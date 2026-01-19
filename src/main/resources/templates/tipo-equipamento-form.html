@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastrar Tipos de Equipamentos</title>
+</head>
+<body>
+<form th:action="@{/admin/tipo-equipamento/salvar}" th:object="${tipo}" method="post">
+
+  <label>Tipos de equipamentos</label>
+  <input type="text" th:field="*{nome}"/>
+
+  <label>Marca</label>
+  <select th:field="*{marcaId}">
+    <option value="">Selecione</option>
+    <option th:each="m : ${marcas}"
+            th:value="${m.id}"
+            th:text="${m.nome}">
+    </option>
+  </select>
+
+  <label>Modelo</label>
+  <select th:field="*{modeloId}">
+    <option value="">Selecione</option>
+    <option th:each="m : ${modelos}"
+            th:value="${m.id}"
+            th:text="${m.nome}">
+    </option>
+  </select>
+
+  <button type="submit">Salvar tipo</button>
+</form>
+
+</body>
+</html>

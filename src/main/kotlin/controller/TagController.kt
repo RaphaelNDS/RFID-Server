@@ -1,5 +1,7 @@
 package org.example.controller
 
+import org.example.model.TagEntity
+import org.example.repository.TagRepository
 import org.example.request.TagNaoCadastradaView
 import org.example.request.CadastroRequest
 import org.example.response.TagResponse
@@ -13,6 +15,7 @@ class TagController(
     private val service: RfidService
 ) {
 
+    // /api/tags/{epc}
     @GetMapping("/{epc}")
     fun buscar(@PathVariable epc: String): ResponseEntity<TagResponse> {
         val tag = service.buscarPorTag(epc)
@@ -21,19 +24,8 @@ class TagController(
         return ResponseEntity.ok(tag)
     }
 
-    @PostMapping("/naocadastrada")
-    fun salvarNao(@RequestBody req: RfidController.LeituraRequest) {
-        service.salvarNaoCadastrada(req.tag)
-    }
-
-    @GetMapping("/naocadastradas")
-    fun listarNao(): List<TagNaoCadastradaView> =
-        service.listarNaoCadastradas()
-
     @PostMapping("/cadastrar")
     fun cadastrar(@RequestBody req: CadastroRequest) {
         service.cadastrarTag(req)
     }
 }
-
-

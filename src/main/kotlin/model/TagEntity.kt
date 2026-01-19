@@ -13,12 +13,22 @@ class TagEntity(
     @Column(nullable = false)
     var codigoInterno: String = "",
 
-
+    @Column(nullable = false, unique = true)
     val tagHash: String,
+
+    @Column(nullable = false, unique = true)
     val tagReal: String,
 
-    val modelo: String,
-    val patrimonio: String,
-    val numeroSerie: String
+    @Column(name = "tipo_equipamento_id")
+    var tipoEquipamentoId: Long? = null,
+
+    @Column(name = "marca_id")
+    var marcaId: Long? = null,
+
+    @Column(name = "modelo_id")
+    var modeloId: Long? = null,
+
+    var patrimonio: String = "",
+    var numeroSerie: String = ""
 )
 

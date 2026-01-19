@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/base :: layout(~{::title}, ~{::section})">
+
+<title>Tags Pendentes</title>
+
+<section>
+  <h2>📋 Tags não cadastradas</h2>
+
+  <table>
+    <tr>
+      <th>EPC</th>
+      <th>Data</th>
+      <th>Ação</th>
+    </tr>
+
+    <tr th:each="t : ${pendentes}">
+      <td th:text="${t.tag}"></td>
+      <td th:text="${t.dataHora}"></td>
+      <td>
+        <a class="btn"
+           th:href="@{/admin/cadastro(tag=${t.tag})}">
+          ➕ Cadastrar
+        </a>
+      </td>
+    </tr>
+  </table>
+
+</section>
+</html>
