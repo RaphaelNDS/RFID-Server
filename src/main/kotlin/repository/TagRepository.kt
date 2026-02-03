@@ -2,6 +2,10 @@ package org.example.repository
 
 import org.example.model.*
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor
+import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
+import java.time.LocalDateTime
 import java.util.*
 
 interface TagRepository : JpaRepository<TagEntity, Long> {
@@ -34,4 +38,26 @@ interface MarcaRepository : JpaRepository<MarcaEntity, Long> {
 
 interface ModeloRepository : JpaRepository<ModeloEntity, Long> {
     fun findByMarcaId(marcaId: Long): List<ModeloEntity>
+}
+
+interface LeituraAndroidRepository :
+    JpaRepository<LeituraAndroidEntity, Long>,
+    JpaSpecificationExecutor<LeituraAndroidEntity> {
+    @Query("""
+        select cast(l.dataHora as date), count(l)
+        from LeituraAndroidEntity l
+        group by cast(l.dataHora as date)
+        order by cast(l.dataHora as date) desc
+    """)
+    fun contarPorDia(): List<Array<Any>>
+
+    @Query("""
+        select l from LeituraAndroidEntity l
+        where l.dataHora between :inicio and :fim
+        order by l.dataHora desc
+    """)
+    fun buscarPorPeriodo(
+        @Param("inicio") inicio: LocalDateTime,
+        @Param("fim") fim: LocalDateTime
+    ): List<LeituraAndroidEntity>
 }

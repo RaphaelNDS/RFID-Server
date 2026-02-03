@@ -9,6 +9,6 @@ class HomeController {
 
     @GetMapping("/")
     fun home(model: Model): String {
-        return "home"
+        return "admin"
     }
 }

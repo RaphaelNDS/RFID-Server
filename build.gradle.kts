@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "org.example"
-version = "1.2.0"
+version = "1.2.1"
 
 java {
     toolchain {
@@ -29,6 +29,9 @@ dependencies {
     implementation(kotlin("reflect"))
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
+
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 
 }
 

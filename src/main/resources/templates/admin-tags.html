@@ -4,38 +4,38 @@
 
 <title>Tags Cadastradas</title>
 
-<section>
+<section class="page-container">
 
-  <h2>✅ Tags cadastradas</h2>
+  <h2 class="page-title">✅ Tags Cadastradas</h2>
 
-  <table border="1" cellspacing="0" cellpadding="6" style="width:100%">
-    <thead>
-    <tr>
-      <th>EPC (TAG)</th>
-      <th>Código</th>
-      <th>Tipo</th>
-      <th>Marca</th>
-      <th>Modelo</th>
-      <th>Patrimônio</th>
-      <th>Nº Série</th>
-    </tr>
-    </thead>
+  <div class="table-card">
+    <table>
+      <thead>
+      <tr>
+        <th>EPC (TAG)</th>
+        <th>Código</th>
+        <th>Tipo</th>
+        <th>Marca</th>
+        <th>Modelo</th>
+        <th>Patrimônio</th>
+        <th>Nº Série</th>
+      </tr>
+      </thead>
 
-    <tbody>
-    <tr th:each="t : ${tags}">
-      <td th:text="${t.tag}">EPC</td>
-      <td th:text="${t.codigoInterno}">Código</td>
-
-      <!-- 🔥 RELACIONAMENTOS -->
-      <td th:text="${t.tipoNome}">Tipo</td>
-      <td th:text="${t.marcaNome}">Marca</td>
-      <td th:text="${t.modeloNome}">Modelo</td>
-
-      <td th:text="${t.patrimonio}">Patrimônio</td>
-      <td th:text="${t.numeroSerie}">Série</td>
-    </tr>
-    </tbody>
-  </table>
+      <tbody>
+      <tr th:each="t : ${tags}">
+        <td th:text="${t.tag}"></td>
+        <td th:text="${t.codigoInterno}"></td>
+        <td th:text="${t.tipoNome}"></td>
+        <td th:text="${t.marcaNome}"></td>
+        <td th:text="${t.modeloNome}"></td>
+        <td th:text="${t.patrimonio}"></td>
+        <td th:text="${t.numeroSerie}"></td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
 
 </section>
+
 </html>

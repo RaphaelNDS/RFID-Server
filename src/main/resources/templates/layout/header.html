@@ -1,16 +1,31 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<div th:fragment="header">
-  <h2>🛠 Sistema de Gestão RFID</h2>
-  <hr>
-  <nav>
-    <a th:href="@{/admin}">Dashboard</a> |
-    <a th:href="@{/admin/tags-cadastradas}">Tags</a> |
-    <a th:href="@{/admin/tags-pendentes}">Tags Pendentes</a> |
+
+<div th:fragment="header" class="header">
+
+  <div style="display:flex; align-items:center;">
+    <div style="font-size:20px;">
+      🛠 Sistema de Gestão RFID
+    </div>
+
+    <button class="theme-toggle" onclick="toggleTheme()">
+      🌙 / ☀
+    </button>
+  </div>
+
+  <nav class="nav">
+    <a th:href="@{/admin}">Dashboard</a>
+    <a th:href="@{/admin/tags-cadastradas}">Tags</a>
+    <a th:href="@{/admin/tags-pendentes}">Pendentes</a>
     <a th:href="@{/admin/cadastro}">Cadastro</a>
+    <a th:href="@{/admin/leituras-android}">Leituras</a>
+    <a th:href="@{/admin/catalogo}">Catálogo</a>
   </nav>
-  <hr>
+
 </div>
+
+
 </body>
 </html>
+

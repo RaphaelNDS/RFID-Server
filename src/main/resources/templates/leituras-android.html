@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/base :: layout(~{::title}, ~{::section})">
+
+<title>Leituras Android</title>
+
+<section class="leituras-container">
+
+    <h2 class="page-title">📱 Leituras vindas do Android</h2>
+
+    <!-- RESUMO -->
+    <div class="resumo-card">
+
+        <h3>📅 Leituras por dia</h3>
+
+        <div class="card-grid">
+
+            <a th:href="@{/admin/leituras-android}" class="card">
+                <strong>📂 Ler tudo</strong>
+            </a>
+
+            <a th:each="c : ${contadorPorDia}"
+               th:href="@{/admin/leituras-android(dia=${c.key})}"
+               class="card">
+
+                <strong th:text="${c.key}"></strong>
+                <span th:text="${c.value} + ' leituras'"></span>
+
+            </a>
+
+        </div>
+    </div>
+
+    <!-- FILTRO -->
+    <div class="filtro-card">
+        <form method="get" class="filtro-form">
+
+            <input type="hidden" name="dia" th:value="${diaSelecionado}"/>
+
+            <input name="tag" placeholder="Tag EPC"
+                   th:value="${param.tag}">
+
+            <input name="tipo" placeholder="Tipo"
+                   th:value="${param.tipo}">
+
+            <input name="marca" placeholder="Marca"
+                   th:value="${param.marca}">
+
+            <input name="modelo" placeholder="Modelo"
+                   th:value="${param.modelo}">
+
+            <input name="numeroSerie" placeholder="Nº Série"
+                   th:value="${param.numeroSerie}">
+
+            <button type="submit">🔍 Filtrar</button>
+
+        </form>
+    </div>
+
+    <!-- TABELA -->
+    <div class="table-container">
+        <table>
+
+            <thead>
+            <tr>
+                <th>Data/Hora</th>
+                <th>Tag</th>
+                <th>Código</th>
+                <th>Tipo</th>
+                <th>Marca</th>
+                <th>Modelo</th>
+                <th>Patrimônio</th>
+                <th>Série</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr th:each="l : ${leituras}">
+                <td th:text="${#temporals.format(l.dataHora, 'dd/MM/yyyy HH:mm')}"></td>
+                <td th:text="${l.tag}"></td>
+                <td th:text="${l.codigoInterno}"></td>
+                <td th:text="${l.tipo}"></td>
+                <td th:text="${l.marca}"></td>
+                <td th:text="${l.modelo}"></td>
+                <td th:text="${l.patrimonio}"></td>
+                <td th:text="${l.numeroSerie}"></td>
+            </tr>
+
+            <tr th:if="${#lists.isEmpty(leituras)}">
+                <td colspan="8" style="text-align:center; padding:20px;">
+                    Nenhuma leitura encontrada.
+                </td>
+            </tr>
+
+            </tbody>
+
+        </table>
+    </div>
+
+</section>
+
+</html>

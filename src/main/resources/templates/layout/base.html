@@ -4,7 +4,225 @@
 
 <head>
   <meta charset="UTF-8">
-  <title th:replace="${title}">Sistema</title>
+  <title th:replace="${title}">Sistema RFID</title>
+
+  <style>
+
+    /* =========================
+       VARIÁVEIS DE TEMA
+    ========================= */
+
+    :root {
+        --bg: #ffffff;
+        --text: #222;
+        --card: #f5f5f5;
+        --card-strong: #ffffff;
+        --border: #e0e0e0;
+        --table-bg: #ffffff;
+        --table-head: #f2f2f2;
+        --primary: #4CAF50;
+    }
+
+    /* DARK MODE */
+    body.dark {
+        --bg: #121212;
+        --text: #f5f5f5;
+        --card: #1e1e1e;
+        --card-strong: #242424;
+        --border: #2c2c2c;
+        --table-bg: #ffffff; /* tabela continua clara */
+        --table-head: #f2f2f2;
+        --primary: #4CAF50;
+    }
+
+    /* =========================
+       BASE
+    ========================= */
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        transition: 0.3s ease;
+    }
+
+    main {
+        max-width: 1300px;
+        margin: 30px auto;
+        padding: 20px;
+    }
+
+    .page-title {
+        margin-bottom: 25px;
+    }
+
+    /* =========================
+       HEADER
+    ========================= */
+
+    .header {
+        background: var(--card);
+        padding: 20px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .nav {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .nav a {
+        background: var(--card-strong);
+        color: var(--text);
+        padding: 8px 14px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 14px;
+        transition: 0.2s;
+    }
+
+    .nav a:hover {
+        background: var(--primary);
+        color: white;
+    }
+
+    /* =========================
+       BOTÃO TOGGLE
+    ========================= */
+
+    .theme-toggle {
+        margin-left: auto;
+        background: var(--primary);
+        border: none;
+        padding: 6px 12px;
+        border-radius: 20px;
+        cursor: pointer;
+        color: white;
+        font-size: 13px;
+    }
+
+    /* =========================
+       CARDS
+    ========================= */
+
+    .resumo-card,
+    .filtro-card,
+    .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+    }
+
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+    }
+
+    .card:hover {
+        transform: translateY(-4px);
+    }
+
+    /* =========================
+       TABELA (SEMPRE CLARA)
+    ========================= */
+
+    .table-container {
+        background: var(--table-bg);
+        padding: 15px;
+        border-radius: 12px;
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        color: #222;
+    }
+
+    thead {
+        background: var(--table-head);
+    }
+
+    th, td {
+        padding: 10px;
+        border-bottom: 1px solid #ddd;
+    }
+
+    tbody tr:nth-child(even) {
+        background: #fafafa;
+    }
+
+    tbody tr:hover {
+        background: #f1f1f1;
+    }
+
+    /* =========================
+       FILTROS
+    ========================= */
+
+    .filtro-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .filtro-form input {
+        padding: 8px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        background: var(--card-strong);
+        color: var(--text);
+    }
+
+    .filtro-form button {
+        background: var(--primary);
+        border: none;
+        padding: 8px 15px;
+        border-radius: 6px;
+        cursor: pointer;
+        color: white;
+    }
+
+    /* =========================
+       FOOTER
+    ========================= */
+
+    .footer {
+        background: var(--card);
+        padding: 15px;
+        text-align: center;
+        border-top: 1px solid var(--border);
+        margin-top: 40px;
+    }
+
+  </style>
+
+  <script>
+    function toggleTheme() {
+        document.body.classList.toggle("dark");
+        localStorage.setItem("theme",
+            document.body.classList.contains("dark") ? "dark" : "light");
+    }
+
+    // carregar tema salvo
+    window.onload = function() {
+        const saved = localStorage.getItem("theme");
+        if (saved === "dark") {
+            document.body.classList.add("dark");
+        }
+    }
+  </script>
+
+
 </head>
 
 <body>

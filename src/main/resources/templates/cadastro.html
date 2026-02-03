@@ -4,54 +4,75 @@
 
 <title>Cadastro de Tag</title>
 
-<section>
+<section class="page-container">
 
-    <h2>📝 Cadastro de etiqueta</h2>
+    <h2 class="page-title">📝 Cadastro de Etiqueta</h2>
 
-    <form th:action="@{/admin/cadastro/salvar}"
-          th:object="${cadastro}"
-          method="post">
+    <div class="form-card">
+        <form th:action="@{/admin/cadastro/salvar}"
+              th:object="${cadastro}"
+              method="post"
+              class="form-grid">
 
-        <label>TAG RFID</label>
-        <input type="text" th:field="*{tag}" readonly>
+            <div class="form-group">
+                <label>TAG RFID</label>
+                <input type="text" th:field="*{tag}" readonly>
+            </div>
 
-        <label>Código Interno</label>
-        <input type="text"
-               th:field="*{codigoInterno}"
-               placeholder="Ex: EQ-000123"
-               required>
+            <div class="form-group">
+                <label>Código Interno</label>
+                <input type="text"
+                       th:field="*{codigoInterno}"
+                       placeholder="Ex: 0.111.222.333"
+                       required>
+            </div>
 
-        <label>Tipo de equipamento</label>
-        <select id="tipoSelect" name="tipoEquipamentoId">
-            <option value="">Selecione o tipo</option>
-            <option th:each="t : ${tipos}"
-                    th:value="${t.id}"
-                    th:text="${t.nome}">
-            </option>
-        </select>
+            <div class="form-group">
+                <label>Tipo de Equipamento</label>
+                <select id="tipoSelect" name="tipoEquipamentoId">
+                    <option value="">Selecione o tipo</option>
+                    <option th:each="t : ${tipos}"
+                            th:value="${t.id}"
+                            th:text="${t.nome}">
+                    </option>
+                </select>
+                <span id="tipoStatus" class="status-text">
+                    ⏳ aguardando seleção
+                </span>
+            </div>
 
-        <span id="tipoStatus" style="margin-left:8px;color:gray;">
-            ⏳ aguardando seleção
-        </span>
+            <div class="form-group">
+                <label>Marca</label>
+                <select id="marcaSelect" name="marcaId" disabled>
+                    <option value="">Selecione a marca</option>
+                </select>
+            </div>
 
-        <label>Marca</label>
-        <select id="marcaSelect" name="marcaId" disabled>
-            <option value="">Selecione a marca</option>
-        </select>
+            <div class="form-group">
+                <label>Modelo</label>
+                <select id="modeloSelect" name="modeloId" disabled>
+                    <option value="">Selecione o modelo</option>
+                </select>
+            </div>
 
-        <label>Modelo</label>
-        <select id="modeloSelect" name="modeloId" disabled>
-            <option value="">Selecione o modelo</option>
-        </select>
+            <div class="form-group">
+                <label>Patrimônio</label>
+                <input type="text" th:field="*{patrimonio}">
+            </div>
 
-        <label>Patrimônio</label>
-        <input type="text" th:field="*{patrimonio}">
+            <div class="form-group">
+                <label>Nº Série</label>
+                <input type="text" th:field="*{numeroSerie}">
+            </div>
 
-        <label>Nº Série</label>
-        <input type="text" th:field="*{numeroSerie}">
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">
+                    💾 Salvar Cadastro
+                </button>
+            </div>
 
-        <button type="submit">Salvar</button>
-    </form>
+        </form>
+
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
@@ -162,5 +183,6 @@
         });
     </script>
 
+</div>
 </section>
 </html>
