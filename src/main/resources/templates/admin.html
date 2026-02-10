@@ -1,7 +1,35 @@
-<section class="admin-container" xmlns:th="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Painel Administrativo</title>
+
+<section class="page-container admin-dark">
 
   <h1 class="page-title">📊 Painel Administrativo</h1>
 
+  <!-- STATUS DO SERVIDOR -->
+  <div class="card-grid" style="margin-bottom: 25px">
+
+    <div class="card">
+      <div class="icon">📡</div>
+      <h3>Status do Servidor</h3>
+
+      <p>
+        Status:
+        <strong th:text="${info.status}"
+                th:classappend="${info?.status == 'ONLINE'} ? 'text-ok' : 'text-error'">
+        </strong>
+      </p>
+
+      <p>🕒 <span th:text="${info.horaServidor}"></span></p>
+      <p>🗄 Banco: <span th:text="${info.banco}"></span></p>
+      <p>🔖 Versão: <span th:text="${info.versao}"></span></p>
+    </div>
+
+  </div>
+
+  <!-- CARDS PRINCIPAIS -->
   <div class="card-grid">
 
     <a th:href="@{/admin/tags-cadastradas}" class="card">
@@ -34,59 +62,16 @@
       <p>Monitorar leituras em tempo real</p>
     </a>
 
+    <a th:href="@{/admin/dashboard}" class="card destaque">
+      <div class="icon">📊</div>
+      <h3>Dashboard</h3>
+      <p>Visualizar gráficos e métricas</p>
+    </a>
+
   </div>
 
 </section>
-
-<style>
-  .admin-container {
-      padding: 30px;
-  }
-
-  .page-title {
-      margin-bottom: 30px;
-      font-size: 28px;
-  }
-
-  .card-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 20px;
-  }
-
-  .card {
-      background: #1e1e1e;
-      padding: 25px;
-      border-radius: 12px;
-      text-decoration: none;
-      color: white;
-      transition: 0.3s ease;
-      border: 1px solid #2c2c2c;
-  }
-
-  .card:hover {
-      transform: translateY(-5px);
-      background: #2a2a2a;
-  }
-
-  .card .icon {
-      font-size: 32px;
-      margin-bottom: 10px;
-  }
-
-  .card h3 {
-      margin: 10px 0 5px;
-  }
-
-  .card p {
-      font-size: 14px;
-      color: #aaa;
-  }
-
-  .card.destaque {
-      border: 1px solid #4CAF50;
-  }
-</style>
+</html>
 
 
 
@@ -106,48 +91,109 @@
 
 
 
-<!--<!DOCTYPE html>-->
-<!--<html xmlns:th="http://www.thymeleaf.org"-->
-<!--      th:replace="layout/base :: layout(~{::title}, ~{::section})">-->
 
-<!--<title>Painel Admin</title>-->
 
-<!--<section>-->
-<!--  <h1>📊 Painel Administrativo</h1>-->
 
-<!--  <ul>-->
-<!--    <li>-->
-<!--      <a th:href="@{/admin/tags-cadastradas}">-->
-<!--        📋 Ver tags cadastradas-->
-<!--      </a>-->
-<!--    </li>-->
 
-<!--    <li>-->
-<!--      <a th:href="@{/admin/tags-pendentes}">-->
-<!--        📋 Ver tags não cadastradas-->
-<!--      </a>-->
-<!--    </li>-->
 
-<!--    <li>-->
-<!--      <a th:href="@{/admin/cadastro}">-->
-<!--        ➕ Cadastrar novas tags-->
-<!--      </a>-->
-<!--    </li>-->
 
-<!--    <li>-->
-<!--    <a th:href="@{/admin/catalogo}">-->
-<!--      📦 Catálogo de Equipamentos-->
+
+
+
+
+
+<!--<section class="admin-container" xmlns:th="http://www.w3.org/1999/xhtml">-->
+
+<!--  <h1 class="page-title">📊 Painel Administrativo</h1>-->
+
+<!--  <div class="card-grid">-->
+
+<!--    <a th:href="@{/admin/tags-cadastradas}" class="card">-->
+<!--      <div class="icon">📋</div>-->
+<!--      <h3>Tags Cadastradas</h3>-->
+<!--      <p>Visualizar todas as tags registradas</p>-->
 <!--    </a>-->
-<!--    </li>-->
 
+<!--    <a th:href="@{/admin/tags-pendentes}" class="card">-->
+<!--      <div class="icon">⚠️</div>-->
+<!--      <h3>Tags Pendentes</h3>-->
+<!--      <p>Tags ainda não cadastradas</p>-->
+<!--    </a>-->
 
-<!--    <li>-->
-<!--      <a th:href="@{/admin/leituras-android}">-->
-<!--        📱 Leituras vindas do Android-->
-<!--      </a>-->
-<!--    </li>-->
-<!--  </ul>-->
+<!--    <a th:href="@{/admin/cadastro}" class="card">-->
+<!--      <div class="icon">➕</div>-->
+<!--      <h3>Cadastro de Tags</h3>-->
+<!--      <p>Adicionar novas tags ao sistema</p>-->
+<!--    </a>-->
+
+<!--    <a th:href="@{/admin/catalogo}" class="card">-->
+<!--      <div class="icon">📦</div>-->
+<!--      <h3>Catálogo</h3>-->
+<!--      <p>Gerenciar equipamentos</p>-->
+<!--    </a>-->
+
+<!--    <a th:href="@{/admin/leituras-android}" class="card destaque">-->
+<!--      <div class="icon">📱</div>-->
+<!--      <h3>Leituras Android</h3>-->
+<!--      <p>Monitorar leituras em tempo real</p>-->
+<!--    </a>-->
+
+<!--    <a th:href="@{/admin/dashboard}" class="card destaque">-->
+<!--      <div class="icon">📱</div>-->
+<!--      <h3>Dashboard</h3>-->
+<!--      <p>Visualizar em gráficos</p>-->
+<!--    </a>-->
+
+<!--  </div>-->
 
 <!--</section>-->
-<!--</html>-->
 
+<!--<style>-->
+<!--  .admin-container {-->
+<!--      padding: 30px;-->
+<!--  }-->
+
+<!--  .page-title {-->
+<!--      margin-bottom: 30px;-->
+<!--      font-size: 28px;-->
+<!--  }-->
+
+<!--  .card-grid {-->
+<!--      display: grid;-->
+<!--      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));-->
+<!--      gap: 20px;-->
+<!--  }-->
+
+<!--  .card {-->
+<!--      background: #1e1e1e;-->
+<!--      padding: 25px;-->
+<!--      border-radius: 12px;-->
+<!--      text-decoration: none;-->
+<!--      color: white;-->
+<!--      transition: 0.3s ease;-->
+<!--      border: 1px solid #2c2c2c;-->
+<!--  }-->
+
+<!--  .card:hover {-->
+<!--      transform: translateY(-5px);-->
+<!--      background: #2a2a2a;-->
+<!--  }-->
+
+<!--  .card .icon {-->
+<!--      font-size: 32px;-->
+<!--      margin-bottom: 10px;-->
+<!--  }-->
+
+<!--  .card h3 {-->
+<!--      margin: 10px 0 5px;-->
+<!--  }-->
+
+<!--  .card p {-->
+<!--      font-size: 14px;-->
+<!--      color: #aaa;-->
+<!--  }-->
+
+<!--  .card.destaque {-->
+<!--      border: 1px solid #4CAF50;-->
+<!--  }-->
+<!--</style>-->

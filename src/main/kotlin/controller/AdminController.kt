@@ -8,15 +8,23 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.example.request.CadastroRequest
+import org.example.service.StatusService
 
 @Controller
 @RequestMapping("/admin")
 class AdminController(
-    private val rfidService: RfidService
+    private val rfidService: RfidService,
+    private val statusService: StatusService
 ) {
 
     @GetMapping
-    fun dashboard() = "admin"
+//    fun dashboard() = "admin"
+    fun dashboard(model: Model): String {
+
+        model.addAttribute("info", statusService.getStatus())  // 👈 ADICIONE ISSO
+
+        return "admin"
+    }
 
     @GetMapping("/tags-pendentes")
     fun pendentes(model: Model): String {

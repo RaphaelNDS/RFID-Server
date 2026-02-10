@@ -30,7 +30,6 @@ class LeituraAndroidAdminController(
         val spec = Specification<LeituraAndroidEntity> { root, _, cb ->
             val predicates = mutableListOf<Predicate>()
 
-            // 🔹 filtro por DIA
             dia?.takeIf { it.isNotBlank() }?.let {
                 val data = LocalDate.parse(it)
                 val inicio = data.atStartOfDay()
@@ -44,15 +43,19 @@ class LeituraAndroidAdminController(
             tag?.takeIf { it.isNotBlank() }?.let {
                 predicates.add(cb.like(root.get("tag"), "%$it%"))
             }
+
             tipo?.takeIf { it.isNotBlank() }?.let {
                 predicates.add(cb.like(root.get("tipo"), "%$it%"))
             }
+
             marca?.takeIf { it.isNotBlank() }?.let {
                 predicates.add(cb.like(root.get("marca"), "%$it%"))
             }
+
             modelo?.takeIf { it.isNotBlank() }?.let {
                 predicates.add(cb.like(root.get("modelo"), "%$it%"))
             }
+
             numeroSerie?.takeIf { it.isNotBlank() }?.let {
                 predicates.add(cb.like(root.get("numeroSerie"), "%$it%"))
             }
@@ -63,7 +66,12 @@ class LeituraAndroidAdminController(
         val leituras = leituraRepo.findAll(spec)
 
         val contadorPorDia = leituraRepo.contarPorDia()
-            .associate { it[0].toString() to (it[1] as Long) }
+            .map {
+                val data = it[0].toString()
+                val total = (it[1] as Number).toLong()
+                data to total
+            }.toMap()
+
 
         model.addAttribute("leituras", leituras)
         model.addAttribute("contadorPorDia", contadorPorDia)

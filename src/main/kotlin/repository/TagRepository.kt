@@ -52,12 +52,51 @@ interface LeituraAndroidRepository :
     fun contarPorDia(): List<Array<Any>>
 
     @Query("""
-        select l from LeituraAndroidEntity l
-        where l.dataHora between :inicio and :fim
-        order by l.dataHora desc
+    select count(l)
+    from LeituraAndroidEntity l
+""")
+    fun contarTotal(): Long
+
+    @Query("""
+    select count(l)
+    from LeituraAndroidEntity l
+    where l.dataHora >= :inicio
+""")
+    fun contarDesde(@Param("inicio") inicio: LocalDateTime): Long
+
+    @Query("""
+    select cast(l.dataHora as date), count(l)
+    from LeituraAndroidEntity l
+    where l.dataHora >= :inicio
+    group by cast(l.dataHora as date)
+    order by cast(l.dataHora as date)
+""")
+    fun contarUltimosDias(@Param("inicio") inicio: LocalDateTime): List<Array<Any>>
+
+    @Query("""
+    select l.tipo, count(l)
+    from LeituraAndroidEntity l
+    group by l.tipo
+""")
+    fun contarPorTipo(): List<Array<Any>>
+
+    @Query("""
+    select l.marca, count(l)
+    from LeituraAndroidEntity l
+    group by l.marca
+""")
+    fun contarPorMarca(): List<Array<Any>>
+
+
+    @Query("""
+        SELECT l FROM LeituraAndroidEntity l
+        WHERE l.dataHora BETWEEN :inicio AND :fim
+        ORDER BY l.dataHora DESC
     """)
     fun buscarPorPeriodo(
         @Param("inicio") inicio: LocalDateTime,
         @Param("fim") fim: LocalDateTime
     ): List<LeituraAndroidEntity>
+
 }
+
