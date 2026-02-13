@@ -8,6 +8,11 @@
 
   <h1 class="page-title">📦 Catálogo de Equipamentos</h1>
 
+  <div th:if="${erro}" class="alert-error">
+    <p th:text="${erro}"></p>
+  </div>
+
+
   <div class="card-grid">
 
     <!-- TIPOS -->

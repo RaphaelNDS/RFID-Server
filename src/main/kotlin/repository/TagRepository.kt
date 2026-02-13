@@ -28,17 +28,37 @@ interface TagNaoCadastradaRepository :
 }
 
 
-interface TipoEquipamentoRepository :
-    JpaRepository<TipoEquipamentoEntity, Long>
+interface TipoEquipamentoRepository : JpaRepository<TipoEquipamentoEntity, Long> {
+
+    fun findByNomeIgnoreCase(nome: String): Optional<TipoEquipamentoEntity>
+
+}
 
 interface MarcaRepository : JpaRepository<MarcaEntity, Long> {
+
+    fun findByNomeIgnoreCaseAndTipoId(nome: String, tipoId: Long): Optional<MarcaEntity>
+
     fun findByTipoId(tipoId: Long): List<MarcaEntity>
 }
 
-
 interface ModeloRepository : JpaRepository<ModeloEntity, Long> {
+
+    fun findByNomeIgnoreCaseAndMarcaId(nome: String, marcaId: Long): Optional<ModeloEntity>
+
     fun findByMarcaId(marcaId: Long): List<ModeloEntity>
 }
+
+//interface TipoEquipamentoRepository :
+//    JpaRepository<TipoEquipamentoEntity, Long>
+
+//interface MarcaRepository : JpaRepository<MarcaEntity, Long> {
+//    fun findByTipoId(tipoId: Long): List<MarcaEntity>
+//}
+//
+//
+//interface ModeloRepository : JpaRepository<ModeloEntity, Long> {
+//    fun findByMarcaId(marcaId: Long): List<ModeloEntity>
+//}
 
 interface LeituraAndroidRepository :
     JpaRepository<LeituraAndroidEntity, Long>,

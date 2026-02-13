@@ -39,22 +39,59 @@ class CatalogoViewController(
         model.addAttribute("modelos", catalogoService.listarModelos())
         return "modelos"
     }
+//    @PostMapping("/tipo")
+//    fun salvarTipo(req: TipoEquipamentoRequest): String {
+//        catalogoService.salvarTipo(req)
+//        return "redirect:/admin/catalogo"
+//    }
+//
+//    @PostMapping("/marca")
+//    fun salvarMarca(req: MarcaRequest): String {
+//        catalogoService.salvarMarca(req)
+//        return "redirect:/admin/catalogo"
+//    }
+//
+//    @PostMapping("/modelo")
+//    fun salvarModelo(req: ModeloRequest): String {
+//        catalogoService.salvarModelo(req)
+//        return "redirect:/admin/catalogo"
+//    }
+
+
     @PostMapping("/tipo")
-    fun salvarTipo(req: TipoEquipamentoRequest): String {
-        catalogoService.salvarTipo(req)
-        return "redirect:/admin/catalogo"
+    fun salvarTipo(req: TipoEquipamentoRequest, model: Model): String {
+        return try {
+            catalogoService.salvarTipo(req)
+            "redirect:/admin/catalogo"
+        } catch (e: IllegalArgumentException) {
+            model.addAttribute("erro", e.message)
+            carregar(model)
+            "catalogo"
+        }
     }
 
     @PostMapping("/marca")
-    fun salvarMarca(req: MarcaRequest): String {
-        catalogoService.salvarMarca(req)
-        return "redirect:/admin/catalogo"
+    fun salvarMarca(req: MarcaRequest, model: Model): String {
+        return try {
+            catalogoService.salvarMarca(req)
+            "redirect:/admin/catalogo"
+        } catch (e: IllegalArgumentException) {
+            model.addAttribute("erro", e.message)
+            carregar(model)
+            "catalogo"
+        }
     }
 
     @PostMapping("/modelo")
-    fun salvarModelo(req: ModeloRequest): String {
-        catalogoService.salvarModelo(req)
-        return "redirect:/admin/catalogo"
+    fun salvarModelo(req: ModeloRequest, model: Model): String {
+        return try {
+            catalogoService.salvarModelo(req)
+            "redirect:/admin/catalogo"
+        } catch (e: IllegalArgumentException) {
+            model.addAttribute("erro", e.message)
+            carregar(model)
+            "catalogo"
+        }
     }
 
 

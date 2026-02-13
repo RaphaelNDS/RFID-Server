@@ -16,7 +16,7 @@ class StatusService {
         return ServerStatusResponse(
             status = "ONLINE",
             horaServidor = hora,
-            versao = "1.2.1",
+            versao = "1.2.3",
             banco = "H2 (memória)"
         )
     }

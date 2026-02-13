@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*
 import org.example.request.MarcaRequest
 import org.example.request.ModeloRequest
 import org.example.request.TipoEquipamentoRequest
+import org.springframework.ui.Model
 
 @RestController
 @RequestMapping("/api/catalogo")
@@ -20,7 +21,7 @@ class CatalogoApiController(
     fun salvarTipo(@RequestBody req: TipoEquipamentoRequest) =
         catalogoService.salvarTipo(req)
 
-    @PostMapping("/marca")
+        @PostMapping("/marca")
     fun salvarMarca(@RequestBody req: MarcaRequest) =
         catalogoService.salvarMarca(req)
 
@@ -28,19 +29,31 @@ class CatalogoApiController(
     fun salvarModelo(@RequestBody req: ModeloRequest) =
         catalogoService.salvarModelo(req)
 
-    // ---------- GET ----------
-
-    // /api/catalogo/marcas?tipoId=1
     @GetMapping("/marcas")
-    fun marcasPorTipo(@RequestParam tipoId: Long): List<MarcaDTO> =
-        catalogoService.listarMarcasPorTipo(tipoId)
-            .map { MarcaDTO(it.id, it.nome) }
+    fun listarMarcas(@RequestParam tipoId: Long): List<MarcaDTO> {
+        return catalogoService
+            .listarMarcasPorTipo(tipoId)
+            .map { MarcaDTO(it.id!!, it.nome) }
+    }
 
-    // /api/catalogo/modelos?marcaId=1
+    // =============================
+    // LISTAR MODELOS POR MARCA
+    // =============================
     @GetMapping("/modelos")
-    fun modelosPorMarca(@RequestParam marcaId: Long): List<ModeloDTO> =
-        catalogoService.listarModelosPorMarca(marcaId)
-            .map { ModeloDTO(it.id, it.nome) }
+    fun listarModelos(@RequestParam marcaId: Long): List<ModeloDTO> {
+        return catalogoService
+            .listarModelosPorMarca(marcaId)
+            .map { ModeloDTO(it.id!!, it.nome) }
+    }
+
+
+//    @GetMapping("/marcas")
+//    fun marcasPorTipo(@RequestParam tipoId: Long): List<MarcaDTO> =
+//        catalogoService.listarMarcasPorTipo(tipoId)
+//            .map { MarcaDTO(it.id, it.nome) }
+//
+//    @GetMapping("/modelos")
+//    fun modelosPorMarca(@RequestParam marcaId: Long): List<ModeloDTO> =
+//        catalogoService.listarModelosPorMarca(marcaId)
+//            .map { ModeloDTO(it.id, it.nome) }
 }
-
-

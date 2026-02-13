@@ -273,3 +273,12 @@ ADMIN - CARDS SEMPRE ESCUROS
     border-bottom: 1px solid var(--border);
     font-size: 14px;
 }
+
+.alert-error {
+    background: #2c1e1e;
+    border: 1px solid #ff4d4d;
+    color: #ff4d4d;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
