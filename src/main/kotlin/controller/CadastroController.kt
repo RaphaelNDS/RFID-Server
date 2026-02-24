@@ -3,6 +3,7 @@ package org.example.controller
 import jakarta.transaction.Transactional
 import org.example.request.CadastroRequest
 import org.example.service.CatalogoService
+
 import org.example.service.RfidService
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model

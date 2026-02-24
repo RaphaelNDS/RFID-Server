@@ -1,177 +1,204 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
+<html lang="pt-br"
+      xmlns:th="http://www.thymeleaf.org"
       th:replace="layout/base :: layout(~{::title}, ~{::section})">
 
-<title>Catálogo de Equipamentos</title>
+<head>
+  <title>Catálogo de Equipamentos</title>
+</head>
 
 <section class="page-container">
 
-  <h1 class="page-title">📦 Catálogo de Equipamentos</h1>
+  <h1 class="page-title">Catálogo de Equipamentos</h1>
 
-  <div th:if="${erro}" class="alert-error">
-    <p th:text="${erro}"></p>
+  <div class="cards">
+    <div class="card">Tipos <span th:text="${tipos.size()}">0</span></div>
+    <div class="card">Marcas <span th:text="${marcas.size()}">0</span></div>
+    <div class="card">Modelos <span th:text="${modelos.size()}">0</span></div>
   </div>
 
+  <div class="grid">
 
-  <div class="card-grid">
-
-    <!-- TIPOS -->
-    <div class="card">
-      <h2>Tipos de Equipamento</h2>
-
-      <form class="form-grid"
-            th:action="@{/admin/catalogo/tipo}" method="post">
-        <input type="text" name="nome" placeholder="Nome do tipo" required>
-        <button type="submit">Adicionar</button>
-      </form>
-
-      <ul class="simple-list">
-        <li th:each="t : ${tipos}" th:text="${t.nome}"></li>
-      </ul>
-    </div>
-
-    <!-- MARCAS -->
-    <div class="card">
-      <h2>Marcas</h2>
-
-      <form class="form-grid"
-            th:action="@{/admin/catalogo/marca}" method="post">
-
-        <select name="tipoId" required>
-          <option value="">Tipo do equipamento</option>
-          <option th:each="t : ${tipos}"
-                  th:value="${t.id}"
-                  th:text="${t.nome}">
-          </option>
-        </select>
-
-        <input type="text" name="nome" placeholder="Nome da marca" required>
-        <button type="submit">Adicionar</button>
-      </form>
-
-      <ul class="simple-list">
-        <li th:each="m : ${marcas}">
-          <b th:text="${m.nome}"></b>
-          <small> — <span th:text="${m.tipo.nome}"></span></small>
+    <div class="box">
+      <h3>Tipos <button class="btn-primary" onclick="abrirDialog('tipo')">+ Novo</button></h3>
+      <ul class="list">
+        <li th:each="t : ${tipos}" th:attr="data-id=${t.id}">
+          <span th:text="${t.nome}"></span>
+          <div class="actions">
+            <button class="icon-btn" onclick="excluir(this,'tipo')">🗑</button>
+          </div>
         </li>
       </ul>
     </div>
 
-    <!-- MODELOS -->
-    <div class="card">
-      <h2>Modelos</h2>
+    <div class="box">
+      <h3>Marcas <button class="btn-primary" onclick="abrirDialog('marca')">+ Novo</button></h3>
+      <ul class="list">
+        <li th:each="m : ${marcas}" th:attr="data-id=${m.id}">
+          <span th:text="${m.nome}"></span>
+          <div class="actions">
+            <button class="icon-btn" onclick="excluir(this,'marca')">🗑</button>
+          </div>
+        </li>
+      </ul>
+    </div>
 
-      <form class="form-grid"
-            th:action="@{/admin/catalogo/modelo}" method="post">
-
-        <select name="marcaId" required>
-          <option value="">Marca</option>
-          <option th:each="m : ${marcas}"
-                  th:value="${m.id}"
-                  th:text="${m.nome}">
-          </option>
-        </select>
-
-        <input type="text" name="nome" placeholder="Nome do modelo" required>
-        <button type="submit">Adicionar</button>
-      </form>
-
-      <ul class="simple-list">
-        <li th:each="m : ${modelos}">
-          <b th:text="${m.nome}"></b>
-          <small> — <span th:text="${m.marca.nome}"></span></small>
+    <div class="box">
+      <h3>Modelos <button class="btn-primary" onclick="abrirDialog('modelo')">+ Novo</button></h3>
+      <ul class="list">
+        <li th:each="m : ${modelos}" th:attr="data-id=${m.id}">
+          <span th:text="${m.nome}"></span>
+          <div class="actions">
+            <button class="icon-btn" onclick="excluir(this,'modelo')">🗑</button>
+          </div>
         </li>
       </ul>
     </div>
 
   </div>
+
+  <!-- ===== MODAL ===== -->
+  <div class="alert-overlay" id="alertDialog">
+    <div class="alert-box">
+      <div class="alert-header" id="dialogTitulo"></div>
+      <div class="alert-body" id="dialogCampos"></div>
+      <div class="alert-actions">
+        <button class="btn-cancel" onclick="fecharDialog()">Cancelar</button>
+        <button class="btn-save" onclick="salvarDialog()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCRIPT ===== -->
+  <script>
+    let tipoAtual = null;
+
+    function abrirDialog(tipo){
+        tipoAtual = tipo;
+        let html = '';
+
+        if(tipo === 'tipo'){
+            html = `<input type="text" id="dialogNome" placeholder="Nome do tipo">`;
+        }
+
+        if(tipo === 'marca'){
+            html = `
+                <select id="selectTipo">
+                    <option value="">Selecione o tipo</option>
+                </select>
+                <input type="text" id="dialogNome" placeholder="Nome da marca">
+            `;
+        }
+
+        if(tipo === 'modelo'){
+            html = `
+                <select id="selectTipo">
+                    <option value="">Selecione o tipo</option>
+                </select>
+
+                <select id="selectMarca" disabled>
+                    <option value="">Selecione a marca</option>
+                </select>
+
+                <input type="text" id="dialogNome" placeholder="Nome do modelo">
+            `;
+        }
+
+        document.getElementById("dialogCampos").innerHTML = html;
+
+        if(tipo === 'marca' || tipo === 'modelo'){
+            carregarTipos();
+        }
+
+        if(tipo === 'modelo'){
+            document.getElementById("selectTipo").addEventListener("change", carregarMarcas);
+        }
+
+        document.getElementById("dialogTitulo").innerText = "Cadastrar " + tipo.toUpperCase();
+        document.getElementById("alertDialog").style.display="flex";
+    }
+
+    function carregarTipos(){
+        fetch('/api/catalogo/tipos')
+        .then(r => r.json())
+        .then(data => {
+            const sel = document.getElementById("selectTipo");
+            if(!sel) return;
+            sel.innerHTML = `<option value="">Selecione o tipo</option>`;
+            data.forEach(t=>{
+                sel.innerHTML += `<option value="${t.id}">${t.nome}</option>`;
+            });
+        });
+    }
+
+    function carregarMarcas(){
+        const tipoId = document.getElementById("selectTipo").value;
+        if(!tipoId) return;
+
+        fetch(`/api/catalogo/marcas?tipoId=${tipoId}`)
+        .then(r=>r.json())
+        .then(data=>{
+            const sel = document.getElementById("selectMarca");
+            sel.disabled = false;
+            sel.innerHTML = `<option value="">Selecione a marca</option>`;
+            data.forEach(m=>{
+                sel.innerHTML += `<option value="${m.id}">${m.nome}</option>`;
+            });
+        });
+    }
+
+    function salvarDialog(){
+        const nome = document.getElementById("dialogNome").value.trim();
+        if(!nome) return alert("Nome obrigatório");
+
+        let payload = { nome };
+
+        if(tipoAtual === 'marca'){
+            const tipoId = document.getElementById("selectTipo").value;
+            if(!tipoId) return alert("Selecione um tipo");
+            payload.tipoId = tipoId;
+        }
+
+        if(tipoAtual === 'modelo'){
+            const marcaId = document.getElementById("selectMarca").value;
+            if(!marcaId) return alert("Selecione uma marca");
+            payload.marcaId = marcaId;
+        }
+
+        fetch(`/api/catalogo/${tipoAtual}`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(payload)
+        })
+        .then(r=>{
+            if(!r.ok) return r.text().then(t=>{throw new Error(t)});
+            return r.json();
+        })
+        .then(()=>{
+            fecharDialog();
+            location.reload();
+        })
+    .catch(e=>{
+    const msg = e.message.includes("Marca já cadastrada")
+        ? "Já existe uma marca com esse nome para esse tipo."
+        : "Erro ao salvar registro.";
+    alert(msg);
+});
+    }
+
+    function excluir(btn,tipo){
+        if(!confirm("Deseja excluir?")) return;
+        const id = btn.closest("li").dataset.id;
+
+        fetch(`/api/catalogo/${tipo}/${id}`,{method:'DELETE'})
+        .then(()=>location.reload())
+        .catch(()=>alert("Erro ao excluir"));
+    }
+
+    function fecharDialog(){
+        document.getElementById("alertDialog").style.display="none";
+    }
+  </script>
 
 </section>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-<!--<!DOCTYPE html>-->
-<!--<html xmlns:th="http://www.thymeleaf.org"-->
-<!--      th:replace="layout/base :: layout(~{::title}, ~{::section})">-->
-
-<!--<title>Catálogo de Equipamentos</title>-->
-
-<!--<section>-->
-
-<!--  <h1>📦 Catálogo de Equipamentos</h1>-->
-
-<!--  &lt;!&ndash; ================= TIPOS ================= &ndash;&gt;-->
-<!--  <div class="card">-->
-<!--    <h2>Tipos de Equipamento</h2>-->
-
-<!--    <form th:action="@{/admin/catalogo/tipo}" method="post">-->
-<!--    <input type="text" name="nome" placeholder="Novo tipo" required>-->
-<!--      <button type="submit">Adicionar</button>-->
-<!--    </form>-->
-
-<!--    <ul>-->
-<!--      <li th:each="t : ${tipos}" th:text="${t.nome}"></li>-->
-<!--    </ul>-->
-<!--  </div>-->
-
-<!--  &lt;!&ndash; ================= MARCAS ================= &ndash;&gt;-->
-<!--  <div class="card">-->
-<!--    <h2>Marcas</h2>-->
-
-<!--    <form th:action="@{/admin/catalogo/marca}" method="post">-->
-<!--      <select name="tipoId" required>-->
-<!--        <option value="">Selecione o tipo</option>-->
-<!--        <option th:each="t : ${tipos}"-->
-<!--                th:value="${t.id}"-->
-<!--                th:text="${t.nome}">-->
-<!--        </option>-->
-<!--      </select>-->
-
-<!--      <input type="text" name="nome" placeholder="Nova marca" required>-->
-<!--      <button type="submit">Adicionar</button>-->
-<!--    </form>-->
-
-<!--    <ul>-->
-<!--      <li th:each="m : ${marcas}">-->
-<!--        <span th:text="${m.nome}"></span>-->
-<!--        <small> — <span th:text="${m.tipo.nome}"></span></small>-->
-<!--      </li>-->
-<!--    </ul>-->
-<!--  </div>-->
-
-<!--  &lt;!&ndash; ================= MODELOS ================= &ndash;&gt;-->
-<!--  <div class="card">-->
-<!--    <h2>Modelos</h2>-->
-
-<!--    <form th:action="@{/admin/catalogo/modelo}" method="post">-->
-<!--      <select name="marcaId" required>-->
-<!--        <option value="">Selecione a marca</option>-->
-<!--        <option th:each="m : ${marcas}"-->
-<!--                th:value="${m.id}"-->
-<!--                th:text="${m.nome}">-->
-<!--        </option>-->
-<!--      </select>-->
-
-<!--      <input type="text" name="nome" placeholder="Novo modelo" required>-->
-<!--      <button type="submit">Adicionar</button>-->
-<!--    </form>-->
-
-<!--    <ul>-->
-<!--      <li th:each="m : ${modelos}">-->
-<!--        <span th:text="${m.nome}"></span>-->
-<!--        <small> — <span th:text="${m.marca.nome}"></span></small>-->
-<!--      </li>-->
-<!--    </ul>-->
-<!--  </div>-->
-
-<!--</section>-->
-<!--</html>-->

@@ -10,14 +10,13 @@ class ModeloEntity(
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0,
+    var id: Long = 0,
 
     @Column(nullable = false)
-    val nome: String,
+    var nome: String,
 
     @JsonBackReference
     @ManyToOne
     @JoinColumn(name = "marca_id", nullable = false)
-    val marca: MarcaEntity
+    var marca: MarcaEntity
 )
-

@@ -1,5 +1,6 @@
 package org.example.model
 
+import com.fasterxml.jackson.annotation.JsonManagedReference
 import jakarta.persistence.*
 
 @Entity
@@ -8,13 +9,12 @@ class TipoEquipamentoEntity(
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long = 0,
+    var id: Long = 0,
 
     @Column(nullable = false, unique = true)
-    val nome: String,
+    var nome: String,
 
+    @JsonManagedReference   // ✅
     @OneToMany(mappedBy = "tipo", cascade = [CascadeType.ALL])
-    val marcas: List<MarcaEntity> = emptyList()
+    var marcas: List<MarcaEntity> = emptyList()
 )
-
-

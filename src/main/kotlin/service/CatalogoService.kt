@@ -17,12 +17,28 @@ interface CatalogoService {
     fun listarMarcasPorTipo(tipoId: Long): List<MarcaEntity>
     fun listarModelosPorMarca(marcaId: Long): List<ModeloEntity>
 
-    fun salvarTipo(req: TipoEquipamentoRequest)
-    fun salvarMarca(req: MarcaRequest)
-    fun salvarModelo(req: ModeloRequest)
+//    fun salvarTipo(req: TipoEquipamentoRequest): TipoEquipamentoEntity
+//    fun salvarMarca(req: MarcaRequest)
+//    fun salvarModelo(req: ModeloRequest)
+//
+//    fun editarTipo(id: Long, req: TipoEquipamentoRequest)
+//    fun editarMarca(id: Long, req: MarcaRequest)
+//    fun editarModelo(id: Long, req: ModeloRequest)
+
+    fun graficoModelosPorTipo(): Map<String, Long>
+
+    fun excluirTipo(id: Long)
+    fun excluirMarca(id: Long)
+    fun excluirModelo(id: Long)
+
+
+
+    fun salvarTipo(req: TipoEquipamentoRequest): TipoEquipamentoEntity
+    fun salvarMarca(req: MarcaRequest): MarcaEntity
+    fun salvarModelo(req: ModeloRequest): ModeloEntity
+
+    fun editarTipo(id: Long, req: TipoEquipamentoRequest): TipoEquipamentoEntity
+    fun editarMarca(id: Long, req: MarcaRequest): MarcaEntity
+    fun editarModelo(id: Long, req: ModeloRequest): ModeloEntity
+
 }
-
-
-
-
-

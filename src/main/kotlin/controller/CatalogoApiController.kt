@@ -12,48 +12,63 @@ import org.springframework.ui.Model
 @RestController
 @RequestMapping("/api/catalogo")
 class CatalogoApiController(
-    private val catalogoService: CatalogoService
+    private val service: CatalogoService
 ) {
 
-    // ---------- POST ----------
-
+    // CREATE
     @PostMapping("/tipo")
-    fun salvarTipo(@RequestBody req: TipoEquipamentoRequest) =
-        catalogoService.salvarTipo(req)
+    fun tipo(@RequestBody req: TipoEquipamentoRequest) =
+        service.salvarTipo(req)
 
-        @PostMapping("/marca")
-    fun salvarMarca(@RequestBody req: MarcaRequest) =
-        catalogoService.salvarMarca(req)
+    @PostMapping("/marca")
+    fun marca(@RequestBody req: MarcaRequest) =
+        service.salvarMarca(req)
 
     @PostMapping("/modelo")
-    fun salvarModelo(@RequestBody req: ModeloRequest) =
-        catalogoService.salvarModelo(req)
+    fun modelo(@RequestBody req: ModeloRequest) =
+        service.salvarModelo(req)
+
+    // LIST DEPENDENTE
+
+    @GetMapping("/tipos")
+    fun listarTipos() = service.listarTipos()
 
     @GetMapping("/marcas")
-    fun listarMarcas(@RequestParam tipoId: Long): List<MarcaDTO> {
-        return catalogoService
-            .listarMarcasPorTipo(tipoId)
-            .map { MarcaDTO(it.id!!, it.nome) }
-    }
+    fun marcas(@RequestParam tipoId: Long) =
+        service.listarMarcasPorTipo(tipoId).map {
+            MarcaDTO(it.id, it.nome)
+        }
 
-    // =============================
-    // LISTAR MODELOS POR MARCA
-    // =============================
     @GetMapping("/modelos")
-    fun listarModelos(@RequestParam marcaId: Long): List<ModeloDTO> {
-        return catalogoService
-            .listarModelosPorMarca(marcaId)
-            .map { ModeloDTO(it.id!!, it.nome) }
-    }
+    fun modelos(@RequestParam marcaId: Long) =
+        service.listarModelosPorMarca(marcaId).map {
+            ModeloDTO(it.id, it.nome)
+        }
 
+    // DELETE
+    @DeleteMapping("/tipo/{id}")
+    fun delTipo(@PathVariable id: Long) = service.excluirTipo(id)
 
-//    @GetMapping("/marcas")
-//    fun marcasPorTipo(@RequestParam tipoId: Long): List<MarcaDTO> =
-//        catalogoService.listarMarcasPorTipo(tipoId)
-//            .map { MarcaDTO(it.id, it.nome) }
-//
-//    @GetMapping("/modelos")
-//    fun modelosPorMarca(@RequestParam marcaId: Long): List<ModeloDTO> =
-//        catalogoService.listarModelosPorMarca(marcaId)
-//            .map { ModeloDTO(it.id, it.nome) }
+    @DeleteMapping("/marca/{id}")
+    fun delMarca(@PathVariable id: Long) = service.excluirMarca(id)
+
+    @DeleteMapping("/modelo/{id}")
+    fun delModelo(@PathVariable id: Long) = service.excluirModelo(id)
+
+    // UPDATE
+    @PutMapping("/tipo/{id}")
+    fun putTipo(@PathVariable id: Long, @RequestBody req: TipoEquipamentoRequest) =
+        service.editarTipo(id, req)
+
+    @PutMapping("/marca/{id}")
+    fun putMarca(@PathVariable id: Long, @RequestBody req: MarcaRequest) =
+        service.editarMarca(id, req)
+
+    @PutMapping("/modelo/{id}")
+    fun putModelo(@PathVariable id: Long, @RequestBody req: ModeloRequest) =
+        service.editarModelo(id, req)
+
+    // GRAFICO
+    @GetMapping("/grafico/modelos-por-tipo")
+    fun grafico() = service.graficoModelosPorTipo()
 }

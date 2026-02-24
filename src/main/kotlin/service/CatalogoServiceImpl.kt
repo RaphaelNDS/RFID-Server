@@ -19,120 +19,14 @@ class CatalogoServiceImpl(
     private val modeloRepo: ModeloRepository
 ) : CatalogoService {
 
-    override fun listarTipos(): List<TipoEquipamentoEntity> =
-        tipoRepo.findAll()
-
-    override fun listarMarcas(): List<MarcaEntity> =
-        marcaRepo.findAll()
-
-    override fun listarModelos(): List<ModeloEntity> =
-        modeloRepo.findAll()
-
-    override fun listarMarcasPorTipo(tipoId: Long): List<MarcaEntity> =
-        marcaRepo.findByTipoId(tipoId)
-
-    override fun listarModelosPorMarca(marcaId: Long): List<ModeloEntity> =
-        modeloRepo.findByMarcaId(marcaId)
-
-    // SALVAR TIPO
-
-    @Transactional
-    override fun salvarTipo(req: TipoEquipamentoRequest) {
-
-        val nome = req.nome.trim()
-
-        val existente = tipoRepo.findByNomeIgnoreCase(nome)
-
-        if (existente.isPresent) {
-            throw IllegalArgumentException("Tipo já cadastrado!")
-        }
-
-        tipoRepo.save(
-            TipoEquipamentoEntity(
-                nome = nome
-            )
-        )
-    }
-
-    // SALVAR MARCA
-
-    @Transactional
-    override fun salvarMarca(req: MarcaRequest) {
-
-        val nome = req.nome.trim()
-
-        val tipo = tipoRepo.findById(req.tipoId!!)
-            .orElseThrow { IllegalArgumentException("Tipo não encontrado") }
-
-        val existente = marcaRepo
-            .findByNomeIgnoreCaseAndTipoId(nome, tipo.id!!)
-
-        if (existente.isPresent) {
-            throw IllegalArgumentException("Marca já cadastrada para esse tipo!")
-        }
-
-        marcaRepo.save(
-            MarcaEntity(
-                nome = nome,
-                tipo = tipo
-            )
-        )
-    }
-
-
-    // SALVAR MODELO
-
-    @Transactional
-    override fun salvarModelo(req: ModeloRequest) {
-
-        val nome = req.nome.trim()
-
-        val marca = marcaRepo.findById(req.marcaId!!)
-            .orElseThrow { IllegalArgumentException("Marca não encontrada") }
-
-        val existente = modeloRepo
-            .findByNomeIgnoreCaseAndMarcaId(nome, marca.id!!)
-
-        if (existente.isPresent) {
-            throw IllegalArgumentException("Modelo já cadastrado para essa marca!")
-        }
-
-        modeloRepo.save(
-            ModeloEntity(
-                nome = nome,
-                marca = marca
-            )
-        )
-    }
-}
-
-
-
-
-
-
-/*
-import jakarta.transaction.Transactional
-import org.example.model.MarcaEntity
-import org.example.model.ModeloEntity
-import org.example.model.TipoEquipamentoEntity
-import org.example.repository.MarcaRepository
-import org.example.repository.ModeloRepository
-import org.example.repository.TipoEquipamentoRepository
-import org.example.request.MarcaRequest
-import org.example.request.ModeloRequest
-import org.example.request.TipoEquipamentoRequest
-import org.springframework.stereotype.Service
-
-@Service
-class CatalogoServiceImpl(
-    private val tipoRepo: TipoEquipamentoRepository,
-    private val marcaRepo: MarcaRepository,
-    private val modeloRepo: ModeloRepository
-) : CatalogoService {
+    /* =====================================================
+       LISTAGENS
+    ====================================================== */
 
     override fun listarTipos() = tipoRepo.findAll()
+
     override fun listarMarcas() = marcaRepo.findAll()
+
     override fun listarModelos() = modeloRepo.findAll()
 
     override fun listarMarcasPorTipo(tipoId: Long) =
@@ -141,96 +35,177 @@ class CatalogoServiceImpl(
     override fun listarModelosPorMarca(marcaId: Long) =
         modeloRepo.findByMarcaId(marcaId)
 
+    /* =====================================================
+       SALVAR TIPO
+    ====================================================== */
+
     @Transactional
-    override fun salvarTipo(req: TipoEquipamentoRequest) {
+    override fun salvarTipo(req: TipoEquipamentoRequest): TipoEquipamentoEntity {
 
-        val existente = tipoRepo.findByNomeIgnoreCase(req.nome.trim())
+        val nome = req.nome.trim()
 
-        if (existente.isPresent) {
+        require(nome.isNotBlank()) { "Nome do tipo não pode ser vazio" }
+
+        if (tipoRepo.findByNomeIgnoreCase(nome).isPresent) {
             throw IllegalArgumentException("Tipo já cadastrado!")
         }
 
-        val tipo = TipoEquipamentoEntity(
-            nome = req.nome.trim()
+        return tipoRepo.save(
+            TipoEquipamentoEntity(nome = nome)
         )
-
-        tipoRepo.save(tipo)
     }
 
+    /* =====================================================
+       SALVAR MARCA
+    ====================================================== */
+
     @Transactional
-    override fun salvarMarca(req: MarcaRequest) {
+    override fun salvarMarca(req: MarcaRequest): MarcaEntity {
+
+        val nome = req.nome.trim()
+        require(nome.isNotBlank()) { "Nome da marca não pode ser vazio" }
 
         val tipo = tipoRepo.findById(req.tipoId!!)
             .orElseThrow { IllegalArgumentException("Tipo não encontrado") }
 
-        val existente = marcaRepo
-            .findByNomeIgnoreCaseAndTipoId(req.nome.trim(), tipo.id!!)
-
-        if (existente.isPresent) {
+        if (marcaRepo.findByNomeIgnoreCaseAndTipoId(nome, tipo.id!!).isPresent) {
             throw IllegalArgumentException("Marca já cadastrada para esse tipo!")
         }
 
-        val marca = MarcaEntity(
-            nome = req.nome.trim(),
-            tipo = tipo
+        return marcaRepo.save(
+            MarcaEntity(
+                nome = nome,
+                tipo = tipo
+            )
         )
-
-        marcaRepo.save(marca)
     }
 
+    /* =====================================================
+       SALVAR MODELO
+    ====================================================== */
+
     @Transactional
-    override fun salvarModelo(req: ModeloRequest) {
+    override fun salvarModelo(req: ModeloRequest): ModeloEntity {
+
+        val nome = req.nome.trim()
+        require(nome.isNotBlank()) { "Nome do modelo não pode ser vazio" }
 
         val marca = marcaRepo.findById(req.marcaId!!)
             .orElseThrow { IllegalArgumentException("Marca não encontrada") }
 
-        val existente = modeloRepo
-            .findByNomeIgnoreCaseAndMarcaId(req.nome.trim(), marca.id!!)
-
-        if (existente.isPresent) {
+        if (modeloRepo.findByNomeIgnoreCaseAndMarcaId(nome, marca.id!!).isPresent) {
             throw IllegalArgumentException("Modelo já cadastrado para essa marca!")
         }
 
-        val modelo = ModeloEntity(
-            nome = req.nome.trim(),
-            marca = marca
+        return modeloRepo.save(
+            ModeloEntity(
+                nome = nome,
+                marca = marca
+            )
         )
-
-        modeloRepo.save(modelo)
     }
 
-//    @Transactional
-//    override fun salvarTipo(req: TipoEquipamentoRequest) {
-//        val tipo = TipoEquipamentoEntity(nome = req.nome)
-//        tipoRepo.save(tipo)
-//    }
+    /* =====================================================
+       EDITAR
+    ====================================================== */
 
+    @Transactional
+    override fun editarTipo(id: Long, req: TipoEquipamentoRequest): TipoEquipamentoEntity {
 
+        val tipo = tipoRepo.findById(id)
+            .orElseThrow { IllegalArgumentException("Tipo não encontrado") }
 
+        val novoNome = req.nome.trim()
+        require(novoNome.isNotBlank()) { "Nome inválido" }
 
-//    @Transactional
-//    override fun salvarMarca(req: MarcaRequest) {
-//        val tipo = tipoRepo.findById(req.tipoId!!)
-//            .orElseThrow { IllegalArgumentException("Tipo não encontrado") }
-//
-//        val marca = MarcaEntity(
-//            nome = req.nome,
-//            tipo = tipo
-//        )
-//        marcaRepo.save(marca)
-//    }
+        if (tipoRepo.findByNomeIgnoreCase(novoNome)
+                .filter { it.id != id }
+                .isPresent) {
+            throw IllegalArgumentException("Já existe outro tipo com esse nome")
+        }
 
-//    @Transactional
-//    override fun salvarModelo(req: ModeloRequest) {
-//        val marca = marcaRepo.findById(req.marcaId!!)
-//            .orElseThrow { IllegalArgumentException("Marca não encontrada") }
-//
-//        val modelo = ModeloEntity(
-//            nome = req.nome,
-//            marca = marca
-//        )
-//        modeloRepo.save(modelo)
-//    }
+        tipo.nome = novoNome
+        return tipoRepo.save(tipo)
+    }
+
+    @Transactional
+    override fun editarMarca(id: Long, req: MarcaRequest): MarcaEntity {
+
+        val marca = marcaRepo.findById(id)
+            .orElseThrow { IllegalArgumentException("Marca não encontrada") }
+
+        val novoNome = req.nome.trim()
+        require(novoNome.isNotBlank()) { "Nome inválido" }
+
+        if (marcaRepo
+                .findByNomeIgnoreCaseAndTipoId(novoNome, marca.tipo.id!!)
+                .filter { it.id != id }
+                .isPresent) {
+            throw IllegalArgumentException("Já existe outra marca com esse nome nesse tipo")
+        }
+
+        marca.nome = novoNome
+        return marcaRepo.save(marca)
+    }
+
+    @Transactional
+    override fun editarModelo(id: Long, req: ModeloRequest): ModeloEntity {
+
+        val modelo = modeloRepo.findById(id)
+            .orElseThrow { IllegalArgumentException("Modelo não encontrado") }
+
+        val novoNome = req.nome.trim()
+        require(novoNome.isNotBlank()) { "Nome inválido" }
+
+        if (modeloRepo
+                .findByNomeIgnoreCaseAndMarcaId(novoNome, modelo.marca.id!!)
+                .filter { it.id != id }
+                .isPresent) {
+            throw IllegalArgumentException("Já existe outro modelo com esse nome nessa marca")
+        }
+
+        modelo.nome = novoNome
+        return modeloRepo.save(modelo)
+    }
+
+    /* =====================================================
+       EXCLUSÃO SEGURA
+    ====================================================== */
+
+    @Transactional
+    override fun excluirTipo(id: Long) {
+
+        if (marcaRepo.existsByTipoId(id)) {
+            throw IllegalStateException("Não é possível excluir tipo com marcas vinculadas")
+        }
+
+        tipoRepo.deleteById(id)
+    }
+
+    @Transactional
+    override fun excluirMarca(id: Long) {
+
+        if (modeloRepo.existsByMarcaId(id)) {
+            throw IllegalStateException("Não é possível excluir marca com modelos vinculados")
+        }
+
+        marcaRepo.deleteById(id)
+    }
+
+    @Transactional
+    override fun excluirModelo(id: Long) {
+        modeloRepo.deleteById(id)
+    }
+
+    /* =====================================================
+       GRÁFICO
+    ====================================================== */
+
+    override fun graficoModelosPorTipo(): Map<String, Long> {
+
+        return tipoRepo.findAll()
+            .associate { tipo ->
+                tipo.nome to modeloRepo.countByMarcaTipoId(tipo.id!!)
+            }
+    }
 }
-
-*/
