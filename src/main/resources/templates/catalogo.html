@@ -7,20 +7,38 @@
   <title>Catálogo de Equipamentos</title>
 </head>
 
-<section class="page-container">
+<section class="page-container dashboard">
 
   <h1 class="page-title">Catálogo de Equipamentos</h1>
 
+  <!-- ===== DASHBOARD CARDS ===== -->
   <div class="cards">
-    <div class="card">Tipos <span th:text="${tipos.size()}">0</span></div>
-    <div class="card">Marcas <span th:text="${marcas.size()}">0</span></div>
-    <div class="card">Modelos <span th:text="${modelos.size()}">0</span></div>
+    <div class="card">
+      <h3>Tipos</h3>
+      <span th:text="${tipos.size()}">0</span>
+      <small>Total cadastrados</small>
+    </div>
+
+    <div class="card">
+      <h3>Marcas</h3>
+      <span th:text="${marcas.size()}">0</span>
+      <small>Ativas</small>
+    </div>
+
+    <div class="card">
+      <h3>Modelos</h3>
+      <span th:text="${modelos.size()}">0</span>
+      <small>Cadastrados</small>
+    </div>
   </div>
 
+  <!-- ===== GRID CRUD ===== -->
   <div class="grid">
 
     <div class="box">
-      <h3>Tipos <button class="btn-primary" onclick="abrirDialog('tipo')">+ Novo</button></h3>
+      <h3>Tipos
+        <button class="btn-primary" onclick="abrirDialog('tipo')">+ Novo</button>
+      </h3>
       <ul class="list">
         <li th:each="t : ${tipos}" th:attr="data-id=${t.id}">
           <span th:text="${t.nome}"></span>
@@ -32,7 +50,9 @@
     </div>
 
     <div class="box">
-      <h3>Marcas <button class="btn-primary" onclick="abrirDialog('marca')">+ Novo</button></h3>
+      <h3>Marcas
+        <button class="btn-primary" onclick="abrirDialog('marca')">+ Novo</button>
+      </h3>
       <ul class="list">
         <li th:each="m : ${marcas}" th:attr="data-id=${m.id}">
           <span th:text="${m.nome}"></span>
@@ -44,7 +64,9 @@
     </div>
 
     <div class="box">
-      <h3>Modelos <button class="btn-primary" onclick="abrirDialog('modelo')">+ Novo</button></h3>
+      <h3>Modelos
+        <button class="btn-primary" onclick="abrirDialog('modelo')">+ Novo</button>
+      </h3>
       <ul class="list">
         <li th:each="m : ${modelos}" th:attr="data-id=${m.id}">
           <span th:text="${m.nome}"></span>
@@ -111,10 +133,13 @@
         }
 
         if(tipo === 'modelo'){
-            document.getElementById("selectTipo").addEventListener("change", carregarMarcas);
+            document.getElementById("selectTipo")
+              .addEventListener("change", carregarMarcas);
         }
 
-        document.getElementById("dialogTitulo").innerText = "Cadastrar " + tipo.toUpperCase();
+        document.getElementById("dialogTitulo").innerText =
+          "Cadastrar " + tipo.toUpperCase();
+
         document.getElementById("alertDialog").style.display="flex";
     }
 
@@ -178,12 +203,12 @@
             fecharDialog();
             location.reload();
         })
-    .catch(e=>{
-    const msg = e.message.includes("Marca já cadastrada")
-        ? "Já existe uma marca com esse nome para esse tipo."
-        : "Erro ao salvar registro.";
-    alert(msg);
-});
+        .catch(e=>{
+            const msg = e.message.includes("Marca já cadastrada")
+                ? "Já existe uma marca com esse nome para esse tipo."
+                : "Erro ao salvar registro.";
+            alert(msg);
+        });
     }
 
     function excluir(btn,tipo){
@@ -202,3 +227,224 @@
 
 </section>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="pt-br"-->
+<!--      xmlns:th="http://www.thymeleaf.org"-->
+<!--      th:replace="layout/base :: layout(~{::title}, ~{::section})">-->
+
+<!--<head>-->
+<!--  <title>Catálogo de Equipamentos</title>-->
+<!--</head>-->
+
+<!--<section class="page-container">-->
+
+<!--  <h1 class="page-title">Catálogo de Equipamentos</h1>-->
+
+<!--  <div class="cards">-->
+<!--    <div class="card">Tipos <span th:text="${tipos.size()}">0</span></div>-->
+<!--    <div class="card">Marcas <span th:text="${marcas.size()}">0</span></div>-->
+<!--    <div class="card">Modelos <span th:text="${modelos.size()}">0</span></div>-->
+<!--  </div>-->
+
+<!--  <div class="grid">-->
+
+<!--    <div class="box">-->
+<!--      <h3>Tipos <button class="btn-primary" onclick="abrirDialog('tipo')">+ Novo</button></h3>-->
+<!--      <ul class="list">-->
+<!--        <li th:each="t : ${tipos}" th:attr="data-id=${t.id}">-->
+<!--          <span th:text="${t.nome}"></span>-->
+<!--          <div class="actions">-->
+<!--            <button class="icon-btn" onclick="excluir(this,'tipo')">🗑</button>-->
+<!--          </div>-->
+<!--        </li>-->
+<!--      </ul>-->
+<!--    </div>-->
+
+<!--    <div class="box">-->
+<!--      <h3>Marcas <button class="btn-primary" onclick="abrirDialog('marca')">+ Novo</button></h3>-->
+<!--      <ul class="list">-->
+<!--        <li th:each="m : ${marcas}" th:attr="data-id=${m.id}">-->
+<!--          <span th:text="${m.nome}"></span>-->
+<!--          <div class="actions">-->
+<!--            <button class="icon-btn" onclick="excluir(this,'marca')">🗑</button>-->
+<!--          </div>-->
+<!--        </li>-->
+<!--      </ul>-->
+<!--    </div>-->
+
+<!--    <div class="box">-->
+<!--      <h3>Modelos <button class="btn-primary" onclick="abrirDialog('modelo')">+ Novo</button></h3>-->
+<!--      <ul class="list">-->
+<!--        <li th:each="m : ${modelos}" th:attr="data-id=${m.id}">-->
+<!--          <span th:text="${m.nome}"></span>-->
+<!--          <div class="actions">-->
+<!--            <button class="icon-btn" onclick="excluir(this,'modelo')">🗑</button>-->
+<!--          </div>-->
+<!--        </li>-->
+<!--      </ul>-->
+<!--    </div>-->
+
+<!--  </div>-->
+
+<!--  &lt;!&ndash; ===== MODAL ===== &ndash;&gt;-->
+<!--  <div class="alert-overlay" id="alertDialog">-->
+<!--    <div class="alert-box">-->
+<!--      <div class="alert-header" id="dialogTitulo"></div>-->
+<!--      <div class="alert-body" id="dialogCampos"></div>-->
+<!--      <div class="alert-actions">-->
+<!--        <button class="btn-cancel" onclick="fecharDialog()">Cancelar</button>-->
+<!--        <button class="btn-save" onclick="salvarDialog()">Salvar</button>-->
+<!--      </div>-->
+<!--    </div>-->
+<!--  </div>-->
+
+<!--  &lt;!&ndash; ===== SCRIPT ===== &ndash;&gt;-->
+<!--  <script>-->
+<!--    let tipoAtual = null;-->
+
+<!--    function abrirDialog(tipo){-->
+<!--        tipoAtual = tipo;-->
+<!--        let html = '';-->
+
+<!--        if(tipo === 'tipo'){-->
+<!--            html = `<input type="text" id="dialogNome" placeholder="Nome do tipo">`;-->
+<!--        }-->
+
+<!--        if(tipo === 'marca'){-->
+<!--            html = `-->
+<!--                <select id="selectTipo">-->
+<!--                    <option value="">Selecione o tipo</option>-->
+<!--                </select>-->
+<!--                <input type="text" id="dialogNome" placeholder="Nome da marca">-->
+<!--            `;-->
+<!--        }-->
+
+<!--        if(tipo === 'modelo'){-->
+<!--            html = `-->
+<!--                <select id="selectTipo">-->
+<!--                    <option value="">Selecione o tipo</option>-->
+<!--                </select>-->
+
+<!--                <select id="selectMarca" disabled>-->
+<!--                    <option value="">Selecione a marca</option>-->
+<!--                </select>-->
+
+<!--                <input type="text" id="dialogNome" placeholder="Nome do modelo">-->
+<!--            `;-->
+<!--        }-->
+
+<!--        document.getElementById("dialogCampos").innerHTML = html;-->
+
+<!--        if(tipo === 'marca' || tipo === 'modelo'){-->
+<!--            carregarTipos();-->
+<!--        }-->
+
+<!--        if(tipo === 'modelo'){-->
+<!--            document.getElementById("selectTipo").addEventListener("change", carregarMarcas);-->
+<!--        }-->
+
+<!--        document.getElementById("dialogTitulo").innerText = "Cadastrar " + tipo.toUpperCase();-->
+<!--        document.getElementById("alertDialog").style.display="flex";-->
+<!--    }-->
+
+<!--    function carregarTipos(){-->
+<!--        fetch('/api/catalogo/tipos')-->
+<!--        .then(r => r.json())-->
+<!--        .then(data => {-->
+<!--            const sel = document.getElementById("selectTipo");-->
+<!--            if(!sel) return;-->
+<!--            sel.innerHTML = `<option value="">Selecione o tipo</option>`;-->
+<!--            data.forEach(t=>{-->
+<!--                sel.innerHTML += `<option value="${t.id}">${t.nome}</option>`;-->
+<!--            });-->
+<!--        });-->
+<!--    }-->
+
+<!--    function carregarMarcas(){-->
+<!--        const tipoId = document.getElementById("selectTipo").value;-->
+<!--        if(!tipoId) return;-->
+
+<!--        fetch(`/api/catalogo/marcas?tipoId=${tipoId}`)-->
+<!--        .then(r=>r.json())-->
+<!--        .then(data=>{-->
+<!--            const sel = document.getElementById("selectMarca");-->
+<!--            sel.disabled = false;-->
+<!--            sel.innerHTML = `<option value="">Selecione a marca</option>`;-->
+<!--            data.forEach(m=>{-->
+<!--                sel.innerHTML += `<option value="${m.id}">${m.nome}</option>`;-->
+<!--            });-->
+<!--        });-->
+<!--    }-->
+
+<!--    function salvarDialog(){-->
+<!--        const nome = document.getElementById("dialogNome").value.trim();-->
+<!--        if(!nome) return alert("Nome obrigatório");-->
+
+<!--        let payload = { nome };-->
+
+<!--        if(tipoAtual === 'marca'){-->
+<!--            const tipoId = document.getElementById("selectTipo").value;-->
+<!--            if(!tipoId) return alert("Selecione um tipo");-->
+<!--            payload.tipoId = tipoId;-->
+<!--        }-->
+
+<!--        if(tipoAtual === 'modelo'){-->
+<!--            const marcaId = document.getElementById("selectMarca").value;-->
+<!--            if(!marcaId) return alert("Selecione uma marca");-->
+<!--            payload.marcaId = marcaId;-->
+<!--        }-->
+
+<!--        fetch(`/api/catalogo/${tipoAtual}`,{-->
+<!--            method:'POST',-->
+<!--            headers:{'Content-Type':'application/json'},-->
+<!--            body:JSON.stringify(payload)-->
+<!--        })-->
+<!--        .then(r=>{-->
+<!--            if(!r.ok) return r.text().then(t=>{throw new Error(t)});-->
+<!--            return r.json();-->
+<!--        })-->
+<!--        .then(()=>{-->
+<!--            fecharDialog();-->
+<!--            location.reload();-->
+<!--        })-->
+<!--    .catch(e=>{-->
+<!--    const msg = e.message.includes("Marca já cadastrada")-->
+<!--        ? "Já existe uma marca com esse nome para esse tipo."-->
+<!--        : "Erro ao salvar registro.";-->
+<!--    alert(msg);-->
+<!--});-->
+<!--    }-->
+
+<!--    function excluir(btn,tipo){-->
+<!--        if(!confirm("Deseja excluir?")) return;-->
+<!--        const id = btn.closest("li").dataset.id;-->
+
+<!--        fetch(`/api/catalogo/${tipo}/${id}`,{method:'DELETE'})-->
+<!--        .then(()=>location.reload())-->
+<!--        .catch(()=>alert("Erro ao excluir"));-->
+<!--    }-->
+
+<!--    function fecharDialog(){-->
+<!--        document.getElementById("alertDialog").style.display="none";-->
+<!--    }-->
+<!--  </script>-->
+
+<!--</section>-->
+<!--</html>-->

@@ -11,12 +11,12 @@ class StatusService {
     fun getStatus(): ServerStatusResponse {
 
         val hora = LocalDateTime.now()
-            .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"))
+            .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
 
         return ServerStatusResponse(
             status = "ONLINE",
-            horaServidor = hora,
-            versao = "1.2.4",
+            horaServidor = "Desde $hora",
+            versao = "1.2.6",
             banco = "H2 (memória)"
         )
     }
