@@ -9,23 +9,25 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.example.request.ModeloRequest
 import org.example.request.TipoEquipamentoRequest
 import org.springframework.http.MediaType
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
+@PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
 @Controller
 @RequestMapping("/admin/catalogo")
 class CatalogoViewController(
     private val catalogoService: CatalogoService
 ) {
-
+    @PreAuthorize("@authService.temPermissao('CATALOGO','READ')")
     @GetMapping
     fun catalogo(model: Model): String {
         carregar(model)
         return "catalogo"
     }
-
+    @PreAuthorize("@authService.temPermissao('CATALOGO','CREATE')")
     @GetMapping("/tipos")
     fun tipos(model: Model): String {
         model.addAttribute("tipos", catalogoService.listarTipos())

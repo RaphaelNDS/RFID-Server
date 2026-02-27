@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Acesso ao Sistema</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+
+<body>
+<div class="page-container" style="max-width:420px; margin-top:80px;">
+  <div class="form-card">
+    <h2 class="page-title" style="text-align:center;">Acesso ao Sistema</h2>
+
+    <form action="/login" method="post" class="form-grid-compact">
+      <div class="field" style="grid-column: span 2;">
+        <label>Email</label>
+        <input name="username" placeholder="usuario@empresa.com" required>
+      </div>
+
+      <div class="field" style="grid-column: span 2;">
+        <label>Senha</label>
+        <input name="password" type="password" placeholder="••••••••" required>
+      </div>
+
+      <div class="form-actions-compact">
+        <button class="btn-primary">Entrar</button>
+      </div>
+    </form>
+  </div>
+</div>
+</body>
+</html>

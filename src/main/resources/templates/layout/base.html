@@ -5,284 +5,62 @@
 <head>
   <meta charset="UTF-8">
   <title th:replace="${title}">Sistema RFID</title>
-
   <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
 
 <body>
 
+<!-- HEADER -->
 <div th:replace="~{layout/header :: header}"></div>
 
-<main class="main-container">
-  <div th:replace="${content}"></div>
-</main>
+<!-- APP -->
+<div class="app-shell">
+  <main class="main-container">
+    <div class="page-container" th:replace="${content}"></div>
+  </main>
+</div>
 
+<!-- FOOTER -->
 <div th:replace="~{layout/footer :: footer}"></div>
 
+<!-- JS GLOBAL -->
 <script>
-  function toggleTheme() {
-      document.body.classList.toggle("dark");
-      localStorage.setItem("theme",
-          document.body.classList.contains("dark") ? "dark" : "light");
-  }
+  document.addEventListener("DOMContentLoaded", function(){
 
-  window.onload = function() {
-      const saved = localStorage.getItem("theme");
-      if (saved === "dark") {
-          document.body.classList.add("dark");
-      }
+    const profileBtn = document.getElementById("profileBtn");
+    const dropdown = document.getElementById("profileDropdown");
+
+    if(profileBtn && dropdown){
+
+      profileBtn.addEventListener("click", function(e){
+        e.stopPropagation();
+        dropdown.classList.toggle("active");
+      });
+
+      dropdown.addEventListener("click", function(e){
+        e.stopPropagation();
+      });
+
+      document.addEventListener("click", function(){
+        dropdown.classList.remove("active");
+      });
+    }
+
+    // tema
+    const saved = localStorage.getItem("theme");
+    if(saved === "dark"){
+      document.body.classList.add("dark");
+    }
+  });
+
+  function toggleTheme(){
+    document.body.classList.toggle("dark");
+    localStorage.setItem(
+      "theme",
+      document.body.classList.contains("dark") ? "dark" : "light"
+    );
   }
 </script>
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-<!--<!DOCTYPE html>-->
-<!--<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR"-->
-<!--      th:fragment="layout(title, content)">-->
-
-<!--<head>-->
-<!--  <meta charset="UTF-8">-->
-<!--  <title th:replace="${title}">Sistema RFID</title>-->
-
-<!--  <style>-->
-
-<!--    /* =========================-->
-<!--       VARIÁVEIS DE TEMA-->
-<!--    ========================= */-->
-
-<!--    :root {-->
-<!--        &#45;&#45;bg: #ffffff;-->
-<!--        &#45;&#45;text: #222;-->
-<!--        &#45;&#45;card: #f5f5f5;-->
-<!--        &#45;&#45;card-strong: #ffffff;-->
-<!--        &#45;&#45;border: #e0e0e0;-->
-<!--        &#45;&#45;table-bg: #ffffff;-->
-<!--        &#45;&#45;table-head: #f2f2f2;-->
-<!--        &#45;&#45;primary: #4CAF50;-->
-<!--    }-->
-
-<!--    /* DARK MODE */-->
-<!--    body.dark {-->
-<!--        &#45;&#45;bg: #121212;-->
-<!--        &#45;&#45;text: #f5f5f5;-->
-<!--        &#45;&#45;card: #1e1e1e;-->
-<!--        &#45;&#45;card-strong: #242424;-->
-<!--        &#45;&#45;border: #2c2c2c;-->
-<!--        &#45;&#45;table-bg: #ffffff; /* tabela continua clara */-->
-<!--        &#45;&#45;table-head: #f2f2f2;-->
-<!--        &#45;&#45;primary: #4CAF50;-->
-<!--    }-->
-
-<!--    /* =========================-->
-<!--       BASE-->
-<!--    ========================= */-->
-
-<!--    * {-->
-<!--        margin: 0;-->
-<!--        padding: 0;-->
-<!--        box-sizing: border-box;-->
-<!--    }-->
-
-<!--    body {-->
-<!--        font-family: "Segoe UI", Arial, sans-serif;-->
-<!--        background: var(&#45;&#45;bg);-->
-<!--        color: var(&#45;&#45;text);-->
-<!--        transition: 0.3s ease;-->
-<!--    }-->
-
-<!--    main {-->
-<!--        max-width: 1300px;-->
-<!--        margin: 30px auto;-->
-<!--        padding: 20px;-->
-<!--    }-->
-
-<!--    .page-title {-->
-<!--        margin-bottom: 25px;-->
-<!--    }-->
-
-<!--    /* =========================-->
-<!--       HEADER-->
-<!--    ========================= */-->
-
-<!--    .header {-->
-<!--        background: var(&#45;&#45;card);-->
-<!--        padding: 20px;-->
-<!--        border-bottom: 1px solid var(&#45;&#45;border);-->
-<!--    }-->
-
-<!--    .nav {-->
-<!--        display: flex;-->
-<!--        gap: 10px;-->
-<!--        flex-wrap: wrap;-->
-<!--    }-->
-
-<!--    .nav a {-->
-<!--        background: var(&#45;&#45;card-strong);-->
-<!--        color: var(&#45;&#45;text);-->
-<!--        padding: 8px 14px;-->
-<!--        border-radius: 8px;-->
-<!--        text-decoration: none;-->
-<!--        font-size: 14px;-->
-<!--        transition: 0.2s;-->
-<!--    }-->
-
-<!--    .nav a:hover {-->
-<!--        background: var(&#45;&#45;primary);-->
-<!--        color: white;-->
-<!--    }-->
-
-<!--    /* =========================-->
-<!--       BOTÃO TOGGLE-->
-<!--    ========================= */-->
-
-<!--    .theme-toggle {-->
-<!--        margin-left: auto;-->
-<!--        background: var(&#45;&#45;primary);-->
-<!--        border: none;-->
-<!--        padding: 6px 12px;-->
-<!--        border-radius: 20px;-->
-<!--        cursor: pointer;-->
-<!--        color: white;-->
-<!--        font-size: 13px;-->
-<!--    }-->
-
-<!--    /* =========================-->
-<!--       CARDS-->
-<!--    ========================= */-->
-
-<!--    .resumo-card,-->
-<!--    .filtro-card,-->
-<!--    .card {-->
-<!--        background: var(&#45;&#45;card);-->
-<!--        border: 1px solid var(&#45;&#45;border);-->
-<!--        border-radius: 12px;-->
-<!--        padding: 20px;-->
-<!--    }-->
-
-<!--    .card-grid {-->
-<!--        display: grid;-->
-<!--        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));-->
-<!--        gap: 20px;-->
-<!--    }-->
-
-<!--    .card:hover {-->
-<!--        transform: translateY(-4px);-->
-<!--    }-->
-
-<!--    /* =========================-->
-<!--       TABELA (SEMPRE CLARA)-->
-<!--    ========================= */-->
-
-<!--    .table-container {-->
-<!--        background: var(&#45;&#45;table-bg);-->
-<!--        padding: 15px;-->
-<!--        border-radius: 12px;-->
-<!--        overflow-x: auto;-->
-<!--    }-->
-
-<!--    table {-->
-<!--        width: 100%;-->
-<!--        border-collapse: collapse;-->
-<!--        color: #222;-->
-<!--    }-->
-
-<!--    thead {-->
-<!--        background: var(&#45;&#45;table-head);-->
-<!--    }-->
-
-<!--    th, td {-->
-<!--        padding: 10px;-->
-<!--        border-bottom: 1px solid #ddd;-->
-<!--    }-->
-
-<!--    tbody tr:nth-child(even) {-->
-<!--        background: #fafafa;-->
-<!--    }-->
-
-<!--    tbody tr:hover {-->
-<!--        background: #f1f1f1;-->
-<!--    }-->
-
-<!--    /* =========================-->
-<!--       FILTROS-->
-<!--    ========================= */-->
-
-<!--    .filtro-form {-->
-<!--        display: flex;-->
-<!--        flex-wrap: wrap;-->
-<!--        gap: 10px;-->
-<!--    }-->
-
-<!--    .filtro-form input {-->
-<!--        padding: 8px;-->
-<!--        border-radius: 6px;-->
-<!--        border: 1px solid var(&#45;&#45;border);-->
-<!--        background: var(&#45;&#45;card-strong);-->
-<!--        color: var(&#45;&#45;text);-->
-<!--    }-->
-
-<!--    .filtro-form button {-->
-<!--        background: var(&#45;&#45;primary);-->
-<!--        border: none;-->
-<!--        padding: 8px 15px;-->
-<!--        border-radius: 6px;-->
-<!--        cursor: pointer;-->
-<!--        color: white;-->
-<!--    }-->
-
-<!--    /* =========================-->
-<!--       FOOTER-->
-<!--    ========================= */-->
-
-<!--    .footer {-->
-<!--        background: var(&#45;&#45;card);-->
-<!--        padding: 15px;-->
-<!--        text-align: center;-->
-<!--        border-top: 1px solid var(&#45;&#45;border);-->
-<!--        margin-top: 40px;-->
-<!--    }-->
-
-<!--  </style>-->
-
-<!--  <script>-->
-<!--    function toggleTheme() {-->
-<!--        document.body.classList.toggle("dark");-->
-<!--        localStorage.setItem("theme",-->
-<!--            document.body.classList.contains("dark") ? "dark" : "light");-->
-<!--    }-->
-
-<!--    // carregar tema salvo-->
-<!--    window.onload = function() {-->
-<!--        const saved = localStorage.getItem("theme");-->
-<!--        if (saved === "dark") {-->
-<!--            document.body.classList.add("dark");-->
-<!--        }-->
-<!--    }-->
-<!--  </script>-->
-
-
-<!--</head>-->
-
-<!--<body>-->
-
-<!--<div th:replace="~{layout/header :: header}"></div>-->
-
-<!--<main>-->
-<!--  <div th:replace="${content}"></div>-->
-<!--</main>-->
-
-<!--<div th:replace="~{layout/footer :: footer}"></div>-->
-
-<!--</body>-->
-<!--</html>-->

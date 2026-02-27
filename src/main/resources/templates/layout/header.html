@@ -1,32 +1,108 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<body>
+<div th:fragment="header" class="header"
+     xmlns:th="http://www.thymeleaf.org"
+     xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
-<div th:fragment="header" class="header">
+  <div class="header-container">
 
-  <div style="display:flex; align-items:center;">
-    <div style="font-size:20px;">
-      🛠 Sistema de Gestão RFID
+    <!-- LOGO -->
+    <div class="header-left">
+      <div class="logo">
+        🛠 Sistema RFID
+      </div>
     </div>
 
-    <button class="theme-toggle" onclick="toggleTheme()">
-      🌙 / ☀
-    </button>
+    <!-- NAV -->
+    <nav class="nav">
+      <a th:href="@{/admin}">Home</a>
+
+      <a th:href="@{/admin/tags-cadastradas}"
+         th:if="${@authService.temPermissao('TAG','READ')}">Tags</a>
+
+      <a th:href="@{/admin/tags-pendentes}"
+         th:if="${@authService.temPermissao('TAG','READ')}">Pendentes</a>
+
+      <a th:href="@{/admin/cadastro}"
+         th:if="${@authService.temPermissao('TAG','CREATE')}">Cadastro</a>
+
+      <a th:href="@{/admin/leituras-android}"
+         th:if="${@authService.temPermissao('LEITURA','READ')}">Leituras</a>
+
+      <a th:href="@{/admin/catalogo}"
+         th:if="${@authService.temPermissao('CATALOGO','READ')}">Catálogo</a>
+
+      <a th:href="@{/admin/dashboard}"
+         th:if="${@authService.temPermissao('DASHBOARD','READ')}">Dashboard</a>
+
+      <a th:href="@{/admin/usuarios}"
+         sec:authorize="hasRole('ADMIN')">Usuários</a>
+    </nav>
+
+    <!-- RIGHT -->
+    <div class="header-right">
+
+      <!-- THEME -->
+      <button class="theme-toggle" type="button" onclick="toggleTheme()">
+        🌙 / ☀
+      </button>
+
+      <!-- PROFILE -->
+      <div class="profile-menu" id="profileMenu">
+        <div class="profile-name" id="profileBtn">
+          <span sec:authentication="name"></span> ⌄
+        </div>
+
+        <div class="profile-dropdown" id="profileDropdown">
+          <a th:href="@{/perfil}">Meu Perfil</a>
+          <a th:href="@{/perfil/senha}">Alterar Senha</a>
+          <a th:href="@{/perfil/email}">Alterar Email</a>
+
+          <form th:action="@{/logout}" method="post">
+            <button type="submit" class="logout-btn">Sair</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
   </div>
-
-  <nav class="nav">
-    <a th:href="@{/admin}">Home</a>
-    <a th:href="@{/admin/tags-cadastradas}">Tags</a>
-    <a th:href="@{/admin/tags-pendentes}">Pendentes</a>
-    <a th:href="@{/admin/cadastro}">Cadastro</a>
-    <a th:href="@{/admin/leituras-android}">Leituras</a>
-    <a th:href="@{/admin/catalogo}">Catálogo</a>
-    <a th:href="@{/admin/dashboard}">Dashboard</a>
-  </nav>
-
 </div>
 
+<!-- JS -->
+<script>
+  document.addEventListener("DOMContentLoaded", function(){
 
-</body>
-</html>
+    const profileBtn = document.getElementById("profileBtn");
+    const dropdown = document.getElementById("profileDropdown");
 
+    // segurança
+    if(profileBtn && dropdown){
+
+      profileBtn.addEventListener("click", function(e){
+        e.stopPropagation();
+        dropdown.classList.toggle("active");
+      });
+
+      dropdown.addEventListener("click", function(e){
+        e.stopPropagation(); // permite clicar nos links
+      });
+
+      document.addEventListener("click", function(){
+        dropdown.classList.remove("active"); // fecha só clicando fora
+      });
+    }
+
+    // tema
+    const saved = localStorage.getItem("theme");
+    if(saved === "dark"){
+      document.body.classList.add("dark");
+    }
+
+  });
+
+  function toggleTheme(){
+    document.body.classList.toggle("dark");
+    localStorage.setItem(
+      "theme",
+      document.body.classList.contains("dark") ? "dark" : "light"
+    );
+  }
+</script>

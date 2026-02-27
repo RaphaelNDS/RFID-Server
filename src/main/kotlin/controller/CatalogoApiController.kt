@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*
 import org.example.request.MarcaRequest
 import org.example.request.ModeloRequest
 import org.example.request.TipoEquipamentoRequest
-import org.springframework.ui.Model
+import org.springframework.security.access.prepost.PreAuthorize
 
 @RestController
 @RequestMapping("/api/catalogo")
@@ -15,60 +15,80 @@ class CatalogoApiController(
     private val service: CatalogoService
 ) {
 
-    // CREATE
+    /* ================= CREATE ================= */
+
+    @PreAuthorize("@authService.temPermissao('CATALOGO','CREATE')")
     @PostMapping("/tipo")
-    fun tipo(@RequestBody req: TipoEquipamentoRequest) =
+    fun criarTipo(@RequestBody req: TipoEquipamentoRequest) =
         service.salvarTipo(req)
 
+    @PreAuthorize("@authService.temPermissao('CATALOGO','CREATE')")
     @PostMapping("/marca")
-    fun marca(@RequestBody req: MarcaRequest) =
+    fun criarMarca(@RequestBody req: MarcaRequest) =
         service.salvarMarca(req)
 
+    @PreAuthorize("@authService.temPermissao('CATALOGO','CREATE')")
     @PostMapping("/modelo")
-    fun modelo(@RequestBody req: ModeloRequest) =
+    fun criarModelo(@RequestBody req: ModeloRequest) =
         service.salvarModelo(req)
 
-    // LIST DEPENDENTE
+    /* ================= READ ================= */
 
+    @PreAuthorize("@authService.temPermissao('CATALOGO','READ')")
     @GetMapping("/tipos")
     fun listarTipos() = service.listarTipos()
 
+    @PreAuthorize("@authService.temPermissao('CATALOGO','READ')")
     @GetMapping("/marcas")
     fun marcas(@RequestParam tipoId: Long) =
         service.listarMarcasPorTipo(tipoId).map {
             MarcaDTO(it.id, it.nome)
         }
 
+    @PreAuthorize("@authService.temPermissao('CATALOGO','READ')")
     @GetMapping("/modelos")
     fun modelos(@RequestParam marcaId: Long) =
         service.listarModelosPorMarca(marcaId).map {
             ModeloDTO(it.id, it.nome)
         }
 
-    // DELETE
-    @DeleteMapping("/tipo/{id}")
-    fun delTipo(@PathVariable id: Long) = service.excluirTipo(id)
+    /* ================= UPDATE ================= */
 
-    @DeleteMapping("/marca/{id}")
-    fun delMarca(@PathVariable id: Long) = service.excluirMarca(id)
-
-    @DeleteMapping("/modelo/{id}")
-    fun delModelo(@PathVariable id: Long) = service.excluirModelo(id)
-
-    // UPDATE
+    @PreAuthorize("@authService.temPermissao('CATALOGO','UPDATE')")
     @PutMapping("/tipo/{id}")
-    fun putTipo(@PathVariable id: Long, @RequestBody req: TipoEquipamentoRequest) =
+    fun atualizarTipo(@PathVariable id: Long, @RequestBody req: TipoEquipamentoRequest) =
         service.editarTipo(id, req)
 
+    @PreAuthorize("@authService.temPermissao('CATALOGO','UPDATE')")
     @PutMapping("/marca/{id}")
-    fun putMarca(@PathVariable id: Long, @RequestBody req: MarcaRequest) =
+    fun atualizarMarca(@PathVariable id: Long, @RequestBody req: MarcaRequest) =
         service.editarMarca(id, req)
 
+    @PreAuthorize("@authService.temPermissao('CATALOGO','UPDATE')")
     @PutMapping("/modelo/{id}")
-    fun putModelo(@PathVariable id: Long, @RequestBody req: ModeloRequest) =
+    fun atualizarModelo(@PathVariable id: Long, @RequestBody req: ModeloRequest) =
         service.editarModelo(id, req)
 
-    // GRAFICO
+    /* ================= DELETE ================= */
+
+    @PreAuthorize("@authService.temPermissao('CATALOGO','DELETE')")
+    @DeleteMapping("/tipo/{id}")
+    fun delTipo(@PathVariable id: Long) =
+        service.excluirTipo(id)
+
+    @PreAuthorize("@authService.temPermissao('CATALOGO','DELETE')")
+    @DeleteMapping("/marca/{id}")
+    fun delMarca(@PathVariable id: Long) =
+        service.excluirMarca(id)
+
+    @PreAuthorize("@authService.temPermissao('CATALOGO','DELETE')")
+    @DeleteMapping("/modelo/{id}")
+    fun delModelo(@PathVariable id: Long) =
+        service.excluirModelo(id)
+
+    /* ================= DASHBOARD ================= */
+
+    @PreAuthorize("@authService.temPermissao('CATALOGO','READ')")
     @GetMapping("/grafico/modelos-por-tipo")
     fun grafico() = service.graficoModelosPorTipo()
 }

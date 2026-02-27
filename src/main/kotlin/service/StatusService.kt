@@ -16,7 +16,7 @@ class StatusService {
         return ServerStatusResponse(
             status = "ONLINE",
             horaServidor = "Desde $hora",
-            versao = "1.2.6",
+            versao = "1.3.1",
             banco = "H2 (memória)"
         )
     }

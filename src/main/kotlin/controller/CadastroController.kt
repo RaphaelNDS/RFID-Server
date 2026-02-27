@@ -3,12 +3,13 @@ package org.example.controller
 import jakarta.transaction.Transactional
 import org.example.request.CadastroRequest
 import org.example.service.CatalogoService
-
+import org.springframework.security.access.prepost.PreAuthorize
 import org.example.service.RfidService
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 
+@PreAuthorize("hasRole('ADMIN')")
 @Controller
 @RequestMapping("/admin/cadastro")
 class CadastroController(
@@ -16,6 +17,7 @@ class CadastroController(
     private val catalogoService: CatalogoService
 ) {
 
+    @PreAuthorize("@authService.temPermissao('TAG','CREATE')")
     @GetMapping
     fun form(
         @RequestParam(required = false) tag: String?,
@@ -34,6 +36,7 @@ class CadastroController(
         return "cadastro"
     }
 
+    @PreAuthorize("@authService.temPermissao('TAG','CREATE')")
     @PostMapping("/salvar")
     fun salvar(@ModelAttribute cadastro: CadastroRequest): String {
         rfidService.cadastrarTag(cadastro)

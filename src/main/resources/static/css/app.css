@@ -545,3 +545,132 @@ body.dark .dashboard .cards .card {
 body.dark .dashboard .cards .card::before {
   background: linear-gradient(180deg, #3b82f6, #1d4ed8);
 }
+.profile-menu {
+  position: relative;
+  margin-left: 20px;
+}
+
+.profile-name {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.profile-dropdown a,
+.profile-dropdown button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* =====================================================
+   ESTRUTURA DO APP
+===================================================== */
+
+.app-shell{
+  min-height: calc(100vh - 120px);
+  padding-top: 20px;
+}
+
+.main-container{
+  max-width: 1400px;
+  margin: auto;
+  padding: 20px;
+}
+
+.page-container{
+  max-width: 1200px;
+  margin: auto;
+}
+
+/* =====================================================
+   DASHBOARD AJUSTE VISUAL
+===================================================== */
+
+.dashboard{
+  margin-top: 30px;
+}
+
+.dashboard-title{
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 25px;
+}
+.header{
+  position: relative;
+  z-index: 1000;
+}
+
+.header-container{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+
+.header-right{
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* PROFILE */
+.profile-menu{
+  position: relative;
+}
+
+.profile-name{
+  cursor: pointer;
+  user-select: none;
+}
+
+.profile-dropdown{
+  position: absolute;
+  top: 120%;
+  right: 0;
+  background: var(--card-bg, #fff);
+  min-width: 180px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-5px);
+  transition: .2s;
+  z-index: 5000;
+}
+
+.profile-dropdown.active{
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.profile-dropdown a,
+.profile-dropdown button{
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.profile-dropdown a:hover,
+.profile-dropdown button:hover{
+  background: rgba(0,0,0,0.05);
+}
+
+/* THEME */
+.theme-toggle{
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+}

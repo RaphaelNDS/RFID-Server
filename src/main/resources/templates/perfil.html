@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Meu Perfil</title>
+
+<section class="page-container">
+
+  <h1 class="page-title">Meu Perfil</h1>
+
+  <div class="grid">
+
+    <div class="card">
+      <h3>Informações do Usuário</h3>
+
+      <ul class="list">
+        <li><span>Nome:</span> <span sec:authentication="name"></span></li>
+        <li><span>Email:</span> <span th:text="${#authentication.principal.username}"></span></li>
+        <li><span>Perfil:</span> <span th:text="${#authentication.authorities}"></span></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Ações</h3>
+
+      <div class="actions">
+        <a th:href="@{/perfil/senha}" class="btn-primary">Alterar Senha</a><br><br>
+        <a th:href="@{/perfil/email}" class="btn-primary">Alterar Email</a>
+      </div>
+    </div>
+
+  </div>
+</section>
+</html>

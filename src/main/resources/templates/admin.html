@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
 
 <title>Painel Administrativo</title>
@@ -16,7 +17,7 @@
 
             <span th:text="${info.status}"
                   th:classappend="${info?.status == 'ONLINE'} ? 'text-ok' : 'text-error'">
-      </span>
+            </span>
 
             <small>🕒 <span th:text="${info.horaServidor}"></span></small>
             <small>🗄 Banco: <span th:text="${info.banco}"></span></small>
@@ -25,133 +26,64 @@
 
     </div>
 
-    <!-- ================= MÓDULOS ADMIN ================= -->
+    <!-- ================= MÓDULOS ================= -->
     <div class="cards">
 
-        <a th:href="@{/admin/tags-cadastradas}" class="card">
+        <!-- TAGS - somente quem tem permissão READ -->
+        <a th:if="${@authService.temPermissao('TAGS','READ')}"
+           th:href="@{/admin/tags-cadastradas}" class="card">
             <h3>Tags Cadastradas</h3>
             <span>📋</span>
             <small>Visualizar todas as tags registradas</small>
         </a>
 
-        <a th:href="@{/admin/tags-pendentes}" class="card">
+        <a th:if="${@authService.temPermissao('TAGS','READ')}"
+           th:href="@{/admin/tags-pendentes}" class="card">
             <h3>Tags Pendentes</h3>
             <span>⚠️</span>
             <small>Tags ainda não cadastradas</small>
         </a>
 
-        <a th:href="@{/admin/cadastro}" class="card">
+        <!-- CADASTRO TAGS -->
+        <a th:if="${@authService.temPermissao('TAGS','CREATE')}"
+           th:href="@{/admin/cadastro}" class="card">
             <h3>Cadastro de Tags</h3>
             <span>➕</span>
             <small>Adicionar novas tags ao sistema</small>
         </a>
 
-        <a th:href="@{/admin/catalogo}" class="card">
+        <!-- CATÁLOGO -->
+        <a th:if="${@authService.temPermissao('CATALOGO','READ')}"
+           th:href="@{/admin/catalogo}" class="card">
             <h3>Catálogo</h3>
             <span>📦</span>
             <small>Gerenciar equipamentos</small>
         </a>
 
-        <a th:href="@{/admin/leituras-android}" class="card destaque">
+        <!-- LEITURAS -->
+        <a th:if="${@authService.temPermissao('LEITURAS','READ')}"
+           th:href="@{/admin/leituras-android}" class="card destaque">
             <h3>Leituras Android</h3>
             <span>📱</span>
             <small>Monitorar leituras em tempo real</small>
         </a>
 
-        <a th:href="@{/admin/dashboard}" class="card destaque">
+        <!-- DASHBOARD -->
+        <a th:if="${@authService.temPermissao('DASHBOARD','READ')}"
+           th:href="@{/admin/dashboard}" class="card destaque">
             <h3>Dashboard</h3>
             <span>📊</span>
             <small>Visualizar gráficos e métricas</small>
+        </a>
+
+        <a sec:authorize="hasRole('ADMIN')"
+           th:href="@{/admin/usuarios}" class="card destaque">
+            <h3>Gestão de Usuários</h3>
+            <span>👥</span>
+            <small>Controle de acessos e permissões</small>
         </a>
 
     </div>
 
 </section>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!--<!DOCTYPE html>-->
-<!--<html xmlns:th="http://www.thymeleaf.org"-->
-<!--      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">-->
-
-<!--<title>Painel Administrativo</title>-->
-
-<!--<section class="page-container admin-dark dashboard">-->
-
-<!--  <h1 class="page-title">Painel Administrativo</h1>-->
-
-<!--  &lt;!&ndash; ================= STATUS DO SISTEMA ================= &ndash;&gt;-->
-<!--  <div class="cards" style="margin-bottom: 35px">-->
-
-<!--    <div class="card">-->
-<!--      <h3>Status do Servidor</h3>-->
-
-<!--      <span th:text="${info.status}"-->
-<!--            th:classappend="${info?.status == 'ONLINE'} ? 'text-ok' : 'text-error'">-->
-<!--      </span>-->
-
-<!--      <small>🕒 <span th:text="${info.horaServidor}"></span></small>-->
-<!--      <small>🗄 Banco: <span th:text="${info.banco}"></span></small>-->
-<!--      <small>🔖 Versão: <span th:text="${info.versao}"></span></small>-->
-<!--    </div>-->
-
-<!--  </div>-->
-
-<!--  &lt;!&ndash; ================= MÓDULOS ADMIN ================= &ndash;&gt;-->
-<!--  <div class="cards">-->
-
-<!--    <a th:href="@{/admin/tags-cadastradas}" class="card">-->
-<!--      <h3>Tags Cadastradas</h3>-->
-<!--      <span>📋</span>-->
-<!--      <small>Visualizar todas as tags registradas</small>-->
-<!--    </a>-->
-
-<!--    <a th:href="@{/admin/tags-pendentes}" class="card">-->
-<!--      <h3>Tags Pendentes</h3>-->
-<!--      <span>⚠️</span>-->
-<!--      <small>Tags ainda não cadastradas</small>-->
-<!--    </a>-->
-
-<!--    <a th:href="@{/admin/cadastro}" class="card">-->
-<!--      <h3>Cadastro de Tags</h3>-->
-<!--      <span>➕</span>-->
-<!--      <small>Adicionar novas tags ao sistema</small>-->
-<!--    </a>-->
-
-<!--    <a th:href="@{/admin/catalogo}" class="card">-->
-<!--      <h3>Catálogo</h3>-->
-<!--      <span>📦</span>-->
-<!--      <small>Gerenciar equipamentos</small>-->
-<!--    </a>-->
-
-<!--    <a th:href="@{/admin/leituras-android}" class="card destaque">-->
-<!--      <h3>Leituras Android</h3>-->
-<!--      <span>📱</span>-->
-<!--      <small>Monitorar leituras em tempo real</small>-->
-<!--    </a>-->
-
-<!--    <a th:href="@{/admin/dashboard}" class="card destaque">-->
-<!--      <h3>Dashboard</h3>-->
-<!--      <span>📊</span>-->
-<!--      <small>Visualizar gráficos e métricas</small>-->
-<!--    </a>-->
-
-<!--  </div>-->
-
-<!--</section>-->
-<!--</html>-->

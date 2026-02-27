@@ -3,8 +3,11 @@ package org.example.controller
 import jakarta.persistence.criteria.Predicate
 import org.example.model.LeituraAndroidEntity
 import org.example.repository.LeituraAndroidRepository
+import org.example.request.LeituraRequest
 import org.example.service.LeituraAndroidConsultaService
+import org.example.service.LeituraAndroidService
 import org.springframework.data.jpa.domain.Specification
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
@@ -13,8 +16,15 @@ import java.time.LocalDate
 @Controller
 @RequestMapping("/admin/leituras-android")
 class LeituraAndroidAdminController(
-    private val leituraRepo: LeituraAndroidRepository
+    private val leituraRepo: LeituraAndroidRepository,
+    private val leituraService: LeituraAndroidService
 ) {
+
+    @PreAuthorize("@authService.temPermissao('LEITURA','CREATE')")
+    @PostMapping("/api/android/leitura")
+    fun receberLeitura(@RequestBody req: LeituraRequest) {
+        leituraService.salvarLeitura(req.tag)
+    }
 
     @GetMapping
     fun listar(

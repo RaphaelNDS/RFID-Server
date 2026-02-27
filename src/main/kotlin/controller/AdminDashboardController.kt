@@ -5,6 +5,7 @@ import org.example.model.LeituraAndroidEntity
 import org.example.repository.LeituraAndroidRepository
 import org.example.service.LeituraAndroidConsultaService
 import org.springframework.data.jpa.domain.Specification
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
@@ -16,6 +17,10 @@ import java.time.LocalDateTime
 class AdminDashboardController(
     private val leituraRepo: LeituraAndroidRepository
 ) {
+
+    @PreAuthorize("@authService.temPermissao('DASHBOARD','READ')")
+    @GetMapping("/admin/dashboard")
+    fun dashboard(): String = "dashboard"
 
     @GetMapping("/dashboard")
     fun dashboard(

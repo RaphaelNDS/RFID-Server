@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Cadastro Inicial</title>
+
+<section class="page-container" style="max-width:900px; margin:auto;">
+
+  <div class="form-card">
+    <h2 class="page-title">Cadastro do Administrador Inicial</h2>
+
+    <p style="margin-bottom:20px; color:var(--muted);">
+      Sistema novo detectado. Crie o usuário administrador principal.
+    </p>
+
+    <form action="/admin/usuarios/cadastrar" method="post" class="form-grid-compact">
+
+      <div class="field">
+        <label>Nome</label>
+        <input name="nome" required>
+      </div>
+
+      <div class="field">
+        <label>Email</label>
+        <input name="email" type="email" required>
+      </div>
+
+      <div class="field">
+        <label>Senha</label>
+        <input name="senha" type="password" required>
+      </div>
+
+      <div class="field">
+        <label>Perfil</label>
+        <select name="role">
+          <option value="ADMIN">Administrador</option>
+        </select>
+      </div>
+
+      <div class="field" style="grid-column: span 2;">
+        <label>Módulos</label>
+        <div class="list">
+          <label><input type="checkbox" name="telas" value="CATALOGO"> Catálogo</label>
+          <label><input type="checkbox" name="telas" value="RFID"> RFID</label>
+          <label><input type="checkbox" name="telas" value="LEITURA"> Leituras</label>
+          <label><input type="checkbox" name="telas" value="DASHBOARD"> Dashboard</label>
+          <label><input type="checkbox" name="telas" value="USUARIO"> Usuários</label>
+        </div>
+      </div>
+
+      <div class="field" style="grid-column: span 2;">
+        <label>Permissões</label>
+        <div class="list">
+          <label><input type="checkbox" name="permissoes" value="CREATE"> Criar</label>
+          <label><input type="checkbox" name="permissoes" value="READ"> Visualizar</label>
+          <label><input type="checkbox" name="permissoes" value="UPDATE"> Editar</label>
+          <label><input type="checkbox" name="permissoes" value="DELETE"> Excluir</label>
+        </div>
+      </div>
+
+      <div class="form-actions-compact">
+        <button class="btn-primary">Criar Administrador</button>
+      </div>
+
+    </form>
+  </div>
+</section>
+</html>

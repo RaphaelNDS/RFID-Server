@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Cadastrar Usuário</title>
+
+<section class="page-container">
+
+  <h1 class="page-title">Cadastrar Usuário</h1>
+
+  <div class="form-card">
+    <form method="post" action="/admin/usuarios/novo" class="form-grid-compact">
+
+      <div class="field">
+        <label>Nome</label>
+        <input name="nome" required>
+      </div>
+
+      <div class="field">
+        <label>Email</label>
+        <input name="email" type="email" required>
+      </div>
+
+      <div class="field">
+        <label>Senha</label>
+        <input name="senha" type="password" required>
+      </div>
+
+      <div class="field">
+        <label>Perfil</label>
+        <select name="role">
+          <option value="USER">Usuário</option>
+          <option value="GESTOR">Gestor</option>
+          <option value="ADMIN">Administrador</option>
+        </select>
+      </div>
+
+      <div class="field" style="grid-column: span 2;">
+        <label>Módulos</label>
+        <div class="list">
+          <label><input type="checkbox" name="telas" value="TAGS"> Tags</label>
+          <label><input type="checkbox" name="telas" value="CATALOGO"> Catálogo</label>
+          <label><input type="checkbox" name="telas" value="DASHBOARD"> Dashboard</label>
+          <label><input type="checkbox" name="telas" value="LEITURAS"> Leituras</label>
+        </div>
+      </div>
+
+      <div class="field" style="grid-column: span 2;">
+        <label>Permissões</label>
+        <div class="list">
+          <label><input type="checkbox" name="permissoes" value="READ"> Ler</label>
+          <label><input type="checkbox" name="permissoes" value="CREATE"> Criar</label>
+          <label><input type="checkbox" name="permissoes" value="UPDATE"> Editar</label>
+          <label><input type="checkbox" name="permissoes" value="DELETE"> Excluir</label>
+        </div>
+      </div>
+
+      <div class="form-actions-compact">
+        <button class="btn-primary">Cadastrar Usuário</button>
+      </div>
+
+    </form>
+  </div>
+</section>
+</html>
