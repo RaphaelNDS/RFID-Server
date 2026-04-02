@@ -71,6 +71,8 @@
                 <th>Modelo</th>
                 <th>Patrimônio</th>
                 <th>Série</th>
+                <th>Movimento</th>
+                <th>Detalhes Expedição</th>
             </tr>
             </thead>
 
@@ -84,10 +86,12 @@
                 <td th:text="${l.modelo}"></td>
                 <td th:text="${l.patrimonio}"></td>
                 <td th:text="${l.numeroSerie}"></td>
+                <td th:text="${l.movimento ?: '-'}"></td>
+                <td th:text="${(l.motivoEntrada ?: '') + (l.destino != null ? ' | Destino: ' + l.destino : '')}"></td>
             </tr>
 
             <tr th:if="${#lists.isEmpty(leituras)}">
-                <td colspan="8" style="text-align:center; padding:20px;">
+                <td colspan="10" style="text-align:center; padding:20px;">
                     Nenhuma leitura encontrada.
                 </td>
             </tr>

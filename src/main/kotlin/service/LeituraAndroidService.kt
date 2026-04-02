@@ -2,6 +2,8 @@ package org.example.service
 
 import org.example.controller.LeituraAndroidStreamController
 import org.example.model.LeituraAndroidEntity
+import org.example.model.TipoMovimento
+import org.example.request.MovimentoExpedicaoRequest
 import org.example.repository.*
 import org.springframework.stereotype.Service
 
@@ -41,5 +43,21 @@ class LeituraAndroidService(
         leituraRepo.save(leitura)
 
         streamController.publicar(leitura)
+    }
+
+    fun registrarMovimento(leituraId: Long, req: MovimentoExpedicaoRequest) {
+
+        if (req.movimento == TipoMovimento.ENTRADA && req.motivoEntrada.isNullOrBlank()) {
+            throw RuntimeException("Informe o tipo de entrada")
+        }
+
+        val leitura = leituraRepo.findById(leituraId)
+            .orElseThrow { RuntimeException("Leitura não encontrada") }
+
+        leitura.movimento = req.movimento
+        leitura.motivoEntrada = req.motivoEntrada?.takeIf { it.isNotBlank() }
+        leitura.destino = req.destino?.takeIf { it.isNotBlank() }
+
+        leituraRepo.save(leitura)
     }
 }

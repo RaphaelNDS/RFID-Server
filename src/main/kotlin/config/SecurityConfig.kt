@@ -38,6 +38,7 @@ class SecurityConfig {
 
                 it.requestMatchers("/admin/**").authenticated()
                 it.requestMatchers("/dashboard").authenticated()
+                it.requestMatchers("/expedicao/**").authenticated()
                 it.requestMatchers("/perfil/**").authenticated()
 
                 it.anyRequest().authenticated()

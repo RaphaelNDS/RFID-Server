@@ -20,5 +20,16 @@ data class LeituraAndroidEntity(
     val patrimonio: String? = null,
     val numeroSerie: String? = null,
 
+    @Enumerated(EnumType.STRING)
+    var movimento: TipoMovimento? = null,
+
+    var motivoEntrada: String? = null,
+    var destino: String? = null,
+
     val dataHora: LocalDateTime = LocalDateTime.now()
 )
+
+enum class TipoMovimento {
+    ENTRADA,
+    SAIDA
+}

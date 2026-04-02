@@ -154,6 +154,8 @@ interface LeituraAndroidRepository :
         @Param("inicio") inicio: LocalDateTime,
         @Param("fim") fim: LocalDateTime
     ): List<LeituraAndroidEntity>
+
+    fun findTop100ByOrderByDataHoraDesc(): List<LeituraAndroidEntity>
 }
 
 

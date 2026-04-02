@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/base :: layout(~{::title}, ~{::section})">
+
+<title>Expedição</title>
+
+<section class="page-container">
+  <h1 class="page-title">🚚 Expedição - Entradas e Saídas</h1>
+
+  <p style="margin-bottom:12px; color:var(--muted);">
+    Nesta tela são mostradas as leituras do Android. Para cada leitura, registre se foi entrada ou saída.
+  </p>
+
+  <div th:if="${msg}" style="margin-bottom:12px; color:#0f766e;" th:text="${msg}"></div>
+  <div th:if="${erro}" style="margin-bottom:12px; color:#b91c1c;" th:text="${erro}"></div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+      <tr>
+        <th>Data/Hora</th>
+        <th>Tag</th>
+        <th>Equipamento</th>
+        <th>Movimento Atual</th>
+        <th>Ação</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr th:each="l : ${leituras}">
+        <td th:text="${#temporals.format(l.dataHora, 'dd/MM/yyyy HH:mm')}"></td>
+        <td th:text="${l.tag}"></td>
+        <td th:text="${(l.tipo ?: '-') + ' / ' + (l.marca ?: '-') + ' / ' + (l.modelo ?: '-')}"></td>
+        <td>
+          <span th:if="${l.movimento != null}" th:text="${l.movimento}"></span>
+          <span th:if="${l.movimento == null}">Pendente</span>
+          <br>
+          <small th:if="${l.motivoEntrada != null}" th:text="'Entrada: ' + ${l.motivoEntrada}"></small>
+          <small th:if="${l.destino != null}" th:text="'Saída destino: ' + ${l.destino}"></small>
+        </td>
+        <td>
+          <form th:action="@{'/expedicao/' + ${l.id} + '/movimento'}" method="post" class="form-grid-compact" style="grid-template-columns:repeat(1,minmax(140px,1fr)); gap:8px;">
+            <select name="movimento" required>
+              <option value="">Selecione</option>
+              <option th:value="${entrada}">Entrada</option>
+              <option th:value="${saida}">Saída</option>
+            </select>
+
+            <select name="motivoEntrada">
+              <option value="">Motivo da entrada</option>
+              <option th:each="m : ${tiposEntrada}" th:value="${m}" th:text="${m}"></option>
+            </select>
+
+            <input name="destino" placeholder="Destino (opcional na saída)">
+
+            <button type="submit">Salvar</button>
+          </form>
+        </td>
+      </tr>
+      <tr th:if="${#lists.isEmpty(leituras)}">
+        <td colspan="5" style="text-align:center; padding:18px;">Sem leituras ainda.</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+</html>

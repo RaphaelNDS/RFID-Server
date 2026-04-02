@@ -35,10 +35,16 @@
         Cadastro
       </a>
 
-      <!-- LEITURAS -->
+      <!-- LEITURAS ESTOQUE -->
       <a th:href="@{/admin/leituras-android}"
-         th:if="${@authService.temPermissao('LEITURA','READ')}">
+         sec:authorize="hasRole('ADMIN')">
         Leituras
+      </a>
+
+      <!-- EXPEDIÇÃO -->
+      <a th:href="@{/expedicao}"
+         sec:authorize="hasRole('USER')">
+        Expedição
       </a>
 
       <!-- CATÁLOGO -->
