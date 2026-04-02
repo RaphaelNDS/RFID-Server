@@ -2,39 +2,50 @@ package org.example.controller
 
 import jakarta.transaction.Transactional
 import org.example.request.CadastroRequest
+import org.example.service.CatalogoService
+import org.springframework.security.access.prepost.PreAuthorize
 import org.example.service.RfidService
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.*
 
+@PreAuthorize("hasRole('ADMIN')")
 @Controller
 @RequestMapping("/admin/cadastro")
-class CadastroController(private val service: RfidService) {
+class CadastroController(
+    private val rfidService: RfidService,
+    private val catalogoService: CatalogoService
+) {
 
-    @GetMapping("/form")
-    fun form(@RequestParam tag: String, model: Model): String {
+    @PreAuthorize("@authService.temPermissao('TAG','CREATE')")
+    @GetMapping
+    fun form(
+        @RequestParam(required = false) tag: String?,
+        model: Model
+    ): String {
 
-        model.addAttribute(
-            "cadastro",
-            CadastroRequest(
-                tag = tag,
-                modelo = "",
-                patrimonio = "",
-                numeroSerie = ""
-            )
-        )
+        val cadastro = CadastroRequest()
 
-        return "cadastro-form"
+        if (tag != null) {
+            cadastro.tag = tag
+        }
+
+        model.addAttribute("cadastro", cadastro)
+        carregarCombos(model)
+
+        return "cadastro"
     }
 
+    @PreAuthorize("@authService.temPermissao('TAG','CREATE')")
     @PostMapping("/salvar")
-    @Transactional
-    fun salvar(req: CadastroRequest): String {
-        service.cadastrarTag(req)
-        return "redirect:/admin/cadastro"
+    fun salvar(@ModelAttribute cadastro: CadastroRequest): String {
+        rfidService.cadastrarTag(cadastro)
+        return "redirect:/admin/tags-cadastradas"
     }
 
+    private fun carregarCombos(model: Model) {
+        model.addAttribute("tipos", catalogoService.listarTipos())
+        model.addAttribute("marcas", catalogoService.listarMarcas())
+        model.addAttribute("modelos", catalogoService.listarModelos())
+    }
 }

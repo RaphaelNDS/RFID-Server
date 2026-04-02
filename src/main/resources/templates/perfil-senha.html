@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Alterar Senha</title>
+
+<section class="page-container">
+
+  <h1 class="page-title">Alterar Senha</h1>
+
+  <div class="card">
+
+    <form th:action="@{/perfil/senha}" method="post">
+
+      <div class="field">
+        <label>Senha Atual</label>
+        <input type="password" name="senhaAtual" required>
+      </div>
+
+      <div class="field">
+        <label>Nova Senha</label>
+        <input type="password" name="novaSenha" required>
+      </div>
+
+      <div class="field">
+        <label>Confirmar Nova Senha</label>
+        <input type="password" name="confirmarSenha" required>
+      </div>
+
+      <button type="submit" class="btn-primary">Salvar</button>
+
+    </form>
+
+  </div>
+
+</section>
+</html>

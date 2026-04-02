@@ -1,45 +1,51 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <title>Tags não cadastradas</title>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ccc; padding: 8px; }
-    th { background: #f4f4f4; }
-    button { padding: 6px 10px; cursor: pointer; }
-  </style>
-</head>
-<body>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
 
-<h2>Tags não cadastradas</h2>
+<title>Tags Não Cadastradas</title>
 
-<table id="tbl">
-  <thead>
-  <tr>
-    <th>Tag</th>
-    <th>Data</th>
-    <th>Ação</th>
-  </tr>
-  </thead>
-  <tbody></tbody>
-</table>
+<section class="page-container">
 
-<hr>
+  <h1 class="page-title">⚠️ Tags Não Cadastradas</h1>
 
-<h3>Cadastrar Tag</h3>
+  <div class="table-container">
+    <table id="tbl">
+      <thead>
+      <tr>
+        <th>Tag</th>
+        <th>Data</th>
+        <th>Ação</th>
+      </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-<input id="tag" placeholder="Tag" readonly>
-<input id="modelo" placeholder="Modelo">
-<input id="patrimonio" placeholder="Patrimônio">
-<input id="serie" placeholder="Número de série">
+  <br><br>
 
-<button onclick="cadastrar()">Cadastrar</button>
+  <div class="card" style="max-width:600px">
+
+    <h3>📝 Cadastrar Tag</h3>
+    <br>
+
+    <div style="display:grid; gap:10px">
+
+      <input id="tag" placeholder="Tag" readonly>
+      <input id="modelo" placeholder="Modelo">
+      <input id="patrimonio" placeholder="Patrimônio">
+      <input id="serie" placeholder="Número de série">
+
+      <button onclick="cadastrar()">Cadastrar</button>
+
+    </div>
+
+  </div>
+
+</section>
 
 <script>
   async function carregar() {
-      const res = await fetch('/api/tags/nao-cadastradas')
+      const res = await fetch('/api/tags/naocadastradas')
       const data = await res.json()
 
       const tbody = document.querySelector('#tbl tbody')
@@ -82,5 +88,119 @@
   carregar()
 </script>
 
-</body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!--<!DOCTYPE html>-->
+<!--<html lang="pt-BR">-->
+<!--<head>-->
+<!--  <meta charset="UTF-8">-->
+<!--  <title>Tags não cadastradas</title>-->
+<!--  <style>-->
+<!--    body { font-family: Arial; padding: 20px; }-->
+<!--    table { border-collapse: collapse; width: 100%; }-->
+<!--    th, td { border: 1px solid #ccc; padding: 8px; }-->
+<!--    th { background: #f4f4f4; }-->
+<!--    button { padding: 6px 10px; cursor: pointer; }-->
+<!--  </style>-->
+<!--</head>-->
+<!--<body>-->
+
+<!--<h2>Tags não cadastradas</h2>-->
+
+<!--<table id="tbl">-->
+<!--  <thead>-->
+<!--  <tr>-->
+<!--    <th>Tag</th>-->
+<!--    <th>Data</th>-->
+<!--    <th>Ação</th>-->
+<!--  </tr>-->
+<!--  </thead>-->
+<!--  <tbody></tbody>-->
+<!--</table>-->
+
+<!--<hr>-->
+
+<!--<h3>Cadastrar Tag</h3>-->
+
+<!--<input id="tag" placeholder="Tag" readonly>-->
+<!--<input id="modelo" placeholder="Modelo">-->
+<!--<input id="patrimonio" placeholder="Patrimônio">-->
+<!--<input id="serie" placeholder="Número de série">-->
+
+<!--<button onclick="cadastrar()">Cadastrar</button>-->
+
+<!--<script>-->
+<!--  async function carregar() {-->
+<!--      const res = await fetch('/api/tags/naocadastradas')-->
+<!--      const data = await res.json()-->
+
+<!--      const tbody = document.querySelector('#tbl tbody')-->
+<!--      tbody.innerHTML = ''-->
+
+<!--      data.forEach(t => {-->
+<!--          const tr = document.createElement('tr')-->
+<!--          tr.innerHTML = `-->
+<!--              <td>${t.tag}</td>-->
+<!--              <td>${t.dataHora}</td>-->
+<!--              <td><button onclick="selecionar('${t.tag}')">Cadastrar</button></td>-->
+<!--          `-->
+<!--          tbody.appendChild(tr)-->
+<!--      })-->
+<!--  }-->
+
+<!--  function selecionar(tag) {-->
+<!--      document.getElementById('tag').value = tag-->
+<!--  }-->
+
+<!--  async function cadastrar() {-->
+
+<!--      const body = {-->
+<!--          tag: document.getElementById('tag').value,-->
+<!--          modelo: document.getElementById('modelo').value,-->
+<!--          patrimonio: document.getElementById('patrimonio').value,-->
+<!--          numeroSerie: document.getElementById('serie').value-->
+<!--      }-->
+
+<!--      await fetch('/api/tags/cadastrar', {-->
+<!--          method: 'POST',-->
+<!--          headers: {'Content-Type': 'application/json'},-->
+<!--          body: JSON.stringify(body)-->
+<!--      })-->
+
+<!--      alert('Cadastrado com sucesso!')-->
+<!--      carregar()-->
+<!--  }-->
+
+<!--  carregar()-->
+<!--</script>-->
+
+<!--</body>-->
+<!--</html>-->

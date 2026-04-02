@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Setup Inicial</title>
+
+<section class="page-container" style="max-width:600px; margin:auto;">
+
+  <div class="form-card">
+    <h2 class="page-title">Configuração Inicial</h2>
+
+    <form th:action="@{/setup}" method="post" class="form-grid-compact">
+
+      <div class="field">
+        <label>Nome</label>
+        <input type="text" name="nome" required>
+      </div>
+
+      <div class="field">
+        <label>Email</label>
+        <input type="email" name="email" required>
+      </div>
+
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" name="senha" required>
+      </div>
+
+      <div class="form-actions-compact" style="grid-column: span 2;">
+        <button class="btn-primary">Criar Administrador</button>
+      </div>
+
+    </form>
+  </div>
+</section>
+</html>

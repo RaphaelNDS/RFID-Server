@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      th:replace="layout/base :: layout(~{::title}, ~{::section})">
+
+<title>Dashboard</title>
+
+<section class="page-container">
+
+  <h2 class="page-title">📊 Dashboard Geral</h2>
+
+  <form method="get" class="filter-bar">
+    <label>Início:</label>
+    <input type="date" name="inicio">
+
+    <label>Fim:</label>
+    <input type="date" name="fim">
+
+    <button type="submit" class="btn-primary">Filtrar</button>
+  </form>
+
+  <!-- CONTADORES -->
+  <div class="top-cards">
+
+    <div class="info-card">
+      <h4>Total</h4>
+      <span th:text="${totalLeituras}">0</span>
+    </div>
+
+    <div class="info-card">
+      <h4>Hoje</h4>
+      <span th:text="${leiturasHoje}">0</span>
+    </div>
+
+    <div class="info-card">
+      <h4>Última Hora</h4>
+      <span th:text="${leiturasUltimaHora}">0</span>
+    </div>
+
+    <div class="info-card">
+      <h4>Crescimento</h4>
+      <span th:text="${crescimento} + '%'">0%</span>
+    </div>
+
+  </div>
+
+  <!-- GRÁFICOS -->
+  <div class="grafico-card">
+    <h3>Últimos 7 Dias</h3>
+    <canvas id="grafico7dias"></canvas>
+  </div>
+
+  <div class="grafico-card">
+    <h3>Por Tipo</h3>
+    <canvas id="graficoTipo"></canvas>
+  </div>
+
+  <div class="grafico-card">
+    <h3>Por Marca</h3>
+    <canvas id="graficoMarca"></canvas>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script th:inline="javascript">
+    const dados7 = [[${dados7dias}]];
+    const tipo   = [[${dadosTipo}]];
+    const marca  = [[${dadosMarca}]];
+
+    function criarGrafico(id, tipoGrafico, dados) {
+        new Chart(document.getElementById(id), {
+            type: tipoGrafico,
+            data: {
+                labels: Object.keys(dados),
+                datasets: [{
+                    data: Object.values(dados)
+                }]
+            }
+        });
+    }
+
+    criarGrafico("grafico7dias","line",dados7);
+    criarGrafico("graficoTipo","bar",tipo);
+    criarGrafico("graficoMarca","bar",marca);
+
+    // SSE
+    const evt = new EventSource('/admin/sse');
+    evt.onmessage = () => location.reload();
+  </script>
+
+</section>
+</html>

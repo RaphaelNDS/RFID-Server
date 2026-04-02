@@ -11,9 +11,7 @@
         padding: 40px;
     }
 
-    h1 {
-        margin-bottom: 10px;
-    }
+    h1 { margin-bottom: 10px; }
 
     .card {
         background: white;
@@ -23,14 +21,8 @@
         box-shadow: 0 2px 6px rgba(0,0,0,.1);
     }
 
-    ul {
-        list-style: none;
-        padding-left: 0;
-    }
-
-    li {
-        margin: 8px 0;
-    }
+    ul { list-style: none; padding-left: 0; }
+    li { margin: 8px 0; }
 
     a {
         text-decoration: none;
@@ -38,9 +30,7 @@
         font-weight: bold;
     }
 
-    a:hover {
-        text-decoration: underline;
-    }
+    a:hover { text-decoration: underline; }
 
     .tag {
         background: #e0e0e0;
@@ -54,54 +44,92 @@
 <body>
 
 <h1>📡 Sistema RFID – Painel Principal</h1>
-<p>Servidor rodando em <b>localhost:8082</b></p>
+<p>Servidor rodando em <b>http://localhost:8082</b></p>
 
+<!-- ================= CONSULTAS ================= -->
 <div class="card">
   <h2>🔍 Consultas</h2>
   <ul>
     <li>
-      <a href="/api/tags/">Buscar tag por EPC</a>
+      <a href="/api/tags/EXEMPLO_EPC">Buscar tag por EPC</a>
       <span class="tag">GET</span>
+      <small>→ troque <b>EXEMPLO_EPC</b> pela etiqueta real</small>
     </li>
   </ul>
 </div>
 
+<!-- ================= ADMIN TAGS ================= -->
 <div class="card">
-  <h2>📦 Tags Cadastradas</h2>
+  <h2>👨‍💼 Administração de Tags</h2>
   <ul>
     <li>
-      <a href="/api/tags/admin">Listar todas as tags</a>
-      <span class="tag">GET</span>
+      <a href="/admin/tags-cadastradas">Ver tags cadastradas</a>
+      <span class="tag">WEB</span>
     </li>
-  </ul>
-</div>
-
-<div class="card">
-  <h2>⚠️ Tags Não Cadastradas</h2>
-  <ul>
     <li>
-      <a href="/api/tags/naocadastradas">Ver pendentes</a>
-      <span class="tag">GET</span>
-    </li>
-  </ul>
-</div>
-
-<div class="card">
-  <h2>📝 Cadastro</h2>
-  <ul>
-    <li>
-      <a href="/admin/cadastro">Tela de cadastro manual</a>
+      <a href="/admin/tags-pendentes">Cadastrar tags pendentes</a>
       <span class="tag">WEB</span>
     </li>
   </ul>
 </div>
 
+<!-- ================= CATÁLOGO ================= -->
 <div class="card">
-  <h2>🔧 Utilitários</h2>
+  <h2>📦 Catálogo de Equipamentos</h2>
   <ul>
     <li>
-      <a href="/actuator/health">Status do servidor</a>
-      <span class="tag">SPRING</span>
+      <a href="/admin/catalogo">Cadastro</a>
+      <span class="tag">WEB</span>
+    </li>
+    <li>
+      <a href="/admin/catalogo/tipos">Tipos de equipamento</a>
+      <span class="tag">WEB</span>
+    </li>
+    <li>
+      <a href="/admin/catalogo/marcas">Marcas</a>
+      <span class="tag">WEB</span>
+    </li>
+    <li>
+      <a href="/admin/catalogo/modelos">Modelos</a>
+      <span class="tag">WEB</span>
+    </li>
+  </ul>
+</div>
+
+<!-- ================= NÃO CADASTRADAS ================= -->
+<div class="card">
+  <h2>⚠️ Tags Não Cadastradas (API)</h2>
+  <ul>
+    <li>
+      <a href="/api/tags/naocadastradas">Listar pendentes</a>
+      <span class="tag">GET</span>
+    </li>
+  </ul>
+</div>
+
+<!-- ================= CADASTRO VIA API ================= -->
+<div class="card">
+  <h2>📝 Cadastro via API</h2>
+  <ul>
+    <li>
+      <a href="/api/tags/cadastrar">Cadastrar tag</a>
+      <span class="tag">POST</span>
+      <small>→ usar via Postman / App</small>
+    </li>
+  </ul>
+</div>
+
+<!-- ================= UTIL ================= -->
+<div class="card">
+  <h2>📊 Servidor</h2>
+  <ul>
+    <li>
+      <a href="/status">Status do servidor</a>
+      <span class="tag">WEB</span>
+    </li>
+    <li>
+      <a href="/api/status">Status (API)</a>
+      <span class="tag">GET</span>
     </li>
   </ul>
 </div>

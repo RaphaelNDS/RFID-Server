@@ -1,0 +1,676 @@
+/* =====================================================
+   SISTEMA DE TEMA (DESIGN SYSTEM)
+===================================================== */
+
+:root {
+  --bg: #f6f8fb;
+  --text: #1f2937;
+  --card: #ffffff;
+  --card-strong: #ffffff;
+  --border: #e5e7eb;
+  --table-bg: #ffffff;
+  --table-head: #f9fafb;
+
+  --primary: #2563eb;
+  --primary-dark: #1e40af;
+  --danger: #dc2626;
+
+  --muted: #6b7280;
+  --shadow-sm: 0 2px 6px rgba(0,0,0,.04);
+  --shadow-md: 0 8px 20px rgba(0,0,0,.06);
+}
+
+/* ================= DARK MODE ================= */
+
+body.dark {
+  --bg: #0f172a;
+  --text: #e5e7eb;
+  --card: #111827;
+  --card-strong: #0b1220;
+  --border: #1f2937;
+  --table-bg: #0b1220;
+  --table-head: #111827;
+
+  --muted: #9ca3af;
+  --shadow-sm: 0 2px 6px rgba(0,0,0,.4);
+  --shadow-md: 0 10px 30px rgba(0,0,0,.6);
+}
+
+/* =====================================================
+   RESET
+===================================================== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* =====================================================
+   BASE
+===================================================== */
+
+body {
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  transition: background .3s ease, color .3s ease;
+}
+
+/* =====================================================
+   LAYOUT
+===================================================== */
+
+.main-container {
+  max-width: 1300px;
+  margin: 30px auto;
+  padding: 20px;
+}
+
+.page-container {
+  max-width: 1200px;
+  margin: auto;
+  padding: 30px;
+}
+
+.page-title{
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -.5px;
+  margin-bottom: 25px;
+}
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.header {
+  background: var(--card);
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.nav {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.nav a {
+  background: var(--card-strong);
+  color: var(--text);
+  padding: 8px 14px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 14px;
+  transition: .2s;
+}
+
+.nav a:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.theme-toggle {
+  margin-left: auto;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border: none;
+  padding: 6px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  color: white;
+  font-size: 13px;
+  box-shadow: 0 4px 10px rgba(37,99,235,.25);
+}
+
+/* =====================================================
+   CARDS
+===================================================== */
+
+.card,
+.box,
+.list-card,
+.form-card,
+.form-card-compact {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: var(--shadow-sm);
+  transition: .25s ease;
+}
+
+.card:hover,
+.box:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 22px;
+  margin-bottom: 35px;
+}
+
+.cards .card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cards .card span {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.box h3{
+  font-size: 16px;
+  font-weight: 700;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:18px;
+}
+
+/* =====================================================
+   GRID
+===================================================== */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 25px;
+}
+
+/* =====================================================
+   LISTAS
+===================================================== */
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list li{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 0;
+  border-bottom:1px solid var(--border);
+  font-size:14px;
+}
+
+.list li span{
+  font-weight:500;
+}
+
+.actions button,
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  margin-left: 6px;
+  color: var(--text);
+  transition:.2s;
+}
+
+.actions button:hover,
+.icon-btn:hover {
+  transform: scale(1.15);
+  color: var(--primary);
+}
+
+/* =====================================================
+   TABELAS
+===================================================== */
+
+.table-container {
+  background: var(--table-bg);
+  padding: 15px;
+  border-radius: 14px;
+  overflow-x: auto;
+  box-shadow: var(--shadow-sm);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text);
+}
+
+thead {
+  background: var(--table-head);
+}
+
+th, td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+tbody tr:nth-child(even) {
+  background: var(--card);
+}
+
+tbody tr:hover {
+  background: var(--card-strong);
+}
+
+/* =====================================================
+   FORMULÁRIOS
+===================================================== */
+
+form {
+  margin-bottom: 20px;
+}
+
+input, select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card-strong);
+  color: var(--text);
+  transition:.2s;
+}
+
+input:focus, select:focus{
+  outline:none;
+  border:1px solid var(--primary);
+  box-shadow:0 0 0 3px rgba(37,99,235,.15);
+}
+
+/* =====================================================
+   BOTÕES
+===================================================== */
+
+button,
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border: none;
+  padding: 8px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  color: white;
+  font-weight: 600;
+  transition: .2s;
+  box-shadow: 0 4px 10px rgba(37,99,235,.25);
+}
+
+button:hover,
+.btn-primary:hover {
+  transform:translateY(-1px);
+  box-shadow:0 6px 14px rgba(37,99,235,.35);
+}
+
+/* =====================================================
+   STATUS
+===================================================== */
+
+.text-ok { color: #22c55e; font-weight: bold; }
+.text-error { color: var(--danger); font-weight: bold; }
+
+/* =====================================================
+   FORM COMPACTO
+===================================================== */
+
+.form-grid-compact {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px 25px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.field label {
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing:.6px;
+}
+
+.status-text {
+  font-size: 11px;
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.form-actions-compact {
+  grid-column: span 2;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+/* =====================================================
+   MODAL / ALERT
+===================================================== */
+
+.alert-overlay,
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modal.ativo,
+.alert-overlay.ativo {
+  display: flex;
+}
+
+.alert-box,
+.modal-box {
+  background: var(--card-strong);
+  color: var(--text);
+  padding: 30px;
+  border-radius: 20px;
+  min-width: 320px;
+  max-width: 440px;
+  box-shadow: 0 20px 50px rgba(0,0,0,.35);
+  animation: fadeIn .2s ease;
+}
+
+.alert-header{
+  font-size:18px;
+  font-weight:700;
+  margin-bottom:18px;
+}
+
+.alert-actions,
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.btn-cancel {
+  background: var(--border);
+  color: var(--text);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.btn-save {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+/* =====================================================
+   FOOTER
+===================================================== */
+
+.footer {
+  background: var(--card);
+  padding: 15px;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  margin-top: 40px;
+  color: var(--muted);
+}
+
+/* =====================================================
+   ADMIN THEME — LIGHT (PROFISSIONAL)
+===================================================== */
+
+.admin-dark {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+/* cards */
+.admin-dark .card{
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #1f2937;
+}
+
+/* títulos */
+.admin-dark .card h3{
+  color: #334155;
+}
+
+/* textos secundários */
+.admin-dark .card small{
+  color: #64748b;
+}
+
+/* números/destaques */
+.admin-dark .card span{
+  color: #0f172a;
+}
+
+/* hover */
+.admin-dark .card:hover{
+  transform: translateY(-6px);
+  box-shadow: 0 16px 35px rgba(0,0,0,.08);
+  border-color: #cbd5f5;
+}
+
+/* =====================================================
+   ANIMAÇÕES
+===================================================== */
+
+@keyframes fadeIn {
+  from { transform: scale(.95); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* =====================================================
+   DASHBOARD CARDS (EXCLUSIVO)
+===================================================== */
+
+.dashboard .cards {
+  gap: 26px;
+}
+
+.dashboard .cards .card {
+  position: relative;
+  overflow: hidden;
+  border: none;
+  padding: 26px 26px 24px 26px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, var(--card), var(--card-strong));
+  box-shadow: 0 12px 30px rgba(0,0,0,.06);
+  transition: .25s ease;
+}
+
+.dashboard .cards .card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 40px rgba(0,0,0,.10);
+}
+
+/* faixa decorativa lateral */
+.dashboard .cards .card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 6px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--primary), var(--primary-dark));
+  border-radius: 6px;
+}
+
+/* título do card */
+.dashboard .cards .card h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  margin-bottom: 10px;
+}
+
+/* número principal */
+.dashboard .cards .card span {
+  font-size: 38px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+}
+
+/* subtítulo / descrição */
+.dashboard .cards .card small {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* versão dark */
+body.dark .dashboard .cards .card {
+  background: linear-gradient(135deg, #0b1220, #111827);
+  box-shadow: 0 18px 40px rgba(0,0,0,.6);
+}
+
+body.dark .dashboard .cards .card::before {
+  background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+}
+.profile-menu {
+  position: relative;
+  margin-left: 20px;
+}
+
+.profile-name {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.profile-dropdown a,
+.profile-dropdown button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* =====================================================
+   ESTRUTURA DO APP
+===================================================== */
+
+.app-shell{
+  min-height: calc(100vh - 120px);
+  padding-top: 20px;
+}
+
+.main-container{
+  max-width: 1400px;
+  margin: auto;
+  padding: 20px;
+}
+
+.page-container{
+  max-width: 1200px;
+  margin: auto;
+}
+
+/* =====================================================
+   DASHBOARD AJUSTE VISUAL
+===================================================== */
+
+.dashboard{
+  margin-top: 30px;
+}
+
+.dashboard-title{
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 25px;
+}
+.header{
+  position: relative;
+  z-index: 1000;
+}
+
+.header-container{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+
+.header-right{
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* PROFILE */
+.profile-menu{
+  position: relative;
+}
+
+.profile-name{
+  cursor: pointer;
+  user-select: none;
+}
+
+.profile-dropdown{
+  position: absolute;
+  top: 120%;
+  right: 0;
+  background: var(--card-bg, #fff);
+  min-width: 180px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-5px);
+  transition: .2s;
+  z-index: 5000;
+}
+
+.profile-dropdown.active{
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.profile-dropdown a,
+.profile-dropdown button{
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+.profile-dropdown a:hover,
+.profile-dropdown button:hover{
+  background: rgba(0,0,0,0.05);
+}
+
+/* THEME */
+.theme-toggle{
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+}

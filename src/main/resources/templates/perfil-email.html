@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Alterar Email</title>
+
+<section class="page-container">
+
+  <h1 class="page-title">Alterar Email</h1>
+
+  <div class="card">
+
+    <form th:action="@{/perfil/email}" method="post">
+
+      <div class="field">
+        <label>Email atual</label>
+        <input type="email"
+               sec:authentication="principal.username"
+               readonly>
+      </div>
+
+      <div class="field">
+        <label>Novo Email</label>
+        <input type="email" name="novoEmail" required>
+      </div>
+
+      <button type="submit" class="btn-primary">Salvar</button>
+
+    </form>
+
+  </div>
+
+</section>
+</html>

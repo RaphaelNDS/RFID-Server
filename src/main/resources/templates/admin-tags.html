@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Tags Cadastradas</title>
+
+<section class="page-container">
+
+  <h2 class="page-title">✅ Tags Cadastradas</h2>
+
+  <div class="table-card">
+    <table>
+      <thead>
+      <tr>
+        <th>EPC (TAG)</th>
+        <th>Código</th>
+        <th>Tipo</th>
+        <th>Marca</th>
+        <th>Modelo</th>
+        <th>Patrimônio</th>
+        <th>Nº Série</th>
+      </tr>
+      </thead>
+
+      <tbody>
+      <tr th:each="t : ${tags}">
+        <td th:text="${t.tag}"></td>
+        <td th:text="${t.codigoInterno}"></td>
+        <td th:text="${t.tipoNome}"></td>
+        <td th:text="${t.marcaNome}"></td>
+        <td th:text="${t.modeloNome}"></td>
+        <td th:text="${t.patrimonio}"></td>
+        <td th:text="${t.numeroSerie}"></td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+</section>
+
+</html>

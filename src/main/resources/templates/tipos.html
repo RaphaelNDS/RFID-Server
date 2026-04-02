@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Tipos de Equipamento</title>
+</head>
+<body>
+
+<h2>📦 Tipos de Equipamento</h2>
+
+<table border="1" cellpadding="6">
+    <tr>
+        <th>ID</th>
+        <th>Nome</th>
+    </tr>
+    <tr th:each="t : ${tipos}">
+        <td th:text="${t.id}"></td>
+        <td th:text="${t.nome}"></td>
+    </tr>
+</table>
+
+</body>
+</html>
