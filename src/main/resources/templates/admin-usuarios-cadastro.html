@@ -9,7 +9,10 @@
   <h1 class="page-title">Cadastrar Usuário</h1>
 
   <div class="form-card">
-    <form method="post" action="/admin/usuarios/novo" class="form-grid-compact">
+
+    <form action="/admin/usuarios/cadastrar"
+          method="post"
+          class="form-grid-compact">
 
       <div class="field">
         <label>Nome</label>
@@ -28,30 +31,49 @@
 
       <div class="field">
         <label>Perfil</label>
-        <select name="role">
+        <select name="role" id="perfil">
+
           <option value="USER">Usuário</option>
           <option value="GESTOR">Gestor</option>
           <option value="ADMIN">Administrador</option>
+          <option value="CUSTOM">Personalizado</option>
+
         </select>
       </div>
 
-      <div class="field" style="grid-column: span 2;">
+      <div class="field" style="grid-column:span 2">
+
         <label>Módulos</label>
+
         <div class="list">
-          <label><input type="checkbox" name="telas" value="TAGS"> Tags</label>
+
           <label><input type="checkbox" name="telas" value="CATALOGO"> Catálogo</label>
+
+          <label><input type="checkbox" name="telas" value="TAG"> RFID</label>
+
+          <label><input type="checkbox" name="telas" value="LEITURA"> Leituras</label>
+
           <label><input type="checkbox" name="telas" value="DASHBOARD"> Dashboard</label>
-          <label><input type="checkbox" name="telas" value="LEITURAS"> Leituras</label>
+
+          <label><input type="checkbox" name="telas" value="USUARIO"> Usuários</label>
+
         </div>
       </div>
 
-      <div class="field" style="grid-column: span 2;">
+      <div class="field" style="grid-column:span 2">
+
         <label>Permissões</label>
+
         <div class="list">
+
           <label><input type="checkbox" name="permissoes" value="READ"> Ler</label>
+
           <label><input type="checkbox" name="permissoes" value="CREATE"> Criar</label>
+
           <label><input type="checkbox" name="permissoes" value="UPDATE"> Editar</label>
+
           <label><input type="checkbox" name="permissoes" value="DELETE"> Excluir</label>
+
         </div>
       </div>
 
@@ -60,6 +82,86 @@
       </div>
 
     </form>
+
   </div>
+
+  <script>
+
+    const perfil = document.getElementById("perfil")
+    const modulos = document.querySelectorAll("input[name='telas']")
+    const permissoes = document.querySelectorAll("input[name='permissoes']")
+
+    function atualizarPermissoes(){
+
+    modulos.forEach(m=>{
+    m.checked=false
+    m.disabled=false
+    })
+
+    permissoes.forEach(p=>{
+    p.checked=false
+    p.disabled=false
+    })
+
+    if(perfil.value==="ADMIN"){
+
+    modulos.forEach(m=>{
+    m.checked=true
+    m.disabled=true
+    })
+
+    permissoes.forEach(p=>{
+    p.checked=true
+    p.disabled=true
+    })
+
+    }
+
+    if(perfil.value==="GESTOR"){
+
+    modulos.forEach(m=>{
+    m.checked=true
+    m.disabled=true
+    })
+
+    permissoes.forEach(p=>{
+
+    if(p.value!=="DELETE"){
+    p.checked=true
+    }
+
+    p.disabled=true
+
+    })
+
+    }
+
+    if(perfil.value==="USER"){
+
+    modulos.forEach(m=>{
+    m.checked=true
+    m.disabled=true
+    })
+
+    permissoes.forEach(p=>{
+
+    if(p.value==="READ"){
+    p.checked=true
+    }
+
+    p.disabled=true
+
+    })
+
+    }
+
+    }
+
+    perfil.addEventListener("change", atualizarPermissoes)
+
+    atualizarPermissoes()
+
+  </script>
+
 </section>
 </html>

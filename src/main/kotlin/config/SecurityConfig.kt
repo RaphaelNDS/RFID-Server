@@ -28,6 +28,7 @@ class SecurityConfig {
                 it.requestMatchers(
                     "/login",
                     "/setup",
+                    "/setup/**",
                     "/h2-console/**",
                     "/css/**",
                     "/js/**",
@@ -38,6 +39,8 @@ class SecurityConfig {
                 it.requestMatchers("/admin/**").hasRole("ADMIN")
                 it.requestMatchers("/gestor/**").hasRole("GESTOR")
                 it.requestMatchers("/user/**").hasRole("USER")
+                it.requestMatchers("/dashboard").authenticated()
+                it.requestMatchers("/perfil/**").authenticated()
 
                 it.anyRequest().authenticated()
             }

@@ -2,10 +2,7 @@ package org.example.controller
 
 import org.example.service.UsuarioService
 import org.springframework.stereotype.Controller
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.*
 
 @Controller
 @RequestMapping("/perfil")
@@ -19,23 +16,32 @@ class PerfilController(
     @GetMapping("/senha")
     fun senha(): String = "perfil-senha"
 
-    @GetMapping("/email")
-    fun email(): String = "perfil-email"
-
     @PostMapping("/senha")
     fun alterarSenha(
-        @RequestParam atual: String,
-        @RequestParam nova: String
+        @RequestParam senhaAtual: String,
+        @RequestParam novaSenha: String,
+        @RequestParam confirmarSenha: String
     ): String {
-        usuarioService.alterarSenha(atual, nova)
-        return "redirect:/perfil?ok"
+
+        if (novaSenha != confirmarSenha) {
+            throw RuntimeException("Nova senha e confirmação não conferem")
+        }
+
+        usuarioService.alterarSenha(senhaAtual, novaSenha)
+
+        return "redirect:/perfil?senhaAlterada"
     }
+
+    @GetMapping("/email")
+    fun email(): String = "perfil-email"
 
     @PostMapping("/email")
     fun alterarEmail(
         @RequestParam novoEmail: String
     ): String {
+
         usuarioService.alterarEmail(novoEmail)
-        return "redirect:/perfil?ok"
+
+        return "redirect:/perfil?emailAlterado"
     }
 }

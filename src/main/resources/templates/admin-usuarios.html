@@ -66,3 +66,23 @@
   </div>
 </section>
 </html>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function(){
+
+      const modulos = document.querySelectorAll("input[name='telas']")
+      const permissoes = document.querySelectorAll("input[name='permissoes']")
+
+      // ADMIN = tudo marcado e travado
+      modulos.forEach(m => {
+          m.checked = true
+          m.disabled = true
+      })
+
+      permissoes.forEach(p => {
+          p.checked = true
+          p.disabled = true
+      })
+
+  })
+</script>

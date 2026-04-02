@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Dashboard</title>
+
+<section class="page-container">
+
+  <h1 class="page-title">Dashboard</h1>
+
+  <!-- ================= ADMIN ================= -->
+  <div th:if="${isAdmin}">
+    <h2>Painel Administrativo</h2>
+
+    <div class="cards">
+      <a th:href="@{/admin/usuarios}" class="card">
+        👥 Gestão de Usuários
+      </a>
+    </div>
+  </div>
+
+  <!-- ================= CARDS DINÂMICOS ================= -->
+  <div class="cards">
+
+    <a th:if="${@authService.temPermissao('TAG','READ')}"
+       th:href="@{/admin/tags-cadastradas}" class="card">
+      📋 Tags
+    </a>
+
+    <a th:if="${@authService.temPermissao('TAG','CREATE')}"
+       th:href="@{/admin/cadastro}" class="card">
+      ➕ Cadastro
+    </a>
+
+    <a th:if="${@authService.temPermissao('LEITURA','READ')}"
+       th:href="@{/admin/leituras-android}" class="card">
+      📱 Leituras
+    </a>
+
+    <a th:if="${@authService.temPermissao('CATALOGO','READ')}"
+       th:href="@{/admin/catalogo}" class="card">
+      📦 Catálogo
+    </a>
+
+    <a th:if="${@authService.temPermissao('DASHBOARD','READ')}"
+       th:href="@{/admin/dashboard}" class="card">
+      📊 Relatórios
+    </a>
+
+  </div>
+
+</section>
+</html>

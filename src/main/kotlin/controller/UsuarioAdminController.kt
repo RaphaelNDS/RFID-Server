@@ -27,8 +27,18 @@ class UsuarioAdminController(
     fun novo(): String = "admin-usuarios-cadastro"
 
     @PostMapping("/cadastrar")
-    fun criar(req: CadastroUsuarioRequest): String {
-        service.cadastrar(req)
-        return "redirect:/admin/usuarios"
+    fun criar(req: CadastroUsuarioRequest, model: Model): String {
+
+        return try {
+
+            service.cadastrar(req)
+            model.addAttribute("msg", "Usuário criado com sucesso!")
+            "redirect:/admin/usuarios/novo"
+
+        } catch (e: Exception) {
+
+            model.addAttribute("erro", e.message)
+            "admin-usuarios-cadastro"
+        }
     }
 }

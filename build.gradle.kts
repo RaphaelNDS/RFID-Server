@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "org.example"
-version = "1.3.0"
+version = "1.3.1"
 
 java {
     toolchain {
@@ -29,6 +29,7 @@ dependencies {
 
         // Security (OBRIGATÓRIO pro @PreAuthorize)
         implementation("org.springframework.boot:spring-boot-starter-security")
+        implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
 
         // JPA
         implementation("org.springframework.boot:spring-boot-starter-data-jpa")

@@ -3,7 +3,8 @@ package org.example.model
 enum class Role {
     ADMIN,
     GESTOR,
-    USER
+    USER,
+    CUSTOM
 }
 
 enum class Acao {

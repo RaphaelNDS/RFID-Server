@@ -1,4 +1,5 @@
-<div th:fragment="header" class="header"
+<div th:fragment="header"
+     class="header"
      xmlns:th="http://www.thymeleaf.org"
      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
@@ -12,29 +13,52 @@
     </div>
 
     <!-- NAV -->
-    <nav class="nav">
-      <a th:href="@{/admin}">Home</a>
+    <nav class="nav" sec:authorize="isAuthenticated()">
 
+      <!-- HOME DINÂMICO -->
+<!--      <a th:href="@{/redirect}">Home</a>-->
+      <a th:href="@{/dashboard}">Home</a>
+      <!-- TAGS -->
       <a th:href="@{/admin/tags-cadastradas}"
-         th:if="${@authService.temPermissao('TAG','READ')}">Tags</a>
+         th:if="${@authService.temPermissao('TAG','READ')}">
+        Tags
+      </a>
 
       <a th:href="@{/admin/tags-pendentes}"
-         th:if="${@authService.temPermissao('TAG','READ')}">Pendentes</a>
+         th:if="${@authService.temPermissao('TAG','READ')}">
+        Pendentes
+      </a>
 
+      <!-- CADASTRO -->
       <a th:href="@{/admin/cadastro}"
-         th:if="${@authService.temPermissao('TAG','CREATE')}">Cadastro</a>
+         th:if="${@authService.temPermissao('TAG','CREATE')}">
+        Cadastro
+      </a>
 
+      <!-- LEITURAS -->
       <a th:href="@{/admin/leituras-android}"
-         th:if="${@authService.temPermissao('LEITURA','READ')}">Leituras</a>
+         th:if="${@authService.temPermissao('LEITURA','READ')}">
+        Leituras
+      </a>
 
+      <!-- CATÁLOGO -->
       <a th:href="@{/admin/catalogo}"
-         th:if="${@authService.temPermissao('CATALOGO','READ')}">Catálogo</a>
+         th:if="${@authService.temPermissao('CATALOGO','READ')}">
+        Catálogo
+      </a>
 
+      <!-- DASHBOARD -->
       <a th:href="@{/admin/dashboard}"
-         th:if="${@authService.temPermissao('DASHBOARD','READ')}">Dashboard</a>
+         th:if="${@authService.temPermissao('DASHBOARD','READ')}">
+        Dashboard
+      </a>
 
-      <a th:href="@{/admin/usuarios}"
-         sec:authorize="hasRole('ADMIN')">Usuários</a>
+      <!-- USUÁRIOS -->
+      <a th:href="@{/admin/usuarios/novo}"
+         sec:authorize="hasRole('ADMIN')">
+        Usuários
+      </a>
+
     </nav>
 
     <!-- RIGHT -->
@@ -47,19 +71,36 @@
 
       <!-- PROFILE -->
       <div class="profile-menu" id="profileMenu">
+
         <div class="profile-name" id="profileBtn">
-          <span sec:authentication="name"></span> ⌄
+
+          <span sec:authorize="isAuthenticated()"
+                sec:authentication="principal.nome"></span>
+
+          <span sec:authorize="!isAuthenticated()">
+            Visitante
+          </span> ⌄
+
         </div>
 
         <div class="profile-dropdown" id="profileDropdown">
-          <a th:href="@{/perfil}">Meu Perfil</a>
-          <a th:href="@{/perfil/senha}">Alterar Senha</a>
-          <a th:href="@{/perfil/email}">Alterar Email</a>
 
-          <form th:action="@{/logout}" method="post">
-            <button type="submit" class="logout-btn">Sair</button>
-          </form>
+          <div sec:authorize="isAuthenticated()">
+            <a th:href="@{/perfil}">Meu Perfil</a>
+            <a th:href="@{/perfil/senha}">Alterar Senha</a>
+            <a th:href="@{/perfil/email}">Alterar Email</a>
+
+            <form th:action="@{/logout}" method="post">
+              <button type="submit" class="logout-btn">Sair</button>
+            </form>
+          </div>
+
+          <div sec:authorize="!isAuthenticated()">
+            <a th:href="@{/login}">Login</a>
+          </div>
+
         </div>
+
       </div>
 
     </div>
@@ -73,7 +114,6 @@
     const profileBtn = document.getElementById("profileBtn");
     const dropdown = document.getElementById("profileDropdown");
 
-    // segurança
     if(profileBtn && dropdown){
 
       profileBtn.addEventListener("click", function(e){
@@ -82,15 +122,15 @@
       });
 
       dropdown.addEventListener("click", function(e){
-        e.stopPropagation(); // permite clicar nos links
+        e.stopPropagation();
       });
 
       document.addEventListener("click", function(){
-        dropdown.classList.remove("active"); // fecha só clicando fora
+        dropdown.classList.remove("active");
       });
     }
 
-    // tema
+    // tema persistente
     const saved = localStorage.getItem("theme");
     if(saved === "dark"){
       document.body.classList.add("dark");

@@ -15,9 +15,15 @@
       <h3>Informações do Usuário</h3>
 
       <ul class="list">
-        <li><span>Nome:</span> <span sec:authentication="name"></span></li>
-        <li><span>Email:</span> <span th:text="${#authentication.principal.username}"></span></li>
-        <li><span>Perfil:</span> <span th:text="${#authentication.authorities}"></span></li>
+        <li>
+          <span>Nome:</span>
+          <span th:text="${#authentication.principal.nome}"></span>
+        </li>
+
+        <li>
+          <span>Email:</span>
+          <span th:text="${#authentication.principal.email}"></span>
+        </li>
       </ul>
     </div>
 

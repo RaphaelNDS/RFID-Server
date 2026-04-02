@@ -1,9 +1,9 @@
 package org.example.service
 
 import org.example.repository.UserRepository
+import org.example.security.UserPrincipal
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
-import org.springframework.security.core.userdetails.User
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException
@@ -29,10 +29,12 @@ class CustomUserDetailsService(
             )
         }
 
-        return User(
-            user.email,
-            user.senha,
-            authorities
+        return UserPrincipal(
+            id = user.id!!,
+            nome = user.nome,
+            email = user.email,
+            senha = user.senha,
+            authoritiesList = authorities
         )
     }
 }
