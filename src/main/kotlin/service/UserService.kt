@@ -101,15 +101,11 @@ class UsuarioService(
 
             Role.USER -> {
 
-                Modulo.values().forEach { modulo ->
+                val modulosExpedicao = listOf(Modulo.RFID, Modulo.LEITURA)
 
-                    permissoes.add(
-                        PermissaoEntity(
-                         modulo = modulo,
-                          acao = Acao.READ,
-                           usuario = usuarioSalvo
-                        )
-                    )
+                modulosExpedicao.forEach { modulo ->
+                    permissoes.add(PermissaoEntity(modulo = modulo, acao = Acao.READ, usuario = usuarioSalvo))
+                    permissoes.add(PermissaoEntity(modulo = modulo, acao = Acao.CREATE, usuario = usuarioSalvo))
                 }
             }
 

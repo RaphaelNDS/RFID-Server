@@ -20,12 +20,12 @@
       <a th:href="@{/dashboard}">Home</a>
       <!-- TAGS -->
       <a th:href="@{/admin/tags-cadastradas}"
-         th:if="${@authService.temPermissao('TAG','READ')}">
+         sec:authorize="hasRole('ADMIN')">
         Tags
       </a>
 
       <a th:href="@{/admin/tags-pendentes}"
-         th:if="${@authService.temPermissao('TAG','READ')}">
+         sec:authorize="hasRole('ADMIN')">
         Pendentes
       </a>
 
@@ -43,13 +43,13 @@
 
       <!-- CATÁLOGO -->
       <a th:href="@{/admin/catalogo}"
-         th:if="${@authService.temPermissao('CATALOGO','READ')}">
+         sec:authorize="hasRole('ADMIN')">
         Catálogo
       </a>
 
       <!-- DASHBOARD -->
       <a th:href="@{/admin/dashboard}"
-         th:if="${@authService.temPermissao('DASHBOARD','READ')}">
+         sec:authorize="hasRole('ADMIN')">
         Dashboard
       </a>
 

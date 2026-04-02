@@ -36,9 +36,7 @@ class SecurityConfig {
                     "/webjars/**"
                 ).permitAll()
 
-                it.requestMatchers("/admin/**").hasRole("ADMIN")
-                it.requestMatchers("/gestor/**").hasRole("GESTOR")
-                it.requestMatchers("/user/**").hasRole("USER")
+                it.requestMatchers("/admin/**").authenticated()
                 it.requestMatchers("/dashboard").authenticated()
                 it.requestMatchers("/perfil/**").authenticated()
 

@@ -23,7 +23,7 @@
   <!-- ================= CARDS DINÂMICOS ================= -->
   <div class="cards">
 
-    <a th:if="${@authService.temPermissao('TAG','READ')}"
+    <a sec:authorize="hasRole('ADMIN')"
        th:href="@{/admin/tags-cadastradas}" class="card">
       📋 Tags
     </a>
@@ -38,12 +38,12 @@
       📱 Leituras
     </a>
 
-    <a th:if="${@authService.temPermissao('CATALOGO','READ')}"
+    <a sec:authorize="hasRole('ADMIN')"
        th:href="@{/admin/catalogo}" class="card">
       📦 Catálogo
     </a>
 
-    <a th:if="${@authService.temPermissao('DASHBOARD','READ')}"
+    <a sec:authorize="hasRole('ADMIN')"
        th:href="@{/admin/dashboard}" class="card">
       📊 Relatórios
     </a>

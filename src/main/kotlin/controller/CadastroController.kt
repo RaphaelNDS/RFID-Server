@@ -9,7 +9,6 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 
-@PreAuthorize("hasRole('ADMIN')")
 @Controller
 @RequestMapping("/admin/cadastro")
 class CadastroController(

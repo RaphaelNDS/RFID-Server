@@ -26,6 +26,7 @@ class LeituraAndroidAdminController(
         leituraService.salvarLeitura(req.tag)
     }
 
+    @PreAuthorize("@authService.temPermissao('LEITURA','READ')")
     @GetMapping
     fun listar(
         @RequestParam(required = false) dia: String?,

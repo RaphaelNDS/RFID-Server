@@ -33,10 +33,8 @@
         <label>Perfil</label>
         <select name="role" id="perfil">
 
-          <option value="USER">Usuário</option>
-          <option value="GESTOR">Gestor</option>
-          <option value="ADMIN">Administrador</option>
-          <option value="CUSTOM">Personalizado</option>
+          <option value="ADMIN">Estoque</option>
+          <option value="USER">Expedição</option>
 
         </select>
       </div>
@@ -49,7 +47,7 @@
 
           <label><input type="checkbox" name="telas" value="CATALOGO"> Catálogo</label>
 
-          <label><input type="checkbox" name="telas" value="TAG"> RFID</label>
+          <label><input type="checkbox" name="telas" value="RFID"> RFID</label>
 
           <label><input type="checkbox" name="telas" value="LEITURA"> Leituras</label>
 
@@ -91,74 +89,28 @@
     const modulos = document.querySelectorAll("input[name='telas']")
     const permissoes = document.querySelectorAll("input[name='permissoes']")
 
+    function marcarPermissoes(modulosAtivos, permissoesAtivas){
+      modulos.forEach(m => {
+        m.checked = modulosAtivos.includes(m.value)
+        m.disabled = true
+      })
+
+      permissoes.forEach(p => {
+        p.checked = permissoesAtivas.includes(p.value)
+        p.disabled = true
+      })
+    }
+
     function atualizarPermissoes(){
+      if (perfil.value === "ADMIN") {
+        marcarPermissoes(["CATALOGO", "RFID", "LEITURA", "DASHBOARD", "USUARIO"], ["READ", "CREATE", "UPDATE", "DELETE"])
+        return
+      }
 
-    modulos.forEach(m=>{
-    m.checked=false
-    m.disabled=false
-    })
-
-    permissoes.forEach(p=>{
-    p.checked=false
-    p.disabled=false
-    })
-
-    if(perfil.value==="ADMIN"){
-
-    modulos.forEach(m=>{
-    m.checked=true
-    m.disabled=true
-    })
-
-    permissoes.forEach(p=>{
-    p.checked=true
-    p.disabled=true
-    })
-
-    }
-
-    if(perfil.value==="GESTOR"){
-
-    modulos.forEach(m=>{
-    m.checked=true
-    m.disabled=true
-    })
-
-    permissoes.forEach(p=>{
-
-    if(p.value!=="DELETE"){
-    p.checked=true
-    }
-
-    p.disabled=true
-
-    })
-
-    }
-
-    if(perfil.value==="USER"){
-
-    modulos.forEach(m=>{
-    m.checked=true
-    m.disabled=true
-    })
-
-    permissoes.forEach(p=>{
-
-    if(p.value==="READ"){
-    p.checked=true
-    }
-
-    p.disabled=true
-
-    })
-
-    }
-
+      marcarPermissoes(["RFID", "LEITURA"], ["READ", "CREATE"])
     }
 
     perfil.addEventListener("change", atualizarPermissoes)
-
     atualizarPermissoes()
 
   </script>
