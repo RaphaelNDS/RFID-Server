@@ -21,30 +21,27 @@ repositories {
 }
 
 dependencies {
-    dependencies {
+    // Web + MVC
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
 
-        // Web + MVC
-        implementation("org.springframework.boot:spring-boot-starter-web")
-        implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
+    // Security (OBRIGATÓRIO pro @PreAuthorize)
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
 
-        // Security (OBRIGATÓRIO pro @PreAuthorize)
-        implementation("org.springframework.boot:spring-boot-starter-security")
-        implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
+    // JPA
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    runtimeOnly("com.h2database:h2")
 
-        // JPA
-        implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-        runtimeOnly("com.h2database:h2")
+    // Kotlin
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation(kotlin("reflect"))
 
-        // Kotlin
-        implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-        implementation(kotlin("reflect"))
+    // WebFlux (SSE, streams, etc)
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
 
-        // WebFlux (SSE, streams, etc)
-        implementation("org.springframework.boot:spring-boot-starter-webflux")
-
-        // Test
-        testImplementation("org.springframework.boot:spring-boot-starter-test")
-    }
+    // Test
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
 
 //    implementation("org.springframework.boot:spring-boot-starter-web")
 //    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
