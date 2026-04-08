@@ -31,6 +31,3 @@ class RfidController(
         service.salvarNaoCadastrada(req.tag)
     }
 }
-
-
-

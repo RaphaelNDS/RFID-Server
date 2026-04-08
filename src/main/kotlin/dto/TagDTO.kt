@@ -10,4 +10,3 @@ val modeloNome: String?,
 val patrimonio: String?,
 val numeroSerie: String?
 )
-

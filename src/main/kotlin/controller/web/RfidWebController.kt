@@ -49,5 +49,3 @@ class RfidWebController(
         return "cadastro"
     }
 }
-
-

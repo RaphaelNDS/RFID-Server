@@ -134,5 +134,3 @@ class RfidService(
         return bytes.joinToString("") { "%02x".format(it) }
     }
 }
-
-

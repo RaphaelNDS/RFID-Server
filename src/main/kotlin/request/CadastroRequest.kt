@@ -10,6 +10,3 @@ data class CadastroRequest(
     var marcaId: Long? = null,
     var modeloId: Long? = null
 )
-
-
-

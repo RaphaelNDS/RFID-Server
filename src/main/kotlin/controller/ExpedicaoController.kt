@@ -23,7 +23,31 @@ class ExpedicaoController(
 
     @GetMapping
     fun tela(model: Model): String {
-        model.addAttribute("leituras", leituraRepo.findTop100ByOrderByDataHoraDesc())
+        val leiturasRecentes = leituraRepo.findTop100ByOrderByDataHoraDesc()
+        val resumoEquipamentos = leituraRepo.findAllByOrderByDataHoraDesc()
+            .groupBy { it.tag }
+            .map { (_, registros) ->
+                val maisRecente = registros.first()
+                val temEntrada = registros.any { it.movimento == TipoMovimento.ENTRADA }
+                val temSaida = registros.any { it.movimento == TipoMovimento.SAIDA }
+
+                EquipamentoResumoExpedicao(
+                    tag = maisRecente.tag,
+                    equipamento = listOf(maisRecente.tipo, maisRecente.marca, maisRecente.modelo)
+                        .map { it ?: "-" }
+                        .joinToString(" / "),
+                    status = when {
+                        temEntrada && temSaida -> "Entrou e saiu"
+                        temEntrada -> "Com entrada"
+                        temSaida -> "Com saída"
+                        else -> "Sem movimento"
+                    }
+                )
+            }
+            .sortedBy { it.equipamento }
+
+        model.addAttribute("leituras", leiturasRecentes)
+        model.addAttribute("resumoEquipamentos", resumoEquipamentos)
         model.addAttribute("tiposEntrada", listOf("REMESSA_CONSERTO", "RETORNO_LOCACAO"))
         model.addAttribute("entrada", TipoMovimento.ENTRADA.name)
         model.addAttribute("saida", TipoMovimento.SAIDA.name)
@@ -45,4 +69,10 @@ class ExpedicaoController(
             "redirect:/expedicao"
         }
     }
+
+    data class EquipamentoResumoExpedicao(
+        val tag: String,
+        val equipamento: String,
+        val status: String
+    )
 }

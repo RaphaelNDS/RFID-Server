@@ -5,4 +5,3 @@ data class TipoEquipamentoRequest(
     var marcaId: Long? = null,
     var modeloId: Long? = null
 )
-

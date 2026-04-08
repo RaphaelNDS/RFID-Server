@@ -13,6 +13,28 @@
 
   <div th:if="${msg}" style="margin-bottom:12px; color:#0f766e;" th:text="${msg}"></div>
   <div th:if="${erro}" style="margin-bottom:12px; color:#b91c1c;" th:text="${erro}"></div>
+  <h2 style="margin: 12px 0;">Lista de equipamentos por status</h2>
+  <div class="table-container" style="margin-bottom:16px;">
+    <table>
+      <thead>
+      <tr>
+        <th>Tag</th>
+        <th>Equipamento</th>
+        <th>Status</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr th:each="equip : ${resumoEquipamentos}">
+        <td th:text="${equip.tag}"></td>
+        <td th:text="${equip.equipamento}"></td>
+        <td th:text="${equip.status}"></td>
+      </tr>
+      <tr th:if="${#lists.isEmpty(resumoEquipamentos)}">
+        <td colspan="3" style="text-align:center; padding:18px;">Sem equipamentos com histórico de expedição.</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
 
   <div class="table-container">
     <table>

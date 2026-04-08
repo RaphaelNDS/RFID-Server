@@ -31,4 +31,3 @@ class TagEntity(
     var patrimonio: String = "",
     var numeroSerie: String = ""
 )
-

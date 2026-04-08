@@ -36,6 +36,7 @@ class SecurityConfig {
                     "/webjars/**"
                 ).permitAll()
 
+                it.requestMatchers("/api/**").permitAll()
                 it.requestMatchers("/admin/**").authenticated()
                 it.requestMatchers("/dashboard").authenticated()
                 it.requestMatchers("/expedicao/**").authenticated()

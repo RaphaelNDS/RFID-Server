@@ -9,4 +9,3 @@ val patrimonio: String,
 val numeroSerie: String
 
 )
-

@@ -19,4 +19,3 @@ class ModeloController(
         return "redirect:/admin/catalogo"
     }
 }
-
