@@ -5,6 +5,7 @@ import org.example.request.SetupAdminRequest
 import org.example.service.UsuarioService
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Controller
+import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 
@@ -24,7 +25,7 @@ class SetupController(
     }
 
     @PostMapping("/setup")
-    fun criarAdmin(req: SetupAdminRequest, request: HttpServletRequest): String {
+    fun criarAdmin(req: SetupAdminRequest, request: HttpServletRequest, model: Model): String {
 
         if (usuarioService.existeUsuario()) {
             log.warn(
@@ -34,7 +35,15 @@ class SetupController(
             return "redirect:/login"
         }
 
-        usuarioService.criarAdminInicial(req)
-        return "redirect:/login"
+        return try {
+            usuarioService.criarAdminInicial(req)
+            "redirect:/login"
+        } catch (e: IllegalArgumentException) {
+            // Ex.: senha fraca - volta ao formulário com o motivo e o que foi digitado (menos a senha)
+            model.addAttribute("erro", e.message)
+            model.addAttribute("nome", req.nome)
+            model.addAttribute("email", req.email)
+            "setup"
+        }
     }
 }

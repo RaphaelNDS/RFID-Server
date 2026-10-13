@@ -9,8 +9,9 @@ val nome: String,
 val email: String,
 val senha: String,
 val role: Role,
-val telas: List<String> = emptyList(),
-val permissoes: List<String> = emptyList()
+// Anuláveis de propósito: sem nenhuma caixa marcada, o formulário não envia o campo e o Spring entrega null
+val telas: List<String>? = null,
+val permissoes: List<String>? = null
 )
 
 data class PermissaoRequest(

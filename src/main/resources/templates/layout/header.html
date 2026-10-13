@@ -39,6 +39,10 @@
         <svg class="ic"><use href="/img/icones.svg#sinal"/></svg>Leituras
       </a>
 
+      <a th:href="@{/admin/inventarios}" th:if="${@authService.temPermissao('LEITURA','READ')}">
+        <svg class="ic"><use href="/img/icones.svg#ok"/></svg>Inventários
+      </a>
+
       <a th:href="@{/admin/catalogo}" th:if="${@authService.temPermissao('CATALOGO','READ')}">
         <svg class="ic"><use href="/img/icones.svg#pacote"/></svg>Catálogo
       </a>

@@ -21,6 +21,13 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
     fun existsByTagReal(tagReal: String): Boolean
 
     fun findByPatrimonio(patrimonio: String): Optional<TagEntity>
+
+    // Quantas etiquetas usam cada item do catálogo (para impedir exclusão de item em uso)
+    fun countByTipoEquipamentoId(tipoId: Long): Long
+
+    fun countByMarcaId(marcaId: Long): Long
+
+    fun countByModeloId(modeloId: Long): Long
 }
 
 /* =====================================================

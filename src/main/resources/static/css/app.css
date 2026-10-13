@@ -251,7 +251,9 @@ a:hover { text-decoration: underline; }
   font-size: 13px;
   font-weight: 700;
 }
-.perfil-nome { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Com 9 itens no menu não sobra espaço para o nome no topo: fica só o avatar (nome e email aparecem no menu do perfil) */
+.perfil-nome { display: none; }
+.perfil-btn { padding: 3px 8px 3px 3px; }
 
 .perfil-menu {
   display: none;
@@ -771,17 +773,13 @@ a:hover { text-decoration: underline; }
 
 /* ============================ RESPONSIVO ============================ */
 
-@media (max-width: 1240px) {
-  .perfil-nome, .perfil-btn > .ic { display: none; }
-  .perfil-btn { padding: 3px; }
-}
-
 @media (max-width: 1080px) {
   .nav { gap: 0; }
   .nav a { padding: 8px 9px; }
 }
 
-@media (max-width: 900px) {
+/* Abaixo disso o menu vira o botão ☰ (os 9 itens não cabem numa linha) */
+@media (max-width: 1024px) {
   .menu-toggle { display: inline-grid; }
   .topbar-inner { gap: 12px; }
 
@@ -806,6 +804,9 @@ a:hover { text-decoration: underline; }
   .perfil-nome, .perfil-btn > .ic { display: none; }
   .perfil-btn { padding: 3px; }
 
+}
+
+@media (max-width: 900px) {
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
 }
 

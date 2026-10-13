@@ -4,6 +4,7 @@ import org.example.config.BancoDadosConfig
 import org.example.response.ServerStatusResponse
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.ObjectProvider
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.boot.info.BuildProperties
 import org.springframework.context.event.EventListener
@@ -18,7 +19,11 @@ import java.time.format.DateTimeFormatter
 @Service
 class StatusService(
     private val bancoDados: BancoDadosConfig,
-    buildProperties: ObjectProvider<BuildProperties>
+    private val backup: BackupService,
+    buildProperties: ObjectProvider<BuildProperties>,
+    // Opcionais (valor padrão) para os testes que montam o service à mão continuarem iguais
+    private val certificado: CertificadoHttps? = null,
+    @Value("\${rfid.https.habilitado:true}") private val httpsHabilitado: Boolean = true
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -38,7 +43,12 @@ class StatusService(
             horaServidor = "Desde ${iniciadoEm.format(FORMATO_DATA)}",
             versao = versao,
             banco = bancoDados.descricao,
-            tempoOnline = formatarDuracao(Duration.between(iniciadoEm, LocalDateTime.now()))
+            tempoOnline = formatarDuracao(Duration.between(iniciadoEm, LocalDateTime.now())),
+            ultimoBackup = backup.resumoUltimoBackup(),
+            certificadoHttps = when {
+                !httpsHabilitado -> "HTTPS desligado: o tráfego não é criptografado"
+                else -> certificado?.impressaoDigital ?: "—"
+            }
         )
     }
 

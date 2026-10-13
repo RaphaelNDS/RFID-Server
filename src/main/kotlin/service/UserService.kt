@@ -13,7 +13,8 @@ import org.springframework.stereotype.Service
 @Service
 class UsuarioService(
     private val repo: UserRepository,
-    private val encoder: PasswordEncoder
+    private val encoder: PasswordEncoder,
+    private val politicaSenha: PoliticaSenha
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -36,6 +37,8 @@ class UsuarioService(
             log.warn("Criação de administrador inicial recusada: já existem usuários cadastrados")
             throw IllegalStateException("O sistema já foi configurado")
         }
+
+        politicaSenha.exigir(req.senha, req.email, req.nome, "configuração inicial")
 
         val usuario = UsuarioEntity(
             nome = req.nome,
@@ -71,6 +74,8 @@ class UsuarioService(
             throw IllegalArgumentException("Já existe um usuário com este email")
         }
 
+        politicaSenha.exigir(req.senha, req.email, req.nome, "cadastro de usuário")
+
         val roleFinal = if (!existeUsuario()) {
             Role.ADMIN
         } else {
@@ -86,8 +91,8 @@ class UsuarioService(
         )
 
         // Valida o perfil CUSTOM antes de gravar, para não sobrar usuário sem permissões em caso de erro
-        val modulosCustom = if (roleFinal == Role.CUSTOM) converterModulos(req.telas) else emptyList()
-        val acoesCustom = if (roleFinal == Role.CUSTOM) converterAcoes(req.permissoes) else emptyList()
+        val modulosCustom = if (roleFinal == Role.CUSTOM) converterModulos(req.telas.orEmpty()) else emptyList()
+        val acoesCustom = if (roleFinal == Role.CUSTOM) converterAcoes(req.permissoes.orEmpty()) else emptyList()
 
         val usuarioSalvo = repo.save(usuario)
 
@@ -201,6 +206,12 @@ class UsuarioService(
             throw IllegalArgumentException("A nova senha e a confirmação não conferem")
         }
 
+        if (encoder.matches(novaSenha, usuario.senha)) {
+            throw IllegalArgumentException("A nova senha deve ser diferente da atual")
+        }
+
+        politicaSenha.exigir(novaSenha, usuario.email, usuario.nome, "troca de senha")
+
         usuario.senha = encoder.encode(novaSenha)
         repo.save(usuario)
 
@@ -250,210 +261,3 @@ class UsuarioService(
         private val EMAIL_VALIDO = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-import org.example.model.*
-import org.example.repository.UserRepository
-import org.example.request.CadastroUsuarioRequest
-import org.example.request.SetupAdminRequest
-import org.springframework.security.core.context.SecurityContextHolder
-import org.springframework.security.crypto.password.PasswordEncoder
-import org.springframework.stereotype.Service
-
-@Service
-class UsuarioService(
-    private val repo: UserRepository,
-    private val encoder: PasswordEncoder
-) {
-
-    fun existeUsuario(): Boolean {
-        return repo.count() > 0
-    }
-
-    fun listarTodos(): List<UsuarioEntity> {
-        return repo.findAll()
-    }
-
-    fun criarAdminInicial(req: SetupAdminRequest) {
-
-        val usuario = UsuarioEntity(
-            nome = req.nome,
-            email = req.email,
-            senha = encoder.encode(req.senha),
-            role = Role.ADMIN
-        )
-
-        val salvo = repo.save(usuario)
-
-        val permissoes = Modulo.values().flatMap { modulo ->
-            Acao.values().map { acao ->
-                PermissaoEntity(
-                    modulo = modulo,
-                    acao = acao,
-                    usuario = salvo
-                )
-            }
-        }
-
-        salvo.permissoes.addAll(permissoes)
-        repo.save(salvo)
-    }
-
-    fun cadastrar(req: CadastroUsuarioRequest) {
-
-        if (repo.existsByEmail(req.email)) {
-            throw RuntimeException("Email já cadastrado")
-        }
-
-        val roleFinal = if (!existeUsuario()) {
-            Role.ADMIN
-        } else {
-            req.role ?: Role.USER
-        }
-
-        val usuario = UsuarioEntity(
-            nome = req.nome,
-            email = req.email,
-            senha = encoder.encode(req.senha),
-            role = roleFinal,
-            permissoes = mutableListOf()
-        )
-
-        val usuarioSalvo = repo.save(usuario)
-
-        val permissoesEntities = mutableListOf<PermissaoEntity>()
-
-        if (roleFinal == Role.ADMIN) {
-
-            Modulo.values().forEach { modulo ->
-                Acao.values().forEach { acao ->
-                    permissoesEntities.add(
-                        PermissaoEntity(
-                            modulo = modulo,
-                            acao = acao,
-                            usuario = usuarioSalvo
-                        )
-                    )
-                }
-            }
-
-        } else if (roleFinal == Role.GESTOR) {
-
-            Modulo.values().forEach { modulo ->
-                permissoesEntities.add(PermissaoEntity(modulo = modulo, acao = Acao.READ, usuario = usuarioSalvo))
-                permissoesEntities.add(PermissaoEntity(modulo = modulo, acao = Acao.CREATE, usuario = usuarioSalvo))
-                permissoesEntities.add(PermissaoEntity(modulo = modulo, acao = Acao.UPDATE, usuario = usuarioSalvo))
-            }
-
-        } else if (roleFinal == Role.USER) {
-
-            Modulo.values().forEach { modulo ->
-                permissoesEntities.add(PermissaoEntity(modulo = modulo, acao = Acao.READ, usuario = usuarioSalvo))
-            }
-
-        } else if (roleFinal == Role.CUSTOM) {
-
-            if (req.telas.isEmpty()) {
-                throw RuntimeException("Selecione pelo menos um módulo")
-            }
-
-            req.telas.forEach { telaStr ->
-                val modulo = Modulo.valueOf(telaStr)
-
-                req.permissoes.forEach { acaoStr ->
-                    val acao = Acao.valueOf(acaoStr)
-
-                    permissoesEntities.add(
-                        PermissaoEntity(
-                            modulo = modulo,
-                            acao = acao,
-                            usuario = usuarioSalvo
-                        )
-                    )
-                }
-            }
-        }
-
-        usuarioSalvo.permissoes.addAll(permissoesEntities)
-        repo.save(usuarioSalvo)
-    }
-
-
-
-    /*
-    fun cadastrar(req: CadastroUsuarioRequest) {
-
-        val roleFinal = if (!existeUsuario()) {
-            Role.ADMIN
-        } else {
-            req.role
-        }
-
-        val usuario = UsuarioEntity(
-            nome = req.nome,
-            email = req.email,
-            senha = encoder.encode(req.senha),
-            role = roleFinal,
-            permissoes = mutableListOf()
-        )
-
-        val usuarioSalvo = repo.save(usuario)
-
-        val permissoesEntities = mutableListOf<PermissaoEntity>()
-
-        req.telas.forEach { telaStr ->
-            val modulo = Modulo.valueOf(telaStr)
-
-            req.permissoes.forEach { acaoStr ->
-                val acao = Acao.valueOf(acaoStr)
-
-                permissoesEntities.add(
-                    PermissaoEntity(
-                        modulo = modulo,
-                        acao = acao,
-                        usuario = usuarioSalvo
-                    )
-                )
-            }
-        }
-
-        usuarioSalvo.permissoes.addAll(permissoesEntities)
-
-        repo.save(usuarioSalvo)
-    }
-
-    */
-
-    fun alterarSenha(senhaAtual: String, novaSenha: String) {
-        val email = SecurityContextHolder.getContext().authentication.name
-        val usuario = repo.findByEmail(email) ?: throw RuntimeException("Usuário não encontrado")
-
-        if (!encoder.matches(senhaAtual, usuario.senha)) {
-            throw RuntimeException("Senha atual inválida")
-        }
-
-        usuario.senha = encoder.encode(novaSenha)
-        repo.save(usuario)
-    }
-
-    fun alterarEmail(novoEmail: String) {
-        val email = SecurityContextHolder.getContext().authentication.name
-        val usuario = repo.findByEmail(email) ?: throw RuntimeException("Usuário não encontrado")
-
-        usuario.email = novoEmail
-        repo.save(usuario)
-    }
-}
-
-*/

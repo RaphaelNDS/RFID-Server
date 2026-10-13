@@ -73,6 +73,7 @@
           <th>Marca</th>
           <th>Modelo</th>
           <th>Nº série</th>
+          <th>Operador</th>
         </tr>
         </thead>
         <tbody>
@@ -85,6 +86,7 @@
           <td th:text="${l.marca}"></td>
           <td th:text="${l.modelo}"></td>
           <td th:text="${l.numeroSerie}"></td>
+          <td th:text="${l.operador != null} ? ${l.operador} : '—'"></td>
         </tr>
         </tbody>
       </table>

@@ -1,0 +1,24 @@
+# Perfil usado pelos testes de integração (@ActiveProfiles("test")).
+# Banco em memória, isolado do arquivo ./data usado em produção.
+spring:
+  datasource:
+    url: jdbc:h2:mem:rfid-teste;DB_CLOSE_DELAY=-1
+  jpa:
+    show-sql: false
+  h2:
+    console:
+      enabled: false
+
+rfid:
+  dispositivos:
+    # coletor-leitura existe para testar um coletor válido SEM permissão de cadastro
+    chaves: coletor-teste:chave-de-teste-0123456789,coletor-leitura:chave-de-leitura-0123456789
+    cadastro: coletor-teste
+  # Nenhum teste gera certificado em disco (os testes do certificado usam pasta temporária)
+  https:
+    habilitado: false
+
+logging:
+  level:
+    root: WARN
+    org.example: WARN

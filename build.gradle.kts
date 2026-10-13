@@ -34,6 +34,9 @@ dependencies {
     runtimeOnly("com.h2database:h2")
     implementation("org.flywaydb:flyway-core")
 
+    // HTTPS: gera o certificado próprio do servidor na primeira inicialização (CertificadoHttps)
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
+
     // Kotlin
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation(kotlin("reflect"))
@@ -43,10 +46,17 @@ dependencies {
 
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test") // login simulado, CSRF no MockMvc
+    testImplementation("io.projectreactor:reactor-test")                    // StepVerifier (SSE / Flux)
+    testImplementation("io.mockk:mockk:1.13.13")                            // mocks idiomáticos em Kotlin
 }
 
 tasks.test {
     useJUnitPlatform()
+    testLogging {
+        events("failed", "skipped")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
 }
 
 // Gera META-INF/build-info.properties: a tela de status lê a versão daqui (não precisa repetir no código)

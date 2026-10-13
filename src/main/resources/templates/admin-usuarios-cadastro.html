@@ -42,7 +42,7 @@
         <div class="field">
           <label for="senha">Senha inicial <span class="obrigatorio">*</span></label>
           <input id="senha" name="senha" type="password" autocomplete="new-password" required>
-          <span class="field-dica">O usuário pode trocá-la depois em "Meu perfil".</span>
+          <span class="field-dica"><span th:text="${regraSenha}"></span> O usuário pode trocá-la depois em "Meu perfil".</span>
         </div>
 
         <div class="field">
@@ -59,21 +59,21 @@
         <fieldset class="field span-2" style="border:0;padding:0;margin:0">
           <legend class="rotulo" style="margin-bottom:8px">Módulos</legend>
           <div class="chips">
-            <label class="chip"><input type="checkbox" name="telas" value="CATALOGO" th:checked="${form != null and form.telas.contains('CATALOGO')}"><span>Catálogo</span></label>
-            <label class="chip"><input type="checkbox" name="telas" value="RFID" th:checked="${form != null and form.telas.contains('RFID')}"><span>Etiquetas (RFID)</span></label>
-            <label class="chip"><input type="checkbox" name="telas" value="LEITURA" th:checked="${form != null and form.telas.contains('LEITURA')}"><span>Leituras</span></label>
-            <label class="chip"><input type="checkbox" name="telas" value="DASHBOARD" th:checked="${form != null and form.telas.contains('DASHBOARD')}"><span>Relatórios</span></label>
-            <label class="chip"><input type="checkbox" name="telas" value="USUARIO" th:checked="${form != null and form.telas.contains('USUARIO')}"><span>Usuários</span></label>
+            <label class="chip"><input type="checkbox" name="telas" value="CATALOGO" th:checked="${form?.telas != null and form.telas.contains('CATALOGO')}"><span>Catálogo</span></label>
+            <label class="chip"><input type="checkbox" name="telas" value="RFID" th:checked="${form?.telas != null and form.telas.contains('RFID')}"><span>Etiquetas (RFID)</span></label>
+            <label class="chip"><input type="checkbox" name="telas" value="LEITURA" th:checked="${form?.telas != null and form.telas.contains('LEITURA')}"><span>Leituras</span></label>
+            <label class="chip"><input type="checkbox" name="telas" value="DASHBOARD" th:checked="${form?.telas != null and form.telas.contains('DASHBOARD')}"><span>Relatórios</span></label>
+            <label class="chip"><input type="checkbox" name="telas" value="USUARIO" th:checked="${form?.telas != null and form.telas.contains('USUARIO')}"><span>Usuários</span></label>
           </div>
         </fieldset>
 
         <fieldset class="field span-2" style="border:0;padding:0;margin:0">
           <legend class="rotulo" style="margin-bottom:8px">O que pode fazer nesses módulos</legend>
           <div class="chips">
-            <label class="chip"><input type="checkbox" name="permissoes" value="READ" th:checked="${form != null and form.permissoes.contains('READ')}"><span>Ver</span></label>
-            <label class="chip"><input type="checkbox" name="permissoes" value="CREATE" th:checked="${form != null and form.permissoes.contains('CREATE')}"><span>Criar</span></label>
-            <label class="chip"><input type="checkbox" name="permissoes" value="UPDATE" th:checked="${form != null and form.permissoes.contains('UPDATE')}"><span>Editar</span></label>
-            <label class="chip"><input type="checkbox" name="permissoes" value="DELETE" th:checked="${form != null and form.permissoes.contains('DELETE')}"><span>Excluir</span></label>
+            <label class="chip"><input type="checkbox" name="permissoes" value="READ" th:checked="${form?.permissoes != null and form.permissoes.contains('READ')}"><span>Ver</span></label>
+            <label class="chip"><input type="checkbox" name="permissoes" value="CREATE" th:checked="${form?.permissoes != null and form.permissoes.contains('CREATE')}"><span>Criar</span></label>
+            <label class="chip"><input type="checkbox" name="permissoes" value="UPDATE" th:checked="${form?.permissoes != null and form.permissoes.contains('UPDATE')}"><span>Editar</span></label>
+            <label class="chip"><input type="checkbox" name="permissoes" value="DELETE" th:checked="${form?.permissoes != null and form.permissoes.contains('DELETE')}"><span>Excluir</span></label>
           </div>
         </fieldset>
 

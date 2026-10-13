@@ -1,11 +1,12 @@
 package org.example.service
 
-import jakarta.transaction.Transactional
+import org.springframework.transaction.annotation.Transactional
 import org.example.model.MarcaEntity
 import org.example.model.ModeloEntity
 import org.example.model.TipoEquipamentoEntity
 import org.example.repository.MarcaRepository
 import org.example.repository.ModeloRepository
+import org.example.repository.TagRepository
 import org.example.repository.TipoEquipamentoRepository
 import org.example.request.MarcaRequest
 import org.example.request.ModeloRequest
@@ -18,7 +19,8 @@ import org.springframework.security.core.context.SecurityContextHolder
 class CatalogoServiceImpl(
     private val tipoRepo: TipoEquipamentoRepository,
     private val marcaRepo: MarcaRepository,
-    private val modeloRepo: ModeloRepository
+    private val modeloRepo: ModeloRepository,
+    private val tagRepo: TagRepository
 ) : CatalogoService {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -195,14 +197,19 @@ class CatalogoServiceImpl(
        EXCLUSÃO SEGURA
     ====================================================== */
 
+    // Além destas verificações (que dão a mensagem amigável), o banco tem chaves estrangeiras
+    // (migração V2) que impedem a exclusão de item em uso mesmo se alguém pular o service.
+
     @Transactional
     override fun excluirTipo(id: Long) {
+
+        val nome = tipoRepo.findById(id).orElse(null)?.nome
 
         if (marcaRepo.existsByTipoId(id)) {
             throw IllegalStateException("Não é possível excluir tipo com marcas vinculadas")
         }
+        recusarSeEmUso("este tipo", nome, id, tagRepo.countByTipoEquipamentoId(id))
 
-        val nome = tipoRepo.findById(id).orElse(null)?.nome
         tipoRepo.deleteById(id)
         log.info("Tipo de equipamento excluído: '{}' (id {}) por {}", nome, id, usuarioAtual())
     }
@@ -210,20 +217,41 @@ class CatalogoServiceImpl(
     @Transactional
     override fun excluirMarca(id: Long) {
 
+        val nome = marcaRepo.findById(id).orElse(null)?.nome
+
         if (modeloRepo.existsByMarcaId(id)) {
             throw IllegalStateException("Não é possível excluir marca com modelos vinculados")
         }
+        recusarSeEmUso("esta marca", nome, id, tagRepo.countByMarcaId(id))
 
-        val nome = marcaRepo.findById(id).orElse(null)?.nome
         marcaRepo.deleteById(id)
         log.info("Marca excluída: '{}' (id {}) por {}", nome, id, usuarioAtual())
     }
 
     @Transactional
     override fun excluirModelo(id: Long) {
+
         val nome = modeloRepo.findById(id).orElse(null)?.nome
+
+        // Antes não havia verificação nenhuma: as etiquetas ficavam apontando para um modelo inexistente
+        recusarSeEmUso("este modelo", nome, id, tagRepo.countByModeloId(id))
+
         modeloRepo.deleteById(id)
         log.info("Modelo excluído: '{}' (id {}) por {}", nome, id, usuarioAtual())
+    }
+
+    // item com artigo, ex.: "esta marca"
+    private fun recusarSeEmUso(item: String, nome: String?, id: Long, etiquetas: Long) {
+        if (etiquetas == 0L) return
+
+        log.warn(
+            "Exclusão recusada: {} '{}' (id {}) está em uso por {} etiqueta(s) (tentativa de {})",
+            item.substringAfter(" "), nome, id, etiquetas, usuarioAtual()
+        )
+        throw IllegalStateException(
+            "Não é possível excluir: $etiquetas etiqueta(s) usam $item. " +
+                "Altere ou exclua essas etiquetas antes."
+        )
     }
 
     /* =====================================================

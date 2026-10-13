@@ -1,4 +1,5 @@
 server:
+  # Com o HTTPS ligado (rfid.https), esta porta só redireciona para o HTTPS (ver HttpsConfig)
   port: 8082
 
 spring:
@@ -29,6 +30,69 @@ spring:
       enabled: true
       settings:
         web-allow-others: false   # console do H2 só aceita acesso a partir da própria máquina
+
+
+rfid:
+  dispositivos:
+    # Chaves dos coletores Android que podem usar /api/android/**, no formato nome:chave
+    # separados por vírgula (ex.: coletor-01:chave-longa-1,coletor-02:chave-longa-2).
+    # O app envia a chave no header X-Chave-Dispositivo (Configurações do app).
+    # Sem nenhuma chave configurada, o app Android fica bloqueado (401).
+    chaves: ${RFID_CHAVES_DISPOSITIVOS:}
+    # Coletores que podem cadastrar etiquetas pelo app, separados por vírgula (os mesmos nomes de "chaves",
+    # ex.: coletor-01,coletor-02). Faz no coletor o papel da permissão RFID/CREATE da web.
+    # Vazio = nenhum coletor cadastra (o app mostra "coletor sem permissão para cadastrar").
+    cadastro: ${RFID_COLETORES_CADASTRO:}
+
+  https:
+    # HTTPS na porta abaixo. A porta HTTP antiga (server.port) passa a só redirecionar as telas para cá
+    # e a recusar a API (erro 426 explicando o endereço HTTPS).
+    habilitado: ${RFID_HTTPS_HABILITADO:true}
+    porta: ${RFID_HTTPS_PORTA:8443}
+    # Certificado (PKCS12). Se não existir, o servidor gera um próprio, válido por 10 anos, com os IPs desta
+    # máquina, e guarda a senha em <arquivo>.senha. Se existir, só carrega: nunca gera outro sozinho (a
+    # impressão digital está fixada nos coletores). Guarde o .p12 e o .senha junto com os backups.
+    # Para um certificado da empresa, aponte para o .p12 dela e informe a senha.
+    keystore: ${RFID_HTTPS_KEYSTORE:./data/rfid-https.p12}
+    senha: ${RFID_HTTPS_SENHA:}
+    # Nomes e IPs extras do certificado gerado, separados por vírgula (ex.: rfid-servidor,192.168.0.10).
+    # Os IPs desta máquina e "localhost" já entram. Só vale ao GERAR o certificado (na primeira vez).
+    nomes: ${RFID_HTTPS_NOMES:}
+
+  operador:
+    # Quanto tempo vale o login do operador no coletor (um turno). O app trabalha offline até esse limite;
+    # ações feitas durante a sessão continuam valendo mesmo se forem enviadas depois que ela expirar.
+    duracao-sessao: ${RFID_DURACAO_SESSAO_OPERADOR:12h}
+    # Prazo máximo (relógio do servidor) para uma ação feita offline chegar ao servidor: o tempo que um coletor
+    # pode ficar sem rede sem perder leituras. Depois do fim da sessão, o token ainda vale só por esse prazo e
+    # só para ações feitas enquanto ela valia; passado o prazo, morre de vez (token vazado não serve para sempre).
+    janela-sincronizacao: ${RFID_JANELA_SINCRONIZACAO:72h}
+
+  senha:
+    # Regras de senha (setup, cadastro de usuário e troca de senha): letras e números, sem o nome/email,
+    # sem senhas comuns, até 72 caracteres (limite do BCrypt). Tamanho mínimo:
+    tamanho-minimo: ${RFID_SENHA_TAMANHO_MINIMO:8}
+
+  login:
+    # Proteção contra adivinhação de senha. Os erros são contados dentro de "bloqueio-minutos".
+    # Erros seguidos no mesmo email que bloqueiam aquele login:
+    max-tentativas: ${RFID_LOGIN_MAX_TENTATIVAS:5}
+    # Erros vindos do mesmo IP (em qualquer conta) que bloqueiam o IP:
+    max-tentativas-ip: ${RFID_LOGIN_MAX_TENTATIVAS_IP:20}
+    # Tempo de bloqueio (e janela de contagem), em minutos:
+    bloqueio-minutos: ${RFID_LOGIN_BLOQUEIO_MINUTOS:15}
+
+  backup:
+    # Backup automático do banco H2 (comando BACKUP TO: gera um .zip sem parar o servidor).
+    # Restaurar: pare o servidor, extraia o .zip na pasta do banco (substituindo rfid-db.mv.db) e suba de novo.
+    habilitado: ${RFID_BACKUP_HABILITADO:true}
+    # Vazio = pasta "backups" ao lado do arquivo do banco (ex.: ./data/backups).
+    # Recomendado apontar para outro disco ou pasta de rede: backup no mesmo disco não protege contra falha do disco.
+    pasta: ${RFID_BACKUP_PASTA:}
+    # Horário no formato cron do Spring (segundo minuto hora dia mês dia-da-semana). Padrão: todo dia às 02:00.
+    cron: ${RFID_BACKUP_CRON:0 0 2 * * *}
+    # Quantos backups guardar; os mais antigos são apagados.
+    manter: ${RFID_BACKUP_MANTER:14}
 
 
 management:

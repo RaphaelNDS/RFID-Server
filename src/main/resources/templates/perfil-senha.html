@@ -13,6 +13,11 @@
     </div>
   </div>
 
+  <div class="alert alert-aviso" th:if="${param.fraca}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+    <span>Sua senha atual não atende às regras de segurança do sistema. Escolha uma nova senha agora.</span>
+  </div>
+
   <div class="alert alert-erro" th:if="${erro}" role="alert">
     <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
   </div>
@@ -26,6 +31,7 @@
       <div class="field">
         <label for="novaSenha">Nova senha</label>
         <input id="novaSenha" type="password" name="novaSenha" autocomplete="new-password" required>
+        <span class="field-dica" th:text="${regraSenha}"></span>
       </div>
       <div class="field">
         <label for="confirmarSenha">Confirmar nova senha</label>

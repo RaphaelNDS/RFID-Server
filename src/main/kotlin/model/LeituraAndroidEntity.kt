@@ -20,5 +20,8 @@ data class LeituraAndroidEntity(
     val patrimonio: String? = null,
     val numeroSerie: String? = null,
 
-    val dataHora: LocalDateTime = LocalDateTime.now()
+    val dataHora: LocalDateTime = LocalDateTime.now(),
+
+    /** Nome do operador logado no coletor. Nulo nas leituras anteriores ao login de operador. */
+    val operador: String? = null
 )

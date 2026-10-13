@@ -36,6 +36,12 @@
           <span>Email ou senha incorretos.</span>
         </div>
 
+        <div class="alert alert-aviso" th:if="${param.bloqueado}" role="alert">
+          <svg class="ic"><use href="/img/icones.svg#relogio"/></svg>
+          <span>Muitas tentativas sem sucesso. Aguarde
+            <strong th:text="${param.bloqueado[0]} + ' minuto(s)'">15 minutos</strong> e tente de novo.</span>
+        </div>
+
         <div class="alert alert-ok" th:if="${param.logout}" role="status">
           <svg class="ic"><use href="/img/icones.svg#ok"/></svg>
           <span>Você saiu do sistema.</span>
