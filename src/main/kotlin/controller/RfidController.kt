@@ -13,7 +13,7 @@ class RfidController(
     private val service: RfidService
 ) {
 
-    @PreAuthorize("@authService.temPermissao('TAG','READ')")
+    @PreAuthorize("@authService.temPermissao('RFID','CREATE')")
     @PostMapping("/cadastrar")
     fun cadastrar(@RequestBody req: CadastroRequest) {
         service.cadastrarTag(req)
@@ -21,7 +21,7 @@ class RfidController(
 
     data class LeituraRequest(val tag: String)
 
-    @PreAuthorize("@authService.temPermissao('TAG','READ')")
+    @PreAuthorize("@authService.temPermissao('RFID','READ')")
     @PostMapping("/ler")
     fun ler(@RequestBody req: LeituraRequest) =
         service.buscarPorTag(req.tag)

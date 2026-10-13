@@ -2,13 +2,16 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
 
-<title>Painel do Usuário</title>
+<title>Bem-vindo · Sistema RFID</title>
 
-<section class="page-container">
-
-  <h1 class="page-title">Painel do Usuário</h1>
-
-  <p>Bem-vindo 👋</p>
-
+<section class="page page-estreita">
+  <div class="card" style="margin-top:32px">
+    <div class="card-body vazio">
+      <svg class="ic"><use href="/img/icones.svg#inicio"/></svg>
+      <strong>Bem-vindo ao Sistema RFID</strong>
+      <p>Os atalhos de acordo com as suas permissões estão na tela inicial.</p>
+      <a th:href="@{/dashboard}" class="btn btn-primary" style="margin-top:16px">Ir para o início</a>
+    </div>
+  </div>
 </section>
 </html>

@@ -2,101 +2,33 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
 
-<title>Status do Servidor</title>
+<title>Status do servidor · Sistema RFID</title>
 
-<section class="page-container">
+<section class="page page-estreita">
 
-    <h1 class="page-title">📡 Status do Servidor RFID</h1>
-
-    <div class="card" style="max-width:500px">
-
-        <p>Status:
-            <strong th:text="${info.status}"></strong>
-        </p>
-
-        <p>Hora do servidor:
-            <strong th:text="${info.horaServidor}"></strong>
-        </p>
-
-        <p>Versão:
-            <strong th:text="${info.versao}"></strong>
-        </p>
-
-        <p>Banco:
-            <strong th:text="${info.banco}"></strong>
-        </p>
-
+  <div class="page-header">
+    <div>
+      <h1>Status do servidor</h1>
+      <p class="subtitulo">Situação atual do servidor RFID</p>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="status-linha">
+        <svg class="ic"><use href="/img/icones.svg#servidor"/></svg>Servidor RFID
+      </h2>
+      <span class="badge badge-online" th:text="${info.status}">ONLINE</span>
+    </div>
+    <div class="card-body">
+      <dl class="dados">
+        <div><dt>No ar desde</dt><dd th:text="${#strings.replace(info.horaServidor, 'Desde ', '')}"></dd></div>
+        <div><dt>Tempo no ar</dt><dd th:text="${info.tempoOnline}"></dd></div>
+        <div><dt>Versão</dt><dd th:text="${info.versao}"></dd></div>
+        <div><dt>Banco de dados</dt><dd th:text="${info.banco}"></dd></div>
+      </dl>
+    </div>
+  </div>
 
 </section>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!--<!DOCTYPE html>-->
-<!--<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">-->
-<!--<head>-->
-<!--    <meta charset="UTF-8">-->
-<!--    <title>Status do Servidor</title>-->
-<!--    <style>-->
-<!--        body {-->
-<!--            font-family: Arial, sans-serif;-->
-<!--            background: #f4f6f8;-->
-<!--            padding: 40px;-->
-<!--        }-->
-<!--        .card {-->
-<!--            background: white;-->
-<!--            padding: 24px;-->
-<!--            border-radius: 8px;-->
-<!--            width: 360px;-->
-<!--            box-shadow: 0 2px 6px rgba(0,0,0,.1);-->
-<!--        }-->
-<!--        .ok {-->
-<!--            color: #2E7D32;-->
-<!--            font-weight: bold;-->
-<!--        }-->
-<!--    </style>-->
-<!--</head>-->
-<!--<body>-->
-
-<!--<h2>📡 Status do Servidor RFID</h2>-->
-
-<!--<div class="card">-->
-<!--    <p>Status: <span class="ok" th:text="${info.status}"></span></p>-->
-<!--    <p>Hora do servidor: <b th:text="${info.horaServidor}"></b></p>-->
-<!--    <p>Versão: <b th:text="${info.versao}"></b></p>-->
-<!--    <p>Banco: <b th:text="${info.banco}"></b></p>-->
-<!--</div>-->
-
-<!--<br>-->
-<!--<a href="/">← Voltar</a>-->
-
-<!--</body>-->
-<!--</html>-->

@@ -1,8 +1,8 @@
 package org.example.service
 
-import org.example.controller.LeituraAndroidStreamController
 import org.example.model.LeituraAndroidEntity
 import org.example.repository.*
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
 @Service
@@ -12,12 +12,18 @@ class LeituraAndroidService(
     private val tipoRepo: TipoEquipamentoRepository,
     private val marcaRepo: MarcaRepository,
     private val modeloRepo: ModeloRepository,
-    private val streamController: LeituraAndroidStreamController
+    private val eventos: LeituraEventosService
 ) {
+
+    private val log = LoggerFactory.getLogger(javaClass)
 
     fun salvarLeitura(tagReal: String) {
 
-        val tag = tagRepo.findByTagReal(tagReal).orElse(null) ?: return
+        // Leituras descartadas ficam em DEBUG: o leitor pode repetir a mesma tag várias vezes por segundo
+        val tag = tagRepo.findByTagReal(tagReal).orElse(null) ?: run {
+            log.debug("Leitura ignorada: tag {} não está cadastrada", tagReal)
+            return
+        }
 
         if (
             tag.codigoInterno.isNullOrBlank() ||
@@ -26,7 +32,10 @@ class LeituraAndroidService(
             tag.modeloId == null ||
             tag.patrimonio.isNullOrBlank() ||
             tag.numeroSerie.isNullOrBlank()
-        ) return
+        ) {
+            log.debug("Leitura ignorada: tag {} tem cadastro incompleto (tipo, marca, modelo, patrimônio ou série)", tagReal)
+            return
+        }
 
         val leitura = LeituraAndroidEntity(
             tag = tagReal,
@@ -40,6 +49,8 @@ class LeituraAndroidService(
 
         leituraRepo.save(leitura)
 
-        streamController.publicar(leitura)
+        log.debug("Leitura registrada: tag {} (patrimônio {})", tagReal, tag.patrimonio)
+
+        eventos.publicar(leitura)
     }
 }

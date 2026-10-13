@@ -9,7 +9,6 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 
-@PreAuthorize("hasRole('ADMIN')")
 @Controller
 @RequestMapping("/admin/cadastro")
 class CadastroController(
@@ -17,7 +16,7 @@ class CadastroController(
     private val catalogoService: CatalogoService
 ) {
 
-    @PreAuthorize("@authService.temPermissao('TAG','CREATE')")
+    @PreAuthorize("@authService.temPermissao('RFID','CREATE')")
     @GetMapping
     fun form(
         @RequestParam(required = false) tag: String?,
@@ -36,11 +35,18 @@ class CadastroController(
         return "cadastro"
     }
 
-    @PreAuthorize("@authService.temPermissao('TAG','CREATE')")
+    @PreAuthorize("@authService.temPermissao('RFID','CREATE')")
     @PostMapping("/salvar")
-    fun salvar(@ModelAttribute cadastro: CadastroRequest): String {
-        rfidService.cadastrarTag(cadastro)
-        return "redirect:/admin/tags-cadastradas"
+    fun salvar(@ModelAttribute("cadastro") cadastro: CadastroRequest, model: Model): String {
+        return try {
+            rfidService.cadastrarTag(cadastro)
+            "redirect:/admin/tags-cadastradas"
+        } catch (e: IllegalArgumentException) {
+            // Volta para o formulário com o que foi digitado e a mensagem de erro
+            model.addAttribute("erro", e.message)
+            carregarCombos(model)
+            "cadastro"
+        }
     }
 
     private fun carregarCombos(model: Model) {

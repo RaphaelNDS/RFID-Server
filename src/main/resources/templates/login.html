@@ -1,32 +1,63 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Acesso ao Sistema</title>
-  <link rel="stylesheet" href="/css/app.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar · Sistema RFID</title>
+  <link rel="icon" th:href="@{/img/favicon.svg}" type="image/svg+xml">
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+  <script th:replace="~{layout/tema :: tema}"></script>
+  <script th:src="@{/js/app.js}" defer></script>
 </head>
 
 <body>
-<div class="page-container" style="max-width:420px; margin-top:80px;">
-  <div class="form-card">
-    <h2 class="page-title" style="text-align:center;">Acesso ao Sistema</h2>
 
-    <form action="/login" method="post" class="form-grid-compact">
-      <div class="field" style="grid-column: span 2;">
-        <label>Email</label>
-        <input name="username" placeholder="usuario@empresa.com" required>
-      </div>
+<button type="button" class="icon-btn auth-tema" onclick="alternarTema()" aria-label="Alternar tema claro/escuro">
+  <svg class="ic tema-claro-ic"><use href="/img/icones.svg#lua"/></svg>
+  <svg class="ic tema-escuro-ic"><use href="/img/icones.svg#sol"/></svg>
+</button>
 
-      <div class="field" style="grid-column: span 2;">
-        <label>Senha</label>
-        <input name="password" type="password" placeholder="••••••••" required>
-      </div>
+<main class="auth">
+  <div class="auth-card">
 
-      <div class="form-actions-compact">
-        <button class="btn-primary">Entrar</button>
+    <div class="auth-marca">
+      <span class="brand-mark"><svg class="ic"><use href="/img/icones.svg#sinal"/></svg></span>
+      <div>
+        <h1>Sistema RFID</h1>
+        <p>Entre com seu email e senha</p>
       </div>
-    </form>
+    </div>
+
+    <div class="card">
+      <form th:action="@{/login}" method="post" class="card-body">
+
+        <div class="alert alert-erro" th:if="${param.error}" role="alert">
+          <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+          <span>Email ou senha incorretos.</span>
+        </div>
+
+        <div class="alert alert-ok" th:if="${param.logout}" role="status">
+          <svg class="ic"><use href="/img/icones.svg#ok"/></svg>
+          <span>Você saiu do sistema.</span>
+        </div>
+
+        <div class="field">
+          <label for="username">Email</label>
+          <input id="username" name="username" type="email" autocomplete="username"
+                 placeholder="usuario@empresa.com" required autofocus>
+        </div>
+
+        <div class="field">
+          <label for="password">Senha</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+      </form>
+    </div>
+
   </div>
-</div>
+</main>
+
 </body>
 </html>

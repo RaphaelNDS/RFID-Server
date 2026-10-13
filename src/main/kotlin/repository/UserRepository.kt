@@ -11,6 +11,8 @@ interface UserRepository : JpaRepository<UsuarioEntity, Long> {
 
     fun existsByEmail(email: String): Boolean
 
+    fun existsByEmailIgnoreCase(email: String): Boolean
+
     @Query("""
         SELECT u FROM UsuarioEntity u
         LEFT JOIN FETCH u.permissoes

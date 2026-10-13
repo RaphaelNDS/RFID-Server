@@ -8,6 +8,7 @@ import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.servlet.mvc.support.RedirectAttributes
 
 
 @PreAuthorize("hasRole('ADMIN')")
@@ -27,17 +28,19 @@ class UsuarioAdminController(
     fun novo(): String = "admin-usuarios-cadastro"
 
     @PostMapping("/cadastrar")
-    fun criar(req: CadastroUsuarioRequest, model: Model): String {
+    fun criar(req: CadastroUsuarioRequest, model: Model, redirect: RedirectAttributes): String {
 
         return try {
-
             service.cadastrar(req)
-            model.addAttribute("msg", "Usuário criado com sucesso!")
+
+            // Flash attribute sobrevive ao redirect (model.addAttribute se perdia)
+            redirect.addFlashAttribute("msg", "Usuário ${req.email} criado com sucesso!")
             "redirect:/admin/usuarios/novo"
 
-        } catch (e: Exception) {
-
+        } catch (e: IllegalArgumentException) {
+            // Volta ao formulário com o que foi digitado (menos a senha)
             model.addAttribute("erro", e.message)
+            model.addAttribute("form", req.copy(senha = ""))
             "admin-usuarios-cadastro"
         }
     }

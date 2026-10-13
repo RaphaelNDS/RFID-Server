@@ -1,10 +1,4 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<body>
-
-<div th:fragment="footer" class="footer">
-  © 2026 - Sistema RFID • Desenvolvido por Backup Automação
-</div>
-
-</body>
-</html>
+<footer th:fragment="footer" class="footer" xmlns:th="http://www.thymeleaf.org">
+  © <span th:text="${#temporals.year(#temporals.createNow())}">2026</span> Sistema RFID · Backup Automação
+  <span th:if="${info != null}"> · versão <span th:text="${info.versao}"></span></span>
+</footer>

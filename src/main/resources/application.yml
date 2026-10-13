@@ -3,19 +3,32 @@ server:
 
 spring:
   datasource:
-    url: jdbc:h2:mem:rfid-db
+    # Banco em arquivo: os dados sobrevivem a reinícios do servidor.
+    # RFID_DB_PATH muda o local (padrão: pasta ./data a partir de onde o servidor é iniciado).
+    # WRITE_DELAY=0 grava cada commit no disco na hora (sem isso, uma queda perde o último ~1s de dados).
+    # DB_CLOSE_ON_EXIT=FALSE deixa o Spring fechar o banco no desligamento, na ordem certa.
+    # Com o servidor rodando o arquivo fica travado: para consultar, use /h2-console (ADMIN).
+    url: jdbc:h2:file:${RFID_DB_PATH:./data/rfid-db};WRITE_DELAY=0;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
-    username: sa
-    password: ""
+    username: ${RFID_DB_USER:sa}
+    password: ${RFID_DB_PASSWORD:}
+
+  # O schema é criado e evoluído pelo Flyway (src/main/resources/db/migration).
+  # O Hibernate só confere se as entidades batem com as tabelas.
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
 
   h2:
     console:
       enabled: true
+      settings:
+        web-allow-others: false   # console do H2 só aceita acesso a partir da própria máquina
 
 
 management:

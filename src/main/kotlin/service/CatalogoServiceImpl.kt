@@ -11,6 +11,8 @@ import org.example.request.MarcaRequest
 import org.example.request.ModeloRequest
 import org.example.request.TipoEquipamentoRequest
 import org.springframework.stereotype.Service
+import org.slf4j.LoggerFactory
+import org.springframework.security.core.context.SecurityContextHolder
 
 @Service
 class CatalogoServiceImpl(
@@ -18,6 +20,8 @@ class CatalogoServiceImpl(
     private val marcaRepo: MarcaRepository,
     private val modeloRepo: ModeloRepository
 ) : CatalogoService {
+
+    private val log = LoggerFactory.getLogger(javaClass)
 
     /* =====================================================
        LISTAGENS
@@ -52,7 +56,7 @@ class CatalogoServiceImpl(
 
         return tipoRepo.save(
             TipoEquipamentoEntity(nome = nome)
-        )
+        ).also { log.info("Tipo de equipamento cadastrado: '{}' (id {}) por {}", it.nome, it.id, usuarioAtual()) }
     }
 
     /* =====================================================
@@ -65,8 +69,16 @@ class CatalogoServiceImpl(
         val nome = req.nome.trim()
         require(nome.isNotBlank()) { "Nome da marca não pode ser vazio" }
 
-        val tipo = tipoRepo.findById(req.tipoId!!)
-            .orElseThrow { IllegalArgumentException("Tipo não encontrado") }
+        // Sem o tipo, o "!!" antigo estourava NullPointerException (erro 500)
+        val tipoId = req.tipoId ?: run {
+            log.warn("Cadastro da marca '{}' recusado: tipo de equipamento não informado (por {})", nome, usuarioAtual())
+            throw IllegalArgumentException("Selecione o tipo de equipamento da marca")
+        }
+
+        val tipo = tipoRepo.findById(tipoId).orElseThrow {
+            log.warn("Cadastro da marca '{}' recusado: tipo de equipamento {} não existe (por {})", nome, tipoId, usuarioAtual())
+            IllegalArgumentException("Tipo de equipamento não encontrado")
+        }
 
         if (marcaRepo.findByNomeIgnoreCaseAndTipoId(nome, tipo.id!!).isPresent) {
             throw IllegalArgumentException("Marca já cadastrada para esse tipo!")
@@ -77,7 +89,7 @@ class CatalogoServiceImpl(
                 nome = nome,
                 tipo = tipo
             )
-        )
+        ).also { log.info("Marca cadastrada: '{}' no tipo '{}' (id {}) por {}", it.nome, it.tipo.nome, it.id, usuarioAtual()) }
     }
 
     /* =====================================================
@@ -90,8 +102,16 @@ class CatalogoServiceImpl(
         val nome = req.nome.trim()
         require(nome.isNotBlank()) { "Nome do modelo não pode ser vazio" }
 
-        val marca = marcaRepo.findById(req.marcaId!!)
-            .orElseThrow { IllegalArgumentException("Marca não encontrada") }
+        // Sem a marca, o "!!" antigo estourava NullPointerException (erro 500)
+        val marcaId = req.marcaId ?: run {
+            log.warn("Cadastro do modelo '{}' recusado: marca não informada (por {})", nome, usuarioAtual())
+            throw IllegalArgumentException("Selecione a marca do modelo")
+        }
+
+        val marca = marcaRepo.findById(marcaId).orElseThrow {
+            log.warn("Cadastro do modelo '{}' recusado: marca {} não existe (por {})", nome, marcaId, usuarioAtual())
+            IllegalArgumentException("Marca não encontrada")
+        }
 
         if (modeloRepo.findByNomeIgnoreCaseAndMarcaId(nome, marca.id!!).isPresent) {
             throw IllegalArgumentException("Modelo já cadastrado para essa marca!")
@@ -102,7 +122,7 @@ class CatalogoServiceImpl(
                 nome = nome,
                 marca = marca
             )
-        )
+        ).also { log.info("Modelo cadastrado: '{}' na marca '{}' (id {}) por {}", it.nome, it.marca.nome, it.id, usuarioAtual()) }
     }
 
     /* =====================================================
@@ -126,6 +146,7 @@ class CatalogoServiceImpl(
 
         tipo.nome = novoNome
         return tipoRepo.save(tipo)
+            .also { log.info("Tipo de equipamento editado: id {} agora se chama '{}' (por {})", it.id, it.nome, usuarioAtual()) }
     }
 
     @Transactional
@@ -146,6 +167,7 @@ class CatalogoServiceImpl(
 
         marca.nome = novoNome
         return marcaRepo.save(marca)
+            .also { log.info("Marca editada: id {} agora se chama '{}' (por {})", it.id, it.nome, usuarioAtual()) }
     }
 
     @Transactional
@@ -166,6 +188,7 @@ class CatalogoServiceImpl(
 
         modelo.nome = novoNome
         return modeloRepo.save(modelo)
+            .also { log.info("Modelo editado: id {} agora se chama '{}' (por {})", it.id, it.nome, usuarioAtual()) }
     }
 
     /* =====================================================
@@ -179,7 +202,9 @@ class CatalogoServiceImpl(
             throw IllegalStateException("Não é possível excluir tipo com marcas vinculadas")
         }
 
+        val nome = tipoRepo.findById(id).orElse(null)?.nome
         tipoRepo.deleteById(id)
+        log.info("Tipo de equipamento excluído: '{}' (id {}) por {}", nome, id, usuarioAtual())
     }
 
     @Transactional
@@ -189,12 +214,16 @@ class CatalogoServiceImpl(
             throw IllegalStateException("Não é possível excluir marca com modelos vinculados")
         }
 
+        val nome = marcaRepo.findById(id).orElse(null)?.nome
         marcaRepo.deleteById(id)
+        log.info("Marca excluída: '{}' (id {}) por {}", nome, id, usuarioAtual())
     }
 
     @Transactional
     override fun excluirModelo(id: Long) {
+        val nome = modeloRepo.findById(id).orElse(null)?.nome
         modeloRepo.deleteById(id)
+        log.info("Modelo excluído: '{}' (id {}) por {}", nome, id, usuarioAtual())
     }
 
     /* =====================================================
@@ -208,4 +237,7 @@ class CatalogoServiceImpl(
                 tipo.nome to modeloRepo.countByMarcaTipoId(tipo.id!!)
             }
     }
+
+    private fun usuarioAtual(): String =
+        SecurityContextHolder.getContext().authentication?.name ?: "sistema"
 }

@@ -1,18 +1,33 @@
 package org.example.service
 
-import org.apache.tomcat.util.net.openssl.ciphers.Authentication
-import org.example.model.Role
-import org.example.model.UsuarioEntity
-import org.example.repository.UserRepository
-import org.springframework.beans.factory.annotation.Autowired
+import org.example.model.Acao
+import org.example.model.Modulo
+import org.slf4j.LoggerFactory
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
+import java.util.concurrent.ConcurrentHashMap
 
 @Service("authService")
 class AuthService {
 
+    private val log = LoggerFactory.getLogger(javaClass)
+
+    private val modulosValidos = Modulo.values().map { it.name }.toSet()
+    private val acoesValidas = Acao.values().map { it.name }.toSet()
+
+    // Nomes inválidos já avisados no log (evita repetir a cada página renderizada)
+    private val invalidosAvisados = ConcurrentHashMap.newKeySet<String>()
 
     fun temPermissao(modulo: String, acao: String): Boolean {
+
+        if (modulo !in modulosValidos || acao !in acoesValidas) {
+            if (invalidosAvisados.add("${modulo}_${acao}")) {
+                log.error(
+                    "Checagem de permissão com módulo/ação inexistente: '{}_{}'. Só o ADMIN vai passar. Módulos válidos: {}; ações válidas: {}",
+                    modulo, acao, modulosValidos, acoesValidas
+                )
+            }
+        }
 
         val auth = SecurityContextHolder.getContext().authentication ?: return false
 

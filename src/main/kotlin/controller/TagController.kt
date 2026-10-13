@@ -7,6 +7,7 @@ import org.example.request.CadastroRequest
 import org.example.response.TagResponse
 import org.example.service.RfidService
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -24,6 +25,7 @@ class TagController(
         return ResponseEntity.ok(tag)
     }
 
+    @PreAuthorize("@authService.temPermissao('RFID','CREATE')")
     @PostMapping("/cadastrar")
     fun cadastrar(@RequestBody req: CadastroRequest) {
         service.cadastrarTag(req)

@@ -25,14 +25,14 @@ class AdminController(
         return "admin"
     }
 
-    @PreAuthorize("@authService.temPermissao('TAG','READ')")
+    @PreAuthorize("@authService.temPermissao('RFID','READ')")
     @GetMapping("/tags-pendentes")
     fun pendentes(model: Model): String {
         model.addAttribute("pendentes", rfidService.listarNaoCadastradas())
         return "admin-tags-pendentes"
     }
 
-    @PreAuthorize("@authService.temPermissao('TAG','READ')")
+    @PreAuthorize("@authService.temPermissao('RFID','READ')")
     @GetMapping("/tags-cadastradas")
     fun cadastradas(model: Model): String {
         model.addAttribute("tags", rfidService.listarParaAdmin())

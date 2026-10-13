@@ -1,22 +1,40 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <title>Tipos de Equipamento</title>
-</head>
-<body>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
 
-<h2>📦 Tipos de Equipamento</h2>
+<title>Tipos de equipamento · Sistema RFID</title>
 
-<table border="1" cellpadding="6">
-    <tr>
-        <th>ID</th>
-        <th>Nome</th>
-    </tr>
-    <tr th:each="t : ${tipos}">
-        <td th:text="${t.id}"></td>
-        <td th:text="${t.nome}"></td>
-    </tr>
-</table>
+<section class="page">
 
-</body>
+  <div class="page-header">
+    <div>
+      <h1>Tipos de equipamento</h1>
+      <p class="subtitulo">Todos os tipos cadastrados no catálogo</p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/catalogo}" class="btn btn-ghost">
+        <svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Voltar ao catálogo
+      </a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-wrap">
+      <table class="table" th:unless="${#lists.isEmpty(tipos)}">
+        <thead>
+        <tr><th>ID</th><th>Nome</th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="i : ${tipos}"><td class="muted" th:text="${i.id}"></td><td class="principal" th:text="${i.nome}"></td></tr>
+        </tbody>
+      </table>
+      <div class="vazio" th:if="${#lists.isEmpty(tipos)}">
+        <svg class="ic"><use href="/img/icones.svg#pacote"/></svg>
+        <strong>Nenhum tipo cadastrado</strong>
+        Cadastre pela tela do catálogo.
+      </div>
+    </div>
+  </div>
+
+</section>
 </html>

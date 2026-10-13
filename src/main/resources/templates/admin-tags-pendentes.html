@@ -1,38 +1,54 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="layout/base :: layout(~{::title}, ~{::section})">
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
 
-<title>Tags Pendentes</title>
+<title>Pendentes · Sistema RFID</title>
 
-<section class="page-container">
+<section class="page">
 
-  <h2 class="page-title">📋 Tags Não Cadastradas</h2>
+  <div class="page-header">
+    <div>
+      <h1>Etiquetas pendentes</h1>
+      <p class="subtitulo">Etiquetas lidas pelos coletores que ainda não estão vinculadas a um equipamento</p>
+    </div>
+  </div>
 
-  <div class="table-card">
-    <table>
-      <thead>
-      <tr>
-        <th>EPC</th>
-        <th>Data</th>
-        <th>Ação</th>
-      </tr>
-      </thead>
+  <div class="card">
+    <div class="card-header">
+      <h2>Aguardando cadastro <span class="contagem" th:text="'(' + ${#lists.size(pendentes)} + ')'"></span></h2>
+    </div>
 
-      <tbody>
-      <tr th:each="t : ${pendentes}">
-        <td th:text="${t.tag}"></td>
-        <td th:text="${t.dataHora}"></td>
-        <td>
-          <a class="btn-primary"
-             th:href="@{/admin/cadastro(tag=${t.tag})}">
-            ➕ Cadastrar
-          </a>
-        </td>
-      </tr>
-      </tbody>
-    </table>
+    <div class="table-wrap">
+      <table class="table" th:unless="${#lists.isEmpty(pendentes)}">
+        <thead>
+        <tr>
+          <th>Etiqueta (EPC)</th>
+          <th>Primeira leitura</th>
+          <th class="acoes"><span class="sr-only">Ações</span></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="t : ${pendentes}">
+          <td class="mono principal" th:text="${t.tag}"></td>
+          <td class="nowrap" th:text="${#temporals.format(t.dataHora, 'dd/MM/yyyy HH:mm')}"></td>
+          <td class="acoes">
+            <a class="btn btn-secondary btn-sm" aria-label="Cadastrar esta etiqueta"
+               th:if="${@authService.temPermissao('RFID','CREATE')}"
+               th:href="@{/admin/cadastro(tag=${t.tag})}">
+              <svg class="ic"><use href="/img/icones.svg#mais"/></svg><span class="texto-btn">Cadastrar</span>
+            </a>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+
+      <div class="vazio" th:if="${#lists.isEmpty(pendentes)}">
+        <svg class="ic"><use href="/img/icones.svg#ok"/></svg>
+        <strong>Nenhuma etiqueta pendente</strong>
+        Todas as etiquetas lidas já estão cadastradas.
+      </div>
+    </div>
   </div>
 
 </section>
-
 </html>

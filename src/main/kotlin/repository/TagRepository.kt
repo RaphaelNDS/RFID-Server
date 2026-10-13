@@ -93,14 +93,6 @@ interface LeituraAndroidRepository :
     """)
     fun contarPorDia(): List<Array<Any>>
 
-    /* ===== TOTAL GERAL ===== */
-
-    @Query("""
-        select count(l)
-        from LeituraAndroidEntity l
-    """)
-    fun contarTotal(): Long
-
     /* ===== CONTADOR DESDE DATA ===== */
 
     @Query("""
@@ -112,48 +104,54 @@ interface LeituraAndroidRepository :
         @Param("inicio") inicio: LocalDateTime
     ): Long
 
-    /* ===== ÚLTIMOS DIAS (PARA DASHBOARD) ===== */
+    /* ===== DASHBOARD: CONTAGENS NO PERÍODO [inicio, fim) ===== */
+    // Intervalo semiaberto: "fim" é o primeiro instante FORA do período (ex.: meia-noite do dia seguinte)
+
+    @Query("""
+        select count(l)
+        from LeituraAndroidEntity l
+        where l.dataHora >= :inicio and l.dataHora < :fim
+    """)
+    fun contarEntre(
+        @Param("inicio") inicio: LocalDateTime,
+        @Param("fim") fim: LocalDateTime
+    ): Long
 
     @Query("""
         select cast(l.dataHora as date), count(l)
         from LeituraAndroidEntity l
-        where l.dataHora >= :inicio
+        where l.dataHora >= :inicio and l.dataHora < :fim
         group by cast(l.dataHora as date)
         order by cast(l.dataHora as date)
     """)
-    fun contarUltimosDias(
-        @Param("inicio") inicio: LocalDateTime
+    fun contarPorDiaEntre(
+        @Param("inicio") inicio: LocalDateTime,
+        @Param("fim") fim: LocalDateTime
     ): List<Array<Any>>
-
-    /* ===== AGRUPADO POR TIPO ===== */
 
     @Query("""
         select l.tipo, count(l)
         from LeituraAndroidEntity l
+        where l.dataHora >= :inicio and l.dataHora < :fim
         group by l.tipo
+        order by count(l) desc
     """)
-    fun contarPorTipo(): List<Array<Any>>
-
-    /* ===== AGRUPADO POR MARCA ===== */
+    fun contarPorTipoEntre(
+        @Param("inicio") inicio: LocalDateTime,
+        @Param("fim") fim: LocalDateTime
+    ): List<Array<Any?>>
 
     @Query("""
         select l.marca, count(l)
         from LeituraAndroidEntity l
+        where l.dataHora >= :inicio and l.dataHora < :fim
         group by l.marca
+        order by count(l) desc
     """)
-    fun contarPorMarca(): List<Array<Any>>
-
-    /* ===== BUSCA POR PERÍODO ===== */
-
-    @Query("""
-        SELECT l FROM LeituraAndroidEntity l
-        WHERE l.dataHora BETWEEN :inicio AND :fim
-        ORDER BY l.dataHora DESC
-    """)
-    fun buscarPorPeriodo(
+    fun contarPorMarcaEntre(
         @Param("inicio") inicio: LocalDateTime,
         @Param("fim") fim: LocalDateTime
-    ): List<LeituraAndroidEntity>
+    ): List<Array<Any?>>
 }
 
 

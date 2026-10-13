@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service
 import java.security.MessageDigest
 import org.example.response.TagViewAdmin
 import java.time.LocalDateTime
+import org.slf4j.LoggerFactory
+import org.springframework.security.core.context.SecurityContextHolder
 
 @Service
 class RfidService(
@@ -21,10 +23,19 @@ class RfidService(
     private val modeloRepo: ModeloRepository
 ) {
 
+    private val log = LoggerFactory.getLogger(javaClass)
+
     /* ================= CADASTRO NORMAL ================= */
 
     @Transactional
     fun cadastrarTag(req: CadastroRequest) {
+
+        require(req.tag.isNotBlank()) { "Informe a TAG RFID" }
+
+        if (repo.existsByTagReal(req.tag)) {
+            log.warn("Cadastro recusado: a tag {} já está cadastrada (tentativa de {})", req.tag, usuarioAtual())
+            throw IllegalArgumentException("Esta etiqueta já está cadastrada")
+        }
 
         val hash = hashTag(req.tag)
 
@@ -43,6 +54,11 @@ class RfidService(
         repo.save(entity)
 
         naoRepo.deleteByTag(req.tag)
+
+        log.info(
+            "Etiqueta cadastrada: {} (patrimônio: {}) por {}",
+            req.tag, req.patrimonio, usuarioAtual()
+        )
     }
 
     fun buscarPorTag(tagReal: String): TagResponse? {
@@ -127,6 +143,9 @@ class RfidService(
             }
 
     /* ================= UTIL ================= */
+
+    private fun usuarioAtual(): String =
+        SecurityContextHolder.getContext().authentication?.name ?: "desconhecido"
 
     private fun hashTag(tag: String): String {
         val md = MessageDigest.getInstance("SHA-256")

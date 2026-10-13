@@ -1,8 +1,9 @@
 package org.example.controller
 
-import org.example.request.CadastroUsuarioRequest
+import jakarta.servlet.http.HttpServletRequest
 import org.example.request.SetupAdminRequest
 import org.example.service.UsuarioService
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -12,11 +13,27 @@ class SetupController(
     private val usuarioService: UsuarioService
 ) {
 
+    private val log = LoggerFactory.getLogger(javaClass)
+
     @GetMapping("/setup")
-    fun setup(): String = "setup"
+    fun setup(): String {
+        if (usuarioService.existeUsuario()) {
+            return "redirect:/login"
+        }
+        return "setup"
+    }
 
     @PostMapping("/setup")
-    fun criarAdmin(req: SetupAdminRequest): String {
+    fun criarAdmin(req: SetupAdminRequest, request: HttpServletRequest): String {
+
+        if (usuarioService.existeUsuario()) {
+            log.warn(
+                "Tentativa bloqueada de criar administrador via /setup com o sistema já configurado (IP: {}, email informado: {})",
+                request.remoteAddr, req.email
+            )
+            return "redirect:/login"
+        }
+
         usuarioService.criarAdminInicial(req)
         return "redirect:/login"
     }

@@ -43,3 +43,7 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+### Banco de dados local (H2 em arquivo) ###
+data/
+*.mv.db
+*.trace.db

@@ -1,35 +1,43 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
 
-<title>Alterar Email</title>
+<title>Alterar email · Sistema RFID</title>
 
-<section class="page-container">
+<section class="page" style="max-width:520px">
 
-  <h1 class="page-title">Alterar Email</h1>
-
-  <div class="card">
-
-    <form th:action="@{/perfil/email}" method="post">
-
-      <div class="field">
-        <label>Email atual</label>
-        <input type="email"
-               sec:authentication="principal.username"
-               readonly>
-      </div>
-
-      <div class="field">
-        <label>Novo Email</label>
-        <input type="email" name="novoEmail" required>
-      </div>
-
-      <button type="submit" class="btn-primary">Salvar</button>
-
-    </form>
-
+  <div class="page-header">
+    <div>
+      <h1>Alterar email</h1>
+      <p class="subtitulo">O email também é o seu login</p>
+    </div>
   </div>
+
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <form class="card" th:action="@{/perfil/email}" method="post">
+    <div class="card-body" style="display:flex;flex-direction:column;gap:16px">
+      <div class="field">
+        <label for="emailAtual">Email atual</label>
+        <input id="emailAtual" type="email" th:value="${#authentication.principal.email}" readonly>
+      </div>
+      <div class="field">
+        <label for="novoEmail">Novo email</label>
+        <input id="novoEmail" type="email" name="novoEmail" th:value="${novoEmail}" autocomplete="email" required autofocus>
+      </div>
+      <div class="field">
+        <label for="senhaAtual">Senha atual</label>
+        <input id="senhaAtual" type="password" name="senhaAtual" autocomplete="current-password" required>
+        <span class="field-dica">Para confirmar que é você.</span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <a th:href="@{/perfil}" class="btn btn-ghost">Cancelar</a>
+      <button type="submit" class="btn btn-primary">Salvar novo email</button>
+    </div>
+  </form>
 
 </section>
 </html>

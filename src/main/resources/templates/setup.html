@@ -1,36 +1,58 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Configuração inicial · Sistema RFID</title>
+  <link rel="icon" th:href="@{/img/favicon.svg}" type="image/svg+xml">
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+  <script th:replace="~{layout/tema :: tema}"></script>
+  <script th:src="@{/js/app.js}" defer></script>
+</head>
 
-<title>Setup Inicial</title>
+<body>
 
-<section class="page-container" style="max-width:600px; margin:auto;">
+<button type="button" class="icon-btn auth-tema" onclick="alternarTema()" aria-label="Alternar tema claro/escuro">
+  <svg class="ic tema-claro-ic"><use href="/img/icones.svg#lua"/></svg>
+  <svg class="ic tema-escuro-ic"><use href="/img/icones.svg#sol"/></svg>
+</button>
 
-  <div class="form-card">
-    <h2 class="page-title">Configuração Inicial</h2>
+<main class="auth">
+  <div class="auth-card">
 
-    <form th:action="@{/setup}" method="post" class="form-grid-compact">
-
-      <div class="field">
-        <label>Nome</label>
-        <input type="text" name="nome" required>
+    <div class="auth-marca">
+      <span class="brand-mark"><svg class="ic"><use href="/img/icones.svg#escudo"/></svg></span>
+      <div>
+        <h1>Configuração inicial</h1>
+        <p>Crie o administrador principal do sistema. Esta tela só aparece uma vez.</p>
       </div>
+    </div>
 
-      <div class="field">
-        <label>Email</label>
-        <input type="email" name="email" required>
-      </div>
+    <div class="card">
+      <form th:action="@{/setup}" method="post" class="card-body">
 
-      <div class="field">
-        <label>Senha</label>
-        <input type="password" name="senha" required>
-      </div>
+        <div class="field">
+          <label for="nome">Nome</label>
+          <input id="nome" type="text" name="nome" autocomplete="name" required autofocus>
+        </div>
 
-      <div class="form-actions-compact" style="grid-column: span 2;">
-        <button class="btn-primary">Criar Administrador</button>
-      </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" name="email" autocomplete="username" required>
+          <span class="field-dica">Será usado para entrar no sistema.</span>
+        </div>
 
-    </form>
+        <div class="field">
+          <label for="senha">Senha</label>
+          <input id="senha" type="password" name="senha" autocomplete="new-password" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Criar administrador</button>
+      </form>
+    </div>
+
   </div>
-</section>
+</main>
+
+</body>
 </html>

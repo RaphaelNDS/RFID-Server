@@ -2,87 +2,73 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
 
-<title>Cadastro Inicial</title>
+<title>Usuários · Sistema RFID</title>
 
-<section class="page-container" style="max-width:900px; margin:auto;">
+<section class="page">
 
-  <div class="form-card">
-    <h2 class="page-title">Cadastro do Administrador Inicial</h2>
-
-    <p style="margin-bottom:20px; color:var(--muted);">
-      Sistema novo detectado. Crie o usuário administrador principal.
-    </p>
-
-    <form action="/admin/usuarios/cadastrar" method="post" class="form-grid-compact">
-
-      <div class="field">
-        <label>Nome</label>
-        <input name="nome" required>
-      </div>
-
-      <div class="field">
-        <label>Email</label>
-        <input name="email" type="email" required>
-      </div>
-
-      <div class="field">
-        <label>Senha</label>
-        <input name="senha" type="password" required>
-      </div>
-
-      <div class="field">
-        <label>Perfil</label>
-        <select name="role">
-          <option value="ADMIN">Administrador</option>
-        </select>
-      </div>
-
-      <div class="field" style="grid-column: span 2;">
-        <label>Módulos</label>
-        <div class="list">
-          <label><input type="checkbox" name="telas" value="CATALOGO"> Catálogo</label>
-          <label><input type="checkbox" name="telas" value="RFID"> RFID</label>
-          <label><input type="checkbox" name="telas" value="LEITURA"> Leituras</label>
-          <label><input type="checkbox" name="telas" value="DASHBOARD"> Dashboard</label>
-          <label><input type="checkbox" name="telas" value="USUARIO"> Usuários</label>
-        </div>
-      </div>
-
-      <div class="field" style="grid-column: span 2;">
-        <label>Permissões</label>
-        <div class="list">
-          <label><input type="checkbox" name="permissoes" value="CREATE"> Criar</label>
-          <label><input type="checkbox" name="permissoes" value="READ"> Visualizar</label>
-          <label><input type="checkbox" name="permissoes" value="UPDATE"> Editar</label>
-          <label><input type="checkbox" name="permissoes" value="DELETE"> Excluir</label>
-        </div>
-      </div>
-
-      <div class="form-actions-compact">
-        <button class="btn-primary">Criar Administrador</button>
-      </div>
-
-    </form>
+  <div class="page-header">
+    <div>
+      <h1>Usuários</h1>
+      <p class="subtitulo">Quem acessa o sistema e com quais permissões</p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/usuarios/novo}" class="btn btn-primary">
+        <svg class="ic"><use href="/img/icones.svg#mais"/></svg>Novo usuário
+      </a>
+    </div>
   </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <div class="field busca">
+        <label for="filtroTabela" class="sr-only">Buscar</label>
+        <svg class="ic"><use href="/img/icones.svg#busca"/></svg>
+        <input id="filtroTabela" type="search" placeholder="Buscar por nome, email ou perfil">
+      </div>
+      <span class="muted nowrap" id="contagem" th:text="${#lists.size(usuarios)} + ' usuário(s)'"></span>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table" id="tabela">
+        <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Email</th>
+          <th>Perfil</th>
+          <th>Permissões</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="u : ${usuarios}">
+          <td class="principal">
+            <span style="display:inline-flex;align-items:center;gap:10px">
+              <span class="avatar" th:text="${#strings.toUpperCase(#strings.substring(u.nome, 0, 1))}">A</span>
+              <span th:text="${u.nome}"></span>
+            </span>
+          </td>
+          <td th:text="${u.email}"></td>
+          <td>
+            <span class="badge" th:classappend="'badge-' + ${u.role}" th:switch="${u.role.name()}">
+              <th:block th:case="'ADMIN'">Administrador</th:block>
+              <th:block th:case="'GESTOR'">Gestor</th:block>
+              <th:block th:case="'USER'">Usuário</th:block>
+              <th:block th:case="*">Personalizado</th:block>
+            </span>
+          </td>
+          <td class="muted" th:text="${u.role.name() == 'ADMIN'} ? 'Acesso total' : ${#lists.size(u.permissoes)} + ' permissão(ões)'"></td>
+        </tr>
+        </tbody>
+      </table>
+
+      <div class="vazio" id="semResultado" hidden>
+        <svg class="ic"><use href="/img/icones.svg#busca"/></svg>
+        <strong>Nada encontrado</strong>
+        Nenhum usuário corresponde à busca.
+      </div>
+    </div>
+  </div>
+
+  <script th:replace="~{layout/filtro-tabela :: script}"></script>
+
 </section>
 </html>
-
-<script>
-  document.addEventListener("DOMContentLoaded", function(){
-
-      const modulos = document.querySelectorAll("input[name='telas']")
-      const permissoes = document.querySelectorAll("input[name='permissoes']")
-
-      // ADMIN = tudo marcado e travado
-      modulos.forEach(m => {
-          m.checked = true
-          m.disabled = true
-      })
-
-      permissoes.forEach(p => {
-          p.checked = true
-          p.disabled = true
-      })
-
-  })
-</script>

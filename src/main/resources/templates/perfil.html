@@ -3,39 +3,58 @@
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
 
-<title>Meu Perfil</title>
+<title>Meu perfil · Sistema RFID</title>
 
-<section class="page-container">
+<section class="page page-estreita">
 
-  <h1 class="page-title">Meu Perfil</h1>
-
-  <div class="grid">
-
-    <div class="card">
-      <h3>Informações do Usuário</h3>
-
-      <ul class="list">
-        <li>
-          <span>Nome:</span>
-          <span th:text="${#authentication.principal.nome}"></span>
-        </li>
-
-        <li>
-          <span>Email:</span>
-          <span th:text="${#authentication.principal.email}"></span>
-        </li>
-      </ul>
+  <div class="page-header">
+    <div>
+      <h1>Meu perfil</h1>
+      <p class="subtitulo">Seus dados de acesso</p>
     </div>
+  </div>
 
-    <div class="card">
-      <h3>Ações</h3>
+  <div class="alert alert-ok" th:if="${param.senhaAlterada}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span>Senha alterada com sucesso.</span>
+  </div>
+  <div class="alert alert-ok" th:if="${param.emailAlterado}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span>Email alterado com sucesso. Use o novo email no próximo login.</span>
+  </div>
 
-      <div class="actions">
-        <a th:href="@{/perfil/senha}" class="btn-primary">Alterar Senha</a><br><br>
-        <a th:href="@{/perfil/email}" class="btn-primary">Alterar Email</a>
+  <div class="card">
+    <div class="card-body" style="display:flex;align-items:center;gap:16px">
+      <span class="avatar" style="width:56px;height:56px;font-size:22px"
+            th:text="${#strings.toUpperCase(#strings.substring(#authentication.principal.nome, 0, 1))}">A</span>
+      <div>
+        <h2 style="font-size:18px" th:text="${#authentication.principal.nome}">Nome</h2>
+        <p class="muted" th:text="${#authentication.principal.email}">email</p>
       </div>
     </div>
-
+    <div class="card-body" style="padding-top:0">
+      <dl class="dados">
+        <div>
+          <dt>Perfil</dt>
+          <dd>
+            <span class="badge badge-ADMIN" sec:authorize="hasRole('ADMIN')">Administrador</span>
+            <span class="badge badge-GESTOR" sec:authorize="hasRole('GESTOR')">Gestor</span>
+            <span class="badge" sec:authorize="hasRole('USER')">Usuário</span>
+            <span class="badge badge-CUSTOM" sec:authorize="hasRole('CUSTOM')">Personalizado</span>
+          </dd>
+        </div>
+      </dl>
+    </div>
   </div>
+
+  <div class="grid grid-2 secao">
+    <a th:href="@{/perfil/senha}" class="tile">
+      <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#chave"/></svg></span>
+      <span><span class="tile-titulo">Alterar senha</span><span class="tile-desc d-block">Exige a senha atual</span></span>
+    </a>
+    <a th:href="@{/perfil/email}" class="tile">
+      <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#email"/></svg></span>
+      <span><span class="tile-titulo">Alterar email</span><span class="tile-desc d-block">O email também é o seu login</span></span>
+    </a>
+  </div>
+
 </section>
 </html>

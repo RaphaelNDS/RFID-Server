@@ -2,36 +2,41 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
 
-<title>Alterar Senha</title>
+<title>Alterar senha · Sistema RFID</title>
 
-<section class="page-container">
+<section class="page" style="max-width:520px">
 
-  <h1 class="page-title">Alterar Senha</h1>
-
-  <div class="card">
-
-    <form th:action="@{/perfil/senha}" method="post">
-
-      <div class="field">
-        <label>Senha Atual</label>
-        <input type="password" name="senhaAtual" required>
-      </div>
-
-      <div class="field">
-        <label>Nova Senha</label>
-        <input type="password" name="novaSenha" required>
-      </div>
-
-      <div class="field">
-        <label>Confirmar Nova Senha</label>
-        <input type="password" name="confirmarSenha" required>
-      </div>
-
-      <button type="submit" class="btn-primary">Salvar</button>
-
-    </form>
-
+  <div class="page-header">
+    <div>
+      <h1>Alterar senha</h1>
+      <p class="subtitulo">Confirme a senha atual e escolha a nova</p>
+    </div>
   </div>
+
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <form class="card" th:action="@{/perfil/senha}" method="post">
+    <div class="card-body" style="display:flex;flex-direction:column;gap:16px">
+      <div class="field">
+        <label for="senhaAtual">Senha atual</label>
+        <input id="senhaAtual" type="password" name="senhaAtual" autocomplete="current-password" required autofocus>
+      </div>
+      <div class="field">
+        <label for="novaSenha">Nova senha</label>
+        <input id="novaSenha" type="password" name="novaSenha" autocomplete="new-password" required>
+      </div>
+      <div class="field">
+        <label for="confirmarSenha">Confirmar nova senha</label>
+        <input id="confirmarSenha" type="password" name="confirmarSenha" autocomplete="new-password" required>
+      </div>
+    </div>
+    <div class="card-footer">
+      <a th:href="@{/perfil}" class="btn btn-ghost">Cancelar</a>
+      <button type="submit" class="btn btn-primary">Salvar nova senha</button>
+    </div>
+  </form>
 
 </section>
 </html>

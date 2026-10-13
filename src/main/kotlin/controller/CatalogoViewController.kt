@@ -8,14 +8,10 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.example.request.ModeloRequest
 import org.example.request.TipoEquipamentoRequest
-import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.*
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
-@PreAuthorize("hasAnyRole('ADMIN','GESTOR')")
+@PreAuthorize("@authService.temPermissao('CATALOGO','READ')")
 @Controller
 @RequestMapping("/admin/catalogo")
 class CatalogoViewController(
@@ -64,6 +60,7 @@ class CatalogoViewController(
 //    }
 
 
+    @PreAuthorize("@authService.temPermissao('CATALOGO','CREATE')")
     @PostMapping("/tipo")
     fun salvarTipo(req: TipoEquipamentoRequest, model: Model): String {
         return try {
@@ -76,6 +73,7 @@ class CatalogoViewController(
         }
     }
 
+    @PreAuthorize("@authService.temPermissao('CATALOGO','CREATE')")
     @PostMapping("/marca")
     fun salvarMarca(req: MarcaRequest, model: Model): String {
         return try {
@@ -88,6 +86,7 @@ class CatalogoViewController(
         }
     }
 
+    @PreAuthorize("@authService.temPermissao('CATALOGO','CREATE')")
     @PostMapping("/modelo")
     fun salvarModelo(req: ModeloRequest, model: Model): String {
         return try {
@@ -99,23 +98,6 @@ class CatalogoViewController(
             "catalogo"
         }
     }
-
-    @GetMapping("/stream", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
-    fun stream(): SseEmitter {
-
-        val emitter = SseEmitter(Long.MAX_VALUE)
-
-        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate({
-            try {
-                emitter.send(SseEmitter.event().data("update"))
-            } catch (e: Exception) {
-                emitter.complete()
-            }
-        }, 0, 10, TimeUnit.SECONDS)
-
-        return emitter
-    }
-
 
     private fun carregar(model: Model) {
         model.addAttribute("tipos", catalogoService.listarTipos())

@@ -21,44 +21,35 @@ repositories {
 }
 
 dependencies {
-    dependencies {
+    // Web + MVC
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
 
-        // Web + MVC
-        implementation("org.springframework.boot:spring-boot-starter-web")
-        implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
+    // Security (OBRIGATÓRIO pro @PreAuthorize)
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
 
-        // Security (OBRIGATÓRIO pro @PreAuthorize)
-        implementation("org.springframework.boot:spring-boot-starter-security")
-        implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
+    // JPA
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    runtimeOnly("com.h2database:h2")
+    implementation("org.flywaydb:flyway-core")
 
-        // JPA
-        implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-        runtimeOnly("com.h2database:h2")
+    // Kotlin
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation(kotlin("reflect"))
 
-        // Kotlin
-        implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-        implementation(kotlin("reflect"))
+    // WebFlux (SSE, streams, etc)
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
 
-        // WebFlux (SSE, streams, etc)
-        implementation("org.springframework.boot:spring-boot-starter-webflux")
-
-        // Test
-        testImplementation("org.springframework.boot:spring-boot-starter-test")
-    }
-
-//    implementation("org.springframework.boot:spring-boot-starter-web")
-//    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-//    runtimeOnly("com.h2database:h2")
-//    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
-//    implementation(kotlin("reflect"))
-//    testImplementation("org.springframework.boot:spring-boot-starter-test")
-//    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
-//
-//    implementation("org.springframework.boot:spring-boot-starter-webflux")
-//    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-
+    // Test
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 
 tasks.test {
     useJUnitPlatform()
+}
+
+// Gera META-INF/build-info.properties: a tela de status lê a versão daqui (não precisa repetir no código)
+springBoot {
+    buildInfo()
 }
