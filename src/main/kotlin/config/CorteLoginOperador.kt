@@ -19,8 +19,11 @@ class CorteLoginOperador(jdbc: JdbcTemplate) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     val momento: LocalDateTime = try {
+        // Nomes entre aspas: o Flyway cria a tabela e as colunas em minúsculas, e o H2 converte nome sem
+        // aspas para MAIÚSCULAS. Sem as aspas a consulta falhava em toda inicialização e o corte virava
+        // "a hora de agora", reabrindo a janela sem operador a cada reinício do servidor.
         jdbc.queryForObject(
-            "select installed_on from flyway_schema_history where version = '4' and success = true",
+            """select "installed_on" from "flyway_schema_history" where "version" = '4' and "success" = true""",
             LocalDateTime::class.java
         ) ?: LocalDateTime.now()
     } catch (e: DataAccessException) {

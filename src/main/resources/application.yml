@@ -68,6 +68,14 @@ rfid:
     # só para ações feitas enquanto ela valia; passado o prazo, morre de vez (token vazado não serve para sempre).
     janela-sincronizacao: ${RFID_JANELA_SINCRONIZACAO:72h}
 
+  leituras:
+    # Tela de leituras: quantas por página (10 a 200).
+    por-pagina: ${RFID_LEITURAS_POR_PAGINA:50}
+    # Retenção: apaga leituras com mais de N dias, todo dia às 03:30. 0 = desligada (guarda tudo).
+    # Mínimo de 30 dias (leituras feitas offline chegam com a data antiga). Inventários não são afetados.
+    # Apagar leituras muda os relatórios dos períodos apagados.
+    reter-dias: ${RFID_LEITURAS_RETER_DIAS:0}
+
   senha:
     # Regras de senha (setup, cadastro de usuário e troca de senha): letras e números, sem o nome/email,
     # sem senhas comuns, até 72 caracteres (limite do BCrypt). Tamanho mínimo:

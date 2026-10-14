@@ -128,21 +128,11 @@ class SegurancaIntegracaoTest : IntegracaoBase() {
             "USER,   /admin/leituras-android,  200",
             "CUSTOM, /admin/leituras-android,  403",
             "GESTOR, /admin/dashboard,         200",
-            "CUSTOM, /admin/dashboard,         403",
-            "USER,   /cadastro/form,           403",
-            "GESTOR, /cadastro/form,           200"
+            "CUSTOM, /admin/dashboard,         403"
         )
         fun `acesso as telas segue as permissoes`(perfil: String, url: String, status: Int) {
             mvc.perform(get(url).with(Perfis.porNome(perfil)))
                 .andExpect(status().`is`(status))
-        }
-
-        @Test
-        fun `usuario so-leitura nao cadastra etiqueta pela API`() {
-            mvc.perform(
-                post("/api/tags/cadastrar").with(Perfis.usuario())
-                    .contentType(MediaType.APPLICATION_JSON).content("""{"tag":"E1"}""")
-            ).andExpect(status().isForbidden)
         }
 
         @Test

@@ -58,23 +58,34 @@ class TelasIntegracaoTest : IntegracaoBase() {
         "/admin/cadastro?tag=E2004700X,  E2004700X",
         "/admin/leituras-android,        PAT-101",
         "/admin/catalogo,                Latitude 5440",
-        "/admin/catalogo/tipos,          Notebook",
-        "/admin/catalogo/marcas,         Dell",
-        "/admin/catalogo/modelos,        Latitude 5440",
-        "/admin/tipo-equipamento/form,   Novo tipo de equipamento",
         "/admin/dashboard,               Relatórios de leituras",
         "/admin/usuarios,                admin@x.com",
         "/admin/usuarios/novo,           Novo usuário",
         "/status,                        Status do servidor",
         "/perfil,                        Meu perfil",
         "/perfil/senha,                  Alterar senha",
-        "/perfil/email,                  Alterar email",
-        "/cadastro/form,                 Cadastrar etiqueta"
+        "/perfil/email,                  Alterar email"
     )
     fun `tela abre e mostra o conteudo esperado`(url: String, textoEsperado: String) {
         mvc.perform(get(url).with(Perfis.admin()))
             .andExpect(status().isOk)
             .andExpect(content().string(containsString(textoEsperado)))
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @CsvSource(
+        // páginas duplicadas ou sem uso removidas na limpeza (item 8)
+        "/gestor", "/user", "/cadastro/form", "/admin/catalogo/tipos", "/admin/catalogo/marcas",
+        "/admin/catalogo/modelos", "/admin/tipo-equipamento/form"
+    )
+    fun `paginas removidas respondem 404`(url: String) {
+        mvc.perform(get(url).with(Perfis.admin())).andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `raiz do site vai direto para a tela inicial`() {
+        mvc.perform(get("/").with(Perfis.admin()))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/dashboard"))
     }
 
     @Test

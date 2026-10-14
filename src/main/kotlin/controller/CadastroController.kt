@@ -1,6 +1,5 @@
 package org.example.controller
 
-import jakarta.transaction.Transactional
 import org.example.request.CadastroRequest
 import org.example.service.CatalogoService
 import org.springframework.security.access.prepost.PreAuthorize

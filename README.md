@@ -72,7 +72,7 @@ administrador; depois disso essa tela não aparece mais.
 | Etiquetas cadastradas (com busca) | `/admin/tags-cadastradas` | RFID · Ver |
 | Pendentes | `/admin/tags-pendentes` | RFID · Ver |
 | Cadastrar etiqueta | `/admin/cadastro` | RFID · Criar |
-| Leituras (filtros por dia, etiqueta, tipo…) | `/admin/leituras-android` | Leituras · Ver |
+| Leituras (paginada; filtros por dia, etiqueta, tipo, operador…) | `/admin/leituras-android` | Leituras · Ver |
 | Inventários | `/admin/inventarios` | Leituras · Ver |
 | Catálogo | `/admin/catalogo` | Catálogo · Ver (criar/excluir exigem Criar/Excluir) |
 | Relatórios (gráficos, tempo real) | `/admin/dashboard` | Relatórios · Ver |
@@ -141,10 +141,11 @@ O app funciona sem rede durante a sessão e envia depois o que ficou na fila. Ca
 
 Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "caminho": "..."}`.
 401 = chave ou sessão inválida · 403 = sem permissão · 409 = conflito (ex.: item em uso) ·
-426 = chamada por HTTP (use HTTPS) · 429 = login bloqueado por tentativas (header `Retry-After`).
+410 = rota antiga removida (atualize o app) · 426 = chamada por HTTP (use HTTPS) · 429 = login bloqueado por tentativas (header `Retry-After`).
 
-> Rotas antigas (`/api/tags/*`, `/api/rfid/*`) ainda existem para compatibilidade, exigem login web e
-> devem ser removidas quando todos os coletores usarem `/api/android`.
+> As rotas antigas dos coletores (`/api/tags/...` e `/api/rfid/...`) foram **removidas**: respondem
+> **410** explicando que o app precisa ser atualizado, e o servidor registra no log (uma vez por hora por
+> coletor) quem ainda as chama — útil para achar coletor com app antigo.
 
 ---
 
@@ -241,6 +242,8 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_HTTPS_NOMES` | *(vazio)* | Nomes/IPs extras do certificado gerado (só na geração) |
 | `RFID_DURACAO_SESSAO_OPERADOR` | `12h` | Duração do login no coletor |
 | `RFID_JANELA_SINCRONIZACAO` | `72h` | Tempo máximo que um coletor pode ficar offline sem perder ações |
+| `RFID_LEITURAS_POR_PAGINA` | `50` | Leituras por página na tela de leituras (10 a 200) |
+| `RFID_LEITURAS_RETER_DIAS` | `0` (desligada) | Apaga leituras com mais de N dias, todo dia às 03:30 (mínimo 30; não afeta inventários) |
 | `RFID_SENHA_TAMANHO_MINIMO` | `8` | Tamanho mínimo de senha |
 | `RFID_LOGIN_MAX_TENTATIVAS` | `5` | Erros por email até bloquear |
 | `RFID_LOGIN_MAX_TENTATIVAS_IP` | `20` | Erros por IP até bloquear |
@@ -315,6 +318,7 @@ detalhe técnico completo.
 |---|---|
 | Coletor recebe 401 em tudo | Chave não configurada ou diferente da do app (`RFID_CHAVES_DISPOSITIVOS`, reiniciar o servidor). |
 | Coletor recebe 426 | O app está usando `http://…:8082`; troque para `https://…:8443`. |
+| Coletor recebe 410 / log "Rota antiga dos coletores chamada" | O coletor está com um app antigo (rotas /api/tags ou /api/rfid): atualize o app. O log mostra o IP do coletor. |
 | Coletor diz que o certificado não confere | A impressão digital no app difere da de `/status` (certificado foi trocado ou restaurado de outro servidor). |
 | "Muitas tentativas sem sucesso" | Bloqueio de login: espere o tempo indicado (ou reinicie o servidor, que zera os contadores). |
 | Etiqueta lida não aparece nas leituras | Cadastro incompleto (falta tipo, marca, modelo, patrimônio ou nº de série). |

@@ -52,20 +52,22 @@ class FluxosIntegracaoTest : IntegracaoBase() {
             assertThat(rfidService.buscarPorTag("E-NOVA")?.patrimonio).isEqualTo("P9")
         }
 
+        // A API de cadastro pelo coletor tem os próprios testes (CadastroColetorIntegracaoTest);
+        // aqui o que se testa é o erro de validação virar 400 com a mensagem em JSON numa API da web.
         @Test
-        fun `etiqueta duplicada pela API responde 400 com a mensagem em JSON`() {
-            rfidService.cadastrarTag(CadastroRequest(tag = "E1", codigoInterno = "TI-1"))
+        fun `erro de validacao numa API responde 400 com a mensagem em JSON`() {
+            catalogo.salvarTipo(TipoEquipamentoRequest(nome = "Notebook"))
 
-            mvc.perform(post("/api/tags/cadastrar").with(Perfis.admin())
-                .contentType(MediaType.APPLICATION_JSON).content("""{"tag":"E1","codigoInterno":"X"}"""))
+            mvc.perform(post("/api/catalogo/tipo").with(Perfis.admin()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("""{"nome":"notebook"}"""))
                 .andExpect(status().isBadRequest)
-                .andExpect(jsonPath("$.mensagem").value("Esta etiqueta já está cadastrada"))
+                .andExpect(jsonPath("$.mensagem").value("Tipo já cadastrado!"))
         }
 
         @Test
         fun `JSON quebrado responde 400 explicando`() {
-            mvc.perform(post("/api/tags/cadastrar").with(Perfis.admin())
-                .contentType(MediaType.APPLICATION_JSON).content("""{"tag":"""))
+            mvc.perform(post("/api/catalogo/tipo").with(Perfis.admin()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("""{"nome":"""))
                 .andExpect(status().isBadRequest)
                 .andExpect(jsonPath("$.mensagem").value(containsString("Corpo da requisição inválido")))
         }
@@ -90,15 +92,6 @@ class FluxosIntegracaoTest : IntegracaoBase() {
                 .contentType(MediaType.APPLICATION_JSON).content("""{"nome":"HP"}"""))
                 .andExpect(status().isBadRequest)
                 .andExpect(jsonPath("$.mensagem").value("Selecione o tipo de equipamento da marca"))
-        }
-
-        @Test
-        fun `tipo repetido pela tela mostra o erro na propria tela`() {
-            catalogo.salvarTipo(TipoEquipamentoRequest(nome = "Notebook"))
-
-            mvc.perform(post("/admin/catalogo/tipo").with(Perfis.admin()).with(csrf()).param("nome", "notebook"))
-                .andExpect(status().isOk)
-                .andExpect(content().string(containsString("Tipo já cadastrado!")))
         }
 
         @Test

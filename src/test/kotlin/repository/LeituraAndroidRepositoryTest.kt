@@ -61,6 +61,15 @@ class LeituraAndroidRepositoryTest {
     }
 
     @Test
+    fun `exclusao da retencao apaga so o que for anterior ao limite`() {
+        // limite = início do dia: apaga a leitura de 23:59 do dia anterior, mantém as do dia em diante
+        val apagadas = repo.apagarAnterioresA(dia.atStartOfDay())
+
+        assertThat(apagadas).isEqualTo(1)
+        assertThat(repo.count()).isEqualTo(4)
+    }
+
+    @Test
     fun `contarDesde conta a partir do instante informado`() {
         // 12:00 (inclusive), 23:59:59 e a meia-noite seguinte
         assertThat(repo.contarDesde(dia.atTime(12, 0))).isEqualTo(3)

@@ -1,6 +1,6 @@
 package org.example.service
 
-import jakarta.transaction.Transactional
+import org.springframework.transaction.annotation.Transactional
 import org.example.model.InventarioEntity
 import org.example.model.InventarioItemEntity
 import org.example.model.LocalEntity

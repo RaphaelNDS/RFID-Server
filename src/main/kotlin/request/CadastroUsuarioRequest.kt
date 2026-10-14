@@ -1,7 +1,5 @@
 package org.example.request
 
-import org.example.model.Acao
-import org.example.model.Modulo
 import org.example.model.Role
 
 data class CadastroUsuarioRequest(
@@ -12,9 +10,4 @@ val role: Role,
 // Anuláveis de propósito: sem nenhuma caixa marcada, o formulário não envia o campo e o Spring entrega null
 val telas: List<String>? = null,
 val permissoes: List<String>? = null
-)
-
-data class PermissaoRequest(
-    val modulo: Modulo,
-    val acao: Acao
 )

@@ -832,3 +832,6 @@ a:hover { text-decoration: underline; }
 
 /* ============================ UTILITÁRIOS ============================ */
 .d-block { display: block; }
+
+/* Paginação no rodapé de um cartão (ex.: Leituras) */
+.paginacao { justify-content: center; align-items: center; gap: 12px; }

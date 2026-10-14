@@ -37,10 +37,10 @@ class SecurityConfig {
 
     private val h2Console = AntPathRequestMatcher("/h2-console/**")
 
-    // Endpoints JSON antigos (sem formulário HTML), que exigem login de usuário.
-    // Ficam fora do CSRF porque não são telas do navegador. O app Android usa /api/android/**,
-    // que tem cadeia própria (dispositivosFilterChain).
-    private val apisDispositivos = arrayOf(
+    // Rotas antigas dos coletores, removidas: só respondem 410 explicando que o app precisa ser atualizado
+    // (RotasAntigasColetorController). Como não fazem nada, ficam sem login e sem CSRF, para o app antigo
+    // receber a mensagem em vez de um redirecionamento para o login. O app atual usa /api/android/**.
+    private val rotasAntigasColetor = arrayOf(
         AntPathRequestMatcher("/api/rfid/**"),
         AntPathRequestMatcher("/api/tags/**")
     )
@@ -105,7 +105,7 @@ class SecurityConfig {
 
         http
             .csrf {
-                it.ignoringRequestMatchers(*apisDispositivos)
+                it.ignoringRequestMatchers(*rotasAntigasColetor)
                 // O console do H2 não envia token CSRF nos formulários dele
                 it.ignoringRequestMatchers(h2Console)
             }
@@ -123,6 +123,7 @@ class SecurityConfig {
                     "/img/**",
                     "/webjars/**"
                 ).permitAll()
+                it.requestMatchers(*rotasAntigasColetor).permitAll()
 
                 it.requestMatchers(h2Console).hasRole("ADMIN")
                 // Gestão de usuários fica só com o ADMIN: quem cria usuários poderia se dar qualquer permissão
@@ -130,8 +131,6 @@ class SecurityConfig {
                 // O resto de /admin é liberado por permissão (MODULO_ACAO) via @PreAuthorize em cada controller.
                 // Todo controller novo em /admin PRECISA ter @PreAuthorize, senão fica aberto a qualquer usuário logado.
                 it.requestMatchers("/admin/**").authenticated()
-                it.requestMatchers("/gestor/**").hasRole("GESTOR")
-                it.requestMatchers("/user/**").hasRole("USER")
                 it.requestMatchers("/dashboard").authenticated()
                 it.requestMatchers("/perfil/**").authenticated()
 

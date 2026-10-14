@@ -51,6 +51,10 @@
         <label for="f-serie">Nº série</label>
         <input id="f-serie" name="numeroSerie" th:value="${param.numeroSerie}">
       </div>
+      <div class="field">
+        <label for="f-operador">Operador</label>
+        <input id="f-operador" name="operador" th:value="${param.operador}">
+      </div>
       <button type="submit" class="btn btn-primary">
         <svg class="ic"><use href="/img/icones.svg#busca"/></svg>Filtrar
       </button>
@@ -58,7 +62,8 @@
     </form>
 
     <div class="card-header">
-      <h2>Resultado <span class="contagem" th:text="'(' + ${#lists.size(leituras)} + ' leituras)'"></span></h2>
+      <h2>Resultado <span class="contagem" th:text="'(' + ${#numbers.formatInteger(totalLeituras, 1, 'POINT')} + ' leituras)'"></span></h2>
+      <span class="muted" th:if="${totalPaginas > 1}" th:text="'Página ' + ${paginaAtual} + ' de ' + ${totalPaginas}"></span>
     </div>
 
     <div class="table-wrap">
@@ -97,6 +102,17 @@
         Ajuste os filtros ou escolha outro dia.
       </div>
     </div>
+
+    <!-- Paginação: os links já levam os filtros aplicados -->
+    <nav class="card-footer paginacao" th:if="${totalPaginas > 1}" aria-label="Páginas">
+      <a th:if="${linkAnterior != null}" th:href="@{${linkAnterior}}" class="btn btn-secondary btn-sm" rel="prev">
+        <svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Anterior
+      </a>
+      <span class="muted" th:text="'Página ' + ${paginaAtual} + ' de ' + ${totalPaginas}">Página 1 de 1</span>
+      <a th:if="${linkProxima != null}" th:href="@{${linkProxima}}" class="btn btn-secondary btn-sm" rel="next">
+        Próxima<svg class="ic" style="transform:scaleX(-1)"><use href="/img/icones.svg#voltar"/></svg>
+      </a>
+    </nav>
   </div>
 
 </section>

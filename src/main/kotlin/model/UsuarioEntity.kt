@@ -1,7 +1,6 @@
 package org.example.model
 
 import jakarta.persistence.*
-import org.springframework.context.support.BeanDefinitionDsl
 
 @Entity
 @Table(name = "usuarios")
