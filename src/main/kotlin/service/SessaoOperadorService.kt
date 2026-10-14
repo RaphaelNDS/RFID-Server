@@ -84,6 +84,13 @@ class SessaoOperadorService(
             throw LoginRecusadoException(401, MENSAGEM_CREDENCIAIS)
         }
 
+        // Senha temporária gerada pelo ADMIN ("Esqueceu a senha?"): como na web, só serve para criar a senha nova.
+        // O coletor não tem tela de troca de senha, então a pessoa troca na web e depois entra aqui.
+        if (usuario.trocarSenha) {
+            log.warn("Login no coletor {} recusado: '{}' entrou com senha temporária e ainda não criou a senha nova (IP {})", dispositivo, usuario.email, ip)
+            throw LoginRecusadoException(403, MENSAGEM_SENHA_TEMPORARIA)
+        }
+
         val principal = detalhes.loadUserByUsername(usuario.email) as UserPrincipal
         val podeLer = temPermissao(principal, "LEITURA_READ")
 
@@ -198,6 +205,8 @@ class SessaoOperadorService(
 
     companion object {
         const val MENSAGEM_CREDENCIAIS = "Email ou senha incorretos"
+        const val MENSAGEM_SENHA_TEMPORARIA =
+            "Você está com uma senha temporária: entre pela web, crie sua senha nova e depois entre no coletor com ela."
 
         /** Diferença aceita entre o relógio do coletor e o do servidor. */
         val TOLERANCIA: Duration = Duration.ofMinutes(5)

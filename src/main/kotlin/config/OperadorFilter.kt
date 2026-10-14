@@ -42,7 +42,7 @@ class OperadorFilter(
     companion object {
         const val HEADER_SESSAO = "X-Sessao-Operador"
         const val HEADER_MOMENTO = "X-Momento"
-        private val SEM_OPERADOR = setOf("/api/android/login", "/api/android/ping")
+        private val SEM_OPERADOR = setOf("/api/android/login", "/api/android/ping", "/api/android/esqueci-senha")
     }
 
     private val log = LoggerFactory.getLogger(javaClass)

@@ -108,6 +108,11 @@ O servidor não envia email: o pedido vai para o administrador dentro do sistema
    senha também libera o login, se estava bloqueado por tentativas erradas.
 4. Ao entrar com ela, a pessoa só acessa a tela de troca de senha até criar a senha nova.
 
+No coletor, a tela de login também tem **Esqueceu a senha?** (`POST /api/android/esqueci-senha`), que cria o
+mesmo pedido. Lá o limite de 5 pedidos a cada 15 min é por coletor e IP, para coletores atrás do mesmo IP não
+travarem uns aos outros. O coletor **não aceita senha temporária**: o login responde 403 pedindo para criar a
+senha nova na web primeiro.
+
 Tema claro/escuro (segue o sistema operacional, com botão para trocar) e layout responsivo para celular.
 
 ---
@@ -143,6 +148,7 @@ O app funciona sem rede durante a sessão e envia depois o que ficou na fila. Ca
 |---|---|---|
 | `GET /api/android/ping` | Testa a conexão e a chave | chave |
 | `POST /api/android/login` · `POST /api/android/logout` | Sessão do operador | chave |
+| `POST /api/android/esqueci-senha` | Pede uma senha nova ao ADMIN (**202**, mesma resposta exista ou não o email) | chave |
 | `GET /api/android/tags/{epc}` | Dados de uma etiqueta | operador · Leituras |
 | `GET /api/android/tags/patrimonio/{patrimonio}` | EPC de um patrimônio (localizar equipamento) | operador · Leituras |
 | `POST /api/android/leitura` | Registra a leitura de uma etiqueta | operador · Leituras |

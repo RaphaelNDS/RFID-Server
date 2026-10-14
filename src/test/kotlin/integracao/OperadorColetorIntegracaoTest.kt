@@ -1,6 +1,7 @@
 package org.example.integracao
 
 import org.assertj.core.api.Assertions.assertThat
+import org.example.controller.OperadorAndroidController
 import org.example.model.Acao
 import org.example.model.Modulo
 import org.example.model.Role
@@ -129,6 +130,67 @@ class OperadorColetorIntegracaoTest : IntegracaoBase() {
 
         assertThat(sessoes.existsById(SessaoOperadorService.hash(token))).isTrue()
         assertThat(sessoes.existsById(token)).isFalse()
+    }
+
+    // ---------- Senha temporária e "Esqueceu a senha?" ----------
+
+    @Test
+    fun `senha temporaria nao entra no coletor ate a troca na web`() {
+        val usuario = operadores.criarUsuario(email = "temp-${UUID.randomUUID()}@x.com")
+        usuario.trocarSenha = true
+        usuarios.save(usuario)
+
+        login(usuario.email)
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.mensagem").value(SessaoOperadorService.MENSAGEM_SENHA_TEMPORARIA))
+        assertThat(sessoes.findAll().none { it.usuarioId == usuario.id }).isTrue()
+
+        // Trocada a senha na web (UsuarioService zera a marca), o coletor volta a aceitar
+        usuario.trocarSenha = false
+        usuarios.save(usuario)
+        login(usuario.email).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `senha errada com senha temporaria pendente continua sendo credencial incorreta`() {
+        val usuario = operadores.criarUsuario(email = "temp-errada-${UUID.randomUUID()}@x.com")
+        usuario.trocarSenha = true
+        usuarios.save(usuario)
+
+        login(usuario.email, senha = "Errada123")
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.mensagem").value(SessaoOperadorService.MENSAGEM_CREDENCIAIS))
+    }
+
+    private fun esqueciSenha(email: String, chave: String? = CHAVE_COLETOR): ResultActions =
+        mvc.perform(
+            post("/api/android/esqueci-senha")
+                .apply { chave?.let { header("X-Chave-Dispositivo", it) } }
+                .contentType(MediaType.APPLICATION_JSON).content("""{"email":"$email"}""")
+                .with { it.remoteAddr = ip; it }
+        )
+
+    @Test
+    fun `esqueci a senha pelo coletor registra o pedido para o administrador sem operador logado`() {
+        val usuario = operadores.criarUsuario(email = "esqueci-${UUID.randomUUID()}@x.com")
+
+        esqueciSenha(usuario.email)
+            .andExpect(status().isAccepted)
+            .andExpect(jsonPath("$.mensagem").value(OperadorAndroidController.MENSAGEM_PEDIDO_SENHA))
+
+        assertThat(usuarios.findByEmail(usuario.email)!!.senhaPedidaEm).isNotNull()
+    }
+
+    @Test
+    fun `esqueci a senha responde igual para email que nao existe`() {
+        esqueciSenha("ninguem-${UUID.randomUUID()}@x.com")
+            .andExpect(status().isAccepted)
+            .andExpect(jsonPath("$.mensagem").value(OperadorAndroidController.MENSAGEM_PEDIDO_SENHA))
+    }
+
+    @Test
+    fun `esqueci a senha exige a chave do coletor`() {
+        esqueciSenha("alguem@x.com", chave = null).andExpect(status().isUnauthorized)
     }
 
     // ---------- Sessão ----------
