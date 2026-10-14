@@ -1,5 +1,7 @@
 package org.example.controller
 
+import org.example.service.EsperadoInventarioService
+import org.example.service.EsperadoLocal
 import org.example.service.InventarioService
 import org.example.service.ItemLido
 import org.example.service.ResultadoItens
@@ -18,7 +20,8 @@ import java.time.OffsetDateTime
 @RestController
 @RequestMapping("/api/android")
 class InventarioAndroidController(
-    private val service: InventarioService
+    private val service: InventarioService,
+    private val esperados: EsperadoInventarioService
 ) {
 
     data class AbrirInventarioRequest(
@@ -37,6 +40,12 @@ class InventarioAndroidController(
     @PreAuthorize(LEITURA)
     @GetMapping("/locais")
     fun locais(): List<String> = service.listarLocais()
+
+    /** O que é esperado no local (o que foi encontrado no último inventário finalizado dele), para o coletor mostrar o que falta. */
+    @PreAuthorize(LEITURA)
+    @GetMapping("/inventarios/esperado")
+    fun esperado(@RequestParam local: String, auth: Authentication): EsperadoLocal =
+        esperados.esperadoNoLocal(local, auth.name)
 
     @PreAuthorize(LEITURA)
     @PostMapping("/inventarios")

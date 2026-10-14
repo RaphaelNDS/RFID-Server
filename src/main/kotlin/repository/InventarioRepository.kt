@@ -3,6 +3,7 @@ package org.example.repository
 import org.example.model.InventarioEntity
 import org.example.model.InventarioItemEntity
 import org.example.model.LocalEntity
+import org.example.model.StatusInventario
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import java.util.Optional
@@ -19,6 +20,9 @@ interface InventarioRepository : JpaRepository<InventarioEntity, String> {
     fun findAllByOrderByIniciadoEmDesc(): List<InventarioEntity>
 
     fun findByLocalIdOrderByIniciadoEmDesc(localId: Long): List<InventarioEntity>
+
+    /** Último inventário finalizado do local: base da lista do que é esperado no próximo inventário. */
+    fun findFirstByLocalIdAndStatusOrderByFinalizadoEmDesc(localId: Long, status: StatusInventario): InventarioEntity?
 }
 
 interface InventarioItemRepository : JpaRepository<InventarioItemEntity, Long> {

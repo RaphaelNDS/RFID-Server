@@ -36,6 +36,9 @@ data class InventarioDetalhe(
     val itens: List<InventarioItemEntity>
 )
 
+/** Mesmo local com grafia diferente (" Sala  101 ") vira um só; a busca no banco ignora maiúsculas. */
+fun limparNomeLocal(nome: String): String = nome.trim().replace(Regex("\\s+"), " ")
+
 data class ItemLido(val tag: String, val lidoEm: OffsetDateTime?)
 
 data class ResultadoItens(val recebidos: Int, val novos: Int)
@@ -185,7 +188,7 @@ class InventarioService(
 
     /** Mesmo local com grafia diferente ("sala 101", " Sala 101 ") vira um só. */
     private fun localPorNome(nome: String): LocalEntity {
-        val limpo = nome.trim().replace(Regex("\\s+"), " ")
+        val limpo = limparNomeLocal(nome)
 
         require(limpo.isNotEmpty()) { "Informe o local do inventário" }
         require(limpo.length <= TAMANHO_MAXIMO_LOCAL) { "O nome do local pode ter no máximo $TAMANHO_MAXIMO_LOCAL caracteres" }

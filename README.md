@@ -160,6 +160,13 @@ O app funciona sem rede durante a sessão e envia depois o que ficou na fila. Ca
 | `POST /api/android/inventarios` | Abre inventário num local | operador · Leituras |
 | `POST /api/android/inventarios/{id}/itens` | Envia etiquetas lidas | operador · Leituras |
 | `POST /api/android/inventarios/{id}/finalizar` | Finaliza o inventário | operador · Leituras |
+| `GET /api/android/inventarios/esperado?local=...` | O que é esperado no local, para o coletor mostrar o que falta (ver abaixo) | operador · Leituras |
+
+**O que é esperado num local:** as etiquetas **cadastradas** encontradas no **último inventário finalizado** daquele
+local (não há campo de local no cadastro da etiqueta). O nome do local segue a regra do inventário (ignora
+maiúsculas e espaços extras). Etiquetas excluídas do cadastro depois ficam de fora, e os dados (patrimônio, tipo,
+marca, modelo) são os do cadastro atual. Local sem inventário finalizado responde `"temReferencia": false` e a
+lista vazia (primeiro inventário dele). A resposta traz também a data e o operador do inventário de referência.
 
 Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "caminho": "..."}`.
 401 = chave ou sessão inválida · 403 = sem permissão · 409 = conflito (ex.: item em uso) ·
