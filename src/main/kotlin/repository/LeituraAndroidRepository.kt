@@ -50,6 +50,9 @@ interface LeituraAndroidRepository :
     """)
     fun contarPorMarcaEntre(@Param("inicio") inicio: LocalDateTime, @Param("fim") fim: LocalDateTime): List<Array<Any?>>
 
+    /** Reenvio do coletor: a mesma tag com a mesma hora de leitura já foi gravada. */
+    fun existsByTagAndDataHora(tag: String, dataHora: LocalDateTime): Boolean
+
     // Retenção: um único DELETE em lote, sem carregar as leituras na memória
     @Modifying
     @Query("delete from LeituraAndroidEntity l where l.dataHora < :limite")

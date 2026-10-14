@@ -153,6 +153,7 @@ O app funciona sem rede durante a sessão e envia depois o que ficou na fila. Ca
 | `GET /api/android/tags/patrimonio/{patrimonio}` | EPC de um patrimônio (localizar equipamento) | operador · Leituras |
 | `POST /api/android/leitura` | Registra a leitura de uma etiqueta | operador · Leituras |
 | `POST /api/android/naocadastrada` | Envia etiqueta desconhecida para Pendentes | operador · Leituras |
+| `POST /api/android/leituras/lote` | Até 500 leituras de um operador numa requisição: classifica e registra cada uma e devolve o resultado por item (`CADASTRADA` com os dados, `NAO_CADASTRADA`, `RECUSADA` ou `ERRO`). A hora de cada leitura é conferida contra a sessão; reenvio da mesma tag com a mesma hora não duplica | operador · Leituras |
 | `GET /api/android/catalogo` | Catálogo para o formulário de cadastro | operador |
 | `POST /api/android/tags` | Cadastra etiqueta pelo coletor | operador · RFID Criar **e** coletor em `RFID_COLETORES_CADASTRO` |
 | `GET /api/android/locais` | Locais já usados em inventários | operador · Leituras |

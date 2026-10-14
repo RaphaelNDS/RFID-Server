@@ -9,6 +9,15 @@ import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
+/** O que aconteceu com uma leitura recebida do coletor. */
+enum class ResultadoLeitura {
+    REGISTRADA,
+    /** Mesma tag com a mesma hora de leitura já gravada: reenvio do coletor (ex.: a resposta se perdeu na rede). */
+    REPETIDA,
+    /** Tag não cadastrada ou com cadastro incompleto: não vira leitura. */
+    IGNORADA
+}
+
 @Service
 class LeituraAndroidService(
     private val leituraRepo: LeituraAndroidRepository,
@@ -21,14 +30,14 @@ class LeituraAndroidService(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    fun salvarLeitura(tagReal: String, lidoEm: OffsetDateTime? = null, operador: String? = null) {
+    fun salvarLeitura(tagReal: String, lidoEm: OffsetDateTime? = null, operador: String? = null): ResultadoLeitura {
 
         require(tagReal.isNotBlank()) { "Informe a TAG RFID" }
 
         // Leituras descartadas ficam em DEBUG: o leitor pode repetir a mesma tag várias vezes por segundo
         val tag = tagRepo.findByTagReal(tagReal).orElse(null) ?: run {
             log.debug("Leitura ignorada: tag {} não está cadastrada", tagReal)
-            return
+            return ResultadoLeitura.IGNORADA
         }
 
         if (
@@ -40,7 +49,16 @@ class LeituraAndroidService(
             tag.numeroSerie.isNullOrBlank()
         ) {
             log.debug("Leitura ignorada: tag {} tem cadastro incompleto (tipo, marca, modelo, patrimônio ou série)", tagReal)
-            return
+            return ResultadoLeitura.IGNORADA
+        }
+
+        val dataHora = dataHoraDaLeitura(tagReal, lidoEm)
+
+        // O coletor reenvia o que não teve resposta: a mesma tag com a mesma hora de leitura (até o milissegundo)
+        // é o mesmo registro chegando de novo. Sem hora informada não dá para saber, então grava.
+        if (lidoEm != null && leituraRepo.existsByTagAndDataHora(tagReal, dataHora)) {
+            log.debug("Leitura repetida ignorada: tag {} lida em {} já estava registrada", tagReal, dataHora)
+            return ResultadoLeitura.REPETIDA
         }
 
         val leitura = LeituraAndroidEntity(
@@ -51,7 +69,7 @@ class LeituraAndroidService(
             modelo = modeloRepo.findById(tag.modeloId!!).orElseThrow().nome,
             patrimonio = tag.patrimonio,
             numeroSerie = tag.numeroSerie,
-            dataHora = dataHoraDaLeitura(tagReal, lidoEm),
+            dataHora = dataHora,
             operador = operador
         )
 
@@ -60,6 +78,7 @@ class LeituraAndroidService(
         log.debug("Leitura registrada: tag {} (patrimônio {}, operador {})", tagReal, tag.patrimonio, operador ?: "—")
 
         eventos.publicar(leitura)
+        return ResultadoLeitura.REGISTRADA
     }
 
     /**
