@@ -76,9 +76,10 @@ administrador; depois disso essa tela não aparece mais.
 | Inventários | `/admin/inventarios` | Leituras · Ver |
 | Catálogo | `/admin/catalogo` | Catálogo · Ver (criar/excluir exigem Criar/Excluir) |
 | Relatórios (gráficos, tempo real) | `/admin/dashboard` | Relatórios · Ver |
-| Usuários | `/admin/usuarios` | somente ADMIN |
+| Usuários (+ pedidos de nova senha e senha temporária) | `/admin/usuarios` | somente ADMIN |
 | Status do servidor (+ backup manual para ADMIN) | `/status` | logado |
 | Meu perfil, trocar senha e email | `/perfil` | logado |
+| Esqueceu a senha? (link na tela de login) | `/esqueci-senha` | público |
 
 ### Perfis de usuário
 
@@ -92,6 +93,20 @@ administrador; depois disso essa tela não aparece mais.
 Módulos: Catálogo, Etiquetas (RFID), Leituras, Relatórios, Usuários. Ações: Ver, Criar, Editar, Excluir.
 O menu e os botões só mostram o que o usuário pode usar. Mudanças de permissão valem a partir do
 próximo login (na web) e na próxima requisição (no coletor).
+
+### Esqueceu a senha
+
+O servidor não envia email: o pedido vai para o administrador dentro do sistema.
+
+1. Na tela de login, a pessoa clica em **Esqueceu a senha?** e informa o email. A resposta é sempre a mesma,
+   exista ou não o email (a tela não revela quem tem conta). Cada pessoa tem no máximo um pedido em aberto, e
+   cada IP pode pedir até 5 vezes a cada 15 min.
+2. O ADMIN vê um contador ao lado de **Usuários** no menu e, na tela de usuários, o quadro **Pedidos de nova
+   senha**, com os botões *Gerar senha temporária* e *Descartar*. O botão *Nova senha* de cada linha gera uma
+   senha temporária mesmo sem pedido (para quem pediu pessoalmente).
+3. A senha temporária aparece **uma única vez**. O ADMIN entrega pessoalmente ou por um canal seguro. Gerar a
+   senha também libera o login, se estava bloqueado por tentativas erradas.
+4. Ao entrar com ela, a pessoa só acessa a tela de troca de senha até criar a senha nova.
 
 Tema claro/escuro (segue o sistema operacional, com botão para trocar) e layout responsivo para celular.
 
@@ -177,6 +192,7 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
   | V2 | `kotlin/db/migration/V2__Chaves_estrangeiras_tags.kt` | Liga etiquetas ao catálogo (limpa referências quebradas e registra no log) |
   | V3 | `db/migration/V3__inventarios.sql` | Locais, inventários e itens |
   | V4 | `db/migration/V4__sessoes_operador.sql` | Sessões de operador e coluna "operador" nos registros |
+  | V5 | `db/migration/V5__recuperacao_senha.sql` | Pedido de nova senha e senha temporária nos usuários |
 
 - **Backup automático** todo dia às 02:00 em `./data/backups` (zip consistente, sem parar o servidor, com o certificado HTTPS junto: `rfid-https.p12` e `.senha`), mantendo
   os 14 mais recentes. Ao subir, se não houver backup das últimas 24 h, faz um na hora. O ADMIN também pode

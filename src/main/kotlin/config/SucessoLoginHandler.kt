@@ -22,6 +22,15 @@ class SucessoLoginHandler(private val politicaSenha: PoliticaSenha) : SimpleUrlA
     }
 
     override fun onAuthenticationSuccess(request: HttpServletRequest, response: HttpServletResponse, authentication: Authentication) {
+        // Senha temporária gerada pelo ADMIN: só libera o sistema depois de criar uma senha nova
+        if ((authentication.principal as? UserPrincipal)?.trocarSenha == true) {
+            log.info("Usuário '{}' entrou com senha temporária: encaminhado para criar uma senha nova", authentication.name)
+            request.getSession(true).setAttribute(TrocaSenhaObrigatoriaFilter.ATRIBUTO_SESSAO, true)
+            clearAuthenticationAttributes(request)
+            redirectStrategy.sendRedirect(request, response, "/perfil/senha?temporaria")
+            return
+        }
+
         val senha = request.getParameter("password").orEmpty()
         val nome = (authentication.principal as? UserPrincipal)?.nome
         val problemas = politicaSenha.problemas(senha, authentication.name, nome)

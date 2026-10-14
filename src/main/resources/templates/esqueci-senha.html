@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Esqueceu a senha · Sistema RFID</title>
+  <link rel="icon" th:href="@{/img/favicon.svg}" type="image/svg+xml">
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+  <script th:replace="~{layout/tema :: tema}"></script>
+  <script th:src="@{/js/app.js}" defer></script>
+</head>
+
+<body>
+
+<button type="button" class="icon-btn auth-tema" onclick="alternarTema()" aria-label="Alternar tema claro/escuro">
+  <svg class="ic tema-claro-ic"><use href="/img/icones.svg#lua"/></svg>
+  <svg class="ic tema-escuro-ic"><use href="/img/icones.svg#sol"/></svg>
+</button>
+
+<main class="auth">
+  <div class="auth-card">
+
+    <div class="auth-marca">
+      <span class="brand-mark"><svg class="ic"><use href="/img/icones.svg#chave"/></svg></span>
+      <div>
+        <h1>Esqueceu a senha?</h1>
+        <p>Informe seu email. O administrador do sistema recebe o pedido e entrega a você uma senha temporária.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <form th:action="@{/esqueci-senha}" method="post" class="card-body">
+
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" autocomplete="username"
+                 placeholder="usuario@empresa.com" required autofocus maxlength="255">
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Avisar o administrador</button>
+        <a th:href="@{/login}" class="btn btn-ghost btn-block">Voltar para o login</a>
+      </form>
+    </div>
+
+  </div>
+</main>
+
+</body>
+</html>

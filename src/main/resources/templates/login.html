@@ -47,6 +47,12 @@
           <span>Você saiu do sistema.</span>
         </div>
 
+        <div class="alert alert-ok" th:if="${param.pedidoSenha}" role="status">
+          <svg class="ic"><use href="/img/icones.svg#ok"/></svg>
+          <span>Pedido enviado. Se o email estiver cadastrado, o administrador vai entregar a você uma
+            <strong>senha temporária</strong>. Ao entrar com ela, você cria a sua senha nova.</span>
+        </div>
+
         <div class="field">
           <label for="username">Email</label>
           <input id="username" name="username" type="email" autocomplete="username"
@@ -59,6 +65,7 @@
         </div>
 
         <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+        <a th:href="@{/esqueci-senha}" class="link-discreto">Esqueceu a senha?</a>
       </form>
     </div>
 

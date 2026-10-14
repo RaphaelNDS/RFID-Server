@@ -82,6 +82,9 @@ class TentativasLoginService(
         }
     }
 
+    /** Zera os erros e o bloqueio desse email (ex.: o ADMIN acabou de gerar uma senha nova para a pessoa). */
+    fun desbloquear(email: String): Boolean = porEmail.remove(normalizar(email)) != null
+
     // Integração com os eventos do Spring Security (o formulário de login dispara esses eventos)
 
     @EventListener

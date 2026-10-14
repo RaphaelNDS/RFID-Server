@@ -212,10 +212,18 @@ class UsuarioService(
 
         politicaSenha.exigir(novaSenha, usuario.email, usuario.nome, "troca de senha")
 
+        val eraTemporaria = usuario.trocarSenha
+        val tinhaPedido = usuario.senhaPedidaEm != null
+
         usuario.senha = encoder.encode(novaSenha)
+        usuario.trocarSenha = false
+        // Quem trocou a própria senha não precisa mais do pedido de "Esqueceu a senha?"
+        usuario.senhaPedidaEm = null
         repo.save(usuario)
 
-        log.info("Senha alterada pelo próprio usuário: {}", usuario.email)
+        log.info("Senha alterada pelo próprio usuário: {}{}{}", usuario.email,
+            if (eraTemporaria) " (substituiu a senha temporária)" else "",
+            if (tinhaPedido) "; pedido de nova senha em aberto encerrado" else "")
     }
 
     /** Troca o email (que também é o login). Exige a senha atual. Retorna o email gravado. */

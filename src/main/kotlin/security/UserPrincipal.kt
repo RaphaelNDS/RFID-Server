@@ -9,7 +9,9 @@ class UserPrincipal(
     val nome: String,
     val email: String,
     private val senha: String,
-    private val authoritiesList: Collection<GrantedAuthority>
+    private val authoritiesList: Collection<GrantedAuthority>,
+    /** Entrou com senha temporária: precisa criar uma senha nova antes de usar o sistema. */
+    val trocarSenha: Boolean = false
 ) : UserDetails {
 
     override fun getAuthorities(): Collection<GrantedAuthority> = authoritiesList

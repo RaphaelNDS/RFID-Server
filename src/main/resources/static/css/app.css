@@ -543,6 +543,20 @@ a:hover { text-decoration: underline; }
 .badge-ADMIN { background: var(--primary-soft); color: var(--primary); }
 .badge-GESTOR { background: var(--success-soft); color: var(--success); }
 .badge-CUSTOM { background: var(--warning-soft); color: var(--warning); }
+/* Contador no menu (ex.: pedidos de senha esperando o ADMIN) */
+.contador {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--warning);
+  color: var(--surface); /* branco no tema claro, escuro no escuro: contraste com o amarelo nos dois */
+}
 .badge-online { background: var(--success-soft); color: var(--success); }
 .badge-online::before {
   content: "";
@@ -764,6 +778,9 @@ a:hover { text-decoration: underline; }
 .auth .card-body { padding: 28px; display: flex; flex-direction: column; gap: 16px; }
 .auth-tema { position: fixed; top: 16px; right: 16px; }
 .auth .alert { margin-bottom: 0; }
+.link-discreto { align-self: center; font-size: 14px; color: var(--muted); }
+.link-discreto:hover { color: var(--primary); }
+.senha-temporaria { font-family: ui-monospace, Consolas, monospace; font-size: 16px; letter-spacing: 1px; user-select: all; }
 
 /* Saudação na tela inicial */
 .saudacao h1 { font-size: 26px; }

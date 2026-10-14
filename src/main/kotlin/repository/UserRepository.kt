@@ -13,6 +13,13 @@ interface UserRepository : JpaRepository<UsuarioEntity, Long> {
 
     fun existsByEmailIgnoreCase(email: String): Boolean
 
+    fun findByEmailIgnoreCase(email: String): UsuarioEntity?
+
+    /** Pedidos de senha nova em aberto, o mais antigo primeiro. */
+    fun findBySenhaPedidaEmIsNotNullOrderBySenhaPedidaEm(): List<UsuarioEntity>
+
+    fun countBySenhaPedidaEmIsNotNull(): Long
+
     @Query("""
         SELECT u FROM UsuarioEntity u
         LEFT JOIN FETCH u.permissoes

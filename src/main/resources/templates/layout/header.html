@@ -53,6 +53,8 @@
 
       <a th:href="@{/admin/usuarios}" sec:authorize="hasRole('ADMIN')">
         <svg class="ic"><use href="/img/icones.svg#usuarios"/></svg>Usuários
+        <span class="contador" th:if="${pedidosSenha != null and pedidosSenha > 0}" th:text="${pedidosSenha}"
+              th:title="${pedidosSenha} + ' pedido(s) de nova senha'">1</span>
       </a>
     </nav>
 

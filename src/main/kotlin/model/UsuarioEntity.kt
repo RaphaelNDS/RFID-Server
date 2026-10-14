@@ -1,6 +1,7 @@
 package org.example.model
 
 import jakarta.persistence.*
+import java.time.LocalDateTime
 
 @Entity
 @Table(name = "usuarios")
@@ -21,5 +22,13 @@ class UsuarioEntity(
     var role: Role,
 
     @OneToMany(mappedBy = "usuario", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.LAZY)
-    var permissoes: MutableList<PermissaoEntity> = mutableListOf()
+    var permissoes: MutableList<PermissaoEntity> = mutableListOf(),
+
+    /** Quando pediu uma senha nova pelo "Esqueceu a senha?" (nulo = nenhum pedido em aberto). */
+    @Column(name = "senha_pedida_em")
+    var senhaPedidaEm: LocalDateTime? = null,
+
+    /** Entrou com senha temporária gerada pelo ADMIN: precisa trocá-la antes de usar o sistema. */
+    @Column(name = "trocar_senha")
+    var trocarSenha: Boolean = false
 )

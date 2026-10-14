@@ -117,6 +117,7 @@ class SecurityConfig {
 
                 it.requestMatchers(
                     "/login",
+                    "/esqueci-senha",
                     "/error",
                     "/setup",
                     "/setup/**",
@@ -142,6 +143,9 @@ class SecurityConfig {
 
             // Barra email/IP bloqueado por excesso de senhas erradas antes de conferir a senha
             .addFilterBefore(BloqueioLoginFilter(tentativasLogin), UsernamePasswordAuthenticationFilter::class.java)
+
+            // Quem entrou com senha temporária só acessa a troca de senha até criar a nova
+            .addFilterAfter(TrocaSenhaObrigatoriaFilter(), UsernamePasswordAuthenticationFilter::class.java)
 
             .formLogin {
                 it.loginPage("/login")

@@ -34,7 +34,8 @@ class CustomUserDetailsService(
             nome = user.nome,
             email = user.email,
             senha = user.senha,
-            authoritiesList = authorities
+            authoritiesList = authorities,
+            trocarSenha = user.trocarSenha
         )
     }
 }

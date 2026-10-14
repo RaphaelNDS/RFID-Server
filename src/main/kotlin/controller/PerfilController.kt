@@ -2,6 +2,8 @@ package org.example.controller
 
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import jakarta.servlet.http.HttpSession
+import org.example.config.TrocaSenhaObrigatoriaFilter
 import org.example.security.UserPrincipal
 import org.example.service.CustomUserDetailsService
 import org.example.service.UsuarioService
@@ -30,7 +32,10 @@ class PerfilController(
     fun perfil(): String = "perfil"
 
     @GetMapping("/senha")
-    fun senha(): String = "perfil-senha"
+    fun senha(session: HttpSession, model: Model): String {
+        model.addAttribute("trocaObrigatoria", trocaObrigatoria(session))
+        return "perfil-senha"
+    }
 
     @PostMapping("/senha")
     fun alterarSenha(
@@ -38,17 +43,24 @@ class PerfilController(
         @RequestParam senhaAtual: String,
         @RequestParam novaSenha: String,
         @RequestParam confirmarSenha: String,
+        session: HttpSession,
         model: Model
     ): String {
 
         return try {
             usuarioService.alterarSenha(usuario.id, senhaAtual, novaSenha, confirmarSenha)
+            // Senha temporária substituída: o sistema volta a ficar liberado nesta sessão
+            session.removeAttribute(TrocaSenhaObrigatoriaFilter.ATRIBUTO_SESSAO)
             "redirect:/perfil?senhaAlterada"
         } catch (e: IllegalArgumentException) {
             model.addAttribute("erro", e.message)
+            model.addAttribute("trocaObrigatoria", trocaObrigatoria(session))
             "perfil-senha"
         }
     }
+
+    private fun trocaObrigatoria(session: HttpSession) =
+        session.getAttribute(TrocaSenhaObrigatoriaFilter.ATRIBUTO_SESSAO) == true
 
     @GetMapping("/email")
     fun email(): String = "perfil-email"

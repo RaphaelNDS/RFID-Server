@@ -67,6 +67,6 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("4") // V4 = sessões de operador
+        assertThat(resultado.targetSchemaVersion).isEqualTo("5") // V5 = pedido de nova senha / senha temporária
     }
 }
