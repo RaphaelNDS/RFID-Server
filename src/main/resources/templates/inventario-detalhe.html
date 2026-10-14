@@ -44,12 +44,79 @@
       <div class="stat-valor" th:classappend="${inventario.naoCadastradas > 0} ? 'negativo'" th:text="${inventario.naoCadastradas}">0</div>
       <div class="stat-dica">Etiquetas sem cadastro</div>
     </div>
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#busca"/></svg>Faltando</div>
+      <div class="stat-valor" th:if="${comparacao.referencia.temReferencia}"
+           th:classappend="${#lists.size(comparacao.faltando) > 0} ? 'negativo' : 'positivo'"
+           th:text="${#lists.size(comparacao.faltando)}">0</div>
+      <div class="stat-valor muted" th:unless="${comparacao.referencia.temReferencia}">—</div>
+      <div class="stat-dica" th:if="${comparacao.referencia.temReferencia}"
+           th:text="${comparacao.encontradas} + ' de ' + ${comparacao.esperadas} + ' esperada(s) encontrada(s)'"></div>
+      <div class="stat-dica" th:unless="${comparacao.referencia.temReferencia}">Primeiro inventário deste local</div>
+    </div>
+  </div>
+
+  <!-- O que faltou em relação ao inventário finalizado anterior do mesmo local -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">
+      <h2>
+        <span th:text="${inventario.status.name() == 'ABERTO'} ? 'Faltando até agora' : 'Faltaram'">Faltaram</span>
+        <span class="contagem" th:if="${comparacao.referencia.temReferencia}" th:text="'(' + ${#lists.size(comparacao.faltando)} + ')'"></span>
+      </h2>
+      <span class="muted" th:if="${comparacao.referencia.temReferencia}">
+        Comparado com o
+        <a th:href="@{/admin/inventarios/{id}(id=${comparacao.referencia.inventarioReferencia})}"
+           th:text="'inventário de ' + ${#temporals.format(comparacao.referencia.finalizadoEm, 'dd/MM/yyyy HH:mm')}">inventário anterior</a><span
+          th:if="${comparacao.referencia.operador != null}" th:text="' (' + ${comparacao.referencia.operador} + ')'"></span>
+      </span>
+    </div>
+
+    <div class="table-wrap">
+      <div class="vazio" th:unless="${comparacao.referencia.temReferencia}">
+        <svg class="ic"><use href="/img/icones.svg#pacote"/></svg>
+        <strong>Primeiro inventário deste local, sem comparação</strong>
+        Não há inventário finalizado deste local antes deste. Os próximos inventários vão ser comparados com este.
+      </div>
+
+      <div class="vazio" th:if="${comparacao.referencia.temReferencia and #lists.isEmpty(comparacao.faltando)}">
+        <svg class="ic"><use href="/img/icones.svg#ok"/></svg>
+        <strong th:text="${inventario.status.name() == 'ABERTO'} ? 'Nada faltando até agora' : 'Nada faltou'">Nada faltou</strong>
+        <span th:text="'Todas as ' + ${comparacao.esperadas} + ' etiquetas encontradas no inventário anterior foram lidas.'"></span>
+      </div>
+
+      <p class="muted" style="margin:12px 20px 0" th:if="${inventario.status.name() == 'ABERTO' and comparacao.referencia.temReferencia and !#lists.isEmpty(comparacao.faltando)}">
+        Inventário em andamento: a lista é provisória e diminui conforme o coletor lê e envia as etiquetas.
+      </p>
+
+      <table class="table" th:if="${comparacao.referencia.temReferencia and !#lists.isEmpty(comparacao.faltando)}">
+        <thead>
+        <tr>
+          <th>Patrimônio</th>
+          <th>Código</th>
+          <th>Tipo</th>
+          <th>Marca</th>
+          <th>Modelo</th>
+          <th>Etiqueta (EPC)</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="f : ${comparacao.faltando}">
+          <td class="principal" th:text="${f.patrimonio != null} ? ${f.patrimonio} : '—'"></td>
+          <td th:text="${f.codigoInterno}"></td>
+          <td th:text="${f.tipo}"></td>
+          <td th:text="${f.marca}"></td>
+          <td th:text="${f.modelo}"></td>
+          <td class="mono" th:text="${f.tag}"></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <div class="card">
     <div class="card-header">
       <h2>Etiquetas lidas <span class="contagem" th:text="'(' + ${#lists.size(itens)} + ')'"></span></h2>
-      <div class="card-acoes" th:unless="${#lists.isEmpty(itens)}">
+      <div class="card-acoes" th:unless="${#lists.isEmpty(itens) and #lists.isEmpty(comparacao.faltando)}">
         <a th:href="@{/admin/inventarios/{id}/exportar(id=${inventario.id},formato='xlsx')}" class="btn btn-secondary btn-sm">
           <svg class="ic"><use href="/img/icones.svg#download"/></svg>Excel
         </a>

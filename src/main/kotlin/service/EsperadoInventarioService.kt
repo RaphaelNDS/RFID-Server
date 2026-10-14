@@ -1,5 +1,6 @@
 package org.example.service
 
+import org.example.model.InventarioEntity
 import org.example.model.StatusInventario
 import org.example.repository.InventarioItemRepository
 import org.example.repository.InventarioRepository
@@ -76,6 +77,43 @@ class EsperadoInventarioService(
             return EsperadoLocal(local = local?.nome ?: limpo, temReferencia = false)
         }
 
+        val (esperado, excluidas) = montarEsperado(local.nome, referencia)
+        log.info("Coletor {} pediu o esperado do local '{}': {} etiqueta(s) do inventário {} finalizado em {} (operador {}){}",
+            dispositivo, local.nome, esperado.itens.size, referencia.id, referencia.finalizadoEm, referencia.operador ?: "—",
+            if (excluidas > 0) "; $excluidas excluída(s) do cadastro depois ficaram de fora" else "")
+
+        return esperado
+    }
+
+    /**
+     * O que faltou no inventário [inventarioId], comparando com o último inventário finalizado do mesmo local
+     * ANTES do início dele (tela de detalhe e exportação). Um inventário antigo compara com o que veio antes dele,
+     * e não com o mais recente. Em andamento: o que falta até agora.
+     */
+    @Transactional(readOnly = true)
+    fun faltandoNoInventario(inventarioId: String): FaltandoInventario {
+        val inventario = inventarios.findById(inventarioId).orElseThrow { NoSuchElementException("Inventário $inventarioId não encontrado") }
+        val nomeLocal = locais.findById(inventario.localId).map { it.nome }.orElse("")
+
+        val referencia = inventarios.findFirstByLocalIdAndStatusAndFinalizadoEmBeforeAndIdNotOrderByFinalizadoEmDescIdDesc(
+            inventario.localId, StatusInventario.FINALIZADO, inventario.iniciadoEm, inventario.id
+        ) ?: run {
+            log.debug("Inventário {} ('{}') sem inventário finalizado anterior no local: sem comparação", inventarioId, nomeLocal)
+            return FaltandoInventario(EsperadoLocal(local = nomeLocal, temReferencia = false))
+        }
+
+        val (esperado, _) = montarEsperado(nomeLocal, referencia)
+        val lidas = itens.tagsDoInventario(inventarioId).toSet()
+        val faltando = esperado.itens.filter { it.tag !in lidas }
+
+        log.debug("Inventário {} ('{}') comparado com o inventário {}: {} de {} esperada(s) encontrada(s), {} faltando",
+            inventarioId, nomeLocal, referencia.id, esperado.itens.size - faltando.size, esperado.itens.size, faltando.size)
+
+        return FaltandoInventario(esperado, esperado.itens.size, esperado.itens.size - faltando.size, faltando)
+    }
+
+    /** Lista do esperado a partir do inventário de referência. Devolve também quantas foram excluídas do cadastro depois. */
+    private fun montarEsperado(nomeLocal: String, referencia: InventarioEntity): Pair<EsperadoLocal, Int> {
         val encontradas = itens.findByInventarioIdOrderByLidoEmAsc(referencia.id).filter { it.cadastrada }.map { it.tag }
         val cadastro = if (encontradas.isEmpty()) emptyList() else tags.findAllByTagRealIn(encontradas)
 
@@ -96,18 +134,25 @@ class EsperadoInventarioService(
             }
             .sortedWith(compareBy(nullsLast()) { it.patrimonio })
 
-        val excluidas = encontradas.size - esperados.size
-        log.info("Coletor {} pediu o esperado do local '{}': {} etiqueta(s) do inventário {} finalizado em {} (operador {}){}",
-            dispositivo, local.nome, esperados.size, referencia.id, referencia.finalizadoEm, referencia.operador ?: "—",
-            if (excluidas > 0) "; $excluidas excluída(s) do cadastro depois ficaram de fora" else "")
-
-        return EsperadoLocal(
-            local = local.nome,
+        val esperado = EsperadoLocal(
+            local = nomeLocal,
             temReferencia = true,
             inventarioReferencia = referencia.id,
             finalizadoEm = referencia.finalizadoEm?.atZone(ZoneId.systemDefault())?.toOffsetDateTime(),
             operador = referencia.operador,
             itens = esperados
         )
+        return esperado to (encontradas.size - esperados.size)
     }
 }
+
+/**
+ * Comparação de um inventário com o inventário finalizado anterior do mesmo local.
+ * [referencia].temReferencia = false: primeiro inventário do local, sem comparação.
+ */
+data class FaltandoInventario(
+    val referencia: EsperadoLocal,
+    val esperadas: Int = 0,
+    val encontradas: Int = 0,
+    val faltando: List<ItemEsperado> = emptyList()
+)

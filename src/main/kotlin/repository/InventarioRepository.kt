@@ -23,6 +23,12 @@ interface InventarioRepository : JpaRepository<InventarioEntity, String> {
 
     /** Último inventário finalizado do local: base da lista do que é esperado no próximo inventário. */
     fun findFirstByLocalIdAndStatusOrderByFinalizadoEmDesc(localId: Long, status: StatusInventario): InventarioEntity?
+
+    /** Inventário finalizado do local imediatamente antes de [antes] (outro que não [id]): base da comparação na web.
+     *  Empate no horário de fim: vale o de maior id, para o resultado não variar. */
+    fun findFirstByLocalIdAndStatusAndFinalizadoEmBeforeAndIdNotOrderByFinalizadoEmDescIdDesc(
+        localId: Long, status: StatusInventario, antes: java.time.LocalDateTime, id: String
+    ): InventarioEntity?
 }
 
 interface InventarioItemRepository : JpaRepository<InventarioItemEntity, Long> {

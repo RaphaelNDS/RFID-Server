@@ -104,6 +104,15 @@ mesma permissão da tela. Em Leituras, exporta **todas** as leituras do filtro a
 - **CSV**: para importar em outros sistemas. Segue o padrão do Excel em português (`;` e UTF-8 com BOM), e texto
   que começa com `=`, `+`, `-` ou `@` ganha um `'` na frente, para não ser executado como fórmula.
 
+### Inventário: o que faltou
+
+O detalhe do inventário mostra o que **faltou** em relação ao **inventário finalizado anterior do mesmo local**
+(o último finalizado antes do início deste; um inventário antigo compara com o que veio antes dele), com a data e
+o operador da referência. Entram as etiquetas cadastradas encontradas na referência, com os dados do cadastro atual
+(etiquetas excluídas depois ficam de fora). Inventário em andamento mostra "Faltando até agora" (lista
+provisória); o primeiro inventário de um local diz que não há comparação. A exportação traz as lidas e, depois,
+as que faltaram, com a situação `Faltando` (ou `Faltando até agora`).
+
 ### Perfis de usuário
 
 | Perfil | Permissões |

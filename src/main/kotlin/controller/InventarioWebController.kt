@@ -1,5 +1,7 @@
 package org.example.controller
 
+import org.example.model.StatusInventario
+import org.example.service.EsperadoInventarioService
 import org.example.service.InventarioService
 import org.example.util.FormatoPlanilha
 import org.example.util.Planilha
@@ -19,7 +21,8 @@ import org.springframework.web.bind.annotation.RequestParam
 @Controller
 @RequestMapping("/admin/inventarios")
 class InventarioWebController(
-    private val service: InventarioService
+    private val service: InventarioService,
+    private val esperados: EsperadoInventarioService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -39,30 +42,44 @@ class InventarioWebController(
         val detalhe = service.detalhar(id)
         model.addAttribute("inventario", detalhe.resumo)
         model.addAttribute("itens", detalhe.itens)
+        model.addAttribute("comparacao", esperados.faltandoNoInventario(id))
         return "inventario-detalhe"
     }
 
-    /** Etiquetas lidas no inventário em Excel (padrão) ou CSV, na ordem da leitura. */
+    /**
+     * Etiquetas do inventário em Excel (padrão) ou CSV: as lidas, na ordem da leitura, e depois as que faltaram
+     * em relação ao inventário anterior do mesmo local, com a situação "Faltando" (sem hora de leitura).
+     */
     @PreAuthorize("@authService.temPermissao('LEITURA','READ')")
     @GetMapping("/{id}/exportar")
     fun exportar(@PathVariable id: String, @RequestParam(required = false) formato: String?, auth: Authentication): ResponseEntity<ByteArray> {
         val tipoArquivo = FormatoPlanilha.de(formato)
         val detalhe = service.detalhar(id)
         val inventario = detalhe.resumo
+        val comparacao = esperados.faltandoNoInventario(id)
+
+        val lidas = detalhe.itens.map {
+            listOf(
+                it.lidoEm, it.tag, if (it.cadastrada) "Cadastrada" else "Não cadastrada",
+                it.patrimonio, it.codigoInterno, it.tipo, it.marca, it.modelo, it.operador
+            )
+        }
+        // Em andamento, a lista é provisória: a situação diz isso na própria planilha
+        val situacaoFaltando = if (inventario.status == StatusInventario.ABERTO) "Faltando até agora" else "Faltando"
+        val faltando = comparacao.faltando.map {
+            listOf(null, it.tag, situacaoFaltando, it.patrimonio, it.codigoInterno, it.tipo, it.marca, it.modelo, null)
+        }
 
         val planilha = Planilha(
             nome = "Inventário ${inventario.local}",
             colunas = listOf("Lida em", "Etiqueta (EPC)", "Situação", "Patrimônio", "Código", "Tipo", "Marca", "Modelo", "Operador"),
-            linhas = detalhe.itens.map {
-                listOf(
-                    it.lidoEm, it.tag, if (it.cadastrada) "Cadastrada" else "Não cadastrada",
-                    it.patrimonio, it.codigoInterno, it.tipo, it.marca, it.modelo, it.operador
-                )
-            }
+            linhas = lidas + faltando
         )
 
-        log.info("{} exportou o inventário {} de '{}' em {}: {} etiqueta(s)",
-            auth.name, id, inventario.local, tipoArquivo.extensao.uppercase(), detalhe.itens.size)
+        log.info("{} exportou o inventário {} de '{}' em {}: {} etiqueta(s) lida(s){}",
+            auth.name, id, inventario.local, tipoArquivo.extensao.uppercase(), detalhe.itens.size,
+            if (comparacao.referencia.temReferencia) " e ${comparacao.faltando.size} faltando em relação ao inventário ${comparacao.referencia.inventarioReferencia}"
+            else " (primeiro inventário do local, sem comparação)")
 
         // Ex.: inventario-almoxarifado-2026-10-14 (dia em que o inventário começou)
         return respostaPlanilha(planilha, tipoArquivo, "inventario-${inventario.local}-${inventario.iniciadoEm.toLocalDate()}")
