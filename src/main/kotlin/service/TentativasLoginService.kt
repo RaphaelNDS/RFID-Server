@@ -17,7 +17,9 @@ import java.util.concurrent.ConcurrentHashMap
  * Proteção contra adivinhação de senha no login.
  *
  * - Por email: [maxTentativas] erros dentro da janela bloqueiam aquele login.
- * - Por IP: [maxTentativasIp] erros (em qualquer conta) bloqueiam o IP — pega quem testa a mesma senha em várias contas.
+ * - Por origem: [maxTentativasIp] erros (em qualquer conta) bloqueiam a origem — pega quem testa a mesma senha em
+ *   várias contas. Na web a origem é o IP; no coletor é "coletor@IP" (SessaoOperadorService), para vários coletores
+ *   atrás do mesmo IP (NAT) não travarem uns aos outros por causa de um operador errando a senha.
  *
  * Emails inexistentes contam igual aos existentes, para não revelar quais contas existem.
  * Os contadores ficam em memória: reiniciar o servidor zera tudo (aceitável para um servidor único).
@@ -43,32 +45,32 @@ class TentativasLoginService(
     private val porEmail = ConcurrentHashMap<String, Registro>()
     private val porIp = ConcurrentHashMap<String, Registro>()
 
-    /** Quanto falta de bloqueio para esse email ou IP; null se o login está liberado. */
-    fun tempoRestanteDeBloqueio(email: String?, ip: String?): Duration? {
+    /** Quanto falta de bloqueio para esse email ou origem; null se o login está liberado. */
+    fun tempoRestanteDeBloqueio(email: String?, origem: String?): Duration? {
         val agora = relogio.instant()
         return listOfNotNull(
             email?.let { porEmail[normalizar(it)] },
-            ip?.let { porIp[it] }
+            origem?.let { porIp[it] }
         ).mapNotNull { registro ->
             synchronized(registro) { registro.bloqueadoAte?.takeIf { it.isAfter(agora) } }
         }.maxOrNull()?.let { Duration.between(agora, it) }
     }
 
-    fun registrarFalha(email: String, ip: String?) {
+    fun registrarFalha(email: String, origem: String?) {
         val chave = normalizar(email)
 
         contar(porEmail.computeIfAbsent(chave) { Registro() }, maxTentativas)?.let { falhas ->
             log.warn(
-                "Login de '{}' bloqueado por {} min após {} tentativas com senha errada (último IP: {})",
-                chave, duracao.toMinutes(), falhas, ip ?: "desconhecido"
+                "Login de '{}' bloqueado por {} min após {} tentativas com senha errada (última origem: {})",
+                chave, duracao.toMinutes(), falhas, origem ?: "desconhecido"
             )
         }
 
-        if (ip != null) {
-            contar(porIp.computeIfAbsent(ip) { Registro() }, maxTentativasIp)?.let { falhas ->
+        if (origem != null) {
+            contar(porIp.computeIfAbsent(origem) { Registro() }, maxTentativasIp)?.let { falhas ->
                 log.warn(
-                    "IP {} bloqueado por {} min após {} tentativas de login com falha (possível ataque de senhas; última conta tentada: '{}')",
-                    ip, duracao.toMinutes(), falhas, chave
+                    "Origem {} (IP na web, coletor@IP no coletor) bloqueada por {} min após {} tentativas de login com falha (possível ataque de senhas; última conta tentada: '{}')",
+                    origem, duracao.toMinutes(), falhas, chave
                 )
             }
         }

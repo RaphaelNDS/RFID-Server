@@ -71,15 +71,22 @@ class SessaoOperadorService(
     fun entrar(emailInformado: String, senha: String, dispositivo: String, ip: String?): SessaoCriada {
         val email = emailInformado.trim()
 
-        tentativas.tempoRestanteDeBloqueio(email, ip)?.let { restante ->
+        // Bloqueio por origem = coletor + IP, e não só o IP: vários coletores costumam sair para o servidor pelo
+        // mesmo IP (NAT do roteador), e um operador errando a senha travaria o login de todos. Para chegar aqui o
+        // coletor já apresentou a chave dele, então um atacante não troca de "coletor" à vontade. O bloqueio por
+        // email continua o mesmo da web (5 erros naquela conta, venham de onde vierem).
+        val origem = origemDoLogin(dispositivo, ip)
+
+        tentativas.tempoRestanteDeBloqueio(email, origem)?.let { restante ->
             val minutos = (restante.toSeconds() + 59) / 60
-            log.warn("Login no coletor {} recusado sem conferir a senha: '{}' (IP {}) está bloqueado por mais {} min", dispositivo, email.lowercase(), ip, minutos)
+            log.warn("Login no coletor {} recusado sem conferir a senha: '{}' ou o coletor (IP {}) está bloqueado por mais {} min",
+                dispositivo, email.lowercase(), ip, minutos)
             throw LoginRecusadoException(429, "Muitas tentativas sem sucesso. Aguarde $minutos minuto(s) e tente de novo.", restante.toSeconds().coerceAtLeast(1))
         }
 
         val usuario = usuarios.findByEmail(email)
         if (usuario == null || !senhas.matches(senha, usuario.senha)) {
-            tentativas.registrarFalha(email, ip)
+            tentativas.registrarFalha(email, origem)
             log.warn("Login no coletor {} recusado: email ou senha incorretos para '{}' (IP {})", dispositivo, email.lowercase(), ip)
             throw LoginRecusadoException(401, MENSAGEM_CREDENCIAIS)
         }
@@ -193,6 +200,9 @@ class SessaoOperadorService(
             throw SessaoInvalidaException("O usuário desta sessão não existe mais")
         }
     }
+
+    /** Origem das tentativas de login do coletor no TentativasLoginService: "coletor-01@10.0.0.5". */
+    private fun origemDoLogin(dispositivo: String, ip: String?) = "$dispositivo@${ip ?: "desconhecido"}"
 
     private fun temPermissao(usuario: UserPrincipal, permissao: String) =
         usuario.authorities.any { it.authority == "ROLE_ADMIN" || it.authority == permissao }

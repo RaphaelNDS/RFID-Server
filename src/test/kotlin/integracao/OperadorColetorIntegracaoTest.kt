@@ -109,6 +109,32 @@ class OperadorColetorIntegracaoTest : IntegracaoBase() {
     }
 
     @Test
+    fun `erros em varias contas bloqueiam so o coletor que errou e nao os outros atras do mesmo IP`() {
+        val email = "nat-ok-${UUID.randomUUID()}@x.com"
+        operadores.criarUsuario(email = email)
+
+        // 20 erros no coletor-teste, cada um numa conta diferente (nenhuma conta chega ao limite dela)
+        repeat(20) { login("nat-${UUID.randomUUID()}@x.com", senha = "Errada123").andExpect(status().isUnauthorized) }
+
+        // O coletor-teste fica bloqueado, mesmo para outra conta com a senha certa
+        login(email).andExpect(status().isTooManyRequests)
+
+        // O coletor-leitura, saindo pelo MESMO IP (NAT), continua entrando
+        login(email, chave = chaveLeitura).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `bloqueio por email vale em todos os coletores`() {
+        val email = "bloq-todos-${UUID.randomUUID()}@x.com"
+        operadores.criarUsuario(email = email)
+
+        repeat(5) { login(email, senha = "Errada123").andExpect(status().isUnauthorized) }
+
+        // A conta bloqueada no coletor-teste também não entra pelo coletor-leitura
+        login(email, chave = chaveLeitura).andExpect(status().isTooManyRequests)
+    }
+
+    @Test
     fun `usuario sem acesso a Leituras nao entra no coletor`() {
         operadores.criarUsuario(email = "catalogo@x.com", permissoes = arrayOf(Modulo.CATALOGO to Acao.READ))
 

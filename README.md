@@ -197,7 +197,7 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
 | **HTTPS** | Porta 8443 com certificado próprio gerado na primeira execução (10 anos). A porta HTTP 8082 só redireciona as telas e recusa a API com 426. Os coletores fixam a **impressão digital** do certificado, mostrada em `/status`. |
 | **Configuração inicial** | `/setup` só funciona com o banco vazio; depois ninguém cria outro administrador por ali. |
 | **Senhas** | Mínimo 8 caracteres, letras e números, sem o nome/email, sem senhas comuns, até 72 bytes. Quem entra com senha antiga fora da regra é levado à troca de senha. Senhas guardadas com BCrypt. |
-| **Tentativas de login** | 5 erros no mesmo email ou 20 no mesmo IP em 15 min bloqueiam por 15 min — na web e no coletor. Durante o bloqueio nem a senha certa entra. Email inexistente recebe a mesma resposta que senha errada. |
+| **Tentativas de login** | 5 erros no mesmo email (na web e no coletor somados) ou 20 na mesma origem em 15 min bloqueiam por 15 min. A origem é o IP na web e o **coletor + IP** no coletor: vários coletores atrás do mesmo IP (NAT) não se bloqueiam por causa de um operador errando a senha. Durante o bloqueio nem a senha certa entra. Email inexistente recebe a mesma resposta que senha errada. |
 | **Permissões** | Por módulo e ação, conferidas em cada rota (não só escondendo botões). |
 | **CSRF** | Ativo em todas as telas; a API dos coletores não usa cookie, então não precisa. |
 | **Sessões do coletor** | Token aleatório de 32 bytes; o banco guarda só o hash SHA-256. |
@@ -290,7 +290,7 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_LEITURAS_RETER_DIAS` | `0` (desligada) | Apaga leituras com mais de N dias, todo dia às 03:30 (mínimo 30; não afeta inventários) |
 | `RFID_SENHA_TAMANHO_MINIMO` | `8` | Tamanho mínimo de senha |
 | `RFID_LOGIN_MAX_TENTATIVAS` | `5` | Erros por email até bloquear |
-| `RFID_LOGIN_MAX_TENTATIVAS_IP` | `20` | Erros por IP até bloquear |
+| `RFID_LOGIN_MAX_TENTATIVAS_IP` | `20` | Erros por origem até bloquear (IP na web, coletor + IP no coletor) |
 | `RFID_LOGIN_BLOQUEIO_MINUTOS` | `15` | Tempo de bloqueio |
 | `RFID_BACKUP_HABILITADO` | `true` | Backup automático |
 | `RFID_BACKUP_PASTA` | `./data/backups` | Pasta dos backups |
@@ -354,7 +354,7 @@ um arquivo por dia (ou a cada 10 MB), guardando os últimos 30 dias. Exemplos do
 Servidor RFID versão 1.3.1 no ar na porta 8443 (iniciado em 13/10/2026 11:17, pronto em 9,8 s)
 Banco de dados: H2 em arquivo: C:\rfid\data\rfid-db.mv.db (1532 KB)
 Backup concluído: rfid-db-2026-10-13_020000.zip (412 KB em 180 ms)
-Login de 'ana@empresa.com' bloqueado por 15 min após 5 tentativas com senha errada (último IP: 10.0.0.5)
+Login de 'ana@empresa.com' bloqueado por 15 min após 5 tentativas com senha errada (última origem: coletor-01@10.0.0.5)
 Exclusão recusada: modelo 'Latitude 5440' (id 1) está em uso por 7 etiqueta(s) (tentativa de ana@empresa.com)
 Erro inesperado [código cde75674] em POST /api/catalogo/marca (usuário ana@empresa.com)
 ```
