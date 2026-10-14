@@ -267,6 +267,10 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 
 Se aparecer `JAVA_HOME is not set`, aponte para um JDK 17.
 
+**CI:** a cada push (qualquer branch) e em pull requests, o GitHub Actions roda `./gradlew test`
+(`.github/workflows/testes.yml`). O resultado aparece na aba **Actions** do repositório; se algum teste falhar,
+o relatório HTML fica para download na própria execução (Artifacts).
+
 Estrutura (pacote `org.example`):
 
 ```
