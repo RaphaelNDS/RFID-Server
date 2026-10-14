@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.io.File
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -20,8 +21,10 @@ import javax.sql.DataSource
 /**
  * Backup automático do banco H2 em arquivo.
  *
- * Usa o comando BACKUP TO do H2, que gera um .zip consistente sem parar o servidor.
- * Para restaurar: pare o servidor, extraia o .zip na pasta do banco (substituindo o rfid-db.mv.db) e suba de novo.
+ * Usa o comando BACKUP TO do H2, que gera um .zip consistente sem parar o servidor. No mesmo .zip vão o
+ * certificado HTTPS (.p12) e a senha dele (.senha): sem eles, um servidor restaurado gera outro certificado e
+ * todos os coletores precisam ser confirmados de novo.
+ * Para restaurar: pare o servidor, extraia o .zip na pasta do banco (substituindo os arquivos) e suba de novo.
  */
 @Service
 class BackupService(
@@ -29,7 +32,8 @@ class BackupService(
     @Value("\${spring.datasource.url}") private val url: String,
     @Value("\${rfid.backup.habilitado:true}") private val habilitado: Boolean,
     @Value("\${rfid.backup.pasta:}") pastaConfigurada: String,
-    @Value("\${rfid.backup.manter:14}") private val manter: Int
+    @Value("\${rfid.backup.manter:14}") private val manter: Int,
+    private val certificado: CertificadoHttps
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -88,13 +92,15 @@ class BackupService(
 
         log.info("Iniciando backup do banco ({}): {}", motivo, destino.toAbsolutePath())
 
+        val doCertificado: List<String>
         try {
             Files.createDirectories(pasta)
             Files.deleteIfExists(parcial)
 
             jdbc.execute("BACKUP TO '${parcial.toAbsolutePath().toString().replace("'", "''")}'")
+            doCertificado = adicionarCertificado(parcial)
 
-            validar(parcial)
+            validar(parcial, doCertificado)
 
             // Só vira um backup "de verdade" depois de pronto e validado.
             // Dois backups no mesmo segundo (ex.: duplo clique) têm o mesmo nome: o novo substitui o anterior.
@@ -107,8 +113,10 @@ class BackupService(
         }
 
         log.info(
-            "Backup concluído: {} ({} KB em {} ms)",
-            nome, Files.size(destino) / 1024, System.currentTimeMillis() - inicio
+            "Backup concluído: {} ({} KB em {} ms){}",
+            nome, Files.size(destino) / 1024, System.currentTimeMillis() - inicio,
+            if (doCertificado.isEmpty()) ", sem certificado HTTPS (nenhum arquivo encontrado)"
+            else ", com o certificado HTTPS (${doCertificado.joinToString()})"
         )
 
         removerAntigos()
@@ -142,11 +150,28 @@ class BackupService(
         )
     }
 
-    // Um backup que não abre como zip ou vem vazio não serve para restaurar
-    private fun validar(arquivo: Path) {
+    /**
+     * Copia o certificado HTTPS (.p12 e .senha) para dentro do .zip, na raiz, ao lado do banco: com o caminho
+     * padrão (./data), extrair o .zip na pasta do banco já põe tudo no lugar. Devolve os nomes copiados.
+     */
+    private fun adicionarCertificado(zip: Path): List<String> {
+        val arquivos = certificado.arquivosParaBackup()
+        if (arquivos.isEmpty()) return emptyList()
+
+        FileSystems.newFileSystem(zip).use { fs ->
+            arquivos.forEach { Files.copy(it.toPath(), fs.getPath(it.name), StandardCopyOption.REPLACE_EXISTING) }
+        }
+        return arquivos.map { it.name }
+    }
+
+    // Um backup que não abre como zip, vem vazio ou perdeu o certificado no caminho não serve para restaurar
+    private fun validar(arquivo: Path, doCertificado: List<String>) {
         ZipFile(arquivo.toFile()).use { zip ->
             check(zip.entries().asSequence().any { it.name.endsWith(".mv.db") && it.size != 0L }) {
                 "o arquivo gerado não contém o banco"
+            }
+            doCertificado.forEach { nome ->
+                check(zip.getEntry(nome)?.let { it.size > 0 } == true) { "o arquivo gerado não contém o certificado ($nome)" }
             }
         }
     }

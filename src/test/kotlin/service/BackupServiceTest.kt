@@ -37,8 +37,9 @@ class BackupServiceTest {
         url: String = urlBanco,
         habilitado: Boolean = true,
         pasta: String = dir.resolve("backups").toString(),
-        manter: Int = 14
-    ) = BackupService(DriverManagerDataSource(url, "sa", ""), url, habilitado, pasta, manter)
+        manter: Int = 14,
+        certificado: CertificadoHttps = CertificadoHttps(dir.resolve("cert/rfid-https.p12").toString(), "", "")
+    ) = BackupService(DriverManagerDataSource(url, "sa", ""), url, habilitado, pasta, manter, certificado)
 
     private fun nomeEm(quando: LocalDateTime) =
         "rfid-db-${quando.format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss"))}.zip"
@@ -143,6 +144,71 @@ class BackupServiceTest {
             s.fazerBackup("segundo")
 
             assertThat(s.listarBackups()).isNotEmpty()
+        }
+    }
+
+    @Nested
+    inner class Certificado {
+
+        private val p12 get() = dir.resolve("cert/rfid-https.p12")
+        private val senha get() = dir.resolve("cert/rfid-https.p12.senha")
+
+        private fun conteudo(zip: Path, nome: String): ByteArray? =
+            ZipFile(zip.toFile()).use { z -> z.getEntry(nome)?.let { e -> z.getInputStream(e).use { it.readBytes() } } }
+
+        @BeforeEach
+        fun criarCertificado() {
+            Files.createDirectories(p12.parent)
+            Files.write(p12, byteArrayOf(1, 2, 3, 4))
+            Files.writeString(senha, "senha-gerada")
+        }
+
+        @Test
+        fun `o certificado e a senha vao no mesmo zip do banco`() {
+            val arquivo = service().fazerBackup("teste")
+
+            assertThat(conteudo(arquivo, "rfid-https.p12")).containsExactly(1, 2, 3, 4)
+            assertThat(conteudo(arquivo, "rfid-https.p12.senha")).isEqualTo("senha-gerada".toByteArray())
+            assertThat(conteudo(arquivo, "rfid-db.mv.db")).isNotEmpty()
+        }
+
+        @Test
+        fun `extrair o zip na pasta do banco restaura banco e certificado juntos`() {
+            val arquivo = service().fazerBackup("teste")
+
+            val restaurado = dir.resolve("restaurado")
+            Files.createDirectories(restaurado)
+            ZipFile(arquivo.toFile()).use { zip ->
+                zip.entries().asSequence().forEach { e -> zip.getInputStream(e).use { Files.copy(it, restaurado.resolve(e.name)) } }
+            }
+
+            // O CertificadoHttps do servidor restaurado encontra os mesmos arquivos no caminho padrão
+            val restauradoCert = CertificadoHttps(restaurado.resolve("rfid-https.p12").toString(), "", "")
+            assertThat(restauradoCert.arquivosParaBackup().map { it.name })
+                .containsExactlyInAnyOrder("rfid-https.p12", "rfid-https.p12.senha")
+            assertThat(Files.readAllBytes(restaurado.resolve("rfid-https.p12"))).containsExactly(1, 2, 3, 4)
+        }
+
+        @Test
+        fun `com senha configurada so o p12 existe e e o unico copiado`() {
+            Files.delete(senha)
+
+            val arquivo = service().fazerBackup("teste")
+
+            assertThat(conteudo(arquivo, "rfid-https.p12")).isNotNull()
+            assertThat(conteudo(arquivo, "rfid-https.p12.senha")).isNull()
+        }
+
+        @Test
+        fun `sem certificado o backup do banco funciona normalmente`() {
+            Files.delete(p12)
+            Files.delete(senha)
+
+            val arquivo = service().fazerBackup("teste")
+
+            ZipFile(arquivo.toFile()).use { zip ->
+                assertThat(zip.entries().asSequence().map { it.name }.toList()).containsExactly("rfid-db.mv.db")
+            }
         }
     }
 

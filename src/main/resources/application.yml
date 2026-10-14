@@ -59,7 +59,7 @@ rfid:
     porta: ${RFID_HTTPS_PORTA:8443}
     # Certificado (PKCS12). Se não existir, o servidor gera um próprio, válido por 10 anos, com os IPs desta
     # máquina, e guarda a senha em <arquivo>.senha. Se existir, só carrega: nunca gera outro sozinho (a
-    # impressão digital está fixada nos coletores). Guarde o .p12 e o .senha junto com os backups.
+    # impressão digital está fixada nos coletores). O backup automático já leva o .p12 e o .senha.
     # Para um certificado da empresa, aponte para o .p12 dela e informe a senha.
     keystore: ${RFID_HTTPS_KEYSTORE:./data/rfid-https.p12}
     senha: ${RFID_HTTPS_SENHA:}

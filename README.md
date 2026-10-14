@@ -178,15 +178,17 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
   | V3 | `db/migration/V3__inventarios.sql` | Locais, inventários e itens |
   | V4 | `db/migration/V4__sessoes_operador.sql` | Sessões de operador e coluna "operador" nos registros |
 
-- **Backup automático** todo dia às 02:00 em `./data/backups` (zip consistente, sem parar o servidor), mantendo
+- **Backup automático** todo dia às 02:00 em `./data/backups` (zip consistente, sem parar o servidor, com o certificado HTTPS junto: `rfid-https.p12` e `.senha`), mantendo
   os 14 mais recentes. Ao subir, se não houver backup das últimas 24 h, faz um na hora. O ADMIN também pode
   fazer pelo botão em `/status`.
 
-  **Restaurar:** pare o servidor, extraia o `.zip` na pasta do banco (substituindo `rfid-db.mv.db`) e suba de novo.
+  **Restaurar:** pare o servidor, extraia o `.zip` na pasta do banco (`./data`, substituindo os arquivos) e suba de
+  novo. Isso restaura o banco **e** o certificado: os coletores continuam reconhecendo o servidor sem novo
+  pareamento. Se o certificado fica em outro caminho (`RFID_HTTPS_KEYSTORE`), copie o `.p12` e o `.senha` para lá.
 
-  > Recomendado: aponte `RFID_BACKUP_PASTA` para **outro disco ou pasta de rede**, e guarde também
-  > `data/rfid-https.p12` e `data/rfid-https.p12.senha` (o backup automático copia só o banco). Sem o
-  > certificado, todos os coletores precisam ser pareados de novo.
+  > Recomendado: aponte `RFID_BACKUP_PASTA` para **outro disco ou pasta de rede**. Como o backup contém a
+  > chave privada do certificado e a senha dela, essa pasta deve ser acessível só a quem administra o servidor.
+  > Senha informada em `RFID_HTTPS_SENHA` não vai para o backup: guarde-a à parte.
 
 ---
 

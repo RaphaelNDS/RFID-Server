@@ -65,7 +65,7 @@ class CertificadoHttps(
     private val log = LoggerFactory.getLogger(javaClass)
 
     val arquivo: File = File(caminho).absoluteFile
-    private val arquivoSenha = File(arquivo.path + ".senha")
+    val arquivoSenha = File(arquivo.path + ".senha")
     private val extras: List<String> = nomesExtras.split(',').map { it.trim() }.filter { it.isNotEmpty() }
 
     // Preenchidos por garantir() (backing fields: a classe é aberta pelo plugin do Spring)
@@ -75,6 +75,12 @@ class CertificadoHttps(
 
     val certificado: X509Certificate? get() = certificadoCarregado
     val senha: String get() = senhaCarregada
+
+    /**
+     * Arquivos que vão junto no backup do banco: o .p12 e, se existir, o .senha (certificado gerado aqui).
+     * Uma senha informada em rfid.https.senha não é copiada: fica só na configuração.
+     */
+    fun arquivosParaBackup(): List<File> = listOf(arquivo, arquivoSenha).filter { it.isFile }
 
     /** Calculada uma vez (a tela Status é montada em toda página). Nula com o HTTPS desligado. */
     val impressaoDigital: String? get() = digitalCalculada
