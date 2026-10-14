@@ -1,0 +1,102 @@
+<header th:fragment="header"
+        class="topbar"
+        xmlns:th="http://www.thymeleaf.org"
+        xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+  <div class="topbar-inner">
+
+    <button type="button" class="icon-btn menu-toggle" id="menuToggle"
+            aria-label="Abrir menu" aria-controls="menuPrincipal" aria-expanded="false"
+            sec:authorize="isAuthenticated()">
+      <svg class="ic"><use href="/img/icones.svg#menu"/></svg>
+    </button>
+
+    <a class="brand" th:href="@{/dashboard}">
+      <span class="brand-mark"><svg class="ic"><use href="/img/icones.svg#sinal"/></svg></span>
+      <span class="brand-texto">Sistema RFID</span>
+    </a>
+
+    <!-- Cada item só aparece para quem tem a permissão da tela -->
+    <nav class="nav" id="menuPrincipal" aria-label="Menu principal" sec:authorize="isAuthenticated()">
+
+      <a th:href="@{/dashboard}">
+        <svg class="ic"><use href="/img/icones.svg#inicio"/></svg>Início
+      </a>
+
+      <a th:href="@{/admin/tags-cadastradas}" th:if="${@authService.temPermissao('RFID','READ')}">
+        <svg class="ic"><use href="/img/icones.svg#etiqueta"/></svg>Etiquetas
+      </a>
+
+      <a th:href="@{/admin/tags-pendentes}" th:if="${@authService.temPermissao('RFID','READ')}">
+        <svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Pendentes
+      </a>
+
+      <a th:href="@{/admin/cadastro}" th:if="${@authService.temPermissao('RFID','CREATE')}">
+        <svg class="ic"><use href="/img/icones.svg#mais"/></svg>Cadastrar
+      </a>
+
+      <a th:href="@{/admin/leituras-android}" th:if="${@authService.temPermissao('LEITURA','READ')}">
+        <svg class="ic"><use href="/img/icones.svg#sinal"/></svg>Leituras
+      </a>
+
+      <a th:href="@{/admin/inventarios}" th:if="${@authService.temPermissao('LEITURA','READ')}">
+        <svg class="ic"><use href="/img/icones.svg#ok"/></svg>Inventários
+      </a>
+
+      <a th:href="@{/admin/catalogo}" th:if="${@authService.temPermissao('CATALOGO','READ')}">
+        <svg class="ic"><use href="/img/icones.svg#pacote"/></svg>Catálogo
+      </a>
+
+      <a th:href="@{/admin/dashboard}" th:if="${@authService.temPermissao('DASHBOARD','READ')}">
+        <svg class="ic"><use href="/img/icones.svg#grafico"/></svg>Relatórios
+      </a>
+
+      <a th:href="@{/admin/coletores}" sec:authorize="hasRole('ADMIN')">
+        <svg class="ic"><use href="/img/icones.svg#servidor"/></svg>Coletores
+      </a>
+
+      <a th:href="@{/admin/app}" sec:authorize="hasRole('ADMIN')">
+        <svg class="ic"><use href="/img/icones.svg#download"/></svg>App
+      </a>
+
+      <a th:href="@{/admin/usuarios}" sec:authorize="hasRole('ADMIN')">
+        <svg class="ic"><use href="/img/icones.svg#usuarios"/></svg>Usuários
+        <span class="contador" th:if="${pedidosSenha != null and pedidosSenha > 0}" th:text="${pedidosSenha}"
+              th:title="${pedidosSenha} + ' pedido(s) de nova senha'">1</span>
+      </a>
+    </nav>
+
+    <div class="topbar-actions">
+
+      <button type="button" class="icon-btn" onclick="alternarTema()" aria-label="Alternar tema claro/escuro" title="Alternar tema">
+        <svg class="ic tema-claro-ic"><use href="/img/icones.svg#lua"/></svg>
+        <svg class="ic tema-escuro-ic"><use href="/img/icones.svg#sol"/></svg>
+      </button>
+
+      <div class="perfil" id="menuPerfil" sec:authorize="isAuthenticated()">
+        <button type="button" class="perfil-btn" id="menuPerfilBtn" aria-haspopup="true" aria-expanded="false">
+          <span class="avatar" th:text="${#strings.toUpperCase(#strings.substring(#authentication.principal.nome, 0, 1))}">A</span>
+          <span class="perfil-nome" th:text="${#authentication.principal.nome}">Usuário</span>
+          <svg class="ic"><use href="/img/icones.svg#seta-baixo"/></svg>
+        </button>
+
+        <div class="perfil-menu" role="menu">
+          <div class="perfil-menu-cabecalho">
+            <strong th:text="${#authentication.principal.nome}">Usuário</strong>
+            <span th:text="${#authentication.principal.email}">email</span>
+          </div>
+
+          <a th:href="@{/perfil}" role="menuitem"><svg class="ic"><use href="/img/icones.svg#usuario"/></svg>Meu perfil</a>
+          <a th:href="@{/perfil/senha}" role="menuitem"><svg class="ic"><use href="/img/icones.svg#chave"/></svg>Alterar senha</a>
+          <a th:href="@{/perfil/email}" role="menuitem"><svg class="ic"><use href="/img/icones.svg#email"/></svg>Alterar email</a>
+          <a th:href="@{/status}" role="menuitem"><svg class="ic"><use href="/img/icones.svg#servidor"/></svg>Status do servidor</a>
+
+          <form th:action="@{/logout}" method="post">
+            <button type="submit" class="sair" role="menuitem"><svg class="ic"><use href="/img/icones.svg#sair"/></svg>Sair</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</header>

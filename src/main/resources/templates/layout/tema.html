@@ -1,0 +1,12 @@
+<!-- Fragmento usado no <head> de todas as páginas (inclusive login) -->
+<script th:fragment="tema" xmlns:th="http://www.thymeleaf.org">
+  // Tema salvo pelo usuário; sem escolha salva, segue o tema do sistema operacional
+  (function () {
+    let tema = null;
+    try { tema = localStorage.getItem("theme"); } catch (e) { }
+    if (tema !== "dark" && tema !== "light") {
+      tema = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    document.documentElement.setAttribute("data-theme", tema);
+  })();
+</script>

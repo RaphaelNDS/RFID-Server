@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>App dos coletores · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>App dos coletores</h1>
+      <p class="subtitulo">Publique uma versão nova do app: os coletores oferecem a atualização na tela de login</p>
+    </div>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+  <div class="alert alert-erro" th:unless="${publicacaoLigada}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+    <span>Publicação desligada: configure <code>RFID_APP_CERTIFICADO_SHA256</code> com a impressão digital do certificado
+      da chave de assinatura do app. Sem ela o servidor não aceita nenhum APK.</span>
+  </div>
+
+  <div class="grid grid-stats">
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#ok"/></svg>Versão publicada</div>
+      <div class="stat-valor" th:text="${publicada != null} ? ${publicada.versaoNome} : '—'">—</div>
+      <div class="stat-dica" th:text="${publicada != null} ? 'Código ' + ${publicada.codigo} + ' · ' + ${#temporals.format(publicada.publicadaEm, 'dd/MM/yyyy HH:mm')} : 'Nenhuma versão publicada ainda'"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header"><h2>Publicar versão nova</h2></div>
+
+    <form method="post" th:action="@{/admin/app}" enctype="multipart/form-data" class="toolbar">
+      <div class="field">
+        <label for="f-apk">APK de produção (RFID-Android-x.y.z-release.apk)</label>
+        <input id="f-apk" type="file" name="apk" accept=".apk,application/vnd.android.package-archive" required
+               th:disabled="${!publicacaoLigada}">
+      </div>
+      <div class="field" style="flex:2">
+        <label for="f-notas">O que mudou (aparece no coletor)</label>
+        <input id="f-notas" name="notas" maxlength="1000" placeholder="Ex.: correção no envio das leituras" th:disabled="${!publicacaoLigada}">
+      </div>
+      <button type="submit" class="btn btn-primary" th:disabled="${!publicacaoLigada}">
+        <svg class="ic"><use href="/img/icones.svg#download"/></svg>Publicar
+      </button>
+    </form>
+
+    <p class="card-footer muted">
+      O servidor só aceita o APK do pacote <code th:text="${pacote}">pacote</code>, com a assinatura válida, assinado com a
+      chave da empresa (<code class="mono" th:text="${certificadoEsperado != null} ? ${certificadoEsperado} : 'não configurada'"></code>)
+      e com código de versão maior que o de todas as já publicadas: o Android não instala uma versão menor por cima.
+      Tamanho máximo: <span th:text="${tamanhoMaximoMb}">100</span> MB. Só as <span th:text="${versoesGuardadas}">3</span>
+      últimas versões ficam guardadas no disco; a pasta dos APKs não entra no backup automático.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Histórico <span class="contagem" th:text="'(' + ${#lists.size(versoes)} + ')'"></span></h2>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table" th:unless="${#lists.isEmpty(versoes)}">
+        <thead>
+        <tr>
+          <th>Versão</th>
+          <th>Código</th>
+          <th>Publicada em</th>
+          <th>Por</th>
+          <th>Tamanho</th>
+          <th>O que mudou</th>
+          <th>SHA-256</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="v : ${versoes}">
+          <td class="principal">
+            <span th:text="${v.versaoNome}"></span>
+            <span class="badge badge-online" th:if="${publicada != null and v.id == publicada.id}">Publicada</span>
+            <span class="badge" th:if="${v.arquivoRemovido}">Arquivo removido</span>
+          </td>
+          <td th:text="${v.codigo}"></td>
+          <td class="nowrap" th:text="${#temporals.format(v.publicadaEm, 'dd/MM/yyyy HH:mm')}"></td>
+          <td th:text="${v.publicadaPor}"></td>
+          <td class="nowrap" th:text="${#numbers.formatDecimal(v.tamanho / 1048576.0, 1, 'POINT', 1, 'COMMA')} + ' MB'"></td>
+          <td th:text="${v.notas != null} ? ${v.notas} : '—'"></td>
+          <td class="mono" th:text="${#strings.substring(v.sha256, 0, 16)} + '…'" th:title="${v.sha256}"></td>
+        </tr>
+        </tbody>
+      </table>
+
+      <div class="vazio" th:if="${#lists.isEmpty(versoes)}">
+        <svg class="ic"><use href="/img/icones.svg#pacote"/></svg>
+        <strong>Nenhuma versão publicada</strong>
+        Gere o APK de produção (./gradlew assembleRelease no projeto do app) e envie aqui.
+      </div>
+    </div>
+  </div>
+
+</section>
+</html>

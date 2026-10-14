@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Configuração inicial · Sistema RFID</title>
+  <link rel="icon" th:href="@{/img/favicon.svg}" type="image/svg+xml">
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+  <script th:replace="~{layout/tema :: tema}"></script>
+  <script th:src="@{/js/app.js}" defer></script>
+</head>
+
+<body>
+
+<button type="button" class="icon-btn auth-tema" onclick="alternarTema()" aria-label="Alternar tema claro/escuro">
+  <svg class="ic tema-claro-ic"><use href="/img/icones.svg#lua"/></svg>
+  <svg class="ic tema-escuro-ic"><use href="/img/icones.svg#sol"/></svg>
+</button>
+
+<main class="auth">
+  <div class="auth-card">
+
+    <div class="auth-marca">
+      <span class="brand-mark"><svg class="ic"><use href="/img/icones.svg#escudo"/></svg></span>
+      <div>
+        <h1>Configuração inicial</h1>
+        <p>Crie o administrador principal do sistema. Esta tela só aparece uma vez.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <form th:action="@{/setup}" method="post" class="card-body">
+
+        <div class="alert alert-erro" th:if="${erro}" role="alert">
+          <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+        </div>
+
+        <div class="field">
+          <label for="nome">Nome</label>
+          <input id="nome" type="text" name="nome" th:value="${nome}" autocomplete="name" required autofocus>
+        </div>
+
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" name="email" th:value="${email}" autocomplete="username" required>
+          <span class="field-dica">Será usado para entrar no sistema.</span>
+        </div>
+
+        <div class="field">
+          <label for="senha">Senha</label>
+          <input id="senha" type="password" name="senha" autocomplete="new-password" required>
+          <span class="field-dica" th:text="${regraSenha}"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Criar administrador</button>
+      </form>
+    </div>
+
+  </div>
+</main>
+
+</body>
+</html>

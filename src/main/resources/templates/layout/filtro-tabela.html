@@ -1,0 +1,26 @@
+<!-- Busca instantânea em tabela: filtra as linhas de #tabela pelo texto de #filtroTabela.
+     Opcional: #contagem (mostra quantas linhas aparecem) e #semResultado (aviso de busca vazia). -->
+<script th:fragment="script" xmlns:th="http://www.thymeleaf.org">
+  (function () {
+    const campo = document.getElementById("filtroTabela");
+    const tabela = document.getElementById("tabela");
+    if (!campo || !tabela) return;
+
+    const linhas = Array.from(tabela.tBodies[0].rows);
+    const contagem = document.getElementById("contagem");
+    const semResultado = document.getElementById("semResultado");
+    const sufixo = contagem ? contagem.textContent.replace(/^\d+/, "") : "";
+
+    campo.addEventListener("input", function () {
+      const termo = campo.value.trim().toLowerCase();
+      let visiveis = 0;
+      linhas.forEach(function (tr) {
+        const mostra = !termo || tr.textContent.toLowerCase().includes(termo);
+        tr.hidden = !mostra;
+        if (mostra) visiveis++;
+      });
+      if (contagem) contagem.textContent = visiveis + sufixo;
+      if (semResultado) semResultado.hidden = !(linhas.length > 0 && visiveis === 0);
+    });
+  })();
+</script>

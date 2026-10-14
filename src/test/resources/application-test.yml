@@ -1,0 +1,35 @@
+# Perfil usado pelos testes de integração (@ActiveProfiles("test")).
+# Banco em memória, isolado do arquivo ./data usado em produção.
+spring:
+  datasource:
+    url: jdbc:h2:mem:rfid-teste;DB_CLOSE_DELAY=-1
+  jpa:
+    show-sql: false
+  h2:
+    console:
+      enabled: false
+
+rfid:
+  dispositivos:
+    # coletor-leitura existe para testar um coletor válido SEM permissão de cadastro
+    chaves: coletor-teste:chave-de-teste-0123456789,coletor-leitura:chave-de-leitura-0123456789
+    cadastro: coletor-teste
+  app:
+    # APKs de teste (src/test/resources/apk, gerados por gerar-apks-teste.sh) são assinados com a chave de
+    # teste "A": esta é a impressão digital dela. Os testes limpam a pasta antes de cada caso.
+    pasta: ./build/test-app
+    certificado-sha256: 67:5C:77:B8:E4:3A:D3:36:3D:EA:AA:C9:6E:C9:07:DC:49:93:E8:67:9E:C5:49:A8:04:03:87:C1:E5:B3:F5:AC
+  coletores:
+    # Limite baixo para o teste de inundação não precisar enviar 500 erros
+    erros-por-dia: 60
+  # Nenhum teste gera certificado em disco (os testes do certificado usam pasta temporária)
+  https:
+    habilitado: false
+
+logging:
+  # Testes não gravam log em arquivo (o padrão grava em ./data/logs)
+  file:
+    name: ""
+  level:
+    root: WARN
+    org.example: WARN

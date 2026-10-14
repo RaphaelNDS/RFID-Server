@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Erros do coletor · Sistema RFID</title>
+
+<!-- Todo texto vem do coletor: só th:text (nunca th:utext) -->
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1 th:text="'Erros do app · ' + ${coletor}">Erros do app</h1>
+      <p class="subtitulo">Travamentos e falhas relevantes enviados pelo app deste coletor (os mais recentes primeiro)</p>
+    </div>
+    <a th:href="@{/admin/coletores}" class="btn btn-ghost">
+      <svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Voltar
+    </a>
+  </div>
+
+  <div class="card">
+    <form method="get" class="toolbar" th:unless="${#lists.isEmpty(versoes)}">
+      <div class="field">
+        <label for="f-versao">Versão do app</label>
+        <select id="f-versao" name="versao">
+          <option value="">Todas as versões</option>
+          <option th:each="v : ${versoes}" th:value="${v}" th:text="${v}" th:selected="${v == versaoSelecionada}"></option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <svg class="ic"><use href="/img/icones.svg#busca"/></svg>Filtrar
+      </button>
+    </form>
+
+    <div class="card-header">
+      <h2>Erros <span class="contagem" th:text="'(' + ${#lists.size(erros)} + ')'"></span></h2>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table" th:unless="${#lists.isEmpty(erros)}">
+        <thead>
+        <tr>
+          <th>No coletor</th>
+          <th>Recebido</th>
+          <th>Tipo</th>
+          <th>Mensagem</th>
+          <th>Vezes</th>
+          <th>Versão</th>
+          <th>Operador</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="e : ${erros}">
+          <td class="nowrap" th:text="${#temporals.format(e.momento, 'dd/MM/yyyy HH:mm:ss')}"
+              title="Hora do relógio do coletor"></td>
+          <td class="nowrap muted" th:text="${#temporals.format(e.recebidoEm, 'dd/MM/yyyy HH:mm')}"
+              title="Quando chegou ao servidor"></td>
+          <td>
+            <span class="badge badge-CUSTOM" th:if="${e.tipo == 'FALHA_GERAL'}">Travamento</span>
+            <span class="badge" th:unless="${e.tipo == 'FALHA_GERAL'}" th:text="${e.tipo}"></span>
+          </td>
+          <td>
+            <span th:text="${e.mensagem}"></span>
+            <details th:if="${e.detalhe != null}">
+              <summary class="muted">Detalhe</summary>
+              <pre class="mono" style="max-height:320px;overflow:auto;white-space:pre-wrap;font-size:12px" th:text="${e.detalhe}"></pre>
+            </details>
+          </td>
+          <td th:text="${e.ocorrencias}"></td>
+          <td th:text="${e.versaoApp != null} ? ${e.versaoApp} + (${e.codigoVersao != null} ? ' (' + ${e.codigoVersao} + ')' : '') : '—'"></td>
+          <td th:text="${e.operador != null} ? ${e.operador} : '—'"></td>
+        </tr>
+        </tbody>
+      </table>
+
+      <div class="vazio" th:if="${#lists.isEmpty(erros)}">
+        <svg class="ic"><use href="/img/icones.svg#ok"/></svg>
+        <strong>Nenhum erro recebido deste coletor</strong>
+        O app envia os erros quando tem rede. Os erros ficam guardados por 90 dias.
+      </div>
+    </div>
+  </div>
+
+</section>
+</html>

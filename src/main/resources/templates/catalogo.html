@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-br"
+      xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Catálogo · Sistema RFID</title>
+
+<section class="page"
+         th:with="podeCriar=${@authService.temPermissao('CATALOGO','CREATE')},
+                  podeExcluir=${@authService.temPermissao('CATALOGO','DELETE')}">
+
+  <div class="page-header">
+    <div>
+      <h1>Catálogo de equipamentos</h1>
+      <p class="subtitulo">Tipos, marcas e modelos usados no cadastro de etiquetas</p>
+    </div>
+  </div>
+
+  <div class="grid grid-3">
+
+    <!-- TIPOS -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Tipos <span class="contagem" th:text="'(' + ${tipos.size()} + ')'"></span></h2>
+        <button th:if="${podeCriar}" type="button" class="btn btn-secondary btn-sm" onclick="abrirDialog('tipo')">
+          <svg class="ic"><use href="/img/icones.svg#mais"/></svg>Novo
+        </button>
+      </div>
+      <ul class="lista">
+        <li th:each="t : ${tipos}" th:attr="data-id=${t.id}">
+          <span class="item-nome" th:text="${t.nome}"></span>
+          <button th:if="${podeExcluir}" type="button" class="btn btn-danger-ghost btn-icon"
+                  th:attr="aria-label='Excluir ' + ${t.nome}" title="Excluir" onclick="excluir(this,'tipo')">
+            <svg class="ic"><use href="/img/icones.svg#lixeira"/></svg>
+          </button>
+        </li>
+      </ul>
+      <div class="vazio" th:if="${tipos.isEmpty()}"><strong>Nenhum tipo</strong>Comece cadastrando um tipo de equipamento.</div>
+    </div>
+
+    <!-- MARCAS -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Marcas <span class="contagem" th:text="'(' + ${marcas.size()} + ')'"></span></h2>
+        <button th:if="${podeCriar}" type="button" class="btn btn-secondary btn-sm" onclick="abrirDialog('marca')">
+          <svg class="ic"><use href="/img/icones.svg#mais"/></svg>Nova
+        </button>
+      </div>
+      <ul class="lista">
+        <li th:each="m : ${marcas}" th:attr="data-id=${m.id}">
+          <span>
+            <span class="item-nome" th:text="${m.nome}"></span>
+            <span class="item-detalhe d-block" th:text="${m.tipo.nome}"></span>
+          </span>
+          <button th:if="${podeExcluir}" type="button" class="btn btn-danger-ghost btn-icon"
+                  th:attr="aria-label='Excluir ' + ${m.nome}" title="Excluir" onclick="excluir(this,'marca')">
+            <svg class="ic"><use href="/img/icones.svg#lixeira"/></svg>
+          </button>
+        </li>
+      </ul>
+      <div class="vazio" th:if="${marcas.isEmpty()}"><strong>Nenhuma marca</strong>Cada marca pertence a um tipo.</div>
+    </div>
+
+    <!-- MODELOS -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Modelos <span class="contagem" th:text="'(' + ${modelos.size()} + ')'"></span></h2>
+        <button th:if="${podeCriar}" type="button" class="btn btn-secondary btn-sm" onclick="abrirDialog('modelo')">
+          <svg class="ic"><use href="/img/icones.svg#mais"/></svg>Novo
+        </button>
+      </div>
+      <ul class="lista">
+        <li th:each="m : ${modelos}" th:attr="data-id=${m.id}">
+          <span>
+            <span class="item-nome" th:text="${m.nome}"></span>
+            <span class="item-detalhe d-block" th:text="${m.marca.nome} + ' · ' + ${m.marca.tipo.nome}"></span>
+          </span>
+          <button th:if="${podeExcluir}" type="button" class="btn btn-danger-ghost btn-icon"
+                  th:attr="aria-label='Excluir ' + ${m.nome}" title="Excluir" onclick="excluir(this,'modelo')">
+            <svg class="ic"><use href="/img/icones.svg#lixeira"/></svg>
+          </button>
+        </li>
+      </ul>
+      <div class="vazio" th:if="${modelos.isEmpty()}"><strong>Nenhum modelo</strong>Cada modelo pertence a uma marca.</div>
+    </div>
+
+  </div>
+
+  <!-- ===== JANELA DE CADASTRO ===== -->
+  <div class="modal-fundo" id="alertDialog" onclick="if(event.target === this) fecharDialog()">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dialogTitulo">
+      <div class="modal-cabecalho">
+        <h2 id="dialogTitulo">Cadastrar</h2>
+        <button type="button" class="btn btn-ghost btn-icon" onclick="fecharDialog()" aria-label="Fechar">
+          <svg class="ic"><use href="/img/icones.svg#fechar"/></svg>
+        </button>
+      </div>
+      <form class="modal-corpo" id="dialogCampos" onsubmit="salvarDialog(); return false;"></form>
+      <div class="modal-rodape">
+        <button type="button" class="btn btn-ghost" onclick="fecharDialog()">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="botaoSalvar" onclick="salvarDialog()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let tipoAtual = null;
+
+    const TITULOS = { tipo: "Novo tipo de equipamento", marca: "Nova marca", modelo: "Novo modelo" };
+
+    function campo(id, rotulo, html) {
+      return `<div class="field"><label for="${id}">${rotulo}</label>${html}</div>`;
+    }
+
+    function abrirDialog(tipo){
+        tipoAtual = tipo;
+        let html = '';
+
+        if(tipo === 'marca' || tipo === 'modelo'){
+            html += campo("selectTipo", "Tipo de equipamento",
+              `<select id="selectTipo"><option value="">Carregando…</option></select>`);
+        }
+        if(tipo === 'modelo'){
+            html += campo("selectMarca", "Marca",
+              `<select id="selectMarca" disabled><option value="">Escolha o tipo primeiro</option></select>`);
+        }
+        html += campo("dialogNome", "Nome", `<input type="text" id="dialogNome" autocomplete="off" required>`);
+
+        document.getElementById("dialogCampos").innerHTML = html;
+
+        if(tipo === 'marca' || tipo === 'modelo'){
+            carregarTipos();
+        }
+        if(tipo === 'modelo'){
+            document.getElementById("selectTipo").addEventListener("change", carregarMarcas);
+        }
+
+        document.getElementById("dialogTitulo").textContent = TITULOS[tipo];
+        document.getElementById("alertDialog").classList.add("aberto");
+        document.getElementById(tipo === 'tipo' ? "dialogNome" : "selectTipo").focus();
+    }
+
+    function carregarTipos(){
+        fetch('/api/catalogo/tipos')
+        .then(r => r.json())
+        .then(data => {
+            const sel = document.getElementById("selectTipo");
+            if(!sel) return;
+            sel.innerHTML = "";
+            sel.appendChild(new Option("Selecione o tipo", ""));
+            data.forEach(t => sel.appendChild(new Option(t.nome, t.id)));
+        });
+    }
+
+    function carregarMarcas(){
+        const tipoId = document.getElementById("selectTipo").value;
+        const sel = document.getElementById("selectMarca");
+        sel.innerHTML = "";
+        if(!tipoId){
+            sel.appendChild(new Option("Escolha o tipo primeiro", ""));
+            sel.disabled = true;
+            return;
+        }
+
+        fetch(`/api/catalogo/marcas?tipoId=${tipoId}`)
+        .then(r=>r.json())
+        .then(data=>{
+            sel.appendChild(new Option(data.length ? "Selecione a marca" : "Nenhuma marca para este tipo", ""));
+            data.forEach(m => sel.appendChild(new Option(m.nome, m.id)));
+            sel.disabled = data.length === 0;
+        });
+    }
+
+    function salvarDialog(){
+        const nome = document.getElementById("dialogNome").value.trim();
+        if(!nome) return alert("Informe o nome.");
+
+        let payload = { nome };
+
+        if(tipoAtual === 'marca'){
+            const tipoId = document.getElementById("selectTipo").value;
+            if(!tipoId) return alert("Selecione o tipo de equipamento.");
+            payload.tipoId = tipoId;
+        }
+
+        if(tipoAtual === 'modelo'){
+            const marcaId = document.getElementById("selectMarca").value;
+            if(!marcaId) return alert("Selecione a marca.");
+            payload.marcaId = marcaId;
+        }
+
+        const botao = document.getElementById("botaoSalvar");
+        botao.disabled = true;
+
+        fetch(`/api/catalogo/${tipoAtual}`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(payload)
+        })
+        .then(verificarResposta)
+        .then(()=>{
+            fecharDialog();
+            location.reload();
+        })
+        .catch(e=>alert(e.message || "Erro ao salvar registro."))
+        .finally(()=>{ botao.disabled = false; });
+    }
+
+    function excluir(btn,tipo){
+        const li = btn.closest("li");
+        const nome = li.querySelector(".item-nome").textContent;
+        if(!confirm(`Excluir "${nome}"?`)) return;
+
+        fetch(`/api/catalogo/${tipo}/${li.dataset.id}`,{method:'DELETE'})
+        .then(verificarResposta)
+        .then(()=>location.reload())
+        .catch(e=>alert(e.message || "Erro ao excluir."));
+    }
+
+    // Em caso de erro a API devolve {"mensagem": "..."}; repassa essa mensagem para o alert
+    function verificarResposta(r){
+        if(r.ok) return r;
+        return r.json()
+            .catch(()=>({}))
+            .then(corpo=>{ throw new Error(corpo.mensagem || `Erro ${r.status}`); });
+    }
+
+    function fecharDialog(){
+        document.getElementById("alertDialog").classList.remove("aberto");
+    }
+
+    document.addEventListener("keydown", e => { if(e.key === "Escape") fecharDialog(); });
+  </script>
+
+</section>
+</html>

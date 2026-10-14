@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Início · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header saudacao">
+    <div>
+      <h1>Olá, <span th:text="${#strings.arraySplit(#authentication.principal.nome, ' ')[0]}">usuário</span></h1>
+      <p class="subtitulo">O que você precisa fazer hoje?</p>
+    </div>
+    <span class="badge badge-online" th:if="${isAdmin and info != null}" th:text="'Servidor ' + ${#strings.toLowerCase(info.status)}">Servidor online</span>
+  </div>
+
+  <!-- Atalhos: cada um só aparece com a permissão correspondente -->
+  <h2 class="secao-titulo">Acesso rápido</h2>
+  <div class="grid grid-tiles">
+
+    <a th:if="${@authService.temPermissao('RFID','READ')}" th:href="@{/admin/tags-cadastradas}" class="tile">
+      <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#etiqueta"/></svg></span>
+      <span><span class="tile-titulo">Etiquetas</span><span class="tile-desc d-block">Consultar as etiquetas cadastradas</span></span>
+    </a>
+
+    <a th:if="${@authService.temPermissao('RFID','READ')}" th:href="@{/admin/tags-pendentes}" class="tile">
+      <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#relogio"/></svg></span>
+      <span><span class="tile-titulo">Pendentes</span><span class="tile-desc d-block">Etiquetas lidas que ainda não foram cadastradas</span></span>
+    </a>
+
+    <a th:if="${@authService.temPermissao('RFID','CREATE')}" th:href="@{/admin/cadastro}" class="tile">
+      <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#mais"/></svg></span>
+      <span><span class="tile-titulo">Cadastrar etiqueta</span><span class="tile-desc d-block">Vincular uma etiqueta a um equipamento</span></span>
+    </a>
+
+    <a th:if="${@authService.temPermissao('LEITURA','READ')}" th:href="@{/admin/leituras-android}" class="tile">
+      <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#sinal"/></svg></span>
+      <span><span class="tile-titulo">Leituras</span><span class="tile-desc d-block">Histórico das leituras dos coletores</span></span>
+    </a>
+
+    <a th:if="${@authService.temPermissao('CATALOGO','READ')}" th:href="@{/admin/catalogo}" class="tile">
+      <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#pacote"/></svg></span>
+      <span><span class="tile-titulo">Catálogo</span><span class="tile-desc d-block">Tipos, marcas e modelos de equipamento</span></span>
+    </a>
+
+    <a th:if="${@authService.temPermissao('DASHBOARD','READ')}" th:href="@{/admin/dashboard}" class="tile">
+      <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#grafico"/></svg></span>
+      <span><span class="tile-titulo">Relatórios</span><span class="tile-desc d-block">Gráficos de leituras por dia, tipo e marca</span></span>
+    </a>
+  </div>
+
+  <div class="secao" th:if="${isAdmin}">
+    <h2 class="secao-titulo">Administração</h2>
+    <div class="grid grid-tiles">
+      <a th:href="@{/admin/usuarios}" class="tile">
+        <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#usuarios"/></svg></span>
+        <span><span class="tile-titulo">Usuários</span><span class="tile-desc d-block">Acessos e permissões</span></span>
+      </a>
+      <a th:href="@{/status}" class="tile">
+        <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#servidor"/></svg></span>
+        <span>
+          <span class="tile-titulo">Status do servidor</span>
+          <span class="tile-desc d-block" th:if="${info != null}" th:text="'No ar há ' + ${info.tempoOnline}">No ar</span>
+        </span>
+      </a>
+    </div>
+  </div>
+
+</section>
+</html>

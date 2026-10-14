@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!--
+  Página de erro amigável. Usada pelo TratamentoErros (com "mensagem" e "codigo")
+  e pelo Spring Boot para erros fora dos controllers, como página inexistente (só "status").
+-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Erro · Sistema RFID</title>
+
+<section class="page" style="max-width:560px">
+
+  <div class="card" style="margin-top:32px">
+    <div class="card-body vazio" style="padding:40px 28px">
+      <svg class="ic" style="color:var(--danger)"><use href="/img/icones.svg#alerta"/></svg>
+
+      <p class="muted" style="font-size:13px;font-weight:600;letter-spacing:.06em"
+         th:if="${status != null}" th:text="'ERRO ' + ${status}">ERRO</p>
+
+      <h1 style="font-size:22px;margin:6px 0 10px"
+          th:text="${status == 404} ? 'Página não encontrada'
+                 : (${status == 403} ? 'Acesso negado'
+                 : (${status != null and status < 500} ? 'Não foi possível concluir a operação'
+                 : 'Erro no servidor'))">Erro</h1>
+
+      <p style="color:var(--text-2)"
+         th:text="${mensagem != null} ? ${mensagem}
+                : (${status == 404} ? 'O endereço acessado não existe ou foi removido.'
+                : (${status == 403} ? 'Você não tem permissão para acessar esta página.'
+                : 'Ocorreu um erro inesperado. Tente novamente em instantes.'))">
+        Ocorreu um erro.
+      </p>
+
+      <p th:if="${codigo}" style="margin-top:14px" class="muted">
+        Código do erro para o suporte: <strong class="mono" th:text="${codigo}"></strong>
+      </p>
+
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:24px;flex-wrap:wrap">
+        <a href="javascript:history.back()" class="btn btn-secondary">
+          <svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Voltar
+        </a>
+        <a th:href="@{/dashboard}" class="btn btn-primary">
+          <svg class="ic"><use href="/img/icones.svg#inicio"/></svg>Ir para o início
+        </a>
+      </div>
+    </div>
+  </div>
+
+</section>
+</html>

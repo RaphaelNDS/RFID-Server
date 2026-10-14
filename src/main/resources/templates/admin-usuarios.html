@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Usuários · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Usuários</h1>
+      <p class="subtitulo">Quem acessa o sistema e com quais permissões</p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/usuarios/novo}" class="btn btn-primary">
+        <svg class="ic"><use href="/img/icones.svg#mais"/></svg>Novo usuário
+      </a>
+    </div>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <!-- Mostrada uma única vez (flash): depois de sair desta tela, não há como ver a senha de novo -->
+  <div class="alert alert-ok" th:if="${senhaTemporaria}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#chave"/></svg>
+    <span>
+      Senha temporária de <strong th:text="${senhaTemporaria.nome}">Ana</strong>
+      (<span th:text="${senhaTemporaria.email}">ana@empresa.com</span>):
+      <strong><code class="senha-temporaria" th:text="${senhaTemporaria.senha}">K7m2Xq9pRt</code></strong><br>
+      Entregue pessoalmente ou por um canal seguro. Ao entrar com ela, a pessoa é obrigada a criar uma senha nova.
+      <strong>Esta senha não aparece de novo.</strong>
+    </span>
+  </div>
+
+  <div class="card" th:if="${!#lists.isEmpty(pedidos)}" style="margin-bottom:20px">
+    <div class="card-header">
+      <h2>Pedidos de nova senha <span class="contagem" th:text="'(' + ${#lists.size(pedidos)} + ')'">(1)</span></h2>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Email</th>
+          <th>Pedido em</th>
+          <th class="acoes">Ações</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="p : ${pedidos}">
+          <td class="principal" th:text="${p.nome}"></td>
+          <td th:text="${p.email}"></td>
+          <td class="muted nowrap" th:text="${#temporals.format(p.senhaPedidaEm, 'dd/MM/yyyy HH:mm')}"></td>
+          <td class="acoes">
+            <form th:action="@{/admin/usuarios/{id}/senha-temporaria(id=${p.id})}" method="post" style="display:inline">
+              <button type="submit" class="btn btn-primary btn-sm">Gerar senha temporária</button>
+            </form>
+            <form th:action="@{/admin/usuarios/{id}/descartar-pedido(id=${p.id})}" method="post" style="display:inline"
+                  onsubmit="return confirm('Descartar o pedido? A senha da pessoa não muda.')">
+              <button type="submit" class="btn btn-ghost btn-sm">Descartar</button>
+            </form>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <div class="field busca">
+        <label for="filtroTabela" class="sr-only">Buscar</label>
+        <svg class="ic"><use href="/img/icones.svg#busca"/></svg>
+        <input id="filtroTabela" type="search" placeholder="Buscar por nome, email ou perfil">
+      </div>
+      <span class="muted nowrap" id="contagem" th:text="${#lists.size(usuarios)} + ' usuário(s)'"></span>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table" id="tabela">
+        <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Email</th>
+          <th>Perfil</th>
+          <th>Permissões</th>
+          <th class="acoes">Ações</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="u : ${usuarios}">
+          <td class="principal">
+            <span style="display:inline-flex;align-items:center;gap:10px">
+              <span class="avatar" th:text="${#strings.toUpperCase(#strings.substring(u.nome, 0, 1))}">A</span>
+              <span th:text="${u.nome}"></span>
+            </span>
+          </td>
+          <td th:text="${u.email}"></td>
+          <td>
+            <span class="badge" th:classappend="'badge-' + ${u.role}" th:switch="${u.role.name()}">
+              <th:block th:case="'ADMIN'">Administrador</th:block>
+              <th:block th:case="'GESTOR'">Gestor</th:block>
+              <th:block th:case="'USER'">Usuário</th:block>
+              <th:block th:case="*">Personalizado</th:block>
+            </span>
+          </td>
+          <td class="muted" th:text="${u.role.name() == 'ADMIN'} ? 'Acesso total' : ${#lists.size(u.permissoes)} + ' permissão(ões)'"></td>
+          <td class="acoes">
+            <!-- Para quem pediu pessoalmente, sem usar o "Esqueceu a senha?" -->
+            <form th:action="@{/admin/usuarios/{id}/senha-temporaria(id=${u.id})}" method="post" style="display:inline"
+                  th:data-nome="${u.nome}"
+                  onsubmit="return confirm('Gerar uma senha temporária para ' + this.dataset.nome + '? A senha atual deixa de funcionar.')">
+              <button type="submit" class="btn btn-ghost btn-sm" title="Gerar senha temporária">
+                <svg class="ic"><use href="/img/icones.svg#chave"/></svg><span class="texto-btn">Nova senha</span>
+              </button>
+            </form>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+
+      <div class="vazio" id="semResultado" hidden>
+        <svg class="ic"><use href="/img/icones.svg#busca"/></svg>
+        <strong>Nada encontrado</strong>
+        Nenhum usuário corresponde à busca.
+      </div>
+    </div>
+  </div>
+
+  <script th:replace="~{layout/filtro-tabela :: script}"></script>
+
+</section>
+</html>

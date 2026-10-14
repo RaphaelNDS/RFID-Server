@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Status do servidor · Sistema RFID</title>
+
+<section class="page page-estreita">
+
+  <div class="page-header">
+    <div>
+      <h1>Status do servidor</h1>
+      <p class="subtitulo">Situação atual do servidor RFID</p>
+    </div>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2 class="status-linha">
+        <svg class="ic"><use href="/img/icones.svg#servidor"/></svg>Servidor RFID
+      </h2>
+      <span class="badge badge-online" th:text="${info.status}">ONLINE</span>
+    </div>
+    <div class="card-body">
+      <dl class="dados">
+        <div><dt>No ar desde</dt><dd th:text="${#strings.replace(info.horaServidor, 'Desde ', '')}"></dd></div>
+        <div><dt>Tempo no ar</dt><dd th:text="${info.tempoOnline}"></dd></div>
+        <div><dt>Versão</dt><dd th:text="${info.versao}"></dd></div>
+        <div><dt>Banco de dados</dt><dd th:text="${info.banco}"></dd></div>
+        <div><dt>Último backup</dt><dd th:text="${info.ultimoBackup}"></dd></div>
+        <div><dt>Certificado HTTPS (SHA-256)</dt><dd class="mono" style="word-break:break-all" th:text="${info.certificadoHttps}"></dd></div>
+      </dl>
+    </div>
+    <form class="card-footer" th:action="@{/admin/backup}" method="post" sec:authorize="hasRole('ADMIN')">
+      <button type="submit" class="btn btn-secondary">
+        <svg class="ic"><use href="/img/icones.svg#servidor"/></svg>Fazer backup agora
+      </button>
+    </form>
+  </div>
+
+</section>
+</html>
