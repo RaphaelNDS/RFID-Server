@@ -52,6 +52,11 @@ rfid:
     # Vazio = nenhum coletor cadastra (o app mostra "coletor sem permissão para cadastrar").
     cadastro: ${RFID_COLETORES_CADASTRO:}
 
+  coletores:
+    # Tela Coletores: sem contato há esta quantidade de dias, o coletor aparece destacado
+    # ("Sem contato há muito tempo").
+    dias-sem-contato: ${RFID_COLETORES_DIAS_SEM_CONTATO:7}
+
   https:
     # HTTPS na porta abaixo. A porta HTTP antiga (server.port) passa a só redirecionar as telas para cá
     # e a recusar a API (erro 426 explicando o endereço HTTPS).

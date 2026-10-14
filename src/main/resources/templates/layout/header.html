@@ -51,6 +51,10 @@
         <svg class="ic"><use href="/img/icones.svg#grafico"/></svg>Relatórios
       </a>
 
+      <a th:href="@{/admin/coletores}" sec:authorize="hasRole('ADMIN')">
+        <svg class="ic"><use href="/img/icones.svg#servidor"/></svg>Coletores
+      </a>
+
       <a th:href="@{/admin/usuarios}" sec:authorize="hasRole('ADMIN')">
         <svg class="ic"><use href="/img/icones.svg#usuarios"/></svg>Usuários
         <span class="contador" th:if="${pedidosSenha != null and pedidosSenha > 0}" th:text="${pedidosSenha}"

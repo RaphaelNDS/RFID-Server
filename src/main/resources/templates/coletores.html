@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Coletores · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Coletores</h1>
+      <p class="subtitulo">Último contato, versão do app e operador de cada coletor Android</p>
+    </div>
+  </div>
+
+  <div class="grid grid-stats">
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#sinal"/></svg>Coletores</div>
+      <div class="stat-valor" th:text="${#lists.size(coletores)}">0</div>
+      <div class="stat-dica">Com chave configurada no servidor</div>
+    </div>
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#atividade"/></svg>Em uso agora</div>
+      <div class="stat-valor positivo" th:text="${emUso}">0</div>
+      <div class="stat-dica">Falaram com o servidor nos últimos 10 min</div>
+    </div>
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#alerta"/></svg>App desatualizado</div>
+      <div class="stat-valor" th:classappend="${desatualizados > 0} ? 'negativo'" th:text="${desatualizados}">0</div>
+      <div class="stat-dica" th:text="${versaoMaisNova != null} ? 'Versão mais nova vista: ' + ${versaoMaisNova} : 'Nenhum coletor informou a versão ainda'"></div>
+    </div>
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Sem contato</div>
+      <div class="stat-valor" th:classappend="${semContato > 0} ? 'negativo'" th:text="${semContato}">0</div>
+      <div class="stat-dica">Nunca conectaram ou estão parados há muito tempo</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Coletores <span class="contagem" th:text="'(' + ${#lists.size(coletores)} + ')'"></span></h2>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table" th:unless="${#lists.isEmpty(coletores)}">
+        <thead>
+        <tr>
+          <th>Coletor</th>
+          <th>Situação</th>
+          <th>Último contato</th>
+          <th>IP</th>
+          <th>Versão do app</th>
+          <th>Último operador</th>
+          <th>Primeiro contato</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="c : ${coletores}">
+          <td class="principal mono" th:text="${c.nome}"></td>
+          <td>
+            <span class="badge badge-online" th:if="${c.situacao.name() == 'EM_USO'}" th:text="${c.situacao.rotulo}"></span>
+            <span class="badge badge-CUSTOM" th:if="${c.situacao.name() == 'SEM_CONTATO' or c.situacao.name() == 'NUNCA' or c.situacao.name() == 'CHAVE_REMOVIDA'}"
+                  th:text="${c.situacao.rotulo}"></span>
+            <span class="badge" th:if="${c.situacao.name() == 'PARADO'}" th:text="${c.situacao.rotulo}"></span>
+          </td>
+          <td class="nowrap">
+            <span th:if="${c.ultimoContato != null}" th:text="${c.haQuantoTempo}"
+                  th:title="${#temporals.format(c.ultimoContato, 'dd/MM/yyyy HH:mm:ss')}"></span>
+            <span class="muted" th:if="${c.ultimoContato == null}">—</span>
+          </td>
+          <td class="mono" th:text="${c.ultimoIp != null} ? ${c.ultimoIp} : '—'"></td>
+          <td class="nowrap">
+            <span th:if="${c.codigoVersao != null}" th:text="${c.versaoApp} + ' (' + ${c.codigoVersao} + ')'"></span>
+            <span class="muted" th:if="${c.codigoVersao == null and c.ultimoContato != null}" title="Apps anteriores à 1.4.0 não informam a versão">sem versão (anterior à 1.4.0)</span>
+            <span class="muted" th:if="${c.ultimoContato == null}">—</span>
+            <span class="badge badge-CUSTOM" th:if="${c.desatualizado}">desatualizado</span>
+          </td>
+          <td th:text="${c.ultimoOperador != null} ? ${c.ultimoOperador} : '—'"></td>
+          <td class="nowrap" th:text="${c.primeiroContato != null} ? ${#temporals.format(c.primeiroContato, 'dd/MM/yyyy')} : '—'"></td>
+        </tr>
+        </tbody>
+      </table>
+
+      <div class="vazio" th:if="${#lists.isEmpty(coletores)}">
+        <svg class="ic"><use href="/img/icones.svg#sinal"/></svg>
+        <strong>Nenhum coletor configurado</strong>
+        Configure as chaves dos coletores em <code>RFID_CHAVES_DISPOSITIVOS</code> (nome:chave).
+      </div>
+    </div>
+
+    <p class="card-footer muted">
+      "Nunca conectou": a chave existe no servidor, mas o coletor ainda não fez nenhuma chamada aceita — confira a
+      chave e o endereço nas Configurações do app. O contato é atualizado a cada uso do coletor (leituras, inventário,
+      login), não por um sinal contínuo: coletor ligado e parado aparece como "Sem uso no momento".
+    </p>
+  </div>
+
+</section>
+</html>

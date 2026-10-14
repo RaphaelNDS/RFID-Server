@@ -77,9 +77,20 @@ administrador; depois disso essa tela não aparece mais.
 | Catálogo | `/admin/catalogo` | Catálogo · Ver (criar/excluir exigem Criar/Excluir) |
 | Relatórios (gráficos, tempo real) | `/admin/dashboard` | Relatórios · Ver |
 | Usuários (+ pedidos de nova senha e senha temporária) | `/admin/usuarios` | somente ADMIN |
+| Coletores (último contato, IP, versão do app e operador de cada coletor) | `/admin/coletores` | somente ADMIN |
 | Status do servidor (+ backup manual para ADMIN) | `/status` | logado |
 | Meu perfil, trocar senha e email | `/perfil` | logado |
 | Esqueceu a senha? (link na tela de login) | `/esqueci-senha` | público |
+
+### Coletores
+
+A tela **Coletores** (somente ADMIN) mostra cada coletor com chave em `RFID_CHAVES_DISPOSITIVOS`: situação (em uso
+agora, sem uso no momento, sem contato há muito tempo, nunca conectou), último contato ("há 5 min"), IP, versão do
+app (com destaque para quem está numa versão mais antiga que a mais nova vista) e último operador. O contato é
+registrado a cada chamada aceita do coletor em `/api/android` (no máximo uma gravação por minuto por coletor) e a
+versão vem dos headers `X-Versao-App` e `X-Versao-Codigo`, enviados pelo app a partir da 1.4.0. "Nunca conectou"
+quer dizer que a chave existe no servidor, mas o coletor ainda não fez nenhuma chamada aceita: confira a chave e o
+endereço nas Configurações do app.
 
 ### Exportar para Excel
 
@@ -219,6 +230,7 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
   | V3 | `db/migration/V3__inventarios.sql` | Locais, inventários e itens |
   | V4 | `db/migration/V4__sessoes_operador.sql` | Sessões de operador e coluna "operador" nos registros |
   | V5 | `db/migration/V5__recuperacao_senha.sql` | Pedido de nova senha e senha temporária nos usuários |
+  | V6 | `db/migration/V6__coletores.sql` | Situação de cada coletor (tela Coletores) |
 
 - **Backup automático** todo dia às 02:00 em `./data/backups` (zip consistente, sem parar o servidor, com o certificado HTTPS junto: `rfid-https.p12` e `.senha`), mantendo
   os 14 mais recentes. Ao subir, se não houver backup das últimas 24 h, faz um na hora. O ADMIN também pode
@@ -277,6 +289,7 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 |---|---|---|
 | `RFID_CHAVES_DISPOSITIVOS` | *(vazio = nenhum coletor entra)* | `nome:chave` dos coletores, separados por vírgula |
 | `RFID_COLETORES_CADASTRO` | *(vazio)* | Coletores que podem cadastrar etiquetas |
+| `RFID_COLETORES_DIAS_SEM_CONTATO` | `7` | Dias sem contato até o coletor aparecer destacado na tela Coletores |
 | `RFID_DB_PATH` | `./data/rfid-db` | Arquivo do banco |
 | `RFID_DB_USER` / `RFID_DB_PASSWORD` | `sa` / *(vazio)* | Usuário do banco |
 | `RFID_HTTPS_HABILITADO` | `true` | Liga o HTTPS |
