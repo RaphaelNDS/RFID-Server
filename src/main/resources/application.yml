@@ -23,11 +23,19 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    # Mostra no log cada SQL executado. Desligado: em produção lota o log (cada leitura gera vários SQLs).
+    # Ligue só para investigar um problema (RFID_MOSTRAR_SQL=true).
+    show-sql: ${RFID_MOSTRAR_SQL:false}
+    # Ligado de propósito (era o padrão implícito, agora explícito para não gerar aviso na inicialização):
+    # a tela de usuários lê as permissões (coleção lazy) ao montar o HTML, e a API do catálogo devolve as
+    # entidades direto em JSON (tipo -> marcas -> modelos). Para desligar, essas consultas precisam
+    # carregar tudo antes (JOIN FETCH ou DTO).
+    open-in-view: true
 
   h2:
     console:
-      enabled: true
+      # Console do H2 em /h2-console (só ADMIN e só da própria máquina). Se não usar, desligue (RFID_H2_CONSOLE=false).
+      enabled: ${RFID_H2_CONSOLE:true}
       settings:
         web-allow-others: false   # console do H2 só aceita acesso a partir da própria máquina
 
@@ -101,6 +109,20 @@ rfid:
     cron: ${RFID_BACKUP_CRON:0 0 2 * * *}
     # Quantos backups guardar; os mais antigos são apagados.
     manter: ${RFID_BACKUP_MANTER:14}
+
+
+logging:
+  # Além do console, o log vai para arquivo (para achar depois os erros pelo código mostrado ao usuário).
+  # Vazio = só console. Rotação: um arquivo novo por dia ou a cada 10 MB; guarda 30 dias, no máximo 1 GB.
+  file:
+    name: ${RFID_LOG_ARQUIVO:./data/logs/rfid-server.log}
+  charset:
+    file: UTF-8
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 30
+      total-size-cap: 1GB
 
 
 management:

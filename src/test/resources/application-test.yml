@@ -19,6 +19,9 @@ rfid:
     habilitado: false
 
 logging:
+  # Testes não gravam log em arquivo (o padrão grava em ./data/logs)
+  file:
+    name: ""
   level:
     root: WARN
     org.example: WARN

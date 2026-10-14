@@ -161,7 +161,7 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
 | **CSRF** | Ativo em todas as telas; a API dos coletores não usa cookie, então não precisa. |
 | **Sessões do coletor** | Token aleatório de 32 bytes; o banco guarda só o hash SHA-256. |
 | **Integridade** | Chaves estrangeiras impedem excluir tipo/marca/modelo usado por etiquetas. |
-| **Console do H2** | `/h2-console` só para ADMIN e só a partir da própria máquina. Desative em produção (`spring.h2.console.enabled=false`) se não usar. |
+| **Console do H2** | `/h2-console` só para ADMIN e só a partir da própria máquina. Se não usar, desligue com `RFID_H2_CONSOLE=false`. |
 
 ---
 
@@ -252,6 +252,9 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_BACKUP_PASTA` | `./data/backups` | Pasta dos backups |
 | `RFID_BACKUP_CRON` | `0 0 2 * * *` | Horário (todo dia às 02:00) |
 | `RFID_BACKUP_MANTER` | `14` | Quantos backups guardar |
+| `RFID_LOG_ARQUIVO` | `./data/logs/rfid-server.log` | Arquivo de log (vazio = só console); um por dia, guarda 30 dias |
+| `RFID_MOSTRAR_SQL` | `false` | Mostra no log cada SQL executado (só para investigar problema) |
+| `RFID_H2_CONSOLE` | `true` | Liga o console do H2 em `/h2-console` |
 
 ---
 
@@ -296,7 +299,8 @@ Convenções:
 
 ## Logs
 
-Tudo em português. Exemplos do que aparece:
+Tudo em português. Sai no console e no arquivo `./data/logs/rfid-server.log` (mude com `RFID_LOG_ARQUIVO`):
+um arquivo por dia (ou a cada 10 MB), guardando os últimos 30 dias. Exemplos do que aparece:
 
 ```
 Servidor RFID versão 1.3.1 no ar na porta 8443 (iniciado em 13/10/2026 11:17, pronto em 9,8 s)

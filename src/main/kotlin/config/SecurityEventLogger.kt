@@ -53,7 +53,7 @@ class SecurityEventLogger(
     @EventListener(ApplicationReadyEvent::class)
     fun avisarConsoleH2() {
         if (h2ConsoleAtivo) {
-            log.warn("Console do H2 está ATIVO em /h2-console (restrito a ADMIN). Desative em produção com spring.h2.console.enabled=false")
+            log.warn("Console do H2 está ATIVO em /h2-console (restrito a ADMIN). Se não usar, desligue com RFID_H2_CONSOLE=false")
         }
     }
 
