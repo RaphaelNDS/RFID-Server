@@ -18,6 +18,8 @@ java {
 
 repositories {
     mavenCentral()
+    // apksig (leitura e verificação de APK) só é publicado no repositório do Google
+    google()
 }
 
 dependencies {
@@ -40,6 +42,10 @@ dependencies {
     // Kotlin
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation(kotlin("reflect"))
+
+    // Atualização do app pelo servidor: lê a versão de dentro do APK e confere a assinatura
+    // (a mesma biblioteca que o Android usa para verificar APKs)
+    implementation("com.android.tools.build:apksig:8.12.3")
 
     // WebFlux (SSE, streams, etc)
     implementation("org.springframework.boot:spring-boot-starter-webflux")

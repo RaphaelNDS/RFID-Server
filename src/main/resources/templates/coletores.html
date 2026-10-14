@@ -27,7 +27,8 @@
     <div class="stat">
       <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#alerta"/></svg>App desatualizado</div>
       <div class="stat-valor" th:classappend="${desatualizados > 0} ? 'negativo'" th:text="${desatualizados}">0</div>
-      <div class="stat-dica" th:text="${versaoMaisNova != null} ? 'Versão mais nova vista: ' + ${versaoMaisNova} : 'Nenhum coletor informou a versão ainda'"></div>
+      <div class="stat-dica" th:if="${versaoPublicada != null}" th:text="'Versão publicada: ' + ${versaoPublicada}"></div>
+      <div class="stat-dica" th:if="${versaoPublicada == null}" th:text="${versaoMaisNova != null} ? 'Versão mais nova vista: ' + ${versaoMaisNova} : 'Nenhum coletor informou a versão ainda'"></div>
     </div>
     <div class="stat">
       <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Sem contato</div>

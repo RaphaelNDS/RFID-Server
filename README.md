@@ -78,6 +78,7 @@ administrador; depois disso essa tela não aparece mais.
 | Relatórios (gráficos, tempo real) | `/admin/dashboard` | Relatórios · Ver |
 | Usuários (+ pedidos de nova senha e senha temporária) | `/admin/usuarios` | somente ADMIN |
 | Coletores (último contato, IP, versão do app e operador de cada coletor) | `/admin/coletores` | somente ADMIN |
+| App dos coletores (publicar versão nova do app) | `/admin/app` | somente ADMIN |
 | Status do servidor (+ backup manual para ADMIN) | `/status` | logado |
 | Meu perfil, trocar senha e email | `/perfil` | logado |
 | Esqueceu a senha? (link na tela de login) | `/esqueci-senha` | público |
@@ -103,6 +104,24 @@ mesma permissão da tela. Em Leituras, exporta **todas** as leituras do filtro a
   números não vira notação científica) e datas ficam como datas (dá para ordenar e filtrar).
 - **CSV**: para importar em outros sistemas. Segue o padrão do Excel em português (`;` e UTF-8 com BOM), e texto
   que começa com `=`, `+`, `-` ou `@` ganha um `'` na frente, para não ser executado como fórmula.
+
+### App dos coletores (atualização pelo servidor)
+
+Na tela **App dos coletores** (somente ADMIN) o administrador envia o APK de produção, e os coletores oferecem a
+atualização sozinhos na tela de login (ou em Configurações → "Procurar atualização do app"). O operador confirma a
+instalação, como o Android exige, e o que está guardado no coletor continua depois da atualização.
+
+Como isso distribui código para todos os coletores, o servidor só publica o APK que:
+
+- tem a assinatura válida e é do pacote do app (conferido com a `apksig`, a mesma biblioteca do Android);
+- está assinado com a **chave da empresa** (`RFID_APP_CERTIFICADO_SHA256`; sem ela a publicação fica desligada);
+- tem **código de versão maior** que o de todas as já publicadas (o Android não instala versão menor por cima).
+
+O arquivo é gravado como temporário e só vai para o nome final, gerado pelo servidor, depois de conferido. O
+coletor confere o SHA-256 do APK baixado antes de instalar. Só as últimas versões (`RFID_APP_VERSOES_GUARDADAS`)
+mantêm o arquivo. A pasta dos APKs **não entra no backup automático**: se o servidor for restaurado, publique o
+APK de novo. A tela Coletores usa a versão publicada para marcar quem está desatualizado. Rotas do coletor (só a
+chave, sem operador): `GET /api/android/atualizacao` e `GET /api/android/atualizacao/apk`.
 
 ### Inventário: o que faltou
 
@@ -240,6 +259,7 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
   | V4 | `db/migration/V4__sessoes_operador.sql` | Sessões de operador e coluna "operador" nos registros |
   | V5 | `db/migration/V5__recuperacao_senha.sql` | Pedido de nova senha e senha temporária nos usuários |
   | V6 | `db/migration/V6__coletores.sql` | Situação de cada coletor (tela Coletores) |
+  | V7 | `db/migration/V7__versoes_app.sql` | Versões do app publicadas pelo servidor |
 
 - **Backup automático** todo dia às 02:00 em `./data/backups` (zip consistente, sem parar o servidor, com o certificado HTTPS junto: `rfid-https.p12` e `.senha`), mantendo
   os 14 mais recentes. Ao subir, se não houver backup das últimas 24 h, faz um na hora. O ADMIN também pode
@@ -299,6 +319,9 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_CHAVES_DISPOSITIVOS` | *(vazio = nenhum coletor entra)* | `nome:chave` dos coletores, separados por vírgula |
 | `RFID_COLETORES_CADASTRO` | *(vazio)* | Coletores que podem cadastrar etiquetas |
 | `RFID_COLETORES_DIAS_SEM_CONTATO` | `7` | Dias sem contato até o coletor aparecer destacado na tela Coletores |
+| `RFID_APP_CERTIFICADO_SHA256` | *(o da chave da empresa)* | Impressão digital do certificado da chave do app: só APK assinado com ela é publicado (vazio = publicação desligada) |
+| `RFID_APP_PASTA` | `./data/app` | Pasta dos APKs publicados (fora do backup automático) |
+| `RFID_APP_VERSOES_GUARDADAS` | `3` | Quantas versões mantêm o arquivo no disco |
 | `RFID_DB_PATH` | `./data/rfid-db` | Arquivo do banco |
 | `RFID_DB_USER` / `RFID_DB_PASSWORD` | `sa` / *(vazio)* | Usuário do banco |
 | `RFID_HTTPS_HABILITADO` | `true` | Liga o HTTPS |

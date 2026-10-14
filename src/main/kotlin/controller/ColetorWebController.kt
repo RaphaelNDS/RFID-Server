@@ -26,6 +26,7 @@ class ColetorWebController(
         model.addAttribute("semContato", lista.count { it.situacao == SituacaoContato.SEM_CONTATO || it.situacao == SituacaoContato.NUNCA })
         model.addAttribute("versaoMaisNova", lista.filter { it.codigoVersao != null }.maxByOrNull { it.codigoVersao!! }
             ?.let { ColetorService.descreverVersao(it.versaoApp, it.codigoVersao) })
+        model.addAttribute("versaoPublicada", coletores.versaoPublicada()?.let { ColetorService.descreverVersao(it.versaoNome, it.codigo) })
         return "coletores"
     }
 }

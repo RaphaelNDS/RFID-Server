@@ -1,7 +1,9 @@
 package org.example.service
 
 import org.example.model.ColetorEntity
+import org.example.model.VersaoAppEntity
 import org.example.repository.ColetorRepository
+import org.example.repository.VersaoAppRepository
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
@@ -48,7 +50,9 @@ class ColetorService(
     private val repo: ColetorRepository,
     private val relogio: Clock,
     @Value("\${rfid.dispositivos.chaves:}") chavesConfiguradas: String,
-    @Value("\${rfid.coletores.dias-sem-contato:7}") diasSemContato: Long
+    @Value("\${rfid.coletores.dias-sem-contato:7}") diasSemContato: Long,
+    /** Versões publicadas pelo servidor: a publicada é a referência de "desatualizado". */
+    private val versoesApp: VersaoAppRepository? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -140,6 +144,9 @@ class ColetorService(
         }
     }
 
+    /** Versão do app publicada pelo servidor (tela "App dos coletores"), se houver. */
+    fun versaoPublicada(): VersaoAppEntity? = versoesApp?.findFirstByArquivoRemovidoFalseOrderByCodigoDesc()
+
     /** Para os testes de integração: o banco volta ao estado inicial a cada teste, a memória não. */
     internal fun esquecerContatosGravados() = gravados.clear()
 
@@ -147,7 +154,8 @@ class ColetorService(
     fun listar(): List<SituacaoColetor> {
         val agora = LocalDateTime.now(relogio)
         val noBanco = repo.findAll().associateBy { it.nome }
-        val maisNovo = noBanco.values.mapNotNull { it.codigoVersao }.maxOrNull()
+        // Referência: a versão publicada no servidor e a mais nova vista nos coletores, o que for maior
+        val maisNovo = (noBanco.values.mapNotNull { it.codigoVersao } + listOfNotNull(versaoPublicada()?.codigo)).maxOrNull()
 
         fun desatualizado(c: ColetorEntity) =
             maisNovo != null && (c.codigoVersao == null || c.codigoVersao!! < maisNovo)

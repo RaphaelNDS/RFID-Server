@@ -20,6 +20,14 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  # Envio do APK na tela "App dos coletores" (o padrão do Spring é 1 MB). Leitura sob demanda: o arquivo só
+  # é lido depois da conferência de permissão (somente ADMIN), e o serviço para de gravar ao passar de 100 MB.
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 101MB
+      resolve-lazily: true
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -56,6 +64,19 @@ rfid:
     # Tela Coletores: sem contato há esta quantidade de dias, o coletor aparece destacado
     # ("Sem contato há muito tempo").
     dias-sem-contato: ${RFID_COLETORES_DIAS_SEM_CONTATO:7}
+
+  app:
+    # Atualização do app dos coletores pelo servidor (tela "App dos coletores").
+    # Pasta dos APKs publicados (fora do backup automático: em caso de perda, publique o APK de novo).
+    pasta: ${RFID_APP_PASTA:./data/app}
+    # Pacote do app: APK de outro pacote é recusado.
+    pacote: ${RFID_APP_PACOTE:br.com.bkpbr.rfidandroid}
+    # Impressão digital SHA-256 do certificado da chave de assinatura do app (keystore/rfid-android.jks):
+    # só APK assinado com ela é publicado. Vazio = publicação desligada.
+    # Ver com: keytool -list -v -keystore keystore/rfid-android.jks
+    certificado-sha256: ${RFID_APP_CERTIFICADO_SHA256:30:3F:97:AA:EA:F8:D2:EE:2B:9C:25:E2:77:92:10:5B:83:76:31:54:5A:E9:66:DD:AC:60:F1:66:48:EF:6A:A2}
+    # Quantas versões mantêm o arquivo no disco (as mais antigas ficam só no histórico).
+    versoes-guardadas: ${RFID_APP_VERSOES_GUARDADAS:3}
 
   https:
     # HTTPS na porta abaixo. A porta HTTP antiga (server.port) passa a só redirecionar as telas para cá

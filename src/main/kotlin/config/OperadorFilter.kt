@@ -42,7 +42,11 @@ class OperadorFilter(
     companion object {
         const val HEADER_SESSAO = "X-Sessao-Operador"
         const val HEADER_MOMENTO = "X-Momento"
-        private val SEM_OPERADOR = setOf("/api/android/login", "/api/android/ping", "/api/android/esqueci-senha")
+        private val SEM_OPERADOR = setOf(
+            "/api/android/login", "/api/android/ping", "/api/android/esqueci-senha",
+            // Atualização do app: consultada na tela de login, antes de haver operador
+            "/api/android/atualizacao", "/api/android/atualizacao/apk"
+        )
     }
 
     private val log = LoggerFactory.getLogger(javaClass)
