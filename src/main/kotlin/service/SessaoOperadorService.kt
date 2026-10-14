@@ -173,7 +173,11 @@ class SessaoOperadorService(
 
         val motivo = if (encerrada != null) "encerrada" else "expirada"
 
-        if (momento.isBefore(sessao.criadaEm.minus(TOLERANCIA)) || momento.isAfter(limite)) {
+        // Depois do "Sair" vale só o que aconteceu ANTES: uma ação no mesmo instante do logout é recusada (no
+        // Windows o relógio anda em passos de até ~15 ms, e a ação logo após o "Sair" pode ganhar a mesma hora)
+        val depoisDoFim = if (encerrada != null) !momento.isBefore(limite) else momento.isAfter(limite)
+
+        if (momento.isBefore(sessao.criadaEm.minus(TOLERANCIA)) || depoisDoFim) {
             throw SessaoInvalidaException("Sessão do operador $motivo: faça login de novo")
         }
 
