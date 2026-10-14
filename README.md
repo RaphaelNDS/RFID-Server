@@ -105,6 +105,20 @@ mesma permissão da tela. Em Leituras, exporta **todas** as leituras do filtro a
 - **CSV**: para importar em outros sistemas. Segue o padrão do Excel em português (`;` e UTF-8 com BOM), e texto
   que começa com `=`, `+`, `-` ou `@` ganha um `'` na frente, para não ser executado como fórmula.
 
+### Erros do app nos coletores
+
+O app guarda os travamentos e as falhas relevantes (envio recusado pelo servidor, erro do servidor na
+sincronização, leitor RFID que não conecta, atualização que não baixou) e envia ao servidor quando há rede
+(`POST /api/android/erros`, só a chave do coletor). Na tela **Coletores**, a coluna **Erros (24 h)** leva à lista de
+erros do coletor, com a hora no coletor e a de chegada, o detalhe (stack trace), o número de vezes e filtro por
+versão do app (para ver se o erro sumiu depois de uma atualização).
+
+- Sem dados sensíveis: token da sessão, chave do coletor e senhas são mascarados no app e de novo no servidor.
+- Contra app em loop de falha: o app agrupa os repetidos (número de vezes), o servidor aceita no máximo 50 por
+  envio e `RFID_COLETORES_ERROS_POR_DIA` por coletor por dia (acima disso descarta, com um aviso por hora no log).
+- Reenvio não duplica (o id é gerado no coletor). Erros com mais de `RFID_COLETORES_DIAS_ERROS` dias são apagados
+  todo dia às 04:15.
+
 ### App dos coletores (atualização pelo servidor)
 
 Na tela **App dos coletores** (somente ADMIN) o administrador envia o APK de produção, e os coletores oferecem a
@@ -260,6 +274,7 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
   | V5 | `db/migration/V5__recuperacao_senha.sql` | Pedido de nova senha e senha temporária nos usuários |
   | V6 | `db/migration/V6__coletores.sql` | Situação de cada coletor (tela Coletores) |
   | V7 | `db/migration/V7__versoes_app.sql` | Versões do app publicadas pelo servidor |
+  | V8 | `db/migration/V8__erros_coletor.sql` | Erros do app enviados pelos coletores |
 
 - **Backup automático** todo dia às 02:00 em `./data/backups` (zip consistente, sem parar o servidor, com o certificado HTTPS junto: `rfid-https.p12` e `.senha`), mantendo
   os 14 mais recentes. Ao subir, se não houver backup das últimas 24 h, faz um na hora. O ADMIN também pode
@@ -322,6 +337,8 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_APP_CERTIFICADO_SHA256` | *(o da chave da empresa)* | Impressão digital do certificado da chave do app: só APK assinado com ela é publicado (vazio = publicação desligada) |
 | `RFID_APP_PASTA` | `./data/app` | Pasta dos APKs publicados (fora do backup automático) |
 | `RFID_APP_VERSOES_GUARDADAS` | `3` | Quantas versões mantêm o arquivo no disco |
+| `RFID_COLETORES_ERROS_POR_DIA` | `500` | Erros do app aceitos por coletor por dia (acima disso são descartados) |
+| `RFID_COLETORES_DIAS_ERROS` | `90` | Por quantos dias os erros dos coletores ficam guardados |
 | `RFID_DB_PATH` | `./data/rfid-db` | Arquivo do banco |
 | `RFID_DB_USER` / `RFID_DB_PASSWORD` | `sa` / *(vazio)* | Usuário do banco |
 | `RFID_HTTPS_HABILITADO` | `true` | Liga o HTTPS |

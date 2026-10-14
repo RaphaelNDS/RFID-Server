@@ -45,7 +45,9 @@ class OperadorFilter(
         private val SEM_OPERADOR = setOf(
             "/api/android/login", "/api/android/ping", "/api/android/esqueci-senha",
             // Atualização do app: consultada na tela de login, antes de haver operador
-            "/api/android/atualizacao", "/api/android/atualizacao/apk"
+            "/api/android/atualizacao", "/api/android/atualizacao/apk",
+            // Erros do app: o travamento pode ter acontecido sem ninguém logado (ex.: na tela de login)
+            "/api/android/erros"
         )
     }
 

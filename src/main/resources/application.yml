@@ -64,6 +64,10 @@ rfid:
     # Tela Coletores: sem contato há esta quantidade de dias, o coletor aparece destacado
     # ("Sem contato há muito tempo").
     dias-sem-contato: ${RFID_COLETORES_DIAS_SEM_CONTATO:7}
+    # Erros do app enviados pelos coletores: limite por coletor por dia (contra app em loop de falha)
+    # e por quantos dias ficam guardados (apagados todo dia às 04:15).
+    erros-por-dia: ${RFID_COLETORES_ERROS_POR_DIA:500}
+    dias-erros: ${RFID_COLETORES_DIAS_ERROS:90}
 
   app:
     # Atualização do app dos coletores pelo servidor (tela "App dos coletores").

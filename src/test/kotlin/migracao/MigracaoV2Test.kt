@@ -67,6 +67,6 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("7") // V7 = versões do app publicadas pelo servidor
+        assertThat(resultado.targetSchemaVersion).isEqualTo("8") // V8 = erros do app enviados pelos coletores
     }
 }

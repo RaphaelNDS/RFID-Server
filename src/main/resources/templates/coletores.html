@@ -51,6 +51,7 @@
           <th>Último contato</th>
           <th>IP</th>
           <th>Versão do app</th>
+          <th>Erros (24 h)</th>
           <th>Último operador</th>
           <th>Primeiro contato</th>
         </tr>
@@ -75,6 +76,13 @@
             <span class="muted" th:if="${c.codigoVersao == null and c.ultimoContato != null}" title="Apps anteriores à 1.4.0 não informam a versão">sem versão (anterior à 1.4.0)</span>
             <span class="muted" th:if="${c.ultimoContato == null}">—</span>
             <span class="badge badge-CUSTOM" th:if="${c.desatualizado}">desatualizado</span>
+          </td>
+          <td class="nowrap">
+            <a th:href="@{/admin/coletores/{nome}/erros(nome=${c.nome})}"
+               th:with="qtd=${erros24h[c.nome] != null ? erros24h[c.nome] : 0}"
+               th:classappend="${qtd > 0} ? 'badge badge-CUSTOM' : 'muted'"
+               th:text="${qtd > 0} ? ${qtd} + ' erro(s)' : 'nenhum'"
+               title="Ver os erros do app enviados por este coletor">nenhum</a>
           </td>
           <td th:text="${c.ultimoOperador != null} ? ${c.ultimoOperador} : '—'"></td>
           <td class="nowrap" th:text="${c.primeiroContato != null} ? ${#temporals.format(c.primeiroContato, 'dd/MM/yyyy')} : '—'"></td>
