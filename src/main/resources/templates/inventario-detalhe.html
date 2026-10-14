@@ -49,6 +49,12 @@
   <div class="card">
     <div class="card-header">
       <h2>Etiquetas lidas <span class="contagem" th:text="'(' + ${#lists.size(itens)} + ')'"></span></h2>
+      <div class="card-acoes" th:unless="${#lists.isEmpty(itens)}">
+        <a th:href="@{/admin/inventarios/{id}/exportar(id=${inventario.id},formato='xlsx')}" class="btn btn-secondary btn-sm">
+          <svg class="ic"><use href="/img/icones.svg#download"/></svg>Excel
+        </a>
+        <a th:href="@{/admin/inventarios/{id}/exportar(id=${inventario.id},formato='csv')}" class="btn btn-ghost btn-sm" title="Para importar em outros sistemas. No Excel, use o botão Excel: o CSV perde zeros à esquerda do patrimônio">CSV</a>
+      </div>
     </div>
 
     <div class="table-wrap">

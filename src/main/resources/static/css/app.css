@@ -354,6 +354,8 @@ a:hover { text-decoration: underline; }
 .card-header h2,
 .card-header h3 { font-size: 16px; font-weight: 600; }
 .card-header .contagem { color: var(--muted); font-weight: 500; font-size: 14px; }
+/* Botões à direita do título do card (ex.: exportar Excel/CSV) */
+.card-acoes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .card-body { padding: 20px; }
 .card-footer {
   display: flex;

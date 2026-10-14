@@ -65,6 +65,28 @@ class LeituraAndroidConsultaService(
         return resultado
     }
 
+    /**
+     * Todas as leituras do filtro, da mais recente para a mais antiga, para exportar. Acima de
+     * [MAXIMO_EXPORTACAO] recusa com mensagem (IllegalArgumentException → 400), em vez de montar uma planilha
+     * gigante na memória: a pessoa filtra por dia, operador etc. e exporta de novo.
+     */
+    fun buscarParaExportar(filtro: FiltroLeituras): List<LeituraAndroidEntity> {
+        val spec = especificacao(filtro)
+        val total = repo.count(spec)
+
+        if (total > MAXIMO_EXPORTACAO) {
+            log.warn("Exportação de leituras recusada: {} resultado(s), acima do máximo de {} (filtros: {})", total, MAXIMO_EXPORTACAO, descrever(filtro))
+            throw IllegalArgumentException(
+                "A exportação teria $total leituras, acima do máximo de $MAXIMO_EXPORTACAO. Filtre por dia, operador ou outro campo e exporte de novo."
+            )
+        }
+
+        return repo.findAll(spec, Sort.by(Sort.Order.desc("dataHora"), Sort.Order.desc("id")))
+    }
+
+    /** Texto dos filtros aplicados, para o log de quem exportou o quê. */
+    fun descreverFiltro(filtro: FiltroLeituras): String = descrever(filtro)
+
     /** Leituras por dia nos últimos [dias] dias, do mais recente para o mais antigo (atalhos da tela). */
     fun diasRecentes(dias: Long = DIAS_ATALHO): Map<String, Long> {
         val hoje = LocalDate.now(relogio)
@@ -110,6 +132,7 @@ class LeituraAndroidConsultaService(
 
     companion object {
         const val MAXIMO_POR_PAGINA = 200
+        const val MAXIMO_EXPORTACAO = 100_000L
         const val DIAS_ATALHO = 31L
         private const val LIMITE_LENTO_MS = 1000L
     }

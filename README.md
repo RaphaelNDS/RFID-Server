@@ -81,6 +81,18 @@ administrador; depois disso essa tela não aparece mais.
 | Meu perfil, trocar senha e email | `/perfil` | logado |
 | Esqueceu a senha? (link na tela de login) | `/esqueci-senha` | público |
 
+### Exportar para Excel
+
+As telas de **Leituras** e de **detalhe do inventário** têm os botões **Excel** e **CSV**
+(`/admin/leituras-android/exportar` e `/admin/inventarios/{id}/exportar`, parâmetro `formato=xlsx|csv`), com a
+mesma permissão da tela. Em Leituras, exporta **todas** as leituras do filtro aplicado (não só a página), até
+100 mil; acima disso pede para filtrar mais. O log registra quem exportou, o filtro e quantas linhas.
+
+- **Excel (.xlsx)**, o recomendado: textos ficam como texto (patrimônio `000123` não perde os zeros, EPC só com
+  números não vira notação científica) e datas ficam como datas (dá para ordenar e filtrar).
+- **CSV**: para importar em outros sistemas. Segue o padrão do Excel em português (`;` e UTF-8 com BOM), e texto
+  que começa com `=`, `+`, `-` ou `@` ganha um `'` na frente, para não ser executado como fórmula.
+
 ### Perfis de usuário
 
 | Perfil | Permissões |

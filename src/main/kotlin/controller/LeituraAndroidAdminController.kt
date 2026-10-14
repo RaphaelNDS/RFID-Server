@@ -2,7 +2,13 @@ package org.example.controller
 
 import org.example.service.FiltroLeituras
 import org.example.service.LeituraAndroidConsultaService
+import org.example.util.FormatoPlanilha
+import org.example.util.Planilha
+import org.example.util.respostaPlanilha
+import org.slf4j.LoggerFactory
+import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.security.core.Authentication
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
@@ -16,6 +22,8 @@ import java.time.LocalDate
 class LeituraAndroidAdminController(
     private val consulta: LeituraAndroidConsultaService
 ) {
+
+    private val log = LoggerFactory.getLogger(javaClass)
 
     @PreAuthorize("@authService.temPermissao('LEITURA','READ')")
     @GetMapping
@@ -49,6 +57,12 @@ class LeituraAndroidAdminController(
 
         fun linkPagina(numero: Int) = base.cloneBuilder().queryParam("pagina", numero).encode().toUriString()
 
+        // Exportar leva os mesmos filtros da tela (todas as páginas)
+        fun linkExportar(formato: String) = base.cloneBuilder().replacePath("/admin/leituras-android/exportar")
+            .queryParam("formato", formato).encode().toUriString()
+        model.addAttribute("linkExcel", linkExportar("xlsx"))
+        model.addAttribute("linkCsv", linkExportar("csv"))
+
         val paginaAtual = resultado.number + 1
         model.addAttribute("leituras", resultado.content)
         model.addAttribute("totalLeituras", resultado.totalElements)
@@ -60,5 +74,40 @@ class LeituraAndroidAdminController(
         model.addAttribute("diaSelecionado", dia)
 
         return "leituras-android"
+    }
+
+    /** Todas as leituras do filtro (não só a página da tela) em Excel (padrão) ou CSV. */
+    @PreAuthorize("@authService.temPermissao('LEITURA','READ')")
+    @GetMapping("/exportar")
+    fun exportar(
+        @RequestParam(required = false) dia: String?,
+        @RequestParam(required = false) tag: String?,
+        @RequestParam(required = false) tipo: String?,
+        @RequestParam(required = false) marca: String?,
+        @RequestParam(required = false) modelo: String?,
+        @RequestParam(required = false) numeroSerie: String?,
+        @RequestParam(required = false) operador: String?,
+        @RequestParam(required = false) formato: String?,
+        auth: Authentication
+    ): ResponseEntity<ByteArray> {
+        val tipoArquivo = FormatoPlanilha.de(formato)
+        val diaFiltro = dia?.takeIf { it.isNotBlank() }?.let(LocalDate::parse)
+        val filtro = FiltroLeituras(
+            dia = diaFiltro,
+            tag = tag, tipo = tipo, marca = marca, modelo = modelo, numeroSerie = numeroSerie, operador = operador
+        )
+
+        val leituras = consulta.buscarParaExportar(filtro)
+        val planilha = Planilha(
+            nome = "Leituras",
+            colunas = listOf("Data/hora", "Etiqueta (EPC)", "Código", "Patrimônio", "Tipo", "Marca", "Modelo", "Nº série", "Operador"),
+            linhas = leituras.map { listOf(it.dataHora, it.tag, it.codigoInterno, it.patrimonio, it.tipo, it.marca, it.modelo, it.numeroSerie, it.operador) }
+        )
+
+        log.info("{} exportou {} leitura(s) em {} (filtros: {})",
+            auth.name, leituras.size, tipoArquivo.extensao.uppercase(), consulta.descreverFiltro(filtro))
+
+        // Ex.: leituras-2026-10-14 (dia filtrado ou o dia da exportação)
+        return respostaPlanilha(planilha, tipoArquivo, "leituras-${diaFiltro ?: LocalDate.now()}")
     }
 }
