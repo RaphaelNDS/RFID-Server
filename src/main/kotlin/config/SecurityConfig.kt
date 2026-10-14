@@ -26,7 +26,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter
 import org.springframework.security.web.csrf.CsrfException
 import java.time.Clock
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher
 
 @Configuration
 @EnableWebSecurity
@@ -35,14 +35,17 @@ class SecurityConfig {
 
     private val log = LoggerFactory.getLogger(SecurityConfig::class.java)
 
-    private val h2Console = AntPathRequestMatcher("/h2-console/**")
+    // AntPathRequestMatcher foi depreciado no Spring Security 6.5; PathPatternRequestMatcher é o substituto
+    private val caminhos = PathPatternRequestMatcher.withDefaults()
+
+    private val h2Console = caminhos.matcher("/h2-console/**")
 
     // Rotas antigas dos coletores, removidas: só respondem 410 explicando que o app precisa ser atualizado
     // (RotasAntigasColetorController). Como não fazem nada, ficam sem login e sem CSRF, para o app antigo
     // receber a mensagem em vez de um redirecionamento para o login. O app atual usa /api/android/**.
     private val rotasAntigasColetor = arrayOf(
-        AntPathRequestMatcher("/api/rfid/**"),
-        AntPathRequestMatcher("/api/tags/**")
+        caminhos.matcher("/api/rfid/**"),
+        caminhos.matcher("/api/tags/**")
     )
 
     @Bean

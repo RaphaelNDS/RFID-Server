@@ -56,7 +56,7 @@ O app dos coletores fica em outro repositório: **RFID-SERVER-ANDROID** (pasta `
 
 ### Tecnologias
 
-Kotlin 2.1 · Spring Boot 3.2 (Web MVC, Security, Data JPA, Thymeleaf) · H2 em arquivo · Flyway ·
+Kotlin 2.1 · Spring Boot 3.5 (Web MVC, Security, Data JPA, Thymeleaf) · H2 em arquivo · Flyway ·
 Chart.js 4.4.1 (servido localmente, funciona sem internet) · BouncyCastle (certificado HTTPS) · Java 17.
 
 ---
