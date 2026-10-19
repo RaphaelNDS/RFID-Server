@@ -29,7 +29,10 @@ class RfidService(
     /* ================= CADASTRO NORMAL ================= */
 
     @Transactional
-    fun cadastrarTag(req: CadastroRequest) {
+    fun cadastrarTag(pedido: CadastroRequest) {
+
+        // Web e coletor: espaços colados no EPC gerariam outro hash e a leitura nunca bateria com o cadastro
+        val req = normalizar(pedido)
 
         require(req.tag.isNotBlank()) { "Informe a TAG RFID" }
 
@@ -38,7 +41,9 @@ class RfidService(
             throw IllegalArgumentException("Esta etiqueta já está cadastrada")
         }
 
+        require(req.codigoInterno.isNotBlank()) { "Informe o código interno" }
         validarCatalogo(req)
+        recusarPatrimonioRepetido(req.patrimonio, idAtual = null)
 
         val hash = hashTag(req.tag)
 
@@ -163,14 +168,17 @@ class RfidService(
      * Grava no histórico uma linha por campo que mudou, na mesma transação. Devolve os campos alterados.
      */
     @Transactional
-    fun editarTag(id: Long, req: CadastroRequest): List<String> {
+    fun editarTag(id: Long, pedido: CadastroRequest): List<String> {
         val tag = buscarPorId(id)
+        val req = normalizar(pedido)
+        require(req.codigoInterno.isNotBlank()) { "Informe o código interno" }
         validarCatalogo(req.copy(tag = tag.tagReal))
+        recusarPatrimonioRepetido(req.patrimonio, idAtual = tag.id)
 
         val antes = historico.retrato(tag)
-        tag.codigoInterno = req.codigoInterno.trim()
-        tag.patrimonio = req.patrimonio.trim()
-        tag.numeroSerie = req.numeroSerie.trim()
+        tag.codigoInterno = req.codigoInterno
+        tag.patrimonio = req.patrimonio
+        tag.numeroSerie = req.numeroSerie
         tag.tipoEquipamentoId = req.tipoEquipamentoId
         tag.marcaId = req.marcaId
         tag.modeloId = req.modeloId
@@ -183,6 +191,25 @@ class RfidService(
             log.info("Etiqueta {} (patrimônio {}) alterada por {}: {}", tag.tagReal, tag.patrimonio, usuarioAtual(), mudaram.joinToString())
         }
         return mudaram
+    }
+
+    private fun normalizar(req: CadastroRequest) = req.copy(
+        tag = req.tag.trim(),
+        codigoInterno = req.codigoInterno.trim(),
+        patrimonio = req.patrimonio.trim(),
+        numeroSerie = req.numeroSerie.trim()
+    )
+
+    /**
+     * Patrimônio identifica o equipamento: duas etiquetas com o mesmo número confundem o Localizar e os relatórios.
+     * Vazio é permitido (etiqueta ainda sem patrimônio). [idAtual] é a própria etiqueta, na edição.
+     */
+    private fun recusarPatrimonioRepetido(patrimonio: String, idAtual: Long?) {
+        if (patrimonio.isBlank()) return
+        val outra = repo.findAllByPatrimonio(patrimonio).firstOrNull { it.id != idAtual } ?: return
+
+        log.warn("Cadastro recusado: o patrimônio {} já está na etiqueta {} (tentativa de {})", patrimonio, outra.tagReal, usuarioAtual())
+        throw IllegalArgumentException("O patrimônio $patrimonio já está em outra etiqueta (${outra.tagReal})")
     }
 
     /** Exclui a etiqueta. O histórico dela continua, com um retrato dos campos no momento da exclusão. */

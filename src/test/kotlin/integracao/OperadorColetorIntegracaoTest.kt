@@ -6,8 +6,10 @@ import org.example.model.Acao
 import org.example.model.Modulo
 import org.example.model.Role
 import org.example.model.SessaoOperadorEntity
+import org.example.model.TagEntity
 import org.example.repository.LeituraAndroidRepository
 import org.example.repository.SessaoOperadorRepository
+import org.example.repository.TagRepository
 import org.example.repository.UserRepository
 import org.example.request.CadastroRequest
 import org.example.request.MarcaRequest
@@ -41,6 +43,7 @@ class OperadorColetorIntegracaoTest : IntegracaoBase() {
     @Autowired lateinit var leituras: LeituraAndroidRepository
     @Autowired lateinit var rfidService: RfidService
     @Autowired lateinit var catalogo: CatalogoService
+    @Autowired lateinit var tags: TagRepository
 
     private val chaveLeitura = "chave-de-leitura-0123456789" // coletor-leitura (application-test.yml)
 
@@ -384,5 +387,17 @@ class OperadorColetorIntegracaoTest : IntegracaoBase() {
 
         mvc.perform(naoCadastrada().header("X-Chave-Dispositivo", CHAVE_COLETOR).header("X-Momento", isoDe(muitoAntes)))
             .andExpect(status().isOk)
+    }
+
+    @Test
+    fun `patrimonio repetido em etiquetas antigas responde 409 com a explicacao em vez de erro 500`() {
+        // Gravadas direto, como etiquetas de antes da regra de patrimônio único
+        tags.save(TagEntity(tagHash = "h-dup-1", tagReal = "E-DUP-1", codigoInterno = "TI-1", patrimonio = "PAT-DUP"))
+        tags.save(TagEntity(tagHash = "h-dup-2", tagReal = "E-DUP-2", codigoInterno = "TI-2", patrimonio = "PAT-DUP"))
+        val token = operadores.sessaoPadrao(mvc, "localiza@x.com")
+
+        mvc.perform(get("/api/android/tags/patrimonio/PAT-DUP").comoOperador(token))
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.mensagem").value(containsString("está em 2 etiquetas")))
     }
 }

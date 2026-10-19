@@ -25,7 +25,10 @@ class SucessoLoginHandler(private val politicaSenha: PoliticaSenha) : SimpleUrlA
         // Senha temporária gerada pelo ADMIN: só libera o sistema depois de criar uma senha nova
         if ((authentication.principal as? UserPrincipal)?.trocarSenha == true) {
             log.info("Usuário '{}' entrou com senha temporária: encaminhado para criar uma senha nova", authentication.name)
-            request.getSession(true).setAttribute(TrocaSenhaObrigatoriaFilter.ATRIBUTO_SESSAO, true)
+            request.getSession(true).apply {
+                setAttribute(TrocaSenhaObrigatoriaFilter.ATRIBUTO_SESSAO, true)
+                setAttribute(TrocaSenhaObrigatoriaFilter.ATRIBUTO_MOTIVO, TrocaSenhaObrigatoriaFilter.MOTIVO_TEMPORARIA)
+            }
             clearAuthenticationAttributes(request)
             redirectStrategy.sendRedirect(request, response, "/perfil/senha?temporaria")
             return
@@ -40,8 +43,13 @@ class SucessoLoginHandler(private val politicaSenha: PoliticaSenha) : SimpleUrlA
             return
         }
 
+        // Obrigatória, como a temporária: antes só levava para a troca, e dava para sair dela e seguir usando
+        request.getSession(true).apply {
+            setAttribute(TrocaSenhaObrigatoriaFilter.ATRIBUTO_SESSAO, true)
+            setAttribute(TrocaSenhaObrigatoriaFilter.ATRIBUTO_MOTIVO, TrocaSenhaObrigatoriaFilter.MOTIVO_FRACA)
+        }
         log.warn(
-            "Usuário '{}' entrou com senha fora das regras ({}): encaminhado para a troca de senha",
+            "Usuário '{}' entrou com senha fora das regras ({}): só acessa a troca de senha até criar uma nova",
             authentication.name, problemas.joinToString("; ")
         )
         clearAuthenticationAttributes(request)
