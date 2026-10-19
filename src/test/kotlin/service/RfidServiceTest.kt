@@ -155,6 +155,64 @@ class RfidServiceTest {
             .hasMessage("Informe a TAG RFID")
     }
 
+    @Test
+    fun `cadastro tira os espacos do EPC e dos campos (senao a leitura nunca bate com o cadastro)`() {
+        val salvo = slot<TagEntity>()
+        every { tagRepo.save(capture(salvo)) } answers { firstArg() }
+
+        service.cadastrarTag(CadastroRequest(tag = " E1 ", codigoInterno = " TI-1 ", patrimonio = " P1 ", numeroSerie = " S1 "))
+
+        assertThat(salvo.captured.tagReal).isEqualTo("E1")
+        assertThat(salvo.captured.tagHash).isEqualTo(sha256("E1"))
+        assertThat(salvo.captured.codigoInterno).isEqualTo("TI-1")
+        assertThat(salvo.captured.patrimonio).isEqualTo("P1")
+        assertThat(salvo.captured.numeroSerie).isEqualTo("S1")
+        verify { tagRepo.existsByTagReal("E1") }
+        verify { naoRepo.deleteByTag("E1") }
+    }
+
+    @Test
+    fun `codigo interno em branco e recusado`() {
+        assertThatThrownBy { service.cadastrarTag(CadastroRequest(tag = "E1", codigoInterno = "  ")) }
+            .hasMessage("Informe o código interno")
+        verify(exactly = 0) { tagRepo.save(any<TagEntity>()) }
+    }
+
+    @Test
+    fun `patrimonio que ja esta em outra etiqueta e recusado`() {
+        every { tagRepo.findAllByPatrimonio("P1") } returns listOf(TagEntity(id = 7, tagHash = "h", tagReal = "E-OUTRA", patrimonio = "P1"))
+
+        assertThatThrownBy { service.cadastrarTag(CadastroRequest(tag = "E1", codigoInterno = "TI-1", patrimonio = " P1 ")) }
+            .isInstanceOf(IllegalArgumentException::class.java)
+            .hasMessage("O patrimônio P1 já está em outra etiqueta (E-OUTRA)")
+        verify(exactly = 0) { tagRepo.save(any<TagEntity>()) }
+    }
+
+    @Test
+    fun `etiqueta sem patrimonio nao confere repeticao`() {
+        every { tagRepo.save(any<TagEntity>()) } answers { firstArg() }
+
+        service.cadastrarTag(CadastroRequest(tag = "E1", codigoInterno = "TI-1", patrimonio = ""))
+
+        verify(exactly = 0) { tagRepo.findAllByPatrimonio(any()) }
+    }
+
+    @Test
+    fun `editar mantendo o proprio patrimonio e aceito e trocar para um repetido e recusado`() {
+        val tag = TagEntity(id = 5, tagHash = "h5", tagReal = "E5", codigoInterno = "TI-5", patrimonio = "P5")
+        every { tagRepo.findById(5) } returns Optional.of(tag)
+        every { tagRepo.save(any<TagEntity>()) } answers { firstArg() }
+        every { tagRepo.findAllByPatrimonio("P5") } returns listOf(tag)
+        every { tagRepo.findAllByPatrimonio("P1") } returns listOf(TagEntity(id = 7, tagHash = "h7", tagReal = "E7", patrimonio = "P1"))
+
+        service.editarTag(5, CadastroRequest(codigoInterno = "TI-5", patrimonio = "P5", numeroSerie = " S-NOVO "))
+        assertThat(tag.numeroSerie).isEqualTo("S-NOVO")
+
+        assertThatThrownBy { service.editarTag(5, CadastroRequest(codigoInterno = "TI-5", patrimonio = "P1")) }
+            .hasMessage("O patrimônio P1 já está em outra etiqueta (E7)")
+        assertThat(tag.patrimonio).isEqualTo("P5")
+    }
+
     // ---------------- consulta ----------------
 
     @Test

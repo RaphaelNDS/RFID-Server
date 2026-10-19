@@ -11,6 +11,7 @@ import org.example.suporte.Perfis
 import org.hamcrest.Matchers.containsString
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.mock.web.MockHttpSession
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -59,6 +60,31 @@ class SenhaIntegracaoTest : IntegracaoBase() {
         mvc.perform(post("/login").with(csrf()).with { it.remoteAddr = "10.9.0.1"; it }
             .param("username", "antigo@x.com").param("password", "123"))
             .andExpect(redirectedUrl("/perfil/senha?fraca"))
+    }
+
+    @Test
+    fun `com senha fraca o resto do sistema fica bloqueado ate trocar a senha`() {
+        usuarios.save(UsuarioEntity(nome = "Antigo", email = "antigo@x.com", senha = encoder.encode("123"), role = Role.USER))
+
+        val login = mvc.perform(post("/login").with(csrf()).with { it.remoteAddr = "10.9.0.3"; it }
+            .param("username", "antigo@x.com").param("password", "123"))
+            .andExpect(redirectedUrl("/perfil/senha?fraca"))
+            .andReturn()
+        val sessao = login.request.getSession(false) as MockHttpSession
+
+        // Antes dava para sair da tela de troca e usar o sistema normalmente
+        mvc.perform(get("/dashboard").session(sessao)).andExpect(redirectedUrl("/perfil/senha?fraca"))
+
+        // A tela de troca abre com o aviso de senha fraca (e não o de senha temporária)
+        mvc.perform(get("/perfil/senha").param("fraca", "").session(sessao))
+            .andExpect(status().isOk)
+            .andExpect(model().attribute("trocaObrigatoria", false))
+
+        // Trocou: o sistema volta a ficar liberado
+        mvc.perform(post("/perfil/senha").session(sessao).with(csrf())
+            .param("senhaAtual", "123").param("novaSenha", "Kx9mPq2v").param("confirmarSenha", "Kx9mPq2v"))
+            .andExpect(redirectedUrl("/perfil?senhaAlterada"))
+        mvc.perform(get("/dashboard").session(sessao)).andExpect(status().isOk)
     }
 
     @Test

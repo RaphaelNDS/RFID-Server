@@ -14,6 +14,9 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
 
     fun findByPatrimonio(patrimonio: String): Optional<TagEntity>
 
+    // Lista: patrimônio repetido em etiquetas antigas (antes da regra de patrimônio único) não pode dar erro 500
+    fun findAllByPatrimonio(patrimonio: String): List<TagEntity>
+
     fun findAllByTagRealIn(tags: Collection<String>): List<TagEntity>
 
     // Quantas etiquetas usam cada item do catálogo (para impedir exclusão de item em uso)

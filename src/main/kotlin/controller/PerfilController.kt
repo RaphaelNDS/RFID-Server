@@ -49,8 +49,9 @@ class PerfilController(
 
         return try {
             usuarioService.alterarSenha(usuario.id, senhaAtual, novaSenha, confirmarSenha)
-            // Senha temporária substituída: o sistema volta a ficar liberado nesta sessão
+            // Senha temporária ou fraca substituída: o sistema volta a ficar liberado nesta sessão
             session.removeAttribute(TrocaSenhaObrigatoriaFilter.ATRIBUTO_SESSAO)
+            session.removeAttribute(TrocaSenhaObrigatoriaFilter.ATRIBUTO_MOTIVO)
             "redirect:/perfil?senhaAlterada"
         } catch (e: IllegalArgumentException) {
             model.addAttribute("erro", e.message)
@@ -59,8 +60,10 @@ class PerfilController(
         }
     }
 
+    // Aviso de senha temporária; a senha fraca tem o próprio aviso (?fraca)
     private fun trocaObrigatoria(session: HttpSession) =
-        session.getAttribute(TrocaSenhaObrigatoriaFilter.ATRIBUTO_SESSAO) == true
+        session.getAttribute(TrocaSenhaObrigatoriaFilter.ATRIBUTO_SESSAO) == true &&
+            session.getAttribute(TrocaSenhaObrigatoriaFilter.ATRIBUTO_MOTIVO) != TrocaSenhaObrigatoriaFilter.MOTIVO_FRACA
 
     @GetMapping("/email")
     fun email(): String = "perfil-email"

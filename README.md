@@ -263,7 +263,7 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
 |---|---|
 | **HTTPS** | Porta 8443 com certificado próprio gerado na primeira execução (10 anos). A porta HTTP 8082 só redireciona as telas e recusa a API com 426. Os coletores fixam a **impressão digital** do certificado, mostrada em `/status`. |
 | **Configuração inicial** | `/setup` só funciona com o banco vazio; depois ninguém cria outro administrador por ali. |
-| **Senhas** | Mínimo 8 caracteres, letras e números, sem o nome/email, sem senhas comuns, até 72 bytes. Quem entra com senha antiga fora da regra é levado à troca de senha. Senhas guardadas com BCrypt. |
+| **Senhas** | Mínimo 8 caracteres, letras e números, sem o nome/email, sem senhas comuns, até 72 bytes. Quem entra com senha antiga fora da regra só acessa a troca de senha até criar uma nova (na web; o coletor só avisa). Senhas guardadas com BCrypt. |
 | **Tentativas de login** | 5 erros no mesmo email (na web e no coletor somados) ou 20 na mesma origem em 15 min bloqueiam por 15 min. A origem é o IP na web e o **coletor + IP** no coletor: vários coletores atrás do mesmo IP (NAT) não se bloqueiam por causa de um operador errando a senha. Durante o bloqueio nem a senha certa entra. Email inexistente recebe a mesma resposta que senha errada. |
 | **Permissões** | Por módulo e ação, conferidas em cada rota (não só escondendo botões). |
 | **CSRF** | Ativo em todas as telas; a API dos coletores não usa cookie, então não precisa. |

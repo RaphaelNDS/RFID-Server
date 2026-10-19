@@ -4,6 +4,7 @@ import org.example.repository.TagRepository
 import org.example.response.TagResponse
 import org.example.service.RfidService
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.Authentication
@@ -48,7 +49,17 @@ class AndroidApiController(
     @PreAuthorize("@authService.temPermissao('LEITURA','READ')")
     @GetMapping("/tags/patrimonio/{patrimonio}")
     fun buscarPorPatrimonio(@PathVariable patrimonio: String, auth: Authentication): ResponseEntity<Map<String, String>> {
-        val tag = tagRepository.findByPatrimonio(patrimonio).orElse(null)
+        val encontradas = tagRepository.findAllByPatrimonio(patrimonio.trim())
+
+        // Etiquetas antigas com o mesmo patrimônio: o operador não saberia qual procurar
+        if (encontradas.size > 1) {
+            log.warn("Localização: patrimônio {} está em {} etiquetas (dispositivo {}): {}", patrimonio, encontradas.size, auth.name, encontradas.joinToString { it.tagReal })
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                mapOf("mensagem" to "O patrimônio $patrimonio está em ${encontradas.size} etiquetas. Corrija o cadastro na web para localizar.")
+            )
+        }
+
+        val tag = encontradas.firstOrNull()
 
         if (tag == null) {
             log.info("Localização: patrimônio {} não encontrado (dispositivo {})", patrimonio, auth.name)
