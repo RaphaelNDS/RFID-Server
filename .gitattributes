@@ -1,0 +1,2 @@
+# Scripts do Windows sempre com CRLF (o cmd.exe se perde com LF em alguns comandos)
+*.bat text eol=crlf
