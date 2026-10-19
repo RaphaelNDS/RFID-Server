@@ -332,13 +332,41 @@ Depois:
 1. Escolha um nome e uma chave longa (16+ caracteres) para cada coletor e configure
    `RFID_CHAVES_DISPOSITIVOS=coletor-01:chave-longa-1,coletor-02:chave-longa-2`.
 2. Se algum coletor pode cadastrar etiquetas: `RFID_COLETORES_CADASTRO=coletor-01`.
-3. No app de cada coletor, configure o endereço `https://<servidor>:8443`, a chave e a **impressão digital**
-   do certificado (copie de `/status`).
-4. Confira o fuso do Android do coletor (ex.: America/Sao_Paulo, data e hora automáticas): o app mostra os
+3. No app de cada coletor, em **Configurações**, informe o **IP** do servidor (o app usa sempre
+   `https://IP:8443`) e a chave, e toque em **Salvar**.
+4. **Cadastre o certificado no coletor:** o app mostra a impressão digital do certificado do servidor para ser
+   confirmada (ver abaixo).
+5. Confira o fuso do Android do coletor (ex.: America/Sao_Paulo, data e hora automáticas): o app mostra os
    horários no fuso do aparelho, e um coletor em GMT mostra 3 horas a mais.
 
 > Execute o servidor sempre a partir da mesma pasta (o banco e o certificado ficam em `./data`, relativo a ela),
 > ou defina `RFID_DB_PATH` e `RFID_HTTPS_KEYSTORE` com caminhos absolutos.
+
+### Cadastrar o certificado nos coletores
+
+O certificado HTTPS é próprio do servidor (gerado na primeira execução, válido por 10 anos), e cada coletor só
+conversa com o servidor depois que alguém confirma, uma vez por coletor, que o certificado é o deste servidor.
+Assim, outro computador na rede não consegue se passar pelo servidor para receber leituras, cadastros e senhas
+dos operadores.
+
+**1. Pegue a impressão digital SHA-256 no servidor** (32 pares, ex.: `63:0F:85:…:92:36`):
+
+- na tela **Status** (`/status`, logado), no campo da impressão digital do certificado HTTPS; ou
+- no **log**, que mostra a digital a cada inicialização. Na pasta de onde o servidor roda:
+  ```powershell
+  Select-String "SHA-256 do certificado HTTPS" .\data\logs\rfid-server.log | Select-Object -Last 1
+  ```
+
+**2. Confirme no coletor:** ao salvar o IP e a chave, o app abre **"Confirmar o servidor"** com a digital em
+4 linhas de 8 pares. Compare **todos** os pares com a do passo 1 e toque em **"É igual, confiar"** só se forem
+iguais; com qualquer diferença, **"Não confiar"**. Confirmado, a tela mostra *"Servidor: conectado com segurança
+(HTTPS) ✅"* e o coletor passa a aceitar só esse certificado.
+
+**Trocar o certificado** (servidor novo, `.p12` perdido, backup de outro servidor): todo coletor passa a mostrar
+**"Certificado do servidor mudou"**, com a digital nova e a anterior, e recusa o servidor até ser confirmado de novo
+como no passo 2. Para evitar isso, mantenha `data/rfid-https.p12` e `data/rfid-https.p12.senha` no backup (o
+backup automático já inclui os dois) e restaure os dois juntos. Se o alerta aparecer sem que o certificado tenha sido
+trocado, **não confie**: pode ser outro computador se passando pelo servidor.
 
 ---
 
@@ -450,7 +478,7 @@ detalhe técnico completo.
 | Coletor recebe 401 em tudo | Chave não configurada ou diferente da do app (`RFID_CHAVES_DISPOSITIVOS`, reiniciar o servidor). |
 | Coletor recebe 426 | O app está usando `http://…:8082`; troque para `https://…:8443`. |
 | Coletor recebe 410 / log "Rota antiga dos coletores chamada" | O coletor está com um app antigo (rotas /api/tags ou /api/rfid): atualize o app. O log mostra o IP do coletor. |
-| Coletor diz que o certificado não confere | A impressão digital no app difere da de `/status` (certificado foi trocado ou restaurado de outro servidor). |
+| Coletor diz que o certificado não confere | A impressão digital no app difere da de `/status` (certificado foi trocado ou restaurado de outro servidor). Confirme de novo em cada coletor, conferindo a digital nova: ver [Cadastrar o certificado nos coletores](#cadastrar-o-certificado-nos-coletores). |
 | "Muitas tentativas sem sucesso" | Bloqueio de login: espere o tempo indicado (ou reinicie o servidor, que zera os contadores). |
 | Etiqueta lida não aparece nas leituras | Cadastro incompleto (falta tipo, marca, modelo, patrimônio ou nº de série). |
 | Servidor não sobe: certificado não abre | O `.p12` ou o `.senha` foi alterado/perdido. Restaure os dois do backup — não apague, senão um novo certificado é gerado e os coletores precisam ser pareados de novo. |
