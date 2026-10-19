@@ -9,6 +9,8 @@ import org.example.model.*
 import org.example.repository.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.dao.DataIntegrityViolationException
+import java.time.OffsetDateTime
 import java.util.Optional
 
 class LeituraAndroidServiceTest {
@@ -28,7 +30,7 @@ class LeituraAndroidServiceTest {
 
     @BeforeEach
     fun configurar() {
-        every { leituraRepo.save(any<LeituraAndroidEntity>()) } answers { firstArg() }
+        every { leituraRepo.saveAndFlush(any<LeituraAndroidEntity>()) } answers { firstArg() }
         every { tipoRepo.findById(1) } returns Optional.of(tipo)
         every { marcaRepo.findById(2) } returns Optional.of(marca)
         every { modeloRepo.findById(3) } returns Optional.of(modelo)
@@ -46,7 +48,7 @@ class LeituraAndroidServiceTest {
 
         service.salvarLeitura("E1")
 
-        verify { leituraRepo.save(capture(gravada)) }
+        verify { leituraRepo.saveAndFlush(capture(gravada)) }
         assertThat(gravada.captured.tipo).isEqualTo("Notebook")
         assertThat(gravada.captured.marca).isEqualTo("Dell")
         assertThat(gravada.captured.modelo).isEqualTo("Latitude")
@@ -55,12 +57,26 @@ class LeituraAndroidServiceTest {
     }
 
     @Test
+    fun `leitura recusada pelo indice unico conta como repetida e nao vai para a tela`() {
+        every { tagRepo.findByTagReal("E1") } returns Optional.of(tag())
+        // Outra requisição gravou a mesma leitura entre a conferência e a gravação (envio simultâneo)
+        every { leituraRepo.existsByTagAndDataHora(any(), any()) } returns false
+        every { leituraRepo.saveAndFlush(any<LeituraAndroidEntity>()) } throws
+            DataIntegrityViolationException("duplicate key value violates unique constraint \"uk_leituras_android_tag_data_hora\"")
+
+        val resultado = service.salvarLeitura("E1", OffsetDateTime.now().minusMinutes(5))
+
+        assertThat(resultado).isEqualTo(ResultadoLeitura.REPETIDA)
+        verify(exactly = 0) { eventos.publicar(any()) }
+    }
+
+    @Test
     fun `tag nao cadastrada e ignorada`() {
         every { tagRepo.findByTagReal("X") } returns Optional.empty()
 
         service.salvarLeitura("X")
 
-        verify(exactly = 0) { leituraRepo.save(any<LeituraAndroidEntity>()) }
+        verify(exactly = 0) { leituraRepo.saveAndFlush(any<LeituraAndroidEntity>()) }
         verify(exactly = 0) { eventos.publicar(any()) }
     }
 
@@ -70,7 +86,7 @@ class LeituraAndroidServiceTest {
 
         service.salvarLeitura("E1")
 
-        verify(exactly = 0) { leituraRepo.save(any<LeituraAndroidEntity>()) }
+        verify(exactly = 0) { leituraRepo.saveAndFlush(any<LeituraAndroidEntity>()) }
     }
 
     @Test
@@ -79,6 +95,6 @@ class LeituraAndroidServiceTest {
 
         service.salvarLeitura("E1")
 
-        verify(exactly = 0) { leituraRepo.save(any<LeituraAndroidEntity>()) }
+        verify(exactly = 0) { leituraRepo.saveAndFlush(any<LeituraAndroidEntity>()) }
     }
 }

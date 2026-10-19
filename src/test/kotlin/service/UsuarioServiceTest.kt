@@ -29,7 +29,9 @@ class UsuarioServiceTest {
         override fun matches(raw: CharSequence, encoded: String) = encoded == "hash($raw)"
     }
 
-    private val service = UsuarioService(repo, encoder, PoliticaSenha(tamanhoMinimo = 8))
+    private val sessoes = mockk<SessoesUsuarioService>(relaxed = true)
+
+    private val service = UsuarioService(repo, encoder, PoliticaSenha(tamanhoMinimo = 8), sessoes)
 
     private val salvos = mutableListOf<UsuarioEntity>()
 
@@ -270,5 +272,91 @@ class UsuarioServiceTest {
             assertThat(gravado).isEqualTo("nova@x.com")
             assertThat(usuario.email).isEqualTo("nova@x.com")
         }
+    }
+
+    @Nested
+    inner class DesativarEReativar {
+
+        @Test
+        fun `desativar impede o login e encerra as sessoes abertas`() {
+            val ana = usuarioExistente()
+
+            service.desativar(7, quemDesativa = 1)
+
+            assertThat(ana.ativo).isFalse()
+            verify { sessoes.encerrar(7, any(), any()) }
+        }
+
+        @Test
+        fun `ninguem desativa o proprio usuario`() {
+            usuarioExistente()
+
+            assertThatThrownBy { service.desativar(7, quemDesativa = 7) }
+                .isInstanceOf(IllegalStateException::class.java)
+                .hasMessage("Você não pode desativar o próprio usuário")
+            verify(exactly = 0) { sessoes.encerrar(any(), any(), any()) }
+        }
+
+        @Test
+        fun `o ultimo administrador ativo nao pode ser desativado`() {
+            usuarioExistente().role = Role.ADMIN
+            every { repo.countByRoleAndAtivoTrue(Role.ADMIN) } returns 1
+
+            assertThatThrownBy { service.desativar(7, quemDesativa = 1) }
+                .isInstanceOf(IllegalStateException::class.java)
+                .hasMessageContaining("último administrador ativo")
+        }
+
+        @Test
+        fun `reativar volta a liberar o usuario`() {
+            val ana = usuarioExistente().apply { ativo = false }
+
+            service.reativar(7)
+
+            assertThat(ana.ativo).isTrue()
+        }
+    }
+
+    @Nested
+    inner class Editar {
+
+        @Test
+        fun `troca nome, perfil e permissoes`() {
+            val ana = usuarioExistente()
+
+            service.editar(7, " Ana Souza ", Role.CUSTOM, listOf("LEITURA", "RFID"), listOf("READ", "CREATE"), quemEdita = 1)
+
+            assertThat(ana.nome).isEqualTo("Ana Souza")
+            assertThat(ana.role).isEqualTo(Role.CUSTOM)
+            assertThat(ana.permissoes.map { "${it.modulo}_${it.acao}" })
+                .containsExactlyInAnyOrder("LEITURA_READ", "LEITURA_CREATE", "RFID_READ", "RFID_CREATE")
+        }
+
+        @Test
+        fun `o ultimo administrador ativo nao perde o perfil de administrador`() {
+            usuarioExistente().role = Role.ADMIN
+            every { repo.countByRoleAndAtivoTrue(Role.ADMIN) } returns 1
+
+            assertThatThrownBy { service.editar(7, "Ana", Role.USER, null, null, quemEdita = 1) }
+                .hasMessageContaining("último administrador ativo")
+        }
+
+        @Test
+        fun `ninguem tira o proprio acesso de administrador`() {
+            usuarioExistente().role = Role.ADMIN
+            every { repo.countByRoleAndAtivoTrue(Role.ADMIN) } returns 2
+
+            assertThatThrownBy { service.editar(7, "Ana", Role.GESTOR, null, null, quemEdita = 7) }
+                .hasMessage("Você não pode tirar o próprio acesso de administrador")
+        }
+    }
+
+    @Test
+    fun `trocar a propria senha encerra as outras sessoes e mantem a atual`() {
+        usuarioExistente()
+
+        service.alterarSenha(7, "123", "Zt7wLn4r", "Zt7wLn4r", sessaoWebAtual = "sessao-atual")
+
+        verify { sessoes.encerrar(7, any(), manterSessaoWeb = "sessao-atual") }
     }
 }

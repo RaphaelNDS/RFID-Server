@@ -1,5 +1,6 @@
 package org.example.repository
 
+import org.example.model.Role
 import org.example.model.UsuarioEntity
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
@@ -12,6 +13,9 @@ interface UserRepository : JpaRepository<UsuarioEntity, Long> {
     fun existsByEmail(email: String): Boolean
 
     fun existsByEmailIgnoreCase(email: String): Boolean
+
+    // Para nunca desativar (ou rebaixar) o último ADMIN ativo
+    fun countByRoleAndAtivoTrue(role: Role): Long
 
     fun findByEmailIgnoreCase(email: String): UsuarioEntity?
 

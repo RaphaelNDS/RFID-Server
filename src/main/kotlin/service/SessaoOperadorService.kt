@@ -91,6 +91,12 @@ class SessaoOperadorService(
             throw LoginRecusadoException(401, MENSAGEM_CREDENCIAIS)
         }
 
+        // Conferido depois da senha, como na web: quem não sabe a senha não descobre que o usuário existe
+        if (!usuario.ativo) {
+            log.warn("Login no coletor {} recusado: o usuário '{}' está desativado (IP {})", dispositivo, usuario.email, ip)
+            throw LoginRecusadoException(403, MENSAGEM_DESATIVADO)
+        }
+
         // Senha temporária gerada pelo ADMIN ("Esqueceu a senha?"): como na web, só serve para criar a senha nova.
         // O coletor não tem tela de troca de senha, então a pessoa troca na web e depois entra aqui.
         if (usuario.trocarSenha) {
@@ -198,11 +204,18 @@ class SessaoOperadorService(
         val usuario = usuarios.findById(sessao.usuarioId).orElse(null)
             ?: throw SessaoInvalidaException("O usuário desta sessão não existe mais")
 
-        return try {
+        val principal = try {
             detalhes.loadUserByUsername(usuario.email) as UserPrincipal
         } catch (e: UsernameNotFoundException) {
             throw SessaoInvalidaException("O usuário desta sessão não existe mais")
         }
+
+        // Desativado depois do login: o token deixa de valer já na próxima ação (o ADMIN também encerra as sessões)
+        if (!principal.isEnabled) {
+            log.warn("Ação no coletor {} recusada: o usuário {} foi desativado", dispositivo, principal.email)
+            throw SessaoInvalidaException(MENSAGEM_DESATIVADO)
+        }
+        return principal
     }
 
     /** Origem das tentativas de login do coletor no TentativasLoginService: "coletor-01@10.0.0.5". */
@@ -221,6 +234,7 @@ class SessaoOperadorService(
         const val MENSAGEM_CREDENCIAIS = "Email ou senha incorretos"
         const val MENSAGEM_SENHA_TEMPORARIA =
             "Você está com uma senha temporária: entre pela web, crie sua senha nova e depois entre no coletor com ela."
+        const val MENSAGEM_DESATIVADO = "Seu usuário foi desativado. Fale com o administrador."
 
         /** Diferença aceita entre o relógio do coletor e o do servidor. */
         val TOLERANCIA: Duration = Duration.ofMinutes(5)

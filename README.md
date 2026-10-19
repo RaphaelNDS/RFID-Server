@@ -79,7 +79,7 @@ administrador; depois disso essa tela não aparece mais.
 | Inventários | `/admin/inventarios` | Leituras · Ver |
 | Catálogo | `/admin/catalogo` | Catálogo · Ver (criar/excluir exigem Criar/Excluir) |
 | Relatórios (gráficos, tempo real) | `/admin/dashboard` | Relatórios · Ver |
-| Usuários (+ pedidos de nova senha e senha temporária) | `/admin/usuarios` | somente ADMIN |
+| Usuários (+ pedidos de nova senha e senha temporária; editar perfil e permissões; desativar e reativar) | `/admin/usuarios` | somente ADMIN |
 | Coletores (último contato, IP, versão do app e operador de cada coletor) | `/admin/coletores` | somente ADMIN |
 | App dos coletores (publicar versão nova do app) | `/admin/app` | somente ADMIN |
 | Status do servidor (+ backup manual para ADMIN) | `/status` | logado |
@@ -266,6 +266,7 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
 | **Senhas** | Mínimo 8 caracteres, letras e números, sem o nome/email, sem senhas comuns, até 72 bytes. Quem entra com senha antiga fora da regra só acessa a troca de senha até criar uma nova (na web; o coletor só avisa). Senhas guardadas com BCrypt. |
 | **Tentativas de login** | 5 erros no mesmo email (na web e no coletor somados) ou 20 na mesma origem em 15 min bloqueiam por 15 min. A origem é o IP na web e o **coletor + IP** no coletor: vários coletores atrás do mesmo IP (NAT) não se bloqueiam por causa de um operador errando a senha. Durante o bloqueio nem a senha certa entra. Email inexistente recebe a mesma resposta que senha errada. |
 | **Permissões** | Por módulo e ação, conferidas em cada rota (não só escondendo botões). |
+| **Usuário desativado** | Não entra na web nem no coletor, e as sessões abertas dele (web e coletores) caem na hora. Também caem as outras sessões quando a pessoa troca a própria senha ou o ADMIN gera uma senha temporária. O ADMIN não desativa a si mesmo nem o último ADMIN ativo. |
 | **CSRF** | Ativo em todas as telas; a API dos coletores não usa cookie, então não precisa. |
 | **Sessões do coletor** | Token aleatório de 32 bytes; o banco guarda só o hash SHA-256. |
 | **Integridade** | Chaves estrangeiras impedem excluir tipo/marca/modelo usado por etiquetas. |
@@ -291,6 +292,8 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
   | V7 | `db/migration/V7__versoes_app.sql` | Versões do app publicadas pelo servidor |
   | V8 | `db/migration/V8__erros_coletor.sql` | Erros do app enviados pelos coletores |
   | V9 | `db/migration/V9__historico_etiquetas.sql` | Histórico de cadastro, alteração e exclusão das etiquetas |
+  | V10 | `db/migration/V10__leitura_unica.sql` | A mesma leitura (etiqueta + hora no coletor) só é gravada uma vez, mesmo com reenvio simultâneo |
+  | V11 | `db/migration/V11__usuario_ativo.sql` | Usuário ativo/desativado |
 
 - **Backup do banco:** o contêiner `rfid-backup` roda o `pg_dump` todo dia às 02:00 e guarda em
   `docker/backups` (ou na pasta de `RFID_BACKUP_PASTA` do `.env`), em `daily/`, `weekly/` e `monthly/`, mantendo

@@ -545,6 +545,9 @@ a:hover { text-decoration: underline; }
 .badge-ADMIN { background: var(--primary-soft); color: var(--primary); }
 .badge-GESTOR { background: var(--success-soft); color: var(--success); }
 .badge-CUSTOM { background: var(--warning-soft); color: var(--warning); }
+/* Usuário desativado pelo ADMIN: a linha fica apagada e o selo em vermelho */
+.badge-inativo { background: var(--danger-soft); color: var(--danger); }
+tr.inativo td { opacity: .6; }
 /* Contador no menu (ex.: pedidos de senha esperando o ADMIN) */
 .contador {
   display: inline-grid;
