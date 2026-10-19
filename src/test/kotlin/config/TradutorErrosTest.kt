@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.authentication.BadCredentialsException
 import java.io.IOException
@@ -84,6 +85,27 @@ class TradutorErrosTest {
         assertThatThrownBy { traduzir(IOException("Broken pipe")) }.isInstanceOf(IOException::class.java)
         assertThatThrownBy { traduzir(IllegalArgumentException("x"), enviada = true) }
             .isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    @Test
+    fun `conexao fechada pelo navegador e reconhecida e outros erros nao`() {
+        assertThat(TradutorErros.clienteDesconectou(IOException("Broken pipe"), request)).isTrue()
+        assertThat(TradutorErros.clienteDesconectou(IllegalStateException("x"), request)).isFalse()
+    }
+
+    @Test
+    fun `api encerra sem resposta quando o cliente desconectou`() {
+        val response = MockHttpServletResponse()
+
+        assertThat(TratamentoErrosApi().tratar(IOException("Uma conexão estabelecida foi anulada"), request, response)).isNull()
+    }
+
+    @Test
+    fun `tela encerra sem pagina de erro quando o cliente desconectou`() {
+        val mav = TratamentoErros().tratar(IOException("Broken pipe"), request, MockHttpServletResponse())
+
+        assertThat(mav.viewName).isNull()
+        assertThat(mav.model).isEmpty()
     }
 
     private fun assertThatThrownByAndGet(bloco: () -> Unit): Throwable =

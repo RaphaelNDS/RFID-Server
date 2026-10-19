@@ -334,6 +334,8 @@ Depois:
 2. Se algum coletor pode cadastrar etiquetas: `RFID_COLETORES_CADASTRO=coletor-01`.
 3. No app de cada coletor, configure o endereço `https://<servidor>:8443`, a chave e a **impressão digital**
    do certificado (copie de `/status`).
+4. Confira o fuso do Android do coletor (ex.: America/Sao_Paulo, data e hora automáticas): o app mostra os
+   horários no fuso do aparelho, e um coletor em GMT mostra 3 horas a mais.
 
 > Execute o servidor sempre a partir da mesma pasta (o banco e o certificado ficam em `./data`, relativo a ela),
 > ou defina `RFID_DB_PATH` e `RFID_HTTPS_KEYSTORE` com caminhos absolutos.
