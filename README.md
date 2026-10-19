@@ -368,6 +368,40 @@ como no passo 2. Para evitar isso, mantenha `data/rfid-https.p12` e `data/rfid-h
 backup automático já inclui os dois) e restaure os dois juntos. Se o alerta aparecer sem que o certificado tenha sido
 trocado, **não confie**: pode ser outro computador se passando pelo servidor.
 
+### Rodar no Windows fora do IntelliJ
+
+Pelo IntelliJ o servidor para quando o IntelliJ fecha. Para rodar sozinho, monte uma pasta do servidor
+(ex.: `C:\RFID_Servidor`) com:
+
+```
+RFID_Servidor\
+├── iniciar-servidor.bat          ← copie de scripts\windows\
+├── servidor\rfid-server.jar      ← o build/libs/rfid-server-<versão>.jar (./gradlew bootJar), renomeado
+├── config\application.properties ← copie de scripts\windows\application.properties.exemplo e preencha
+└── data\                         ← criada na primeira execução (banco, certificado, logs, backups)
+```
+
+1. Em `config\application.properties`, coloque o nome e a chave de cada coletor (`rfid.dispositivos.chaves`) e
+   os que podem cadastrar (`rfid.dispositivos.cadastro`). As outras opções vêm comentadas com o valor padrão.
+   Esse arquivo faz o papel das variáveis de ambiente da tabela abaixo e **não vai para o git** (tem as chaves).
+2. No `iniciar-servidor.bat`, confira o caminho do Java (`JAVA`). Use o mesmo `java.exe` liberado no Firewall do
+   Windows; com outro, libere a entrada na porta 8443 para ele, senão os coletores não conectam.
+3. Dê dois cliques no `.bat`. A janela fica aberta com o servidor no ar; para parar, **Ctrl+C** (o servidor fecha o
+   banco antes de sair). O `.bat` não inicia se a porta 8443 já estiver em uso (ex.: o servidor do IntelliJ ainda
+   rodando), para os dois não disputarem a porta e o banco.
+
+**Versão nova do servidor:** pare com Ctrl+C, troque `servidor\rfid-server.jar` e inicie de novo. Os dados e o
+certificado ficam em `data\` e não mudam.
+
+**Serviço do Windows (iniciar sozinho ao ligar o computador):** registre o `.bat` com o parâmetro `/servico` (não
+espera tecla ao terminar) numa ferramenta como NSSM ou WinSW, com a pasta do servidor como pasta de trabalho.
+Confira na ferramenta que ela para o serviço com Ctrl+C (a NSSM faz isso por padrão), para o banco ser fechado.
+
+> Já tinha um banco do servidor rodando pelo IntelliJ? Ele fica em `data\` dentro da pasta de trabalho da
+> configuração de execução do IntelliJ.
+> Monte a pasta do servidor nesse mesmo lugar, ou copie a `data\` inteira (com o servidor parado) para a pasta
+> nova: assim o banco e o certificado são os mesmos e os coletores não precisam ser configurados de novo.
+
 ---
 
 ## Configuração (variáveis de ambiente)

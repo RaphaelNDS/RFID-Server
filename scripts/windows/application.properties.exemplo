@@ -1,0 +1,44 @@
+# MODELO da configuração local do servidor RFID (ver README, "Rodar no Windows fora do IntelliJ").
+# Copie para <pasta do servidor>\config\application.properties e troque o nome e a chave dos coletores.
+#
+# O Spring Boot lê ./config/application.properties sozinho ao iniciar a partir da pasta do servidor
+# (pelo iniciar-servidor.bat ou pelo IntelliJ). A cópia com as chaves de verdade NÃO vai para o git:
+# guarde com as senhas da empresa.
+# Mudou algo aqui? Reinicie o servidor (tudo é lido só na inicialização).
+# Linhas com # na frente estão desligadas e valem o padrão mostrado; tire o # para mudar.
+
+# ---------- Coletores ----------
+
+# Coletores que podem usar /api/android/**, no formato nome:chave separados por vírgula
+rfid.dispositivos.chaves=coletor-01:troque-por-uma-chave-longa-de-16-ou-mais-caracteres
+
+# Coletores que podem cadastrar etiquetas pelo app (mesmos nomes de cima)
+rfid.dispositivos.cadastro=coletor-01
+
+# Dias sem contato para a tela Coletores marcar o coletor como parado
+#rfid.coletores.dias-sem-contato=7
+
+# Duração da sessão do operador no coletor (ex.: 12h, 8h, 30m)
+#rfid.operador.duracao-sessao=12h
+
+# ---------- Portas ----------
+
+# HTTPS (telas e coletores). Mudou? Libere a porta nova no firewall e informe IP:porta nos coletores
+#rfid.https.porta=8443
+
+# HTTP: só redireciona as telas para o HTTPS e recusa a API
+#server.port=8082
+
+# ---------- Dados e backup ----------
+
+# Leituras guardadas por quantos dias (0 = para sempre)
+#rfid.leituras.reter-dias=0
+
+# Backup automático (padrão: todo dia às 02:00 em ./data/backups, mantendo os 14 últimos)
+#rfid.backup.habilitado=true
+#rfid.backup.cron=0 0 2 * * *
+#rfid.backup.manter=14
+#rfid.backup.pasta=D:/Backups/RFID
+
+# Console do H2 em /h2-console (só ADMIN). Desligue se ninguém usa
+#spring.h2.console.enabled=true
