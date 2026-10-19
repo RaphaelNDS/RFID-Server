@@ -299,8 +299,20 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
   **Restaurar o banco** (apaga os dados atuais do banco): pare o servidor e rode, na pasta `docker`:
 
   ```powershell
-  docker cp ./backups/last/rfid-latest.dump rfid-postgres:/tmp/rfid.dump
-  docker exec rfid-postgres pg_restore -U rfid -d rfid --clean --if-exists /tmp/rfid.dump
+  docker compose exec backup sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" pg_restore -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists /backups/last/rfid-latest.dump'
+  ```
+
+  Roda dentro do contêiner de backup, que já enxerga a pasta dos backups: o `rfid-latest.dump` é um atalho
+  (link simbólico) para o último backup, e o `docker cp` do Windows não consegue copiar atalhos. Para outro dia,
+  troque o caminho, ex.: `/backups/daily/rfid-20261019.dump`.
+
+  **Conferir um backup sem mexer no banco** (restaura num banco à parte e apaga depois):
+
+  ```powershell
+  docker exec rfid-postgres psql -U rfid -d rfid -c "create database rfid_teste_restauracao"
+  docker compose exec backup sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" pg_restore -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d rfid_teste_restauracao /backups/last/rfid-latest.dump'
+  docker exec rfid-postgres psql -U rfid -d rfid_teste_restauracao -c "select count(*) from usuarios"
+  docker exec rfid-postgres psql -U rfid -d rfid -c "drop database rfid_teste_restauracao"
   ```
 
 - **Backup do certificado HTTPS:** o servidor guarda `rfid-https.p12` e `.senha` todo dia às 02:00 em
