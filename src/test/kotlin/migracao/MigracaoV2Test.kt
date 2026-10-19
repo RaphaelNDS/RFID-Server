@@ -67,6 +67,6 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("8") // V8 = erros do app enviados pelos coletores
+        assertThat(resultado.targetSchemaVersion).isEqualTo("9") // V9 = histórico do cadastro de etiquetas
     }
 }

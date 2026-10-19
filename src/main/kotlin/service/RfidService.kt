@@ -20,7 +20,8 @@ class RfidService(
     private val naoRepo: TagNaoCadastradaRepository,
     private val tipoRepo: TipoEquipamentoRepository,
     private val marcaRepo: MarcaRepository,
-    private val modeloRepo: ModeloRepository
+    private val modeloRepo: ModeloRepository,
+    private val historico: HistoricoEtiquetaService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -53,7 +54,8 @@ class RfidService(
             modeloId = req.modeloId
         )
 
-        repo.save(entity)
+        val salva = repo.save(entity)
+        historico.registrarCadastro(salva)
 
         naoRepo.deleteByTag(req.tag)
 
@@ -137,6 +139,7 @@ class RfidService(
 
         return repo.findAll().map { tag ->
             TagViewAdmin(
+                id = tag.id,
                 tag = tag.tagReal,
                 codigoInterno = tag.codigoInterno,
                 tipoNome = tag.tipoEquipamentoId?.let { tipos[it] },
@@ -149,6 +152,51 @@ class RfidService(
     }
 
 
+
+    /* ================= EDIÇÃO E EXCLUSÃO ================= */
+
+    fun buscarPorId(id: Long): TagEntity =
+        repo.findById(id).orElseThrow { NoSuchElementException("Etiqueta $id não encontrada") }
+
+    /**
+     * Altera os dados da etiqueta (o EPC não muda: é a própria etiqueta). Mesmas regras de catálogo do cadastro.
+     * Grava no histórico uma linha por campo que mudou, na mesma transação. Devolve os campos alterados.
+     */
+    @Transactional
+    fun editarTag(id: Long, req: CadastroRequest): List<String> {
+        val tag = buscarPorId(id)
+        validarCatalogo(req.copy(tag = tag.tagReal))
+
+        val antes = historico.retrato(tag)
+        tag.codigoInterno = req.codigoInterno.trim()
+        tag.patrimonio = req.patrimonio.trim()
+        tag.numeroSerie = req.numeroSerie.trim()
+        tag.tipoEquipamentoId = req.tipoEquipamentoId
+        tag.marcaId = req.marcaId
+        tag.modeloId = req.modeloId
+        repo.save(tag)
+
+        val mudaram = historico.registrarAlteracao(tag, antes)
+        if (mudaram.isEmpty()) {
+            log.info("Etiqueta {} salva sem mudanças por {}", tag.tagReal, usuarioAtual())
+        } else {
+            log.info("Etiqueta {} (patrimônio {}) alterada por {}: {}", tag.tagReal, tag.patrimonio, usuarioAtual(), mudaram.joinToString())
+        }
+        return mudaram
+    }
+
+    /** Exclui a etiqueta. O histórico dela continua, com um retrato dos campos no momento da exclusão. */
+    @Transactional
+    fun excluirTag(id: Long): TagEntity {
+        val tag = buscarPorId(id)
+        val antes = historico.retrato(tag)
+
+        repo.delete(tag)
+        historico.registrarExclusao(tag.id, tag.tagReal, antes)
+
+        log.warn("Etiqueta {} excluída por {} ({})", tag.tagReal, usuarioAtual(), antes.resumo())
+        return tag
+    }
 
     /* ================= NÃO CADASTRADAS ================= */
 

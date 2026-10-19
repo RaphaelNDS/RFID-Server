@@ -11,11 +11,18 @@
       <h1>Etiquetas cadastradas</h1>
       <p class="subtitulo">Equipamentos identificados por etiqueta RFID</p>
     </div>
-    <div class="page-header-acoes" th:if="${@authService.temPermissao('RFID','CREATE')}">
-      <a th:href="@{/admin/cadastro}" class="btn btn-primary">
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/etiquetas/historico}" class="btn btn-ghost">
+        <svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Histórico
+      </a>
+      <a th:href="@{/admin/cadastro}" class="btn btn-primary" th:if="${@authService.temPermissao('RFID','CREATE')}">
         <svg class="ic"><use href="/img/icones.svg#mais"/></svg>Cadastrar etiqueta
       </a>
     </div>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
   </div>
 
   <div class="card">
@@ -39,6 +46,7 @@
           <th>Marca</th>
           <th>Modelo</th>
           <th>Nº série</th>
+          <th></th>
         </tr>
         </thead>
         <tbody>
@@ -50,6 +58,21 @@
           <td th:text="${t.marcaNome} ?: '—'"></td>
           <td th:text="${t.modeloNome} ?: '—'"></td>
           <td th:text="${t.numeroSerie}"></td>
+          <td class="acoes">
+            <a th:href="@{/admin/etiquetas/{id}/editar(id=${t.id})}" class="btn btn-ghost btn-sm"
+               th:if="${@authService.temPermissao('RFID','UPDATE')}" title="Editar">Editar</a>
+            <a th:href="@{/admin/etiquetas/historico(tag=${t.tag})}" class="btn btn-ghost btn-sm" title="Histórico da etiqueta">
+              <svg class="ic"><use href="/img/icones.svg#relogio"/></svg><span class="texto-btn">Histórico</span>
+            </a>
+            <form th:action="@{/admin/etiquetas/{id}/excluir(id=${t.id})}" method="post" style="display:inline"
+                  th:if="${@authService.temPermissao('RFID','DELETE')}"
+                  th:attr="data-tag=${t.tag}"
+                  onsubmit="return confirm('Excluir a etiqueta ' + this.dataset.tag + '? O histórico dela continua guardado.');">
+              <button type="submit" class="btn btn-ghost btn-sm" title="Excluir">
+                <svg class="ic"><use href="/img/icones.svg#lixeira"/></svg><span class="texto-btn">Excluir</span>
+              </button>
+            </form>
+          </td>
         </tr>
         </tbody>
       </table>

@@ -72,6 +72,9 @@ administrador; depois disso essa tela não aparece mais.
 | Etiquetas cadastradas (com busca) | `/admin/tags-cadastradas` | RFID · Ver |
 | Pendentes | `/admin/tags-pendentes` | RFID · Ver |
 | Cadastrar etiqueta | `/admin/cadastro` | RFID · Criar |
+| Editar etiqueta (o EPC não muda) | `/admin/etiquetas/{id}/editar` | RFID · Editar |
+| Excluir etiqueta (botão em Etiquetas cadastradas) | `/admin/etiquetas/{id}/excluir` | RFID · Excluir |
+| Histórico das etiquetas (busca por EPC; acha também as excluídas) | `/admin/etiquetas/historico` | RFID · Ver |
 | Leituras (paginada; filtros por dia, etiqueta, tipo, operador…) | `/admin/leituras-android` | Leituras · Ver |
 | Inventários | `/admin/inventarios` | Leituras · Ver |
 | Catálogo | `/admin/catalogo` | Catálogo · Ver (criar/excluir exigem Criar/Excluir) |
@@ -82,6 +85,17 @@ administrador; depois disso essa tela não aparece mais.
 | Status do servidor (+ backup manual para ADMIN) | `/status` | logado |
 | Meu perfil, trocar senha e email | `/perfil` | logado |
 | Esqueceu a senha? (link na tela de login) | `/esqueci-senha` | público |
+
+### Histórico das etiquetas
+
+Todo cadastro, alteração e exclusão de etiqueta (pela web ou pelo coletor) fica registrado na mesma transação da
+mudança: uma linha por campo alterado, com valor antigo e novo, quem fez (email na web, operador no coletor) e a
+origem ("Web" ou "Coletor X"). Sem filtro, a tela mostra as últimas 200 mudanças; filtrando por EPC, mostra todas
+daquela etiqueta, mesmo que ela já tenha sido excluída. Cada mudança também vai para o log, por exemplo:
+
+```
+Etiqueta E2806894000050123456ABCD (patrimônio PAT-200) alterada por admin@empresa.com: patrimonio
+```
 
 ### Coletores
 
@@ -275,6 +289,7 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
   | V6 | `db/migration/V6__coletores.sql` | Situação de cada coletor (tela Coletores) |
   | V7 | `db/migration/V7__versoes_app.sql` | Versões do app publicadas pelo servidor |
   | V8 | `db/migration/V8__erros_coletor.sql` | Erros do app enviados pelos coletores |
+  | V9 | `db/migration/V9__historico_etiquetas.sql` | Histórico de cadastro, alteração e exclusão das etiquetas |
 
 - **Backup automático** todo dia às 02:00 em `./data/backups` (zip consistente, sem parar o servidor, com o certificado HTTPS junto: `rfid-https.p12` e `.senha`), mantendo
   os 14 mais recentes. Ao subir, se não houver backup das últimas 24 h, faz um na hora. O ADMIN também pode

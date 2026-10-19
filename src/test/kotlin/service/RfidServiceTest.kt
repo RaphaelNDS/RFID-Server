@@ -22,7 +22,9 @@ class RfidServiceTest {
     private val marcaRepo = mockk<MarcaRepository>()
     private val modeloRepo = mockk<ModeloRepository>()
 
-    private val service = RfidService(tagRepo, naoRepo, tipoRepo, marcaRepo, modeloRepo)
+    private val historico = mockk<HistoricoEtiquetaService>(relaxed = true)
+
+    private val service = RfidService(tagRepo, naoRepo, tipoRepo, marcaRepo, modeloRepo, historico)
 
     private fun sha256(texto: String) =
         MessageDigest.getInstance("SHA-256").digest(texto.toByteArray()).joinToString("") { "%02x".format(it) }
