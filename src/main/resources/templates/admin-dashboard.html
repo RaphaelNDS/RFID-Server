@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-br" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Relatórios · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Relatórios de leituras</h1>
+      <p class="subtitulo">Atualiza sozinho quando chegam leituras novas</p>
+    </div>
+
+    <form method="get" class="page-header-acoes" style="align-items:flex-end">
+      <div class="field">
+        <label for="inicio">Início</label>
+        <input id="inicio" type="date" name="inicio" th:value="${inicio}">
+      </div>
+      <div class="field">
+        <label for="fim">Fim</label>
+        <input id="fim" type="date" name="fim" th:value="${fim}">
+      </div>
+      <button type="submit" class="btn btn-primary">Aplicar</button>
+    </form>
+  </div>
+
+  <div class="alert alert-aviso" th:if="${aviso}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${aviso}"></span>
+  </div>
+
+  <div class="grid grid-stats">
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#calendario"/></svg>No período</div>
+      <div class="stat-valor" th:text="${totalPeriodo}">0</div>
+      <div class="stat-dica" th:text="${#temporals.format(inicio, 'dd/MM')} + ' a ' + ${#temporals.format(fim, 'dd/MM/yyyy')}"></div>
+    </div>
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#sinal"/></svg>Hoje</div>
+      <div class="stat-valor" th:text="${leiturasHoje}">0</div>
+      <div class="stat-dica">Desde 00:00</div>
+    </div>
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Última hora</div>
+      <div class="stat-valor" th:text="${leiturasUltimaHora}">0</div>
+      <div class="stat-dica">Últimos 60 minutos</div>
+    </div>
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#atividade"/></svg>Hoje x ontem</div>
+      <div class="stat-valor"
+           th:classappend="${#strings.startsWith(crescimento, '+')} ? 'positivo' : (${#strings.startsWith(crescimento, '-')} ? 'negativo')"
+           th:text="${crescimento}">—</div>
+      <div class="stat-dica">Variação no número de leituras</div>
+    </div>
+  </div>
+
+  <div class="card secao">
+    <div class="card-header"><h2>Leituras por dia</h2></div>
+    <div class="card-body"><div class="grafico"><canvas id="graficoPorDia" aria-label="Leituras por dia"></canvas></div></div>
+  </div>
+
+  <div class="grid grid-2 secao">
+    <div class="card">
+      <div class="card-header"><h2>Por tipo de equipamento</h2></div>
+      <div class="card-body"><div class="grafico"><canvas id="graficoTipo" aria-label="Leituras por tipo"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>Por marca</h2></div>
+      <div class="card-body"><div class="grafico"><canvas id="graficoMarca" aria-label="Leituras por marca"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- Chart.js 4.4.1 servido pelo próprio sistema (funciona sem internet) -->
+  <script th:src="@{/js/chart.umd.min.js}"></script>
+
+  <script th:inline="javascript">
+    const porDia = [[${dadosPorDia}]];
+    const tipo   = [[${dadosTipo}]];
+    const marca  = [[${dadosMarca}]];
+
+    // "2026-10-13" -> "13/10"
+    const rotuloDia = d => d.slice(8, 10) + "/" + d.slice(5, 7);
+
+    let graficos = [];
+
+    function cor(nome) {
+      return getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+    }
+
+    function desenhar() {
+      graficos.forEach(g => g.destroy());
+
+      const primaria = cor("--primary");
+      const texto = cor("--muted");
+      const grade = cor("--border");
+
+      Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+      Chart.defaults.color = texto;
+
+      const comum = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+      };
+      const eixos = (horizontal) => ({
+        x: { grid: { color: horizontal ? grade : "transparent" }, ticks: { precision: 0 }, beginAtZero: true },
+        y: { grid: { color: horizontal ? "transparent" : grade }, ticks: { precision: 0 }, beginAtZero: true },
+      });
+
+      graficos = [
+        new Chart(document.getElementById("graficoPorDia"), {
+          type: "line",
+          data: {
+            labels: Object.keys(porDia).map(rotuloDia),
+            datasets: [{
+              label: "Leituras",
+              data: Object.values(porDia),
+              borderColor: primaria,
+              backgroundColor: primaria + "22",
+              fill: true,
+              tension: .3,
+              pointRadius: 3,
+            }]
+          },
+          options: { ...comum, scales: eixos(false) }
+        }),
+        // espaço entre os colchetes: dois colchetes colados seriam lidos como expressão do Thymeleaf
+        ...[ ["graficoTipo", tipo], ["graficoMarca", marca] ].map(([id, dados]) =>
+          new Chart(document.getElementById(id), {
+            type: "bar",
+            data: {
+              labels: Object.keys(dados),
+              datasets: [{ label: "Leituras", data: Object.values(dados), backgroundColor: primaria, borderRadius: 6, maxBarThickness: 28 }]
+            },
+            options: { ...comum, indexAxis: "y", scales: eixos(true) }
+          })
+        )
+      ];
+    }
+
+    desenhar();
+    document.addEventListener("tema-alterado", desenhar);
+
+    // Recarrega quando o servidor avisa que chegaram leituras novas (os filtros ficam na URL)
+    const evt = new EventSource('/admin/sse');
+    evt.onmessage = () => location.reload();
+  </script>
+
+</section>
+</html>

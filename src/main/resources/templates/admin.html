@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Painel administrativo · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Painel administrativo</h1>
+      <p class="subtitulo">Situação do servidor e atalhos de administração</p>
+    </div>
+  </div>
+
+  <div class="grid grid-stats">
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#atividade"/></svg>Status</div>
+      <div class="stat-valor"><span class="badge badge-online" th:text="${info.status}">ONLINE</span></div>
+      <div class="stat-dica" th:text="${info.horaServidor}">Desde</div>
+    </div>
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Tempo no ar</div>
+      <div class="stat-valor" th:text="${info.tempoOnline}">0min</div>
+    </div>
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#servidor"/></svg>Banco de dados</div>
+      <div class="stat-valor" th:text="${info.banco}">H2</div>
+    </div>
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#etiqueta"/></svg>Versão</div>
+      <div class="stat-valor" th:text="${info.versao}">1.0</div>
+    </div>
+  </div>
+
+  <div class="secao">
+    <h2 class="secao-titulo">Atalhos</h2>
+    <div class="grid grid-tiles">
+      <a th:href="@{/admin/usuarios}" class="tile">
+        <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#usuarios"/></svg></span>
+        <span><span class="tile-titulo">Usuários</span><span class="tile-desc d-block">Acessos e permissões</span></span>
+      </a>
+      <a th:href="@{/admin/tags-pendentes}" class="tile">
+        <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#relogio"/></svg></span>
+        <span><span class="tile-titulo">Pendentes</span><span class="tile-desc d-block">Etiquetas lidas sem cadastro</span></span>
+      </a>
+      <a th:href="@{/admin/catalogo}" class="tile">
+        <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#pacote"/></svg></span>
+        <span><span class="tile-titulo">Catálogo</span><span class="tile-desc d-block">Tipos, marcas e modelos</span></span>
+      </a>
+      <a th:href="@{/admin/dashboard}" class="tile">
+        <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#grafico"/></svg></span>
+        <span><span class="tile-titulo">Relatórios</span><span class="tile-desc d-block">Leituras por dia, tipo e marca</span></span>
+      </a>
+    </div>
+  </div>
+
+</section>
+</html>

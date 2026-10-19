@@ -1,18 +1,162 @@
 server:
+  # Com o HTTPS ligado (rfid.https), esta porta só redireciona para o HTTPS (ver HttpsConfig)
   port: 8082
 
 spring:
   datasource:
-    url: jdbc:h2:mem:rfid-db
+    # Banco em arquivo: os dados sobrevivem a reinícios do servidor.
+    # RFID_DB_PATH muda o local (padrão: pasta ./data a partir de onde o servidor é iniciado).
+    # WRITE_DELAY=0 grava cada commit no disco na hora (sem isso, uma queda perde o último ~1s de dados).
+    # DB_CLOSE_ON_EXIT=FALSE deixa o Spring fechar o banco no desligamento, na ordem certa.
+    # Com o servidor rodando o arquivo fica travado: para consultar, use /h2-console (ADMIN).
+    url: jdbc:h2:file:${RFID_DB_PATH:./data/rfid-db};WRITE_DELAY=0;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
-    username: sa
-    password: ""
+    username: ${RFID_DB_USER:sa}
+    password: ${RFID_DB_PASSWORD:}
+
+  # O schema é criado e evoluído pelo Flyway (src/main/resources/db/migration).
+  # O Hibernate só confere se as entidades batem com as tabelas.
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  # Envio do APK na tela "App dos coletores" (o padrão do Spring é 1 MB). Leitura sob demanda: o arquivo só
+  # é lido depois da conferência de permissão (somente ADMIN), e o serviço para de gravar ao passar de 100 MB.
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 101MB
+      resolve-lazily: true
 
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: validate
+    # Mostra no log cada SQL executado. Desligado: em produção lota o log (cada leitura gera vários SQLs).
+    # Ligue só para investigar um problema (RFID_MOSTRAR_SQL=true).
+    show-sql: ${RFID_MOSTRAR_SQL:false}
+    # Ligado de propósito (era o padrão implícito, agora explícito para não gerar aviso na inicialização):
+    # a tela de usuários lê as permissões (coleção lazy) ao montar o HTML, e a API do catálogo devolve as
+    # entidades direto em JSON (tipo -> marcas -> modelos). Para desligar, essas consultas precisam
+    # carregar tudo antes (JOIN FETCH ou DTO).
+    open-in-view: true
 
   h2:
     console:
-      enabled: true
+      # Console do H2 em /h2-console (só ADMIN e só da própria máquina). Se não usar, desligue (RFID_H2_CONSOLE=false).
+      enabled: ${RFID_H2_CONSOLE:true}
+      settings:
+        web-allow-others: false   # console do H2 só aceita acesso a partir da própria máquina
+
+
+rfid:
+  dispositivos:
+    # Chaves dos coletores Android que podem usar /api/android/**, no formato nome:chave
+    # separados por vírgula (ex.: coletor-01:chave-longa-1,coletor-02:chave-longa-2).
+    # O app envia a chave no header X-Chave-Dispositivo (Configurações do app).
+    # Sem nenhuma chave configurada, o app Android fica bloqueado (401).
+    chaves: ${RFID_CHAVES_DISPOSITIVOS:}
+    # Coletores que podem cadastrar etiquetas pelo app, separados por vírgula (os mesmos nomes de "chaves",
+    # ex.: coletor-01,coletor-02). Faz no coletor o papel da permissão RFID/CREATE da web.
+    # Vazio = nenhum coletor cadastra (o app mostra "coletor sem permissão para cadastrar").
+    cadastro: ${RFID_COLETORES_CADASTRO:}
+
+  coletores:
+    # Tela Coletores: sem contato há esta quantidade de dias, o coletor aparece destacado
+    # ("Sem contato há muito tempo").
+    dias-sem-contato: ${RFID_COLETORES_DIAS_SEM_CONTATO:7}
+    # Erros do app enviados pelos coletores: limite por coletor por dia (contra app em loop de falha)
+    # e por quantos dias ficam guardados (apagados todo dia às 04:15).
+    erros-por-dia: ${RFID_COLETORES_ERROS_POR_DIA:500}
+    dias-erros: ${RFID_COLETORES_DIAS_ERROS:90}
+
+  app:
+    # Atualização do app dos coletores pelo servidor (tela "App dos coletores").
+    # Pasta dos APKs publicados (fora do backup automático: em caso de perda, publique o APK de novo).
+    pasta: ${RFID_APP_PASTA:./data/app}
+    # Pacote do app: APK de outro pacote é recusado.
+    pacote: ${RFID_APP_PACOTE:br.com.bkpbr.rfidandroid}
+    # Impressão digital SHA-256 do certificado da chave de assinatura do app (keystore/rfid-android.jks):
+    # só APK assinado com ela é publicado. Vazio = publicação desligada.
+    # Ver com: keytool -list -v -keystore keystore/rfid-android.jks
+    certificado-sha256: ${RFID_APP_CERTIFICADO_SHA256:30:3F:97:AA:EA:F8:D2:EE:2B:9C:25:E2:77:92:10:5B:83:76:31:54:5A:E9:66:DD:AC:60:F1:66:48:EF:6A:A2}
+    # Quantas versões mantêm o arquivo no disco (as mais antigas ficam só no histórico).
+    versoes-guardadas: ${RFID_APP_VERSOES_GUARDADAS:3}
+
+  https:
+    # HTTPS na porta abaixo. A porta HTTP antiga (server.port) passa a só redirecionar as telas para cá
+    # e a recusar a API (erro 426 explicando o endereço HTTPS).
+    habilitado: ${RFID_HTTPS_HABILITADO:true}
+    porta: ${RFID_HTTPS_PORTA:8443}
+    # Certificado (PKCS12). Se não existir, o servidor gera um próprio, válido por 10 anos, com os IPs desta
+    # máquina, e guarda a senha em <arquivo>.senha. Se existir, só carrega: nunca gera outro sozinho (a
+    # impressão digital está fixada nos coletores). O backup automático já leva o .p12 e o .senha.
+    # Para um certificado da empresa, aponte para o .p12 dela e informe a senha.
+    keystore: ${RFID_HTTPS_KEYSTORE:./data/rfid-https.p12}
+    senha: ${RFID_HTTPS_SENHA:}
+    # Nomes e IPs extras do certificado gerado, separados por vírgula (ex.: rfid-servidor,192.168.0.10).
+    # Os IPs desta máquina e "localhost" já entram. Só vale ao GERAR o certificado (na primeira vez).
+    nomes: ${RFID_HTTPS_NOMES:}
+
+  operador:
+    # Quanto tempo vale o login do operador no coletor (um turno). O app trabalha offline até esse limite;
+    # ações feitas durante a sessão continuam valendo mesmo se forem enviadas depois que ela expirar.
+    duracao-sessao: ${RFID_DURACAO_SESSAO_OPERADOR:12h}
+    # Prazo máximo (relógio do servidor) para uma ação feita offline chegar ao servidor: o tempo que um coletor
+    # pode ficar sem rede sem perder leituras. Depois do fim da sessão, o token ainda vale só por esse prazo e
+    # só para ações feitas enquanto ela valia; passado o prazo, morre de vez (token vazado não serve para sempre).
+    janela-sincronizacao: ${RFID_JANELA_SINCRONIZACAO:72h}
+
+  leituras:
+    # Tela de leituras: quantas por página (10 a 200).
+    por-pagina: ${RFID_LEITURAS_POR_PAGINA:50}
+    # Retenção: apaga leituras com mais de N dias, todo dia às 03:30. 0 = desligada (guarda tudo).
+    # Mínimo de 30 dias (leituras feitas offline chegam com a data antiga). Inventários não são afetados.
+    # Apagar leituras muda os relatórios dos períodos apagados.
+    reter-dias: ${RFID_LEITURAS_RETER_DIAS:0}
+
+  senha:
+    # Regras de senha (setup, cadastro de usuário e troca de senha): letras e números, sem o nome/email,
+    # sem senhas comuns, até 72 caracteres (limite do BCrypt). Tamanho mínimo:
+    tamanho-minimo: ${RFID_SENHA_TAMANHO_MINIMO:8}
+
+  login:
+    # Proteção contra adivinhação de senha. Os erros são contados dentro de "bloqueio-minutos".
+    # Erros seguidos no mesmo email que bloqueiam aquele login:
+    max-tentativas: ${RFID_LOGIN_MAX_TENTATIVAS:5}
+    # Erros vindos do mesmo IP (em qualquer conta) que bloqueiam o IP:
+    max-tentativas-ip: ${RFID_LOGIN_MAX_TENTATIVAS_IP:20}
+    # Tempo de bloqueio (e janela de contagem), em minutos:
+    bloqueio-minutos: ${RFID_LOGIN_BLOQUEIO_MINUTOS:15}
+
+  backup:
+    # Backup automático do banco H2 (comando BACKUP TO: gera um .zip sem parar o servidor).
+    # Restaurar: pare o servidor, extraia o .zip na pasta do banco (substituindo rfid-db.mv.db) e suba de novo.
+    habilitado: ${RFID_BACKUP_HABILITADO:true}
+    # Vazio = pasta "backups" ao lado do arquivo do banco (ex.: ./data/backups).
+    # Recomendado apontar para outro disco ou pasta de rede: backup no mesmo disco não protege contra falha do disco.
+    pasta: ${RFID_BACKUP_PASTA:}
+    # Horário no formato cron do Spring (segundo minuto hora dia mês dia-da-semana). Padrão: todo dia às 02:00.
+    cron: ${RFID_BACKUP_CRON:0 0 2 * * *}
+    # Quantos backups guardar; os mais antigos são apagados.
+    manter: ${RFID_BACKUP_MANTER:14}
+
+
+logging:
+  # Além do console, o log vai para arquivo (para achar depois os erros pelo código mostrado ao usuário).
+  # Vazio = só console. Rotação: um arquivo novo por dia ou a cada 10 MB; guarda 30 dias, no máximo 1 GB.
+  file:
+    name: ${RFID_LOG_ARQUIVO:./data/logs/rfid-server.log}
+  charset:
+    file: UTF-8
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 30
+      total-size-cap: 1GB
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Leituras · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Leituras</h1>
+      <p class="subtitulo">Etiquetas lidas pelos coletores Android</p>
+    </div>
+  </div>
+
+  <!-- Dias com leitura: atalho para filtrar por data -->
+  <div class="pills" style="margin-bottom:16px" aria-label="Filtrar por dia">
+    <a th:href="@{/admin/leituras-android}" class="pill" th:classappend="${#strings.isEmpty(diaSelecionado)} ? 'ativo'">
+      <svg class="ic"><use href="/img/icones.svg#calendario"/></svg>Todos os dias
+    </a>
+    <a th:each="c : ${contadorPorDia}"
+       th:href="@{/admin/leituras-android(dia=${c.key})}"
+       class="pill" th:classappend="${c.key == diaSelecionado} ? 'ativo'">
+      <!-- chave no formato AAAA-MM-DD; exibida como DD/MM/AAAA -->
+      <span th:text="${#strings.substring(c.key, 8, 10) + '/' + #strings.substring(c.key, 5, 7) + '/' + #strings.substring(c.key, 0, 4)}"></span>
+      <span class="qtd" th:text="${c.value}"></span>
+    </a>
+  </div>
+
+  <div class="card">
+    <form method="get" class="toolbar">
+      <input type="hidden" name="dia" th:value="${diaSelecionado}">
+
+      <div class="field">
+        <label for="f-tag">Etiqueta</label>
+        <input id="f-tag" name="tag" th:value="${param.tag}" placeholder="EPC">
+      </div>
+      <div class="field">
+        <label for="f-tipo">Tipo</label>
+        <input id="f-tipo" name="tipo" th:value="${param.tipo}">
+      </div>
+      <div class="field">
+        <label for="f-marca">Marca</label>
+        <input id="f-marca" name="marca" th:value="${param.marca}">
+      </div>
+      <div class="field">
+        <label for="f-modelo">Modelo</label>
+        <input id="f-modelo" name="modelo" th:value="${param.modelo}">
+      </div>
+      <div class="field">
+        <label for="f-serie">Nº série</label>
+        <input id="f-serie" name="numeroSerie" th:value="${param.numeroSerie}">
+      </div>
+      <div class="field">
+        <label for="f-operador">Operador</label>
+        <input id="f-operador" name="operador" th:value="${param.operador}">
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <svg class="ic"><use href="/img/icones.svg#busca"/></svg>Filtrar
+      </button>
+      <a th:href="@{/admin/leituras-android(dia=${diaSelecionado})}" class="btn btn-ghost">Limpar</a>
+    </form>
+
+    <div class="card-header">
+      <h2>Resultado <span class="contagem" th:text="'(' + ${#numbers.formatInteger(totalLeituras, 1, 'POINT')} + ' leituras)'"></span></h2>
+      <div class="card-acoes">
+        <span class="muted" th:if="${totalPaginas > 1}" th:text="'Página ' + ${paginaAtual} + ' de ' + ${totalPaginas}"></span>
+        <!-- Exporta todas as leituras do filtro, não só esta página -->
+        <a th:if="${totalLeituras > 0}" th:href="@{${linkExcel}}" class="btn btn-secondary btn-sm" title="Exportar todas as leituras do filtro">
+          <svg class="ic"><use href="/img/icones.svg#download"/></svg>Excel
+        </a>
+        <a th:if="${totalLeituras > 0}" th:href="@{${linkCsv}}" class="btn btn-ghost btn-sm" title="Para importar em outros sistemas. No Excel, use o botão Excel: o CSV perde zeros à esquerda do patrimônio">CSV</a>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table" th:unless="${#lists.isEmpty(leituras)}">
+        <thead>
+        <tr>
+          <th>Data/hora</th>
+          <th>Etiqueta (EPC)</th>
+          <th>Código</th>
+          <th>Patrimônio</th>
+          <th>Tipo</th>
+          <th>Marca</th>
+          <th>Modelo</th>
+          <th>Nº série</th>
+          <th>Operador</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="l : ${leituras}">
+          <td class="nowrap" th:text="${#temporals.format(l.dataHora, 'dd/MM/yyyy HH:mm:ss')}"></td>
+          <td class="mono" th:text="${l.tag}"></td>
+          <td class="principal" th:text="${l.codigoInterno}"></td>
+          <td th:text="${l.patrimonio}"></td>
+          <td th:text="${l.tipo}"></td>
+          <td th:text="${l.marca}"></td>
+          <td th:text="${l.modelo}"></td>
+          <td th:text="${l.numeroSerie}"></td>
+          <td th:text="${l.operador != null} ? ${l.operador} : '—'"></td>
+        </tr>
+        </tbody>
+      </table>
+
+      <div class="vazio" th:if="${#lists.isEmpty(leituras)}">
+        <svg class="ic"><use href="/img/icones.svg#sinal"/></svg>
+        <strong>Nenhuma leitura encontrada</strong>
+        Ajuste os filtros ou escolha outro dia.
+      </div>
+    </div>
+
+    <!-- Paginação: os links já levam os filtros aplicados -->
+    <nav class="card-footer paginacao" th:if="${totalPaginas > 1}" aria-label="Páginas">
+      <a th:if="${linkAnterior != null}" th:href="@{${linkAnterior}}" class="btn btn-secondary btn-sm" rel="prev">
+        <svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Anterior
+      </a>
+      <span class="muted" th:text="'Página ' + ${paginaAtual} + ' de ' + ${totalPaginas}">Página 1 de 1</span>
+      <a th:if="${linkProxima != null}" th:href="@{${linkProxima}}" class="btn btn-secondary btn-sm" rel="next">
+        Próxima<svg class="ic" style="transform:scaleX(-1)"><use href="/img/icones.svg#voltar"/></svg>
+      </a>
+    </nav>
+  </div>
+
+</section>
+</html>

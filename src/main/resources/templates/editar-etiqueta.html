@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Editar etiqueta · Sistema RFID</title>
+
+<section class="page page-estreita">
+
+  <div class="page-header">
+    <div>
+      <h1>Editar etiqueta</h1>
+      <p class="subtitulo">A mudança fica registrada no histórico da etiqueta (quem, quando, valor antigo e novo)</p>
+    </div>
+    <a th:href="@{/admin/etiquetas/historico(tag=${cadastro.tag})}" class="btn btn-ghost">
+      <svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Histórico
+    </a>
+  </div>
+
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <form class="card" th:action="@{/admin/etiquetas/{id}/editar(id=${etiquetaId})}" th:object="${cadastro}" method="post">
+    <div class="card-body">
+      <div class="form-grid">
+
+        <div class="field span-2">
+          <label for="tag">Etiqueta RFID (EPC)</label>
+          <input type="text" id="tag" th:value="*{tag}" class="mono" readonly>
+          <span class="field-dica">O EPC é a própria etiqueta e não muda. Para trocar a etiqueta física, exclua e cadastre a nova.</span>
+        </div>
+
+        <div class="field">
+          <label for="codigoInterno">Código interno <span class="obrigatorio">*</span></label>
+          <input type="text" id="codigoInterno" th:field="*{codigoInterno}" required>
+        </div>
+
+        <div class="field">
+          <label for="patrimonio">Patrimônio</label>
+          <input type="text" id="patrimonio" th:field="*{patrimonio}">
+        </div>
+
+        <!-- Valores atuais (data-inicial): o script carrega marcas e modelos e já seleciona -->
+        <div class="field">
+          <label for="tipoSelect">Tipo de equipamento</label>
+          <select id="tipoSelect" name="tipoEquipamentoId">
+            <option value="">Selecione o tipo</option>
+            <option th:each="t : ${tipos}" th:value="${t.id}" th:text="${t.nome}"
+                    th:selected="${cadastro.tipoEquipamentoId != null and t.id == cadastro.tipoEquipamentoId}"></option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="marcaSelect">Marca</label>
+          <select id="marcaSelect" name="marcaId" disabled th:attr="data-inicial=${cadastro.marcaId}">
+            <option value="">Escolha o tipo primeiro</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="modeloSelect">Modelo</label>
+          <select id="modeloSelect" name="modeloId" disabled th:attr="data-inicial=${cadastro.modeloId}">
+            <option value="">Escolha a marca primeiro</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="numeroSerie">Nº de série</label>
+          <input type="text" id="numeroSerie" th:field="*{numeroSerie}">
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card-footer">
+      <a th:href="@{/admin/tags-cadastradas}" class="btn btn-ghost">Cancelar</a>
+      <button type="submit" class="btn btn-primary">Salvar alterações</button>
+    </div>
+  </form>
+
+  <script>
+    (function () {
+      const tipoSelect   = document.getElementById("tipoSelect");
+      const marcaSelect  = document.getElementById("marcaSelect");
+      const modeloSelect = document.getElementById("modeloSelect");
+
+      // Preenche um <select> com a lista vinda da API (texto via textContent, sem HTML)
+      function preencher(select, lista, vazio, nenhum, selecionado) {
+        select.innerHTML = "";
+        select.appendChild(new Option(lista.length ? vazio : nenhum, ""));
+        lista.forEach(item => select.appendChild(new Option(item.nome, item.id, false, String(item.id) === String(selecionado))));
+        select.disabled = lista.length === 0;
+      }
+
+      function carregar(url, select, vazio, nenhum, selecionado) {
+        select.disabled = true;
+        select.innerHTML = "";
+        select.appendChild(new Option("Carregando…", ""));
+        return fetch(url)
+          .then(res => { if (!res.ok) throw new Error(res.status); return res.json(); })
+          .then(lista => preencher(select, lista, vazio, nenhum, selecionado))
+          .catch(() => { select.innerHTML = ""; select.appendChild(new Option("Erro ao carregar", "")); });
+      }
+
+      function resetar(select, texto) {
+        select.innerHTML = "";
+        select.appendChild(new Option(texto, ""));
+        select.disabled = true;
+      }
+
+      function carregarMarcas(selecionada) {
+        return carregar("/api/catalogo/marcas?tipoId=" + tipoSelect.value, marcaSelect, "Selecione a marca", "Nenhuma marca para este tipo", selecionada);
+      }
+
+      function carregarModelos(selecionado) {
+        return carregar("/api/catalogo/modelos?marcaId=" + marcaSelect.value, modeloSelect, "Selecione o modelo", "Nenhum modelo para esta marca", selecionado);
+      }
+
+      tipoSelect.addEventListener("change", function () {
+        resetar(modeloSelect, "Escolha a marca primeiro");
+        if (!this.value) return resetar(marcaSelect, "Escolha o tipo primeiro");
+        carregarMarcas(null);
+      });
+
+      marcaSelect.addEventListener("change", function () {
+        if (!this.value) return resetar(modeloSelect, "Escolha a marca primeiro");
+        carregarModelos(null);
+      });
+
+      // Abre com o que está cadastrado hoje
+      if (tipoSelect.value) {
+        carregarMarcas(marcaSelect.dataset.inicial).then(function () {
+          if (marcaSelect.value) carregarModelos(modeloSelect.dataset.inicial);
+        });
+      }
+    })();
+  </script>
+
+</section>
+</html>

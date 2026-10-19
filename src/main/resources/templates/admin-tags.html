@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Etiquetas · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Etiquetas cadastradas</h1>
+      <p class="subtitulo">Equipamentos identificados por etiqueta RFID</p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/etiquetas/historico}" class="btn btn-ghost">
+        <svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Histórico
+      </a>
+      <a th:href="@{/admin/cadastro}" class="btn btn-primary" th:if="${@authService.temPermissao('RFID','CREATE')}">
+        <svg class="ic"><use href="/img/icones.svg#mais"/></svg>Cadastrar etiqueta
+      </a>
+    </div>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <div class="field busca">
+        <label for="filtroTabela" class="sr-only">Buscar</label>
+        <svg class="ic"><use href="/img/icones.svg#busca"/></svg>
+        <input id="filtroTabela" type="search" placeholder="Buscar por etiqueta, código, patrimônio, série, tipo, marca ou modelo">
+      </div>
+      <span class="muted nowrap" id="contagem" th:text="${#lists.size(tags)} + ' etiqueta(s)'"></span>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table" id="tabela">
+        <thead>
+        <tr>
+          <th>Etiqueta (EPC)</th>
+          <th>Código</th>
+          <th>Patrimônio</th>
+          <th>Tipo</th>
+          <th>Marca</th>
+          <th>Modelo</th>
+          <th>Nº série</th>
+          <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="t : ${tags}">
+          <td class="mono" th:text="${t.tag}"></td>
+          <td class="principal" th:text="${t.codigoInterno}"></td>
+          <td th:text="${t.patrimonio}"></td>
+          <td th:text="${t.tipoNome} ?: '—'"></td>
+          <td th:text="${t.marcaNome} ?: '—'"></td>
+          <td th:text="${t.modeloNome} ?: '—'"></td>
+          <td th:text="${t.numeroSerie}"></td>
+          <td class="acoes">
+            <a th:href="@{/admin/etiquetas/{id}/editar(id=${t.id})}" class="btn btn-ghost btn-sm"
+               th:if="${@authService.temPermissao('RFID','UPDATE')}" title="Editar">Editar</a>
+            <a th:href="@{/admin/etiquetas/historico(tag=${t.tag})}" class="btn btn-ghost btn-sm" title="Histórico da etiqueta">
+              <svg class="ic"><use href="/img/icones.svg#relogio"/></svg><span class="texto-btn">Histórico</span>
+            </a>
+            <form th:action="@{/admin/etiquetas/{id}/excluir(id=${t.id})}" method="post" style="display:inline"
+                  th:if="${@authService.temPermissao('RFID','DELETE')}"
+                  th:attr="data-tag=${t.tag}"
+                  onsubmit="return confirm('Excluir a etiqueta ' + this.dataset.tag + '? O histórico dela continua guardado.');">
+              <button type="submit" class="btn btn-ghost btn-sm" title="Excluir">
+                <svg class="ic"><use href="/img/icones.svg#lixeira"/></svg><span class="texto-btn">Excluir</span>
+              </button>
+            </form>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+
+      <div class="vazio" th:if="${#lists.isEmpty(tags)}">
+        <svg class="ic"><use href="/img/icones.svg#etiqueta"/></svg>
+        <strong>Nenhuma etiqueta cadastrada</strong>
+        As etiquetas aparecem aqui depois de cadastradas.
+      </div>
+      <div class="vazio" id="semResultado" hidden>
+        <svg class="ic"><use href="/img/icones.svg#busca"/></svg>
+        <strong>Nada encontrado</strong>
+        Nenhuma etiqueta corresponde à busca.
+      </div>
+    </div>
+  </div>
+
+  <script th:replace="~{layout/filtro-tabela :: script}"></script>
+
+</section>
+</html>

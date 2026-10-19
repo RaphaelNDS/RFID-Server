@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR"
+      th:fragment="layout(title, content)">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:replace="${title}">Sistema RFID</title>
+  <meta th:if="${_csrf != null}" name="_csrf" th:content="${_csrf.token}">
+  <meta th:if="${_csrf != null}" name="_csrf_header" th:content="${_csrf.headerName}">
+  <link rel="icon" th:href="@{/img/favicon.svg}" type="image/svg+xml">
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+
+  <!-- Aplica o tema antes de desenhar a página (evita "piscar" claro ao abrir no escuro) -->
+  <script th:replace="~{layout/tema :: tema}"></script>
+
+  <script>
+    // Envia o token CSRF automaticamente em todo fetch que altera dados (POST/PUT/DELETE)
+    (function () {
+      const token  = document.querySelector('meta[name="_csrf"]')?.content;
+      const header = document.querySelector('meta[name="_csrf_header"]')?.content;
+      if (!token || !header) return;
+
+      const fetchOriginal = window.fetch;
+      window.fetch = function (url, opts = {}) {
+        const metodo = (opts.method || 'GET').toUpperCase();
+        if (!['GET', 'HEAD', 'OPTIONS'].includes(metodo)) {
+          const headers = new Headers(opts.headers || {});
+          headers.set(header, token);
+          opts = { ...opts, headers };
+        }
+        return fetchOriginal(url, opts);
+      };
+    })();
+  </script>
+  <script th:src="@{/js/app.js}" defer></script>
+</head>
+
+<body>
+
+<div th:replace="~{layout/header :: header}"></div>
+
+<main class="conteudo" id="conteudo">
+  <section th:replace="${content}"></section>
+</main>
+
+<div th:replace="~{layout/footer :: footer}"></div>
+
+</body>
+</html>

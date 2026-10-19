@@ -1,8 +1,12 @@
 package org.example.response
 
 data class TagViewAdmin(
+    val id: Long,
     val tag: String,
-    val modelo: String,
+    val codigoInterno: String,
+    val tipoNome: String?,
+    val marcaNome: String?,
+    val modeloNome: String?,
     val patrimonio: String,
     val numeroSerie: String
 )

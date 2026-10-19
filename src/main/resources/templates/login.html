@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar · Sistema RFID</title>
+  <link rel="icon" th:href="@{/img/favicon.svg}" type="image/svg+xml">
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+  <script th:replace="~{layout/tema :: tema}"></script>
+  <script th:src="@{/js/app.js}" defer></script>
+</head>
+
+<body>
+
+<button type="button" class="icon-btn auth-tema" onclick="alternarTema()" aria-label="Alternar tema claro/escuro">
+  <svg class="ic tema-claro-ic"><use href="/img/icones.svg#lua"/></svg>
+  <svg class="ic tema-escuro-ic"><use href="/img/icones.svg#sol"/></svg>
+</button>
+
+<main class="auth">
+  <div class="auth-card">
+
+    <div class="auth-marca">
+      <span class="brand-mark"><svg class="ic"><use href="/img/icones.svg#sinal"/></svg></span>
+      <div>
+        <h1>Sistema RFID</h1>
+        <p>Entre com seu email e senha</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <form th:action="@{/login}" method="post" class="card-body">
+
+        <div class="alert alert-erro" th:if="${param.error}" role="alert">
+          <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+          <span>Email ou senha incorretos.</span>
+        </div>
+
+        <div class="alert alert-aviso" th:if="${param.bloqueado}" role="alert">
+          <svg class="ic"><use href="/img/icones.svg#relogio"/></svg>
+          <span>Muitas tentativas sem sucesso. Aguarde
+            <strong th:text="${param.bloqueado[0]} + ' minuto(s)'">15 minutos</strong> e tente de novo.</span>
+        </div>
+
+        <div class="alert alert-ok" th:if="${param.logout}" role="status">
+          <svg class="ic"><use href="/img/icones.svg#ok"/></svg>
+          <span>Você saiu do sistema.</span>
+        </div>
+
+        <div class="alert alert-ok" th:if="${param.pedidoSenha}" role="status">
+          <svg class="ic"><use href="/img/icones.svg#ok"/></svg>
+          <span>Pedido enviado. Se o email estiver cadastrado, o administrador vai entregar a você uma
+            <strong>senha temporária</strong>. Ao entrar com ela, você cria a sua senha nova.</span>
+        </div>
+
+        <div class="field">
+          <label for="username">Email</label>
+          <input id="username" name="username" type="email" autocomplete="username"
+                 placeholder="usuario@empresa.com" required autofocus>
+        </div>
+
+        <div class="field">
+          <label for="password">Senha</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+        <a th:href="@{/esqueci-senha}" class="link-discreto">Esqueceu a senha?</a>
+      </form>
+    </div>
+
+  </div>
+</main>
+
+</body>
+</html>

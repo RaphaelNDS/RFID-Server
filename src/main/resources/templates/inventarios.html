@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Inventários · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Inventários</h1>
+      <p class="subtitulo">Inventários por local feitos pelos coletores Android</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <form method="get" class="toolbar">
+      <div class="field">
+        <label for="f-local">Local</label>
+        <select id="f-local" name="local">
+          <option value="">Todos os locais</option>
+          <option th:each="l : ${locais}" th:value="${l.id}" th:text="${l.nome}"
+                  th:selected="${l.id == localSelecionado}"></option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <svg class="ic"><use href="/img/icones.svg#busca"/></svg>Filtrar
+      </button>
+      <a th:href="@{/admin/inventarios}" class="btn btn-ghost">Limpar</a>
+    </form>
+
+    <div class="card-header">
+      <h2>Inventários <span class="contagem" th:text="'(' + ${#lists.size(inventarios)} + ')'"></span></h2>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table" th:unless="${#lists.isEmpty(inventarios)}">
+        <thead>
+        <tr>
+          <th>Início</th>
+          <th>Local</th>
+          <th>Coletor</th>
+          <th>Operador</th>
+          <th>Situação</th>
+          <th>Fim</th>
+          <th>Lidas</th>
+          <th>Cadastradas</th>
+          <th>Não cadastradas</th>
+          <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="i : ${inventarios}">
+          <td class="nowrap" th:text="${#temporals.format(i.iniciadoEm, 'dd/MM/yyyy HH:mm')}"></td>
+          <td class="principal" th:text="${i.local}"></td>
+          <td th:text="${i.dispositivo}"></td>
+          <td th:text="${i.operador != null} ? ${i.operador} : '—'"></td>
+          <td>
+            <span class="badge badge-online" th:if="${i.status.name() == 'ABERTO'}">Em andamento</span>
+            <span class="badge" th:unless="${i.status.name() == 'ABERTO'}">Finalizado</span>
+          </td>
+          <td class="nowrap" th:text="${i.finalizadoEm != null} ? ${#temporals.format(i.finalizadoEm, 'dd/MM/yyyy HH:mm')} : '—'"></td>
+          <td th:text="${i.totalLidas}"></td>
+          <td th:text="${i.cadastradas}"></td>
+          <td th:text="${i.naoCadastradas}"></td>
+          <td><a th:href="@{/admin/inventarios/{id}(id=${i.id})}" class="btn btn-ghost">Ver</a></td>
+        </tr>
+        </tbody>
+      </table>
+
+      <div class="vazio" th:if="${#lists.isEmpty(inventarios)}">
+        <svg class="ic"><use href="/img/icones.svg#pacote"/></svg>
+        <strong>Nenhum inventário encontrado</strong>
+        Os inventários aparecem aqui quando um coletor inicia um inventário num local.
+      </div>
+    </div>
+  </div>
+
+</section>
+</html>

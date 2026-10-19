@@ -1,23 +1,25 @@
 package org.example.repository
 
 import org.example.model.TagEntity
-import org.example.model.TagNaoCadastradaEntity
 import org.springframework.data.jpa.repository.JpaRepository
-import java.util.*
+import java.util.Optional
 
 interface TagRepository : JpaRepository<TagEntity, Long> {
 
     fun findByTagHash(tagHash: String): TagEntity?
 
-    fun findByTagReal(epc: String): Optional<TagEntity>
+    fun findByTagReal(tagReal: String): Optional<TagEntity>
 
-    fun existsByTagReal(tag: String): Boolean
-}
+    fun existsByTagReal(tagReal: String): Boolean
 
+    fun findByPatrimonio(patrimonio: String): Optional<TagEntity>
 
-interface TagNaoCadastradaRepository :
-    JpaRepository<TagNaoCadastradaEntity, Long> {
+    fun findAllByTagRealIn(tags: Collection<String>): List<TagEntity>
 
-    fun existsByTag(tag: String): Boolean
-    fun deleteByTag(tag: String)
+    // Quantas etiquetas usam cada item do catálogo (para impedir exclusão de item em uso)
+    fun countByTipoEquipamentoId(tipoId: Long): Long
+
+    fun countByMarcaId(marcaId: Long): Long
+
+    fun countByModeloId(modeloId: Long): Long
 }
