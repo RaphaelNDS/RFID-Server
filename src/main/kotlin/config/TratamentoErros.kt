@@ -35,6 +35,19 @@ object TradutorErros {
 
     private val log = LoggerFactory.getLogger(TratamentoErros::class.java)
 
+    /**
+     * Navegador fechou a conexão antes do fim da resposta (no SSE do dashboard, sempre que a tela é
+     * fechada ou recarregada: a falha só aparece na próxima escrita). Não é erro do servidor nem há
+     * para quem responder; os tratamentos abaixo encerram a requisição em silêncio. Se a exceção
+     * voltasse para o Spring, o Tomcat registraria um ERROR com stack trace a cada tela fechada.
+     */
+    fun clienteDesconectou(ex: Exception, request: HttpServletRequest): Boolean {
+        if (ex !is java.io.IOException) return false
+
+        log.debug("Cliente desconectou durante {} {}: {}", request.method, request.requestURI, ex.message)
+        return true
+    }
+
     fun traduzir(ex: Exception, request: HttpServletRequest, respostaJaEnviada: Boolean): ErroTratado {
 
         // Acesso negado e falta de login ficam com o Spring Security (403 / tela de login)
@@ -112,8 +125,11 @@ object TradutorErros {
 @RestControllerAdvice(annotations = [RestController::class])
 class TratamentoErrosApi {
 
+    // null = requisição encerrada sem corpo (cliente já desconectou)
     @ExceptionHandler(Exception::class)
-    fun tratar(ex: Exception, request: HttpServletRequest, response: HttpServletResponse): ResponseEntity<Map<String, Any?>> {
+    fun tratar(ex: Exception, request: HttpServletRequest, response: HttpServletResponse): ResponseEntity<Map<String, Any?>>? {
+        if (TradutorErros.clienteDesconectou(ex, request)) return null
+
         val erro = TradutorErros.traduzir(ex, request, response.isCommitted)
 
         return ResponseEntity.status(erro.status).body(
@@ -133,6 +149,9 @@ class TratamentoErros {
 
     @ExceptionHandler(Exception::class)
     fun tratar(ex: Exception, request: HttpServletRequest, response: HttpServletResponse): ModelAndView {
+        // ModelAndView vazio = requisição encerrada sem página (cliente já desconectou)
+        if (TradutorErros.clienteDesconectou(ex, request)) return ModelAndView()
+
         val erro = TradutorErros.traduzir(ex, request, response.isCommitted)
 
         return ModelAndView("error", erro.status).apply {
