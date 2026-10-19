@@ -1,13 +1,14 @@
 # Perfil usado pelos testes de integração (@ActiveProfiles("test")).
-# Banco em memória, isolado do arquivo ./data usado em produção.
+# PostgreSQL de verdade num contêiner temporário (Testcontainers sobe o contêiner na primeira conexão e o
+# derruba no fim; precisa do Docker ligado). Mesma versão do docker/docker-compose.yml de produção.
 spring:
   datasource:
-    url: jdbc:h2:mem:rfid-teste;DB_CLOSE_DELAY=-1
+    url: jdbc:tc:postgresql:16-alpine:///rfid-teste
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+    username: rfid
+    password: rfid
   jpa:
     show-sql: false
-  h2:
-    console:
-      enabled: false
 
 rfid:
   dispositivos:

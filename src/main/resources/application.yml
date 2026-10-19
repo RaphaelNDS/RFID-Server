@@ -4,14 +4,12 @@ server:
 
 spring:
   datasource:
-    # Banco em arquivo: os dados sobrevivem a reinícios do servidor.
-    # RFID_DB_PATH muda o local (padrão: pasta ./data a partir de onde o servidor é iniciado).
-    # WRITE_DELAY=0 grava cada commit no disco na hora (sem isso, uma queda perde o último ~1s de dados).
-    # DB_CLOSE_ON_EXIT=FALSE deixa o Spring fechar o banco no desligamento, na ordem certa.
-    # Com o servidor rodando o arquivo fica travado: para consultar, use /h2-console (ADMIN).
-    url: jdbc:h2:file:${RFID_DB_PATH:./data/rfid-db};WRITE_DELAY=0;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: ${RFID_DB_USER:sa}
+    # PostgreSQL no Docker (docker/docker-compose.yml). Porta 5433, e não a padrão 5432, para não disputar com
+    # outro PostgreSQL da máquina; o contêiner só aceita conexão da própria máquina.
+    # A senha fica fora do git: config/application.properties (spring.datasource.password) ou RFID_DB_PASSWORD,
+    # a mesma do docker/.env.
+    url: ${RFID_DB_URL:jdbc:postgresql://localhost:5433/rfid}
+    username: ${RFID_DB_USER:rfid}
     password: ${RFID_DB_PASSWORD:}
 
   # O schema é criado e evoluído pelo Flyway (src/main/resources/db/migration).
@@ -39,13 +37,6 @@ spring:
     # entidades direto em JSON (tipo -> marcas -> modelos). Para desligar, essas consultas precisam
     # carregar tudo antes (JOIN FETCH ou DTO).
     open-in-view: true
-
-  h2:
-    console:
-      # Console do H2 em /h2-console (só ADMIN e só da própria máquina). Se não usar, desligue (RFID_H2_CONSOLE=false).
-      enabled: ${RFID_H2_CONSOLE:true}
-      settings:
-        web-allow-others: false   # console do H2 só aceita acesso a partir da própria máquina
 
 
 rfid:
@@ -129,10 +120,10 @@ rfid:
     bloqueio-minutos: ${RFID_LOGIN_BLOQUEIO_MINUTOS:15}
 
   backup:
-    # Backup automático do banco H2 (comando BACKUP TO: gera um .zip sem parar o servidor).
-    # Restaurar: pare o servidor, extraia o .zip na pasta do banco (substituindo rfid-db.mv.db) e suba de novo.
+    # Backup automático do certificado HTTPS (.p12 e .senha). O banco tem backup próprio: contêiner rfid-backup
+    # do docker/docker-compose.yml. Restaurar: pare o servidor, extraia o .zip na pasta data e suba de novo.
     habilitado: ${RFID_BACKUP_HABILITADO:true}
-    # Vazio = pasta "backups" ao lado do arquivo do banco (ex.: ./data/backups).
+    # Vazio = ./data/backups.
     # Recomendado apontar para outro disco ou pasta de rede: backup no mesmo disco não protege contra falha do disco.
     pasta: ${RFID_BACKUP_PASTA:}
     # Horário no formato cron do Spring (segundo minuto hora dia mês dia-da-semana). Padrão: todo dia às 02:00.

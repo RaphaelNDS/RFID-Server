@@ -4,32 +4,28 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
-import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
-import java.io.File
-import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
-import javax.sql.DataSource
+import java.util.zip.ZipOutputStream
 
 /**
- * Backup automático do banco H2 em arquivo.
+ * Backup automático do certificado HTTPS do servidor (.p12 e a senha dele, .senha).
  *
- * Usa o comando BACKUP TO do H2, que gera um .zip consistente sem parar o servidor. No mesmo .zip vão o
- * certificado HTTPS (.p12) e a senha dele (.senha): sem eles, um servidor restaurado gera outro certificado e
- * todos os coletores precisam ser confirmados de novo.
- * Para restaurar: pare o servidor, extraia o .zip na pasta do banco (substituindo os arquivos) e suba de novo.
+ * O banco (PostgreSQL) tem backup próprio, feito pelo contêiner rfid-backup do docker/docker-compose.yml.
+ * O certificado fica fora do banco e precisa do seu: sem ele, um servidor restaurado gera outro certificado
+ * e todos os coletores precisam ser confirmados de novo.
+ * Para restaurar: pare o servidor, extraia o .zip na pasta data (substituindo os arquivos) e suba de novo.
  */
 @Service
 class BackupService(
-    dataSource: DataSource,
-    @Value("\${spring.datasource.url}") private val url: String,
     @Value("\${rfid.backup.habilitado:true}") private val habilitado: Boolean,
     @Value("\${rfid.backup.pasta:}") pastaConfigurada: String,
     @Value("\${rfid.backup.manter:14}") private val manter: Int,
@@ -37,20 +33,16 @@ class BackupService(
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
-    private val jdbc = JdbcTemplate(dataSource)
 
-    /** Pasta dos backups: a configurada, ou "backups" ao lado do arquivo do banco. */
-    val pasta: Path = pastaConfigurada.trim().ifEmpty { null }?.let { Path.of(it) }
-        ?: arquivoDoBanco()?.parentFile?.resolve("backups")?.toPath()
-        ?: Path.of("data", "backups")
+    /** Pasta dos backups: a configurada, ou data/backups (ao lado do certificado no caminho padrão). */
+    val pasta: Path = pastaConfigurada.trim().ifEmpty { null }?.let { Path.of(it) } ?: Path.of("data", "backups")
 
-    /** Só faz sentido para H2 em arquivo (banco em memória não tem o que guardar; outros bancos têm ferramentas próprias). */
-    val ativo: Boolean get() = habilitado && url.startsWith("jdbc:h2:file:")
+    /** Sem certificado em disco (HTTPS desligado) não há o que guardar. */
+    val ativo: Boolean get() = habilitado && certificado.arquivosParaBackup().isNotEmpty()
 
     fun motivoInativo(): String = when {
         !habilitado -> "desativado na configuração (rfid.backup.habilitado=false)"
-        url.startsWith("jdbc:h2:mem:") -> "banco em memória"
-        else -> "o backup automático só funciona com H2 em arquivo"
+        else -> "nenhum certificado HTTPS para guardar"
     }
 
     @Scheduled(cron = "\${rfid.backup.cron:0 0 2 * * *}")
@@ -63,19 +55,20 @@ class BackupService(
     @EventListener(ApplicationReadyEvent::class)
     fun verificarNaInicializacao() {
         if (!ativo) {
-            log.info("Backup automático do banco: inativo ({})", motivoInativo())
+            log.info("Backup automático do certificado HTTPS: inativo ({})", motivoInativo())
             return
         }
 
         val ultimo = ultimoBackup()
         log.info(
-            "Backup automático do banco: ativo, pasta {}, mantendo os últimos {} (último: {})",
+            "Backup automático do certificado HTTPS: ativo, pasta {}, mantendo os últimos {} (último: {}). " +
+                "O banco tem backup próprio (contêiner rfid-backup)",
             pasta.toAbsolutePath(), manter, ultimo?.let { "${it.fileName}, ${idade(it)}" } ?: "nenhum"
         )
 
         // Garante que exista pelo menos um backup recente logo depois de instalar/atualizar
         if (ultimo == null || Duration.between(dataDoArquivo(ultimo), LocalDateTime.now()).toHours() >= 24) {
-            log.info("Nenhum backup nas últimas 24 horas: fazendo um agora")
+            log.info("Nenhum backup do certificado nas últimas 24 horas: fazendo um agora")
             runCatching { fazerBackup("inicialização") }
         }
     }
@@ -85,22 +78,24 @@ class BackupService(
     fun fazerBackup(motivo: String): Path {
         check(ativo) { "Backup indisponível: ${motivoInativo()}" }
 
-        val inicio = System.currentTimeMillis()
-        val nome = "rfid-db-${LocalDateTime.now().format(FORMATO_NOME)}.zip"
+        val nome = "rfid-certificado-${LocalDateTime.now().format(FORMATO_NOME)}.zip"
         val destino = pasta.resolve(nome)
         val parcial = pasta.resolve("$nome.parcial")
+        val arquivos = certificado.arquivosParaBackup()
 
-        log.info("Iniciando backup do banco ({}): {}", motivo, destino.toAbsolutePath())
-
-        val doCertificado: List<String>
         try {
             Files.createDirectories(pasta)
             Files.deleteIfExists(parcial)
 
-            jdbc.execute("BACKUP TO '${parcial.toAbsolutePath().toString().replace("'", "''")}'")
-            doCertificado = adicionarCertificado(parcial)
-
-            validar(parcial, doCertificado)
+            // Na raiz do .zip: com o caminho padrão (./data), extrair na pasta data já põe tudo no lugar
+            ZipOutputStream(Files.newOutputStream(parcial)).use { zip ->
+                arquivos.forEach { arquivo ->
+                    zip.putNextEntry(ZipEntry(arquivo.name))
+                    Files.copy(arquivo.toPath(), zip)
+                    zip.closeEntry()
+                }
+            }
+            validar(parcial, arquivos.map { it.name })
 
             // Só vira um backup "de verdade" depois de pronto e validado.
             // Dois backups no mesmo segundo (ex.: duplo clique) têm o mesmo nome: o novo substitui o anterior.
@@ -108,16 +103,11 @@ class BackupService(
             Files.move(parcial, destino, StandardCopyOption.ATOMIC_MOVE)
         } catch (e: Exception) {
             runCatching { Files.deleteIfExists(parcial) }
-            log.error("Falha no backup do banco ({}): {}", motivo, e.message, e)
+            log.error("Falha no backup do certificado HTTPS ({}): {}", motivo, e.message, e)
             throw IllegalStateException("Falha ao fazer o backup: ${e.message}", e)
         }
 
-        log.info(
-            "Backup concluído: {} ({} KB em {} ms){}",
-            nome, Files.size(destino) / 1024, System.currentTimeMillis() - inicio,
-            if (doCertificado.isEmpty()) ", sem certificado HTTPS (nenhum arquivo encontrado)"
-            else ", com o certificado HTTPS (${doCertificado.joinToString()})"
-        )
+        log.info("Backup do certificado HTTPS concluído ({}): {} ({})", motivo, nome, arquivos.joinToString { it.name })
 
         removerAntigos()
         return destino
@@ -145,33 +135,16 @@ class BackupService(
 
         excedentes.forEach { Files.deleteIfExists(it) }
         log.info(
-            "{} backup(s) antigo(s) removido(s) para manter os últimos {}: {}",
+            "{} backup(s) antigo(s) do certificado removido(s) para manter os últimos {}: {}",
             excedentes.size, manter, excedentes.joinToString { it.fileName.toString() }
         )
     }
 
-    /**
-     * Copia o certificado HTTPS (.p12 e .senha) para dentro do .zip, na raiz, ao lado do banco: com o caminho
-     * padrão (./data), extrair o .zip na pasta do banco já põe tudo no lugar. Devolve os nomes copiados.
-     */
-    private fun adicionarCertificado(zip: Path): List<String> {
-        val arquivos = certificado.arquivosParaBackup()
-        if (arquivos.isEmpty()) return emptyList()
-
-        FileSystems.newFileSystem(zip).use { fs ->
-            arquivos.forEach { Files.copy(it.toPath(), fs.getPath(it.name), StandardCopyOption.REPLACE_EXISTING) }
-        }
-        return arquivos.map { it.name }
-    }
-
-    // Um backup que não abre como zip, vem vazio ou perdeu o certificado no caminho não serve para restaurar
-    private fun validar(arquivo: Path, doCertificado: List<String>) {
+    // Um backup que não abre como zip ou perdeu algum arquivo no caminho não serve para restaurar
+    private fun validar(arquivo: Path, nomes: List<String>) {
         ZipFile(arquivo.toFile()).use { zip ->
-            check(zip.entries().asSequence().any { it.name.endsWith(".mv.db") && it.size != 0L }) {
-                "o arquivo gerado não contém o banco"
-            }
-            doCertificado.forEach { nome ->
-                check(zip.getEntry(nome)?.let { it.size > 0 } == true) { "o arquivo gerado não contém o certificado ($nome)" }
+            nomes.forEach { nome ->
+                check(zip.getEntry(nome)?.let { it.size > 0 } == true) { "o arquivo gerado não contém $nome" }
             }
         }
     }
@@ -188,16 +161,9 @@ class BackupService(
         }
     }
 
-    private fun arquivoDoBanco(): File? {
-        if (!url.startsWith("jdbc:h2:file:")) return null
-        val caminho = url.removePrefix("jdbc:h2:file:").substringBefore(";")
-            .replaceFirst(Regex("^~"), System.getProperty("user.home").replace("\\", "/"))
-        return File(caminho).absoluteFile
-    }
-
     companion object {
         private val FORMATO_NOME = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss")
         private val FORMATO_TELA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
-        private val PADRAO_NOME = Regex("""^rfid-db-(\d{4}-\d{2}-\d{2}_\d{6})\.zip$""")
+        private val PADRAO_NOME = Regex("""^rfid-certificado-(\d{4}-\d{2}-\d{2}_\d{6})\.zip$""")
     }
 }

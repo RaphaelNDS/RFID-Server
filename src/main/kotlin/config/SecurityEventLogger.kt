@@ -3,8 +3,6 @@ package org.example.config
 import jakarta.servlet.http.HttpServletRequest
 import org.aopalliance.intercept.MethodInvocation
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.security.authentication.AnonymousAuthenticationToken
 import org.springframework.security.authentication.event.AbstractAuthenticationFailureEvent
@@ -14,9 +12,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetails
 import org.springframework.stereotype.Component
 
 @Component
-class SecurityEventLogger(
-    @Value("\${spring.h2.console.enabled:false}") private val h2ConsoleAtivo: Boolean
-) {
+class SecurityEventLogger {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -48,13 +44,6 @@ class SecurityEventLogger(
         }
 
         log.warn("Acesso negado para o usuário {} em {}", auth.name, recurso)
-    }
-
-    @EventListener(ApplicationReadyEvent::class)
-    fun avisarConsoleH2() {
-        if (h2ConsoleAtivo) {
-            log.warn("Console do H2 está ATIVO em /h2-console (restrito a ADMIN). Se não usar, desligue com RFID_H2_CONSOLE=false")
-        }
     }
 
     private fun ip(details: Any?): String =

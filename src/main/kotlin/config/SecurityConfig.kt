@@ -38,7 +38,6 @@ class SecurityConfig {
     // AntPathRequestMatcher foi depreciado no Spring Security 6.5; PathPatternRequestMatcher é o substituto
     private val caminhos = PathPatternRequestMatcher.withDefaults()
 
-    private val h2Console = caminhos.matcher("/h2-console/**")
 
     // Rotas antigas dos coletores, removidas: só respondem 410 explicando que o app precisa ser atualizado
     // (RotasAntigasColetorController). Como não fazem nada, ficam sem login e sem CSRF, para o app antigo
@@ -109,8 +108,6 @@ class SecurityConfig {
         http
             .csrf {
                 it.ignoringRequestMatchers(*rotasAntigasColetor)
-                // O console do H2 não envia token CSRF nos formulários dele
-                it.ignoringRequestMatchers(h2Console)
             }
 
             .authorizeHttpRequests {
@@ -129,7 +126,6 @@ class SecurityConfig {
                 ).permitAll()
                 it.requestMatchers(*rotasAntigasColetor).permitAll()
 
-                it.requestMatchers(h2Console).hasRole("ADMIN")
                 // Gestão de usuários fica só com o ADMIN: quem cria usuários poderia se dar qualquer permissão
                 it.requestMatchers("/admin/usuarios/**").hasRole("ADMIN")
                 // O resto de /admin é liberado por permissão (MODULO_ACAO) via @PreAuthorize em cada controller.
@@ -165,7 +161,7 @@ class SecurityConfig {
                 it.accessDeniedHandler(accessDeniedHandlerComLog())
             }
 
-        // sameOrigin em vez de disable: o console do H2 usa frames, mas outros sites não podem embutir o sistema
+        // Outros sites não podem embutir o sistema em frames (clickjacking)
         http.headers { headers ->
             headers.frameOptions { it.sameOrigin() }
         }

@@ -14,8 +14,8 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor
 import org.springframework.transaction.annotation.Transactional
 
 /**
- * Base dos testes de integração: aplicação completa (segurança, controllers, templates, banco H2 em memória
- * com as migrações do Flyway). Cada teste roda numa transação desfeita no final, então um não vê os dados do outro.
+ * Base dos testes de integração: aplicação completa (segurança, controllers, templates, PostgreSQL num
+ * contêiner temporário com as migrações do Flyway). Cada teste roda numa transação desfeita no final, então um não vê os dados do outro.
  */
 @SpringBootTest
 @AutoConfigureMockMvc

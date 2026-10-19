@@ -32,9 +32,11 @@ dependencies {
     implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity6")
 
     // JPA
+    // Banco: PostgreSQL (no Docker, ver docker/); o Flyway precisa do módulo do banco desde a versão 10
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
-    runtimeOnly("com.h2database:h2")
+    runtimeOnly("org.postgresql:postgresql")
     implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
 
     // HTTPS: gera o certificado próprio do servidor na primeira inicialização (CertificadoHttps)
     implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
@@ -55,6 +57,10 @@ dependencies {
     testImplementation("org.springframework.security:spring-security-test") // login simulado, CSRF no MockMvc
     testImplementation("io.projectreactor:reactor-test")                    // StepVerifier (SSE / Flux)
     testImplementation("io.mockk:mockk:1.13.13")                            // mocks idiomáticos em Kotlin
+    // Testes num PostgreSQL de verdade, num contêiner temporário (precisa do Docker ligado)
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.testcontainers:junit-jupiter")
 }
 
 tasks.test {
