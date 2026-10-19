@@ -1,0 +1,62 @@
+# Banco do servidor RFID: PostgreSQL + backup diário (ver README, "Banco de dados PostgreSQL no Docker").
+#
+# Uso (na pasta onde está este arquivo, com o .env preenchido a partir do .env.exemplo):
+#   docker compose up -d        sobe o banco e o backup (e eles voltam sozinhos quando o Docker iniciar)
+#   docker compose ps           situação dos dois contêineres
+#   docker compose logs backup  últimos backups
+#
+# O servidor (iniciar-servidor.bat) conecta em localhost:5433 com o usuário e a senha do .env.
+
+name: rfid
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rfid-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${RFID_DB_NOME:-rfid}
+      POSTGRES_USER: ${RFID_DB_USER:-rfid}
+      POSTGRES_PASSWORD: ${RFID_DB_PASSWORD:?Defina RFID_DB_PASSWORD no arquivo .env (copie do .env.exemplo)}
+      TZ: America/Sao_Paulo
+      PGTZ: America/Sao_Paulo
+    # Só a própria máquina conecta (127.0.0.1). 5433 para não disputar com outro PostgreSQL na 5432
+    ports:
+      - "127.0.0.1:${RFID_DB_PORTA:-5433}:5432"
+    # Volume do Docker (e não pasta do Windows): o PostgreSQL precisa das permissões de arquivo do Linux
+    volumes:
+      - rfid-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backup:
+    image: prodrigestivill/postgres-backup-local:16-alpine
+    container_name: rfid-backup
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${RFID_DB_NOME:-rfid}
+      POSTGRES_USER: ${RFID_DB_USER:-rfid}
+      POSTGRES_PASSWORD: ${RFID_DB_PASSWORD:?Defina RFID_DB_PASSWORD no arquivo .env (copie do .env.exemplo)}
+      # pg_dump todo dia às 02:00 (formato custom, restaura com pg_restore)
+      SCHEDULE: "0 2 * * *"
+      POSTGRES_EXTRA_OPTS: "--format=custom --compress=9"
+      BACKUP_SUFFIX: ".dump"
+      BACKUP_KEEP_DAYS: ${RFID_BACKUP_DIAS:-14}
+      BACKUP_KEEP_WEEKS: ${RFID_BACKUP_SEMANAS:-4}
+      BACKUP_KEEP_MONTHS: ${RFID_BACKUP_MESES:-6}
+      TZ: America/Sao_Paulo
+    # Pasta do Windows onde ficam os backups (daily/, weekly/, monthly/ e last/). Copie essa pasta para fora da
+    # máquina: backup no mesmo disco não protege contra falha do disco
+    volumes:
+      - ${RFID_BACKUP_PASTA:-./backups}:/backups
+
+volumes:
+  rfid-pgdata:
+    name: rfid-pgdata

@@ -1,6 +1,10 @@
 ### Dados locais do servidor (banco, certificado, backups e logs) ###
 /data/
 
+### Banco no Docker: senha (.env) e backups do PostgreSQL ficam fora do git ###
+docker/.env
+docker/backups/
+
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar

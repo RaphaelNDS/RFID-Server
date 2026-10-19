@@ -19,6 +19,8 @@ set "JAR=%~dp0servidor\rfid-server.jar"
 set "MEMORIA=-Xmx1g"
 rem Porta HTTPS conferida antes de iniciar (a mesma de rfid.https.porta no config, padrao 8443)
 set "PORTA=8443"
+rem Porta do banco PostgreSQL no Docker (a mesma do RFID_DB_PORTA no docker.env, padrao 5433)
+set "PORTA_BANCO=5433"
 
 cd /d "%~dp0"
 chcp 65001 >nul
@@ -42,6 +44,14 @@ netstat -ano | findstr /r /c:":%PORTA% .*LISTENING" >nul
 if not errorlevel 1 (
     echo [ERRO] A porta %PORTA% ja esta em uso: outro servidor RFID ^(ex.: o do IntelliJ^) esta rodando.
     echo        Pare o outro antes de iniciar este.
+    goto :fim_erro
+)
+
+rem O banco roda no Docker (dockerdocker-compose.yml): sem ele o servidor nao sobe
+netstat -ano | findstr /r /c:":%PORTA_BANCO% .*LISTENING" >nul
+if errorlevel 1 (
+    echo [ERRO] O banco de dados ^(PostgreSQL na porta %PORTA_BANCO%^) nao esta no ar.
+    echo        Abra o Docker Desktop e, na pasta do docker-compose.yml, rode: docker compose up -d
     goto :fim_erro
 )
 

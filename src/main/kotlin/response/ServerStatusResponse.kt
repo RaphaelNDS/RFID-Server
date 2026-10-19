@@ -8,7 +8,7 @@ data class ServerStatusResponse(
     val banco: String,
     /** Há quanto tempo o servidor está no ar, ex.: "2d 3h 15min" */
     val tempoOnline: String = "",
-    /** Último backup do banco, ex.: "13/10/2026 02:00 (há 9h)" */
+    /** Último backup do certificado HTTPS, ex.: "13/10/2026 02:00 (há 9h)" (o banco tem backup próprio) */
     val ultimoBackup: String = "",
     /** Impressão digital SHA-256 do certificado HTTPS (o responsável confere no coletor), ou o aviso de HTTPS desligado */
     val certificadoHttps: String = ""

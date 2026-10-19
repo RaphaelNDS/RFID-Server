@@ -7,7 +7,7 @@ Android e oferece as telas web de administração e relatórios.
 O app dos coletores fica em outro repositório: **RFID-SERVER-ANDROID** (pasta `RFIDServer`).
 
 ```
- Coletores Android  ──HTTPS 8443 (chave do coletor + login do operador)──►  RFID Server  ──►  Banco H2 (arquivo)
+ Coletores Android  ──HTTPS 8443 (chave do coletor + login do operador)──►  RFID Server  ──►  PostgreSQL (Docker)
  Navegador (equipe) ──HTTPS 8443 (login e senha)─────────────────────────►  (Spring Boot)      + backups diários
 ```
 
@@ -56,7 +56,7 @@ O app dos coletores fica em outro repositório: **RFID-SERVER-ANDROID** (pasta `
 
 ### Tecnologias
 
-Kotlin 2.1 · Spring Boot 3.5 (Web MVC, Security, Data JPA, Thymeleaf) · H2 em arquivo · Flyway ·
+Kotlin 2.1 · Spring Boot 3.5 (Web MVC, Security, Data JPA, Thymeleaf) · PostgreSQL 16 (Docker) · Flyway ·
 Chart.js 4.4.1 (servido localmente, funciona sem internet) · BouncyCastle (certificado HTTPS) · Java 17.
 
 ---
@@ -269,13 +269,14 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
 | **CSRF** | Ativo em todas as telas; a API dos coletores não usa cookie, então não precisa. |
 | **Sessões do coletor** | Token aleatório de 32 bytes; o banco guarda só o hash SHA-256. |
 | **Integridade** | Chaves estrangeiras impedem excluir tipo/marca/modelo usado por etiquetas. |
-| **Console do H2** | `/h2-console` só para ADMIN e só a partir da própria máquina. Se não usar, desligue com `RFID_H2_CONSOLE=false`. |
+| **Banco** | O PostgreSQL só aceita conexão da própria máquina (`127.0.0.1:5433`); a senha fica no `docker/.env` e no `config\application.properties`, fora do git. |
 
 ---
 
 ## Banco de dados, migrações e backup
 
-- **H2 em arquivo** em `./data/rfid-db.mv.db` (mude com `RFID_DB_PATH`). Cada gravação vai para o disco na hora.
+- **PostgreSQL 16 no Docker** (`docker/docker-compose.yml`): contêiner `rfid-postgres` na porta **5433** (só a
+  própria máquina conecta), dados no volume `rfid-pgdata`. Os contêineres voltam sozinhos quando o Docker inicia.
 - **Flyway** cria e evolui as tabelas; o Hibernate só confere (`ddl-auto: validate`). Toda mudança de tabela é
   uma nova migração:
 
@@ -291,34 +292,51 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
   | V8 | `db/migration/V8__erros_coletor.sql` | Erros do app enviados pelos coletores |
   | V9 | `db/migration/V9__historico_etiquetas.sql` | Histórico de cadastro, alteração e exclusão das etiquetas |
 
-- **Backup automático** todo dia às 02:00 em `./data/backups` (zip consistente, sem parar o servidor, com o certificado HTTPS junto: `rfid-https.p12` e `.senha`), mantendo
-  os 14 mais recentes. Ao subir, se não houver backup das últimas 24 h, faz um na hora. O ADMIN também pode
-  fazer pelo botão em `/status`.
+- **Backup do banco:** o contêiner `rfid-backup` roda o `pg_dump` todo dia às 02:00 e guarda em
+  `docker/backups` (ou na pasta de `RFID_BACKUP_PASTA` do `.env`), em `daily/`, `weekly/` e `monthly/`, mantendo
+  14 diários, 4 semanais e 6 mensais. Backup na hora: `docker exec rfid-backup /backup.sh`.
 
-  **Restaurar:** pare o servidor, extraia o `.zip` na pasta do banco (`./data`, substituindo os arquivos) e suba de
-  novo. Isso restaura o banco **e** o certificado: os coletores continuam reconhecendo o servidor sem novo
-  pareamento. Se o certificado fica em outro caminho (`RFID_HTTPS_KEYSTORE`), copie o `.p12` e o `.senha` para lá.
+  **Restaurar o banco** (apaga os dados atuais do banco): pare o servidor e rode, na pasta `docker`:
 
-  > Recomendado: aponte `RFID_BACKUP_PASTA` para **outro disco ou pasta de rede**. Como o backup contém a
-  > chave privada do certificado e a senha dela, essa pasta deve ser acessível só a quem administra o servidor.
-  > Senha informada em `RFID_HTTPS_SENHA` não vai para o backup: guarde-a à parte.
+  ```powershell
+  docker cp ./backups/last/rfid-latest.dump rfid-postgres:/tmp/rfid.dump
+  docker exec rfid-postgres pg_restore -U rfid -d rfid --clean --if-exists /tmp/rfid.dump
+  ```
+
+- **Backup do certificado HTTPS:** o servidor guarda `rfid-https.p12` e `.senha` todo dia às 02:00 em
+  `./data/backups` (`rfid-certificado-<data>.zip`), mantendo os 14 mais recentes. Ao subir, se não houver backup
+  das últimas 24 h, faz um na hora; o ADMIN também pode fazer pelo botão em `/status`. **Restaurar:** pare o
+  servidor e extraia o `.zip` em `./data`: os coletores continuam reconhecendo o servidor sem nova confirmação.
+
+  > Copie as duas pastas de backup para **outro disco ou pasta de rede**: backup no mesmo disco não protege contra
+  > falha do disco. O zip do certificado tem a chave privada e a senha dela, e o dump tem os dados: acesso só para
+  > quem administra o servidor. Senha informada em `RFID_HTTPS_SENHA` não vai para o backup: guarde-a à parte.
 
 ---
 
 ## Instalação e primeira execução
 
-Requisitos: **Java 17** (para rodar) e o Gradle wrapper do projeto (para compilar).
+Requisitos: **Java 17** (para rodar), **Docker Desktop** (para o banco) e o Gradle wrapper do projeto (para compilar).
 
-```bash
-./gradlew bootJar                      # gera build/libs/rfid-server-<versão>.jar
-java -jar build/libs/rfid-server-1.3.1.jar
-```
+1. **Banco:** copie `docker/.env.exemplo` para `docker/.env`, troque a senha e suba o banco e o backup:
+   ```powershell
+   cd docker
+   docker compose up -d
+   ```
+   No Docker Desktop, deixe ligado *Start Docker Desktop when you sign in*: assim o banco volta junto com o Windows.
+2. **Senha no servidor:** em `config\application.properties` (ou `RFID_DB_PASSWORD`), `spring.datasource.password=` com
+   a mesma senha do `.env`.
+3. **Servidor:**
+   ```bash
+   ./gradlew bootJar                      # gera build/libs/rfid-server-<versão>.jar
+   java -jar build/libs/rfid-server-1.3.1.jar
+   ```
 
 Na primeira execução o servidor:
 
-1. cria o banco em `./data` e aplica as migrações;
+1. cria as tabelas no PostgreSQL (migrações do Flyway);
 2. gera o certificado HTTPS em `./data/rfid-https.p12` (veja a impressão digital no log ou em `/status`);
-3. faz o primeiro backup.
+3. faz o primeiro backup do certificado.
 
 Depois:
 
@@ -339,8 +357,8 @@ Depois:
 5. Confira o fuso do Android do coletor (ex.: America/Sao_Paulo, data e hora automáticas): o app mostra os
    horários no fuso do aparelho, e um coletor em GMT mostra 3 horas a mais.
 
-> Execute o servidor sempre a partir da mesma pasta (o banco e o certificado ficam em `./data`, relativo a ela),
-> ou defina `RFID_DB_PATH` e `RFID_HTTPS_KEYSTORE` com caminhos absolutos.
+> Execute o servidor sempre a partir da mesma pasta (o certificado, os logs e os backups dele ficam em `./data`,
+> relativo a ela), ou defina `RFID_HTTPS_KEYSTORE` com caminho absoluto. O banco fica no PostgreSQL, fora dessa pasta.
 
 ### Cadastrar o certificado nos coletores
 
@@ -418,8 +436,8 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_APP_VERSOES_GUARDADAS` | `3` | Quantas versões mantêm o arquivo no disco |
 | `RFID_COLETORES_ERROS_POR_DIA` | `500` | Erros do app aceitos por coletor por dia (acima disso são descartados) |
 | `RFID_COLETORES_DIAS_ERROS` | `90` | Por quantos dias os erros dos coletores ficam guardados |
-| `RFID_DB_PATH` | `./data/rfid-db` | Arquivo do banco |
-| `RFID_DB_USER` / `RFID_DB_PASSWORD` | `sa` / *(vazio)* | Usuário do banco |
+| `RFID_DB_URL` | `jdbc:postgresql://localhost:5433/rfid` | Endereço do banco |
+| `RFID_DB_USER` / `RFID_DB_PASSWORD` | `rfid` / *(vazio)* | Usuário e senha do banco (a mesma do `docker/.env`) |
 | `RFID_HTTPS_HABILITADO` | `true` | Liga o HTTPS |
 | `RFID_HTTPS_PORTA` | `8443` | Porta HTTPS (a HTTP é 8082) |
 | `RFID_HTTPS_KEYSTORE` | `./data/rfid-https.p12` | Certificado (use o da empresa, se houver) |
@@ -433,13 +451,12 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_LOGIN_MAX_TENTATIVAS` | `5` | Erros por email até bloquear |
 | `RFID_LOGIN_MAX_TENTATIVAS_IP` | `20` | Erros por origem até bloquear (IP na web, coletor + IP no coletor) |
 | `RFID_LOGIN_BLOQUEIO_MINUTOS` | `15` | Tempo de bloqueio |
-| `RFID_BACKUP_HABILITADO` | `true` | Backup automático |
-| `RFID_BACKUP_PASTA` | `./data/backups` | Pasta dos backups |
+| `RFID_BACKUP_HABILITADO` | `true` | Backup automático do certificado HTTPS (o do banco é no `docker/.env`) |
+| `RFID_BACKUP_PASTA` | `./data/backups` | Pasta dos backups do certificado |
 | `RFID_BACKUP_CRON` | `0 0 2 * * *` | Horário (todo dia às 02:00) |
-| `RFID_BACKUP_MANTER` | `14` | Quantos backups guardar |
+| `RFID_BACKUP_MANTER` | `14` | Quantos backups do certificado guardar |
 | `RFID_LOG_ARQUIVO` | `./data/logs/rfid-server.log` | Arquivo de log (vazio = só console); um por dia, guarda 30 dias |
 | `RFID_MOSTRAR_SQL` | `false` | Mostra no log cada SQL executado (só para investigar problema) |
-| `RFID_H2_CONSOLE` | `true` | Liga o console do H2 em `/h2-console` |
 
 ---
 
@@ -471,7 +488,7 @@ src/main/resources/
   static/        css/app.css, js/app.js, js/chart.umd.min.js, img/icones.svg
 src/test/kotlin/
   service/ config/ repository/ migracao/   testes unitários
-  integracao/                              testes com a aplicação completa (MockMvc + H2 em memória)
+  integracao/                              testes com a aplicação completa (MockMvc + PostgreSQL no Testcontainers)
   suporte/                                 base dos testes de integração e usuários simulados
 ```
 
@@ -481,8 +498,9 @@ Convenções:
 - Toda rota em `/admin/**` precisa de `@PreAuthorize` (a cadeia de segurança só exige login ali).
 - Erros de validação: lance `IllegalArgumentException` (vira 400 com a mensagem); conflito de estado:
   `IllegalStateException` (409). O tratamento global devolve JSON nas APIs e a página de erro nas telas.
-- Testes de integração estendem `suporte/IntegracaoBase` (perfil `test`, banco em memória, transação desfeita
-  a cada teste); use senhas que passam na política (ex.: `Kx9mPq2v`) e email/IP únicos em testes de login.
+- Os testes usam um **PostgreSQL de verdade num contêiner temporário** (Testcontainers): o Docker precisa estar
+  ligado para rodar `./gradlew test` (no GitHub Actions ele já está).
+- Testes de integração estendem `suporte/IntegracaoBase` (perfil `test`, transação desfeita a cada teste); use senhas que passam na política (ex.: `Kx9mPq2v`) e email/IP únicos em testes de login.
 
 ---
 
@@ -493,8 +511,8 @@ um arquivo por dia (ou a cada 10 MB), guardando os últimos 30 dias. Exemplos do
 
 ```
 Servidor RFID versão 1.3.1 no ar na porta 8443 (iniciado em 13/10/2026 11:17, pronto em 9,8 s)
-Banco de dados: H2 em arquivo: C:\rfid\data\rfid-db.mv.db (1532 KB)
-Backup concluído: rfid-db-2026-10-13_020000.zip (412 KB em 180 ms)
+Banco de dados: PostgreSQL (localhost:5433/rfid)
+Backup do certificado HTTPS concluído (agendado): rfid-certificado-2026-10-13_020000.zip (rfid-https.p12, rfid-https.p12.senha)
 Login de 'ana@empresa.com' bloqueado por 15 min após 5 tentativas com senha errada (última origem: coletor-01@10.0.0.5)
 Exclusão recusada: modelo 'Latitude 5440' (id 1) está em uso por 7 etiqueta(s) (tentativa de ana@empresa.com)
 Erro inesperado [código cde75674] em POST /api/catalogo/marca (usuário ana@empresa.com)
@@ -517,4 +535,6 @@ detalhe técnico completo.
 | Etiqueta lida não aparece nas leituras | Cadastro incompleto (falta tipo, marca, modelo, patrimônio ou nº de série). |
 | Servidor não sobe: certificado não abre | O `.p12` ou o `.senha` foi alterado/perdido. Restaure os dois do backup — não apague, senão um novo certificado é gerado e os coletores precisam ser pareados de novo. |
 | Não consigo excluir um modelo/marca/tipo | Ele está em uso por etiquetas (a mensagem diz quantas). |
-| Dados sumiram depois de mover o servidor de pasta | O banco é relativo à pasta de execução: use a pasta original ou defina `RFID_DB_PATH`. |
+| Servidor não sobe: `Connection to localhost:5433 refused` | O banco não está no ar: abra o Docker Desktop e, na pasta `docker`, `docker compose up -d` (`docker compose ps` mostra a situação). |
+| Servidor não sobe: `password authentication failed` | A senha em `config\application.properties` (ou `RFID_DB_PASSWORD`) é diferente da do `docker/.env`. |
+| Certificado sumiu depois de mover o servidor de pasta | O certificado é relativo à pasta de execução (`./data`): use a pasta original ou defina `RFID_HTTPS_KEYSTORE`. |

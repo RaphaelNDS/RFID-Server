@@ -34,6 +34,7 @@ jobs:
       - name: Preparar o Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # Os testes sobem um PostgreSQL temporário (Testcontainers): o runner ubuntu já vem com o Docker
       - name: Rodar os testes
         run: ./gradlew test --console=plain
 

@@ -7,6 +7,15 @@
 # Mudou algo aqui? Reinicie o servidor (tudo é lido só na inicialização).
 # Linhas com # na frente estão desligadas e valem o padrão mostrado; tire o # para mudar.
 
+# ---------- Banco (PostgreSQL no Docker, ver docker/docker-compose.yml) ----------
+
+# A mesma senha do RFID_DB_PASSWORD do docker/.env
+spring.datasource.password=troque-pela-senha-do-docker-env
+
+# Endereço e usuário (padrão: localhost:5433, banco e usuário rfid)
+#spring.datasource.url=jdbc:postgresql://localhost:5433/rfid
+#spring.datasource.username=rfid
+
 # ---------- Coletores ----------
 
 # Coletores que podem usar /api/android/**, no formato nome:chave separados por vírgula
@@ -34,11 +43,9 @@ rfid.dispositivos.cadastro=coletor-01
 # Leituras guardadas por quantos dias (0 = para sempre)
 #rfid.leituras.reter-dias=0
 
-# Backup automático (padrão: todo dia às 02:00 em ./data/backups, mantendo os 14 últimos)
+# Backup automático do certificado HTTPS (padrão: todo dia às 02:00 em ./data/backups, mantendo os 14 últimos).
+# O backup do banco é feito pelo contêiner rfid-backup (docker/.env)
 #rfid.backup.habilitado=true
 #rfid.backup.cron=0 0 2 * * *
 #rfid.backup.manter=14
 #rfid.backup.pasta=D:/Backups/RFID
-
-# Console do H2 em /h2-console (só ADMIN). Desligue se ninguém usa
-#spring.h2.console.enabled=true
