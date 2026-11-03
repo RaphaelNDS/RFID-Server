@@ -41,6 +41,16 @@ class OperadorAndroidController(
     }
 
     /**
+     * "Esqueci o PIN" das Configurações do coletor: 200 se for um ADMIN ativo com a senha certa (o coletor então
+     * apaga o PIN); 401/403/429 como no login. Não abre sessão nem mexe na do operador que está no coletor.
+     */
+    @PostMapping("/pin/liberar")
+    fun liberarPin(@RequestBody req: LoginRequest, auth: Authentication, request: HttpServletRequest): Map<String, String> {
+        sessoes.autorizarLiberacaoPin(req.email, req.senha, auth.name, request.remoteAddr)
+        return mapOf("status" to "ok", "mensagem" to "PIN liberado: crie um novo ao salvar as Configurações.")
+    }
+
+    /**
      * "Esqueceu a senha?" da tela de login do coletor: o pedido vai para o ADMIN, em Usuários (o mesmo da web).
      * A resposta é sempre a mesma, exista ou não o email, para a rota não revelar quem tem conta.
      */

@@ -1,6 +1,8 @@
 package org.example.service
 
+import org.example.model.Role
 import org.example.model.SessaoOperadorEntity
+import org.example.model.UsuarioEntity
 import org.example.repository.SessaoOperadorRepository
 import org.example.repository.UserRepository
 import org.example.security.UserPrincipal
@@ -71,31 +73,7 @@ class SessaoOperadorService(
     fun entrar(emailInformado: String, senha: String, dispositivo: String, ip: String?): SessaoCriada {
         val email = emailInformado.trim()
 
-        // Bloqueio por origem = coletor + IP, e não só o IP: vários coletores costumam sair para o servidor pelo
-        // mesmo IP (NAT do roteador), e um operador errando a senha travaria o login de todos. Para chegar aqui o
-        // coletor já apresentou a chave dele, então um atacante não troca de "coletor" à vontade. O bloqueio por
-        // email continua o mesmo da web (5 erros naquela conta, venham de onde vierem).
-        val origem = origemDoLogin(dispositivo, ip)
-
-        tentativas.tempoRestanteDeBloqueio(email, origem)?.let { restante ->
-            val minutos = (restante.toSeconds() + 59) / 60
-            log.warn("Login no coletor {} recusado sem conferir a senha: '{}' ou o coletor (IP {}) está bloqueado por mais {} min",
-                dispositivo, email.lowercase(), ip, minutos)
-            throw LoginRecusadoException(429, "Muitas tentativas sem sucesso. Aguarde $minutos minuto(s) e tente de novo.", restante.toSeconds().coerceAtLeast(1))
-        }
-
-        val usuario = usuarios.findByEmail(email)
-        if (usuario == null || !senhas.matches(senha, usuario.senha)) {
-            tentativas.registrarFalha(email, origem)
-            log.warn("Login no coletor {} recusado: email ou senha incorretos para '{}' (IP {})", dispositivo, email.lowercase(), ip)
-            throw LoginRecusadoException(401, MENSAGEM_CREDENCIAIS)
-        }
-
-        // Conferido depois da senha, como na web: quem não sabe a senha não descobre que o usuário existe
-        if (!usuario.ativo) {
-            log.warn("Login no coletor {} recusado: o usuário '{}' está desativado (IP {})", dispositivo, usuario.email, ip)
-            throw LoginRecusadoException(403, MENSAGEM_DESATIVADO)
-        }
+        val usuario = conferirCredenciais(email, senha, dispositivo, ip, "Login")
 
         // Senha temporária gerada pelo ADMIN ("Esqueceu a senha?"): como na web, só serve para criar a senha nova.
         // O coletor não tem tela de troca de senha, então a pessoa troca na web e depois entra aqui.
@@ -140,6 +118,55 @@ class SessaoOperadorService(
             podeCadastrar = podeCadastrar,
             senhaFraca = senhaFraca
         )
+    }
+
+    /**
+     * "Esqueci o PIN" das Configurações do coletor: um ADMIN confirma com email e senha e o coletor apaga o PIN.
+     * Não cria sessão: um login aqui encerraria a sessão do operador que está usando o coletor (e as leituras
+     * guardadas com ela seriam recusadas). Mesmas proteções do login: bloqueio por tentativas, senha errada conta.
+     */
+    @Transactional
+    fun autorizarLiberacaoPin(emailInformado: String, senha: String, dispositivo: String, ip: String?) {
+        val email = emailInformado.trim()
+        val usuario = conferirCredenciais(email, senha, dispositivo, ip, "Pedido de liberação do PIN")
+
+        if (usuario.role != Role.ADMIN) {
+            log.warn("Liberação do PIN no coletor {} recusada: '{}' não é administrador (IP {})", dispositivo, usuario.email, ip)
+            throw LoginRecusadoException(403, MENSAGEM_SO_ADMIN_PIN)
+        }
+
+        tentativas.registrarSucesso(email)
+        log.warn("PIN das Configurações do coletor {} liberado pelo administrador {} (IP {})", dispositivo, usuario.email, ip)
+    }
+
+    /** Bloqueio por tentativas, email e senha e usuário ativo: o mesmo para o login e para liberar o PIN. */
+    private fun conferirCredenciais(email: String, senha: String, dispositivo: String, ip: String?, acao: String): UsuarioEntity {
+        // Bloqueio por origem = coletor + IP, e não só o IP: vários coletores costumam sair para o servidor pelo
+        // mesmo IP (NAT do roteador), e um operador errando a senha travaria o login de todos. Para chegar aqui o
+        // coletor já apresentou a chave dele, então um atacante não troca de "coletor" à vontade. O bloqueio por
+        // email continua o mesmo da web (5 erros naquela conta, venham de onde vierem).
+        val origem = origemDoLogin(dispositivo, ip)
+
+        tentativas.tempoRestanteDeBloqueio(email, origem)?.let { restante ->
+            val minutos = (restante.toSeconds() + 59) / 60
+            log.warn("{} no coletor {} recusado sem conferir a senha: '{}' ou o coletor (IP {}) está bloqueado por mais {} min", acao,
+                dispositivo, email.lowercase(), ip, minutos)
+            throw LoginRecusadoException(429, "Muitas tentativas sem sucesso. Aguarde $minutos minuto(s) e tente de novo.", restante.toSeconds().coerceAtLeast(1))
+        }
+
+        val usuario = usuarios.findByEmail(email)
+        if (usuario == null || !senhas.matches(senha, usuario.senha)) {
+            tentativas.registrarFalha(email, origem)
+            log.warn("{} no coletor {} recusado: email ou senha incorretos para '{}' (IP {})", acao, dispositivo, email.lowercase(), ip)
+            throw LoginRecusadoException(401, MENSAGEM_CREDENCIAIS)
+        }
+
+        // Conferido depois da senha, como na web: quem não sabe a senha não descobre que o usuário existe
+        if (!usuario.ativo) {
+            log.warn("{} no coletor {} recusado: o usuário '{}' está desativado (IP {})", acao, dispositivo, usuario.email, ip)
+            throw LoginRecusadoException(403, MENSAGEM_DESATIVADO)
+        }
+        return usuario
     }
 
     @Transactional
@@ -235,6 +262,7 @@ class SessaoOperadorService(
         const val MENSAGEM_SENHA_TEMPORARIA =
             "Você está com uma senha temporária: entre pela web, crie sua senha nova e depois entre no coletor com ela."
         const val MENSAGEM_DESATIVADO = "Seu usuário foi desativado. Fale com o administrador."
+        const val MENSAGEM_SO_ADMIN_PIN = "Só um administrador pode liberar o PIN das Configurações do coletor."
 
         /** Diferença aceita entre o relógio do coletor e o do servidor. */
         val TOLERANCIA: Duration = Duration.ofMinutes(5)
