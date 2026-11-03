@@ -1,5 +1,9 @@
 package org.example.service
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -16,6 +20,7 @@ import org.example.request.SetupAdminRequest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.slf4j.LoggerFactory
 import org.springframework.security.crypto.password.PasswordEncoder
 import java.util.Optional
 
@@ -346,8 +351,19 @@ class UsuarioServiceTest {
             usuarioExistente().role = Role.ADMIN
             every { repo.countByRoleAndAtivoTrue(Role.ADMIN) } returns 2
 
-            assertThatThrownBy { service.editar(7, "Ana", Role.GESTOR, null, null, quemEdita = 7) }
-                .hasMessage("Você não pode tirar o próprio acesso de administrador")
+            val logger = LoggerFactory.getLogger(UsuarioService::class.java) as Logger
+            val avisos = ListAppender<ILoggingEvent>().also { it.start(); logger.addAppender(it) }
+            try {
+                assertThatThrownBy { service.editar(7, "Ana", Role.GESTOR, null, null, quemEdita = 7) }
+                    .hasMessage("Você não pode tirar o próprio acesso de administrador")
+            } finally {
+                logger.detachAppender(avisos)
+            }
+
+            // A recusa fica no log do servidor (antes só aparecia na tela)
+            assertThat(avisos.list.filter { it.level == Level.WARN }.map { it.formattedMessage })
+                .containsExactly("Edição de ana@x.com recusada: o administrador tentou tirar o próprio acesso de ADMIN (perfil pedido: GESTOR)")
+            verify(exactly = 0) { repo.save(any<UsuarioEntity>()) }
         }
     }
 
