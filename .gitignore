@@ -54,3 +54,6 @@ bin/
 data/
 *.mv.db
 *.trace.db
+
+### WinSW (baixado à parte, ver README "Serviço do Windows") ###
+scripts/windows/servico/*.exe

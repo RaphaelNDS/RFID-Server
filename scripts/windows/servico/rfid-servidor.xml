@@ -1,0 +1,37 @@
+<!--
+  Serviço do Windows do servidor RFID (WinSW 2.x).
+
+  Fica em RFID_Servidor\servico\ junto com o rfid-servidor.exe (o WinSW-x64.exe renomeado).
+  Instalar/remover: instalar-servico.bat e remover-servico.bat (como administrador). Ver README,
+  "Serviço do Windows".
+
+  - Roda o mesmo java.exe do iniciar-servidor.bat (o liberado no Firewall), na pasta RFID_Servidor
+    (usa .\data e .\config\application.properties).
+  - Para parar, o WinSW manda Ctrl+C para o java (o servidor fecha o banco antes de sair).
+  - Se o servidor cair ou não conseguir subir (ex.: Docker/banco ainda não está no ar logo depois de ligar
+    o computador), o Windows tenta de novo a cada 30 segundos.
+-->
+<service>
+  <id>rfid-servidor</id>
+  <name>Servidor RFID</name>
+  <description>Servidor RFID (coletores e telas web na porta 8443). Banco PostgreSQL no Docker (rfid-postgres).</description>
+
+  <executable>C:\Users\Dev\.jdks\ms-17.0.20\bin\java.exe</executable>
+  <arguments>-Xmx1g -Dfile.encoding=UTF-8 -jar "%BASE%\..\servidor\rfid-server.jar"</arguments>
+  <workingdirectory>%BASE%\..</workingdirectory>
+
+  <startmode>Automatic</startmode>
+  <delayedAutoStart>true</delayedAutoStart>
+
+  <onfailure action="restart" delay="30 sec"/>
+  <resetfailure>1 hour</resetfailure>
+
+  <stoptimeout>60 sec</stoptimeout>
+
+  <!-- Saída do console do java (o log completo do servidor continua em data\logs\rfid-server.log) -->
+  <logpath>%BASE%\logs</logpath>
+  <log mode="roll-by-size">
+    <sizeThreshold>10240</sizeThreshold>
+    <keepFiles>5</keepFiles>
+  </log>
+</service>

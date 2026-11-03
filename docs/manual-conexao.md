@@ -88,8 +88,8 @@ rfid.dispositivos.cadastro=coletor-01
 4. Na primeira vez, o **Firewall do Windows** pergunta se libera o Java: **permita em redes privadas**. Sem isso os
    coletores não conectam (o navegador no próprio servidor funciona, o que engana).
 
-Para o servidor subir sozinho ao ligar o computador, registre o `.bat` como serviço do Windows com o parâmetro
-`/servico` (NSSM ou WinSW). Veja "Rodar no Windows fora do IntelliJ" no [README](../README.md#rodar-no-windows-fora-do-intellij).
+Para o servidor subir sozinho ao ligar o computador (e não cair ao fechar a janela), instale-o como serviço do
+Windows com o `instalar-servico.bat`. Veja "Serviço do Windows" no [README](../README.md#serviço-do-windows).
 
 ---
 
