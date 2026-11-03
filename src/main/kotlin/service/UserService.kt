@@ -136,6 +136,7 @@ class UsuarioService(
             throw IllegalStateException("Este é o último administrador ativo: o sistema ficaria sem ninguém para administrar")
         }
         if (id == quemEdita && role != Role.ADMIN) {
+            log.warn("Edição de {} recusada: o administrador tentou tirar o próprio acesso de ADMIN (perfil pedido: {})", usuario.email, role)
             throw IllegalStateException("Você não pode tirar o próprio acesso de administrador")
         }
 
