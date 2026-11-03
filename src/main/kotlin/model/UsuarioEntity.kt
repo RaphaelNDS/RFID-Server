@@ -30,5 +30,8 @@ class UsuarioEntity(
 
     /** Entrou com senha temporária gerada pelo ADMIN: precisa trocá-la antes de usar o sistema. */
     @Column(name = "trocar_senha")
-    var trocarSenha: Boolean = false
+    var trocarSenha: Boolean = false,
+
+    /** Desativado pelo ADMIN: não entra mais (web e coletor), mas o histórico dele continua. */
+    var ativo: Boolean = true
 )

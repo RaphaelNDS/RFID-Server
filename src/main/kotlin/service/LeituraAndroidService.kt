@@ -3,6 +3,7 @@ package org.example.service
 import org.example.model.LeituraAndroidEntity
 import org.example.repository.*
 import org.slf4j.LoggerFactory
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import java.time.Duration
 import java.time.LocalDateTime
@@ -73,7 +74,14 @@ class LeituraAndroidService(
             operador = operador
         )
 
-        leituraRepo.save(leitura)
+        // A conferência acima não pega duas requisições ao mesmo tempo (o coletor reenvia o lote quando a resposta
+        // demora): o índice único (tag, data_hora) da V10 recusa a segunda gravação, e ela conta como repetida
+        try {
+            leituraRepo.saveAndFlush(leitura)
+        } catch (e: DataIntegrityViolationException) {
+            log.debug("Leitura repetida recusada pelo banco: tag {} lida em {} (envio simultâneo)", tagReal, dataHora)
+            return ResultadoLeitura.REPETIDA
+        }
 
         log.debug("Leitura registrada: tag {} (patrimônio {}, operador {})", tagReal, tag.patrimonio, operador ?: "—")
 

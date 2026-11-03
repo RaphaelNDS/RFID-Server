@@ -48,7 +48,7 @@ class PerfilController(
     ): String {
 
         return try {
-            usuarioService.alterarSenha(usuario.id, senhaAtual, novaSenha, confirmarSenha)
+            usuarioService.alterarSenha(usuario.id, senhaAtual, novaSenha, confirmarSenha, session.id)
             // Senha temporária ou fraca substituída: o sistema volta a ficar liberado nesta sessão
             session.removeAttribute(TrocaSenhaObrigatoriaFilter.ATRIBUTO_SESSAO)
             session.removeAttribute(TrocaSenhaObrigatoriaFilter.ATRIBUTO_MOTIVO)

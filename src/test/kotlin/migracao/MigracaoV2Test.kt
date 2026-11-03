@@ -75,7 +75,27 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("9") // V9 = histórico do cadastro de etiquetas
+        assertThat(resultado.targetSchemaVersion).isEqualTo("11") // V11 = usuário ativo/desativado
+    }
+
+    @Test
+    fun `V10 apaga as leituras repetidas e o banco passa a recusar a mesma leitura duas vezes`() {
+        flyway("9").migrate()
+        sql(
+            "insert into leituras_android (tag, data_hora) values ('E1', '2026-10-19 10:00:00')",
+            "insert into leituras_android (tag, data_hora) values ('E1', '2026-10-19 10:00:00')",
+            "insert into leituras_android (tag, data_hora) values ('E1', '2026-10-19 10:05:00')"
+        )
+
+        flyway().migrate()
+
+        val restantes = conectar().use { c ->
+            c.createStatement().executeQuery("select count(*) from leituras_android where tag = 'E1'").use { rs -> rs.next(); rs.getInt(1) }
+        }
+        assertThat(restantes).isEqualTo(2) // a repetida das 10:00 saiu; a das 10:05 é outra leitura
+        assertThatThrownBy { sql("insert into leituras_android (tag, data_hora) values ('E1', '2026-10-19 10:00:00')") }
+            .isInstanceOf(SQLException::class.java)
+            .satisfies({ assertThat(it.message!!.lowercase()).contains("uk_leituras_android_tag_data_hora") })
     }
 
     companion object {

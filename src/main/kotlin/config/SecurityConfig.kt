@@ -18,6 +18,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.core.session.SessionRegistry
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.access.AccessDeniedHandler
@@ -103,7 +104,12 @@ class SecurityConfig {
     }
 
     @Bean
-    fun filterChain(http: HttpSecurity, tentativasLogin: TentativasLoginService, politicaSenha: PoliticaSenha): SecurityFilterChain {
+    fun filterChain(
+        http: HttpSecurity,
+        tentativasLogin: TentativasLoginService,
+        politicaSenha: PoliticaSenha,
+        sessoesWeb: SessionRegistry
+    ): SecurityFilterChain {
 
         http
             .csrf {
@@ -159,6 +165,12 @@ class SecurityConfig {
 
             .exceptionHandling {
                 it.accessDeniedHandler(accessDeniedHandlerComLog())
+            }
+
+            // Guarda as sessões abertas para derrubar as de um usuário na hora (desativado ou senha trocada:
+            // SessoesUsuarioService). Sem limite de sessões por usuário; a derrubada leva ao login com aviso
+            .sessionManagement {
+                it.maximumSessions(-1).sessionRegistry(sessoesWeb).expiredUrl("/login?encerrada")
             }
 
         // Outros sites não podem embutir o sistema em frames (clickjacking)

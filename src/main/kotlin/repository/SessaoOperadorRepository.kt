@@ -19,4 +19,12 @@ interface SessaoOperadorRepository : JpaRepository<SessaoOperadorEntity, String>
            where s.dispositivo = :dispositivo and s.encerradaEm is null and s.expiraEm > :agora"""
     )
     fun encerrarAbertas(dispositivo: String, agora: LocalDateTime): Int
+
+    /** Encerra as sessões abertas do usuário em todos os coletores (desativado ou senha trocada). Devolve quantas. */
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(
+        """update SessaoOperadorEntity s set s.encerradaEm = :agora
+           where s.usuarioId = :usuarioId and s.encerradaEm is null and s.expiraEm > :agora"""
+    )
+    fun encerrarAbertasDoUsuario(usuarioId: Long, agora: LocalDateTime): Int
 }

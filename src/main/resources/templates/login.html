@@ -47,6 +47,11 @@
           <span>Você saiu do sistema.</span>
         </div>
 
+        <div class="alert alert-aviso" th:if="${param.encerrada}" role="alert">
+          <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+          <span>Sua sessão foi encerrada: o usuário foi desativado ou a senha foi trocada. Entre de novo ou fale com o administrador.</span>
+        </div>
+
         <div class="alert alert-ok" th:if="${param.pedidoSenha}" role="status">
           <svg class="ic"><use href="/img/icones.svg#ok"/></svg>
           <span>Pedido enviado. Se o email estiver cadastrado, o administrador vai entregar a você uma

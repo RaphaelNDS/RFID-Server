@@ -47,7 +47,9 @@ class OperadorFilter(
             // Atualização do app: consultada na tela de login, antes de haver operador
             "/api/android/atualizacao", "/api/android/atualizacao/apk",
             // Erros do app: o travamento pode ter acontecido sem ninguém logado (ex.: na tela de login)
-            "/api/android/erros"
+            "/api/android/erros",
+            // "Esqueci o PIN" das Configurações: o ADMIN se identifica por email e senha, sem abrir sessão
+            "/api/android/pin/liberar"
         )
     }
 

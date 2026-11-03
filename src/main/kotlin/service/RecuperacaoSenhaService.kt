@@ -29,7 +29,8 @@ class RecuperacaoSenhaService(
     private val encoder: PasswordEncoder,
     private val politicaSenha: PoliticaSenha,
     private val tentativasLogin: TentativasLoginService,
-    private val relogio: Clock
+    private val relogio: Clock,
+    private val sessoes: SessoesUsuarioService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -87,6 +88,8 @@ class RecuperacaoSenhaService(
         repo.save(usuario)
 
         val desbloqueado = tentativasLogin.desbloquear(usuario.email)
+        // Senha nova gerada pelo ADMIN: quem estava logado com a senha antiga perde o acesso (web e coletores)
+        sessoes.encerrar(usuario.id!!, "senha temporária gerada pelo ADMIN")
 
         log.warn("Senha temporária gerada para {} por {}{}{}. No próximo login a pessoa precisa criar uma senha nova",
             usuario.email, quemFez(),
