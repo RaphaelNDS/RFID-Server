@@ -300,7 +300,8 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
   | V10 | `db/migration/V10__leitura_unica.sql` | A mesma leitura (etiqueta + hora no coletor) só é gravada uma vez, mesmo com reenvio simultâneo |
   | V11 | `db/migration/V11__usuario_ativo.sql` | Usuário ativo/desativado |
 
-- **Backup do banco:** o contêiner `rfid-backup` roda o `pg_dump` todo dia às 02:00 e guarda em
+- **Backup do banco:** o contêiner `rfid-backup` roda o `pg_dump` ao subir e depois de 6 em 6 horas enquanto está no
+  ar (horário fixo de madrugada não serve: com o computador desligado o backup nunca roda) e guarda em
   `docker/backups` (ou na pasta de `RFID_BACKUP_PASTA` do `.env`), em `daily/`, `weekly/` e `monthly/`, mantendo
   14 diários, 4 semanais e 6 mensais. Backup na hora: `docker exec rfid-backup /backup.sh`.
 
@@ -431,9 +432,32 @@ RFID_Servidor\
 **Versão nova do servidor:** pare com Ctrl+C, troque `servidor\rfid-server.jar` e inicie de novo. Os dados e o
 certificado ficam em `data\` e não mudam.
 
-**Serviço do Windows (iniciar sozinho ao ligar o computador):** registre o `.bat` com o parâmetro `/servico` (não
-espera tecla ao terminar) numa ferramenta como NSSM ou WinSW, com a pasta do servidor como pasta de trabalho.
-Confira na ferramenta que ela para o serviço com Ctrl+C (a NSSM faz isso por padrão), para o banco ser fechado.
+#### Serviço do Windows
+
+Com o servidor instalado como serviço ("Servidor RFID"), ele sobe sozinho ao ligar o computador, não depende de
+uma janela aberta e volta sozinho se cair (nova tentativa a cada 30 s, o que também cobre o Docker ainda subindo
+logo depois de ligar o computador). Usa o [WinSW](https://github.com/winsw/winsw) 2.12.0.
+
+1. Crie a pasta `RFID_Servidor\servico\` e copie para ela os arquivos de `scripts\windows\servico\`
+   (`rfid-servidor.xml`, `instalar-servico.bat` e `remover-servico.bat`).
+2. Baixe o `WinSW-x64.exe` em <https://github.com/winsw/winsw/releases/tag/v2.12.0> e salve nessa pasta com o
+   nome `rfid-servidor.exe` (o nome tem de ser igual ao do `.xml`). Ele não vai para o git.
+3. No `rfid-servidor.xml`, confira o caminho do Java (`executable`): o mesmo `java.exe` do `iniciar-servidor.bat`,
+   liberado no Firewall.
+4. Pare o servidor aberto pelo `.bat` (Ctrl+C na janela dele).
+5. Clique com o botão direito no `instalar-servico.bat` > **Executar como administrador**.
+
+Depois disso, **não use mais o `iniciar-servidor.bat`** (ele recusa iniciar com a porta 8443 em uso). Parar e
+iniciar: `services.msc` > "Servidor RFID", ou, como administrador, `rfid-servidor.exe stop` / `start` na pasta
+`servico`. O serviço para o servidor com Ctrl+C (o banco é fechado antes de sair). O log continua em
+`data\logs\rfid-server.log`; a saída do console fica em `servico\logs`.
+
+**Versão nova do servidor com o serviço:** pare o serviço, troque `servidor\rfid-server.jar` e inicie de novo.
+
+**Voltar para o `.bat`:** botão direito no `remover-servico.bat` > **Executar como administrador**.
+
+> O banco roda no Docker Desktop, que só sobe depois que alguém entra no Windows. Até lá o serviço fica tentando
+> de novo a cada 30 s e o servidor entra no ar sozinho assim que o banco estiver pronto.
 
 > Já tinha um banco do servidor rodando pelo IntelliJ? Ele fica em `data\` dentro da pasta de trabalho da
 > configuração de execução do IntelliJ.

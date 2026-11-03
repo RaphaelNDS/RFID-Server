@@ -44,8 +44,11 @@ services:
       POSTGRES_DB: ${RFID_DB_NOME:-rfid}
       POSTGRES_USER: ${RFID_DB_USER:-rfid}
       POSTGRES_PASSWORD: ${RFID_DB_PASSWORD:?Defina RFID_DB_PASSWORD no arquivo .env (copie do .env.exemplo)}
-      # pg_dump todo dia às 02:00 (formato custom, restaura com pg_restore)
-      SCHEDULE: "0 2 * * *"
+      # pg_dump ao subir o contêiner e depois de 6 em 6 horas enquanto ele estiver no ar (formato custom,
+      # restaura com pg_restore). Não usar horário fixo de madrugada: o computador costuma estar desligado
+      # e o backup nunca roda (aconteceu com o "0 2 * * *" entre 19/10 e 03/11/2026)
+      BACKUP_ON_START: "TRUE"
+      SCHEDULE: "@every 6h"
       POSTGRES_EXTRA_OPTS: "--format=custom --compress=9"
       BACKUP_SUFFIX: ".dump"
       BACKUP_KEEP_DAYS: ${RFID_BACKUP_DIAS:-14}

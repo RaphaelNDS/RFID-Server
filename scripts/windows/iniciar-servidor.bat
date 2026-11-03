@@ -7,8 +7,9 @@ rem  - Pasta de trabalho = pasta deste .bat (RFID_Servidor): usa .\data (banco, 
 rem    logs, backups) e .\config\application.properties (chaves dos coletores e opcoes).
 rem  - Roda em primeiro plano: a janela fica aberta enquanto o servidor estiver no ar.
 rem    Para parar: Ctrl+C nesta janela (o servidor fecha o banco antes de sair).
-rem  - Para virar servico do Windows depois (NSSM, WinSW...): use este .bat com o parametro
-rem    /servico (nao espera tecla ao terminar). Ex.: iniciar-servidor.bat /servico
+rem  - Servico do Windows (inicia sozinho ao ligar o computador): pasta servico\ com o
+rem    instalar-servico.bat (WinSW). Com o servico instalado, nao use este .bat. Ver README.
+rem    O parametro /servico (nao espera tecla ao terminar) fica para outras ferramentas de servico.
 rem  - Versao nova do servidor: pare o servidor, troque servidor\rfid-server.jar e inicie de novo.
 rem ============================================================================================
 
@@ -42,8 +43,8 @@ if not exist "config\application.properties" (
 rem Ja tem servidor nesta porta (ex.: o do IntelliJ)? Dois ao mesmo tempo disputariam a porta e o banco
 netstat -ano | findstr /r /c:":%PORTA% .*LISTENING" >nul
 if not errorlevel 1 (
-    echo [ERRO] A porta %PORTA% ja esta em uso: outro servidor RFID ^(ex.: o do IntelliJ^) esta rodando.
-    echo        Pare o outro antes de iniciar este.
+    echo [ERRO] A porta %PORTA% ja esta em uso: outro servidor RFID ^(o servico "Servidor RFID" ou o IntelliJ^) esta rodando.
+    echo        Com o servico instalado, use services.msc em vez deste .bat. Senao, pare o outro antes.
     goto :fim_erro
 )
 
