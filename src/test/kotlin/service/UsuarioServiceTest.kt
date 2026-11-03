@@ -347,6 +347,24 @@ class UsuarioServiceTest {
         }
 
         @Test
+        fun `nome em branco e recusado e fica no log`() {
+            usuarioExistente()
+            val logger = LoggerFactory.getLogger(UsuarioService::class.java) as Logger
+            val avisos = ListAppender<ILoggingEvent>().also { it.start(); logger.addAppender(it) }
+            try {
+                assertThatThrownBy { service.editar(7, "   ", Role.USER, null, null, quemEdita = 1) }
+                    .isInstanceOf(IllegalArgumentException::class.java)
+                    .hasMessage("Informe o nome")
+            } finally {
+                logger.detachAppender(avisos)
+            }
+
+            assertThat(avisos.list.filter { it.level == Level.WARN }.map { it.formattedMessage })
+                .containsExactly("Edição de ana@x.com recusada: o nome veio em branco")
+            verify(exactly = 0) { repo.save(any<UsuarioEntity>()) }
+        }
+
+        @Test
         fun `ninguem tira o proprio acesso de administrador`() {
             usuarioExistente().role = Role.ADMIN
             every { repo.countByRoleAndAtivoTrue(Role.ADMIN) } returns 2

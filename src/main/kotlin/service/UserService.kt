@@ -129,7 +129,10 @@ class UsuarioService(
     @Transactional
     fun editar(id: Long, nome: String, role: Role, telas: List<String>?, acoes: List<String>?, quemEdita: Long) {
         val usuario = buscarPorId(id)
-        require(nome.isNotBlank()) { "Informe o nome" }
+        if (nome.isBlank()) {
+            log.warn("Edição de {} recusada: o nome veio em branco", usuario.email)
+            throw IllegalArgumentException("Informe o nome")
+        }
 
         if (usuario.role == Role.ADMIN && role != Role.ADMIN && usuario.ativo && repo.countByRoleAndAtivoTrue(Role.ADMIN) <= 1) {
             log.warn("Edição de {} recusada: é o último administrador ativo", usuario.email)
