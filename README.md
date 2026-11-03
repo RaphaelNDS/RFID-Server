@@ -6,6 +6,11 @@ Android e oferece as telas web de administração e relatórios.
 
 O app dos coletores fica em outro repositório: **RFID-SERVER-ANDROID** (pasta `RFIDServer`).
 
+**Manuais:** [como instalar o servidor e conectar os coletores](docs/manual-conexao.md) ·
+[principais erros e como resolver](docs/erros-comuns.md). O jar do servidor fica nas
+[Releases do servidor](https://github.com/RaphaelNDS/RFID-Server/releases) e o APK nas
+[Releases do app](https://github.com/RaphaelNDS/RFID-SERVER-ANDROID/releases).
+
 ```
  Coletores Android  ──HTTPS 8443 (chave do coletor + login do operador)──►  RFID Server  ──►  PostgreSQL (Docker)
  Navegador (equipe) ──HTTPS 8443 (login e senha)─────────────────────────►  (Spring Boot)      + backups diários
