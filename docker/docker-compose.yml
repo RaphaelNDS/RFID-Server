@@ -39,6 +39,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # Espera o banco aceitar conexões antes de iniciar (até 5 min). O depends_on acima só vale no
+    # "docker compose up": quando o Docker Desktop sobe com o Windows, ele religa os dois contêineres ao mesmo
+    # tempo, e o backup ao subir falhava com "Connection refused" (aconteceu em 04/11/2026, deixando um .dump vazio)
+    command:
+      - bash
+      - -c
+      - >-
+        for i in $$(seq 1 60); do pg_isready -q -h "$$POSTGRES_HOST" -U "$$POSTGRES_USER" && break;
+        echo "Aguardando o banco ($$i/60)..."; sleep 5; done;
+        exec /init.sh
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_DB: ${RFID_DB_NOME:-rfid}

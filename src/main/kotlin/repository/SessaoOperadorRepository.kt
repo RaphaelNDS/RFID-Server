@@ -27,4 +27,9 @@ interface SessaoOperadorRepository : JpaRepository<SessaoOperadorEntity, String>
            where s.usuarioId = :usuarioId and s.encerradaEm is null and s.expiraEm > :agora"""
     )
     fun encerrarAbertasDoUsuario(usuarioId: Long, agora: LocalDateTime): Int
+
+    /** Limpeza: apaga as sessões que expiraram antes de [limite] (um DELETE só). Devolve quantas. */
+    @Modifying
+    @Query("delete from SessaoOperadorEntity s where s.expiraEm < :limite")
+    fun apagarExpiradasAntesDe(limite: LocalDateTime): Int
 }

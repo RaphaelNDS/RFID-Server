@@ -49,19 +49,22 @@ class BancoDadosConfig(
 // Separado do BancoDadosConfig de propósito: o Flyway roda antes do JPA,
 // então esta classe não pode depender de repositórios.
 @Configuration
-class MigracoesConfig {
+class MigracoesConfig(
+    @Value("\${rfid.banco.backup-antes-migracao:}") private val comandoBackup: String
+) {
 
     private val log = LoggerFactory.getLogger(MigracoesConfig::class.java)
 
     @Bean
-    fun flywayMigrationStrategy() = FlywayMigrationStrategy { flyway ->
+    fun flywayMigrationStrategy() = estrategia(BackupAntesMigracao(comandoBackup))
+
+    /** Separado do @Bean para o teste passar um backup próprio. */
+    fun estrategia(backup: BackupAntesMigracao) = FlywayMigrationStrategy { flyway ->
         val pendentes = flyway.info().pending()
+        val atual = flyway.info().current()
 
         if (pendentes.isEmpty()) {
-            log.info(
-                "Banco de dados em dia, nenhuma migração pendente (versão {})",
-                flyway.info().current()?.version ?: "-"
-            )
+            log.info("Banco de dados em dia, nenhuma migração pendente (versão {})", atual?.version ?: "-")
             return@FlywayMigrationStrategy
         }
 
@@ -69,6 +72,9 @@ class MigracoesConfig {
             "Aplicando {} migração(ões) no banco: {}",
             pendentes.size, pendentes.joinToString { "V${it.version} (${it.description})" }
         )
+
+        // Banco vazio (primeira instalação) não tem o que guardar. Falha no backup lança exceção e não migra
+        if (atual != null) backup.executar()
 
         try {
             val resultado = flyway.migrate()

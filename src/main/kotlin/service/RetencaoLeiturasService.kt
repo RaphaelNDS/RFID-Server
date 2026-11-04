@@ -12,7 +12,8 @@ import java.time.Clock
 import java.time.LocalDate
 
 /**
- * Retenção das leituras: apaga as leituras com mais de [reterDias] dias, todo dia de madrugada.
+ * Retenção das leituras: apaga as leituras com mais de [reterDias] dias, 10 min depois de o servidor subir e
+ * depois a cada 24 h.
  *
  * DESLIGADA por padrão (rfid.leituras.reter-dias = 0): apagar leituras muda os relatórios, então é decisão
  * do responsável. Inventários e cadastro de etiquetas ficam em outras tabelas e não são afetados.
@@ -47,16 +48,18 @@ class RetencaoLeiturasService(
     @EventListener(ApplicationReadyEvent::class)
     fun informarConfiguracao() {
         if (ativa) {
-            log.info("Retenção de leituras ativa: leituras com mais de {} dias são apagadas todo dia às 03:30", reterDias)
+            log.info("Retenção de leituras ativa: leituras com mais de {} dias são apagadas 10 min depois de o servidor subir e a cada 24 h", reterDias)
         } else {
             log.info("Retenção de leituras desligada: as leituras ficam guardadas para sempre (rfid.leituras.reter-dias=0)")
         }
     }
 
-    @Scheduled(cron = "\${rfid.leituras.retencao-cron:0 30 3 * * *}")
+    // 10 min depois de subir e depois a cada 24 h. Era às 03:30, mas com o computador desligado de madrugada
+    // nunca rodava (o mesmo que aconteceu com o backup das 02:00)
+    @Scheduled(initialDelayString = "PT10M", fixedDelayString = "PT24H")
     fun executarAgendada() {
         if (!ativa) return
-        // Falha aqui não pode derrubar nada: fica no log e tenta de novo amanhã
+        // Falha aqui não pode derrubar nada: fica no log e tenta de novo em 24 h
         runCatching { apagarAntigas() }
             .onFailure { log.error("Falha ao apagar leituras antigas (retenção de {} dias): {}", reterDias, it.message, it) }
     }

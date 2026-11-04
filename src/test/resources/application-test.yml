@@ -11,6 +11,9 @@ spring:
     show-sql: false
 
 rfid:
+  banco:
+    # O banco de teste nasce vazio (não faz backup), mas sem Docker de produção o comando nem existiria
+    backup-antes-migracao: ""
   dispositivos:
     # coletor-leitura existe para testar um coletor válido SEM permissão de cadastro
     chaves: coletor-teste:chave-de-teste-0123456789,coletor-leitura:chave-de-leitura-0123456789

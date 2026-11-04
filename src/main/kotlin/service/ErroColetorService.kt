@@ -159,14 +159,15 @@ class ErroColetorService(
     fun versoesComErro(coletor: String): List<String> =
         repo.findTop200ByColetorOrderByMomentoDesc(coletor).mapNotNull { it.versaoApp }.distinct()
 
-    // Retenção: todo dia às 04:15 (longe do backup das 02:00 e da retenção das leituras às 03:30)
-    @Scheduled(cron = "\${rfid.coletores.erros-retencao-cron:0 15 4 * * *}")
+    // Retenção: 10 min depois de o servidor subir e depois a cada 24 h. Era às 04:15, mas com o computador
+    // desligado de madrugada nunca rodava
+    @Scheduled(initialDelayString = "PT10M", fixedDelayString = "PT24H")
     @Transactional
     fun apagarAntigos() {
         runCatching {
             val apagados = repo.apagarRecebidosAntesDe(LocalDateTime.now(relogio).minusDays(diasRetencao))
             if (apagados > 0) log.info("Retenção de erros dos coletores: {} erro(s) com mais de {} dias apagado(s)", apagados, diasRetencao)
-        }.onFailure { log.error("Retenção de erros dos coletores falhou: tenta de novo amanhã", it) }
+        }.onFailure { log.error("Retenção de erros dos coletores falhou: tenta de novo em 24 h", it) }
     }
 
     companion object {
