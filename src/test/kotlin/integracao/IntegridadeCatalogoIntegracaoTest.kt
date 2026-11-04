@@ -92,7 +92,7 @@ class IntegridadeCatalogoIntegracaoTest : IntegracaoBase() {
 
     @Test
     fun `listagem mostra os nomes do catalogo`() {
-        val etiqueta = rfid.listarParaAdmin().single { it.tag == "E1" }
+        val etiqueta = rfid.listarParaAdmin(null, 0).content.single { it.tag == "E1" }
 
         assertThat(etiqueta.tipoNome).isEqualTo("Notebook")
         assertThat(etiqueta.marcaNome).isEqualTo("Dell")

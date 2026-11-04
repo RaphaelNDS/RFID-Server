@@ -54,24 +54,41 @@ class LeituraLoteService(
         val momentosInvalidos = validarMomentos(itens, token, dispositivo)
         var repetidas = 0
 
+        // Tudo o que o lote precisa consultar, carregado de uma vez (antes: cerca de 6 consultas por leitura)
+        val validas = itens.withIndex()
+            .filter { (indice, item) -> indice !in momentosInvalidos && tagAceita(item.tag.trim()) }
+            .map { it.value }
+        val epcs = validas.map { it.tag.trim() }.toSet()
+        val (cadastradas, nomes) = rfidService.carregarParaLote(epcs)
+        // Banco com comparação sem diferenciar maiúsculas: "abc" cadastrada também conta para "ABC" (como antes)
+        val cadastradasSemCaixa = cadastradas.keys.mapTo(HashSet()) { it.lowercase() }
+        val pendentes = rfidService.jaPendentes(epcs - cadastradas.keys).toMutableSet()
+        val gravadas = inicioDasLeituras(validas)
+            ?.let { leituraService.gravadasDesde(cadastradas.keys, it) } ?: mutableSetOf()
+
         val resultados = itens.mapIndexed { indice, item ->
             val tag = item.tag.trim()
 
             momentosInvalidos[indice]?.let { motivo ->
                 return@mapIndexed ResultadoItemLote(indice, tag, StatusItemLote.RECUSADA, mensagem = motivo)
             }
-            if (tag.isEmpty() || tag.length > TAMANHO_MAXIMO_TAG) {
+            if (!tagAceita(tag)) {
                 val motivo = if (tag.isEmpty()) "Informe a TAG RFID" else "TAG RFID com mais de $TAMANHO_MAXIMO_TAG caracteres"
                 return@mapIndexed ResultadoItemLote(indice, tag, StatusItemLote.RECUSADA, mensagem = motivo)
             }
 
             try {
-                val dados = rfidService.buscarPorTag(tag)
-                if (dados != null) {
-                    if (leituraService.salvarLeitura(tag, item.lidoEm, operador) == ResultadoLeitura.REPETIDA) repetidas++
-                    ResultadoItemLote(indice, tag, StatusItemLote.CADASTRADA, dados = dados)
+                val cadastrada = cadastradas[tag]
+                if (cadastrada != null) {
+                    val resultado = leituraService.salvarLeituraDoLote(cadastrada, nomes, item.lidoEm, operador, gravadas)
+                    if (resultado == ResultadoLeitura.REPETIDA) repetidas++
+                    ResultadoItemLote(indice, tag, StatusItemLote.CADASTRADA, dados = rfidService.resposta(cadastrada, nomes))
                 } else {
-                    rfidService.salvarNaoCadastrada(tag)
+                    // A mesma tag pode vir várias vezes no lote: só a primeira grava a pendência
+                    if (tag !in pendentes && tag.lowercase() !in cadastradasSemCaixa) {
+                        rfidService.registrarPendenteDoLote(tag)
+                        pendentes += tag
+                    }
                     ResultadoItemLote(indice, tag, StatusItemLote.NAO_CADASTRADA)
                 }
             } catch (e: IllegalArgumentException) {
@@ -107,6 +124,15 @@ class LeituraLoteService(
             dispositivo, invalidos.size, itens.size, invalidos.values.distinct().joinToString("; "))
         return invalidos
     }
+
+    private fun tagAceita(tag: String) = tag.isNotEmpty() && tag.length <= TAMANHO_MAXIMO_TAG
+
+    /**
+     * A hora mais antiga entre as leituras com hora informada (só elas são conferidas como reenvio), no fuso do
+     * servidor; null se nenhuma tem hora. Hora no futuro vira "agora" na gravação, que é depois disso, então serve.
+     */
+    private fun inicioDasLeituras(itens: List<ItemLote>): LocalDateTime? =
+        itens.mapNotNull { it.lidoEm?.atZoneSameInstant(ZoneId.systemDefault())?.toLocalDateTime() }.minOrNull()
 
     private fun motivoSeInvalido(token: String, dispositivo: String, momento: LocalDateTime): String? =
         try {
