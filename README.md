@@ -298,7 +298,7 @@ sessão trazem o mesmo `motivo`.
 | **HTTPS** | Porta 8443 com certificado próprio gerado na primeira execução (10 anos). A porta HTTP 8082 só redireciona as telas e recusa a API com 426. Os coletores fixam a **impressão digital** do certificado, mostrada em `/status`. |
 | **Configuração inicial** | `/setup` só funciona com o banco vazio; depois ninguém cria outro administrador por ali. |
 | **Senhas** | Mínimo 8 caracteres, letras e números, sem o nome/email, sem senhas comuns, até 72 bytes. Quem entra com senha antiga fora da regra só acessa a troca de senha até criar uma nova (na web; o coletor só avisa). Senhas guardadas com BCrypt. |
-| **Tentativas de login** | 5 erros no mesmo email (na web e no coletor somados) ou 20 na mesma origem em 15 min bloqueiam por 15 min. A origem é o IP na web e o **coletor + IP** no coletor: vários coletores atrás do mesmo IP (NAT) não se bloqueiam por causa de um operador errando a senha. Durante o bloqueio nem a senha certa entra. Email inexistente recebe a mesma resposta que senha errada. |
+| **Tentativas de login** | Em 15 min: 5 erros no mesmo email vindos da mesma origem bloqueiam aquele login só para essa origem (quem erra a senha do ADMIN de outra máquina não tranca o ADMIN); 20 erros no mesmo email somando as origens, ou 20 na mesma origem em qualquer conta, bloqueiam por 15 min. A origem é o IP na web e o **coletor + IP** no coletor: vários coletores atrás do mesmo IP (NAT) não se bloqueiam por causa de um operador errando a senha. Durante o bloqueio nem a senha certa entra. Email inexistente recebe a mesma resposta que senha errada. |
 | **Permissões** | Por módulo e ação, conferidas em cada rota (não só escondendo botões). |
 | **Usuário desativado** | Não entra na web nem no coletor, e as sessões abertas dele (web e coletores) caem na hora. Também caem as outras sessões quando a pessoa troca a própria senha ou o ADMIN gera uma senha temporária. O ADMIN não desativa a si mesmo nem o último ADMIN ativo. |
 | **CSRF** | Ativo em todas as telas; a API dos coletores não usa cookie, então não precisa. |
@@ -393,7 +393,7 @@ Requisitos: **Java 17** (para rodar), **Docker Desktop** (para o banco) e o Grad
 3. **Servidor:**
    ```bash
    ./gradlew bootJar                      # gera build/libs/rfid-server-<versão>.jar
-   java -jar build/libs/rfid-server-1.3.1.jar
+   java -jar build/libs/rfid-server-<versão>.jar
    ```
 
 Na primeira execução o servidor:
@@ -542,11 +542,12 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_BANCO_PASTA_BACKUPS` | `./docker/backups` | Pasta dos dumps do contêiner de backup (a mesma do `RFID_BACKUP_PASTA` do `docker\.env`), para a tela Status conferir |
 | `RFID_BANCO_BACKUP_ATRASADO_HORAS` | `12` | Horas sem backup do banco até a tela Status e o log avisarem |
 | `RFID_SENHA_TAMANHO_MINIMO` | `8` | Tamanho mínimo de senha |
-| `RFID_LOGIN_MAX_TENTATIVAS` | `5` | Erros por email até bloquear |
+| `RFID_LOGIN_MAX_TENTATIVAS` | `5` | Erros por email, da mesma origem, até bloquear aquele login só para essa origem |
+| `RFID_LOGIN_MAX_TENTATIVAS_EMAIL` | `20` | Erros por email somando todas as origens até bloquear para todas |
 | `RFID_LOGIN_MAX_TENTATIVAS_IP` | `20` | Erros por origem até bloquear (IP na web, coletor + IP no coletor) |
 | `RFID_LOGIN_BLOQUEIO_MINUTOS` | `15` | Tempo de bloqueio |
 | `RFID_BACKUP_HABILITADO` | `true` | Backup automático do certificado HTTPS (o do banco é no `docker/.env`) |
-| `RFID_BACKUP_PASTA` | `./data/backups` | Pasta dos backups do certificado |
+| `RFID_CERT_BACKUP_PASTA` | `./data/backups` | Pasta dos backups do certificado (`RFID_BACKUP_PASTA` é a dos dumps do banco, no `docker\.env`) |
 | `RFID_BACKUP_CRON` | `0 0 2 * * *` | Horário (todo dia às 02:00) |
 | `RFID_BACKUP_MANTER` | `14` | Quantos backups do certificado guardar |
 | `RFID_LOG_ARQUIVO` | `./data/logs/rfid-server.log` | Arquivo de log (vazio = só console); um por dia, guarda 30 dias |
@@ -604,7 +605,7 @@ Tudo em português. Sai no console e no arquivo `./data/logs/rfid-server.log` (m
 um arquivo por dia (ou a cada 10 MB), guardando os últimos 30 dias. Exemplos do que aparece:
 
 ```
-Servidor RFID versão 1.3.1 no ar na porta 8443 (iniciado em 13/10/2026 11:17, pronto em 9,8 s)
+Servidor RFID versão 1.4.0 no ar na porta 8443 (iniciado em 13/10/2026 11:17, pronto em 9,8 s)
 Banco de dados: PostgreSQL (localhost:5433/rfid)
 Backup do certificado HTTPS concluído (agendado): rfid-certificado-2026-10-13_020000.zip (rfid-https.p12, rfid-https.p12.senha)
 Login de 'ana@empresa.com' bloqueado por 15 min após 5 tentativas com senha errada (última origem: coletor-01@10.0.0.5)

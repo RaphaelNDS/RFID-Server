@@ -127,14 +127,15 @@ class OperadorColetorIntegracaoTest : IntegracaoBase() {
     }
 
     @Test
-    fun `bloqueio por email vale em todos os coletores`() {
+    fun `bloqueio por email num coletor nao tranca o operador nos outros`() {
         val email = "bloq-todos-${UUID.randomUUID()}@x.com"
         operadores.criarUsuario(email = email)
 
         repeat(5) { login(email, senha = "Errada123").andExpect(status().isUnauthorized) }
 
-        // A conta bloqueada no coletor-teste também não entra pelo coletor-leitura
-        login(email, chave = chaveLeitura).andExpect(status().isTooManyRequests)
+        // Bloqueada no coletor-teste, mas entra pelo coletor-leitura (cada coletor é uma origem)
+        login(email).andExpect(status().isTooManyRequests)
+        login(email, chave = chaveLeitura).andExpect(status().isOk)
     }
 
     @Test

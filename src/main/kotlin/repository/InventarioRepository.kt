@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
+import org.springframework.data.repository.query.Param
 import java.util.Optional
 
 interface LocalRepository : JpaRepository<LocalEntity, Long> {
@@ -40,6 +41,12 @@ interface InventarioItemRepository : JpaRepository<InventarioItemEntity, Long> {
 
     @Query("select i.tag from InventarioItemEntity i where i.inventarioId = :inventarioId")
     fun tagsDoInventario(inventarioId: String): List<String>
+
+    /** Envio de etiquetas: quais destas já estão no inventário (só as do envio, não todas as do inventário). */
+    @Query("select i.tag from InventarioItemEntity i where i.inventarioId = :inventarioId and i.tag in :tags")
+    fun tagsJaNoInventario(@Param("inventarioId") inventarioId: String, @Param("tags") tags: Collection<String>): List<String>
+
+    fun countByInventarioId(inventarioId: String): Long
 
     /** [inventarioId, total de itens, itens cadastrados] só dos inventários da página (antes somava todos). */
     @Query(

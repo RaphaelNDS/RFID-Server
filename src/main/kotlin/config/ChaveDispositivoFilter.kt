@@ -22,13 +22,28 @@ import java.security.MessageDigest
  * NÃO é um @Component de propósito: se fosse, o Spring Boot registraria o filtro para todas as
  * requisições. Ele é usado só na cadeia de segurança de /api/android (SecurityConfig).
  */
-class ChaveDispositivoFilter(chavesConfiguradas: String) : OncePerRequestFilter() {
+class ChaveDispositivoFilter(
+    chavesConfiguradas: String,
+    private val relogio: java.time.Clock = java.time.Clock.systemDefaultZone(),
+    /** Chaves erradas por IP, dentro de [JANELA_CHAVES_ERRADAS], até a recusa com 429. */
+    private val maximoChavesErradas: Int = MAXIMO_CHAVES_ERRADAS
+) : OncePerRequestFilter() {
 
     companion object {
         const val HEADER = "X-Chave-Dispositivo"
         const val ROLE = "DISPOSITIVO"
         private const val TAMANHO_MINIMO_CHAVE = 16
+
+        /** Chaves erradas por IP até a recusa com 429 (quem tenta adivinhar a chave de um coletor). */
+        const val MAXIMO_CHAVES_ERRADAS = 20
+        val JANELA_CHAVES_ERRADAS: java.time.Duration = java.time.Duration.ofMinutes(15)
+
+        /** Texto da chave de exemplo (application.properties.exemplo): copiada sem trocar, a chave é pública. */
+        private val CHAVE_DE_EXEMPLO = Regex("(?i)troque")
     }
+
+    /** IP -> horários das chaves erradas dentro da janela. */
+    private val errosPorIp = java.util.concurrent.ConcurrentHashMap<String, ArrayDeque<java.time.Instant>>()
 
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -47,6 +62,14 @@ class ChaveDispositivoFilter(chavesConfiguradas: String) : OncePerRequestFilter(
 
     override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, chain: FilterChain) {
         val chave = request.getHeader(HEADER)
+        val ip = request.remoteAddr ?: "?"
+
+        if (bloqueado(ip)) {
+            log.warn("Requisição de dispositivo recusada: IP {} errou a chave {} vezes em {} min ({} {})", ip, maximoChavesErradas,
+                JANELA_CHAVES_ERRADAS.toMinutes(), request.method, request.requestURI)
+            recusar(response, "Muitas tentativas com chave inválida. Aguarde alguns minutos.", HttpStatus.TOO_MANY_REQUESTS)
+            return
+        }
 
         if (chave.isNullOrBlank()) {
             log.warn("Requisição de dispositivo sem chave: {} {} (IP: {})", request.method, request.requestURI, request.remoteAddr)
@@ -58,6 +81,7 @@ class ChaveDispositivoFilter(chavesConfiguradas: String) : OncePerRequestFilter(
 
         if (nome == null) {
             log.warn("Requisição de dispositivo com chave inválida: {} {} (IP: {})", request.method, request.requestURI, request.remoteAddr)
+            registrarErro(ip)
             recusar(response, "Chave do dispositivo inválida")
             return
         }
@@ -84,11 +108,38 @@ class ChaveDispositivoFilter(chavesConfiguradas: String) : OncePerRequestFilter(
         return encontrado
     }
 
-    private fun recusar(response: HttpServletResponse, mensagem: String) {
-        response.status = HttpStatus.UNAUTHORIZED.value()
+    private fun bloqueado(ip: String): Boolean {
+        val erros = errosPorIp[ip] ?: return false
+        synchronized(erros) {
+            descartarAntigos(erros)
+            return erros.size >= maximoChavesErradas
+        }
+    }
+
+    private fun registrarErro(ip: String) {
+        // Memória limitada: com muitos IPs diferentes (varredura), começa de novo
+        if (errosPorIp.size > 10_000) errosPorIp.clear()
+        val erros = errosPorIp.computeIfAbsent(ip) { ArrayDeque() }
+        synchronized(erros) {
+            descartarAntigos(erros)
+            erros.addLast(relogio.instant())
+            if (erros.size == maximoChavesErradas) {
+                log.warn("IP {} bloqueado por até {} min na API dos coletores: {} chaves inválidas seguidas", ip,
+                    JANELA_CHAVES_ERRADAS.toMinutes(), maximoChavesErradas)
+            }
+        }
+    }
+
+    private fun descartarAntigos(erros: ArrayDeque<java.time.Instant>) {
+        val limite = relogio.instant().minus(JANELA_CHAVES_ERRADAS)
+        while (erros.firstOrNull()?.isBefore(limite) == true) erros.removeFirst()
+    }
+
+    private fun recusar(response: HttpServletResponse, mensagem: String, status: HttpStatus = HttpStatus.UNAUTHORIZED) {
+        response.status = status.value()
         response.contentType = MediaType.APPLICATION_JSON_VALUE
         response.characterEncoding = "UTF-8"
-        response.writer.write("""{"status":401,"mensagem":"$mensagem"}""")
+        response.writer.write("""{"status":${status.value()},"mensagem":"$mensagem"}""")
     }
 
     private fun lerChaves(config: String): Map<String, ByteArray> {
@@ -97,18 +148,24 @@ class ChaveDispositivoFilter(chavesConfiguradas: String) : OncePerRequestFilter(
         config.split(',')
             .map { it.trim() }
             .filter { it.isNotEmpty() }
-            .forEach { item ->
+            .forEachIndexed { posicao, item ->
                 val partes = item.split(':', limit = 2).map { it.trim() }
                 val nome = partes.getOrNull(0).orEmpty()
                 val chave = partes.getOrNull(1).orEmpty()
 
+                // Só a posição no log: uma entrada sem ":" pode ser a própria chave colada sem o nome
                 if (nome.isEmpty() || chave.isEmpty()) {
-                    log.warn("Entrada de chave de dispositivo ignorada: formato esperado nome:chave (recebido '{}')", nome.ifEmpty { "?" })
-                    return@forEach
+                    log.error("Entrada {} das chaves de dispositivo ignorada: formato esperado nome:chave", posicao + 1)
+                    return@forEachIndexed
                 }
 
+                if (CHAVE_DE_EXEMPLO.containsMatchIn(chave)) {
+                    log.error("Chave do dispositivo {} IGNORADA: é a do arquivo de exemplo (pública). Gere uma chave aleatória de 32 caracteres ou mais", nome)
+                    return@forEachIndexed
+                }
                 if (chave.length < TAMANHO_MINIMO_CHAVE) {
-                    log.warn("A chave do dispositivo {} tem menos de {} caracteres: use uma chave mais longa", nome, TAMANHO_MINIMO_CHAVE)
+                    log.error("Chave do dispositivo {} IGNORADA: tem menos de {} caracteres (fácil de adivinhar). Use 32 ou mais", nome, TAMANHO_MINIMO_CHAVE)
+                    return@forEachIndexed
                 }
 
                 if (resultado.put(nome, chave.toByteArray()) != null) {

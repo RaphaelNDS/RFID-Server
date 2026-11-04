@@ -103,4 +103,43 @@ class ChaveDispositivoFilterTest {
         assertThat(executar(filtro, "chave-antiga-0123456789").first.status).isEqualTo(401)
         assertThat(executar(filtro, "chave-nova-0123456789").first.status).isEqualTo(200)
     }
+
+    @Test
+    fun `chave do arquivo de exemplo e chave curta sao ignoradas`() {
+        val filtro = ChaveDispositivoFilter(
+            "coletor-01:troque-por-uma-chave-longa-de-16-ou-mais-caracteres, coletor-02:curta123, coletor-03:chave-boa-0123456789"
+        )
+
+        assertThat(executar(filtro, "troque-por-uma-chave-longa-de-16-ou-mais-caracteres").first.status).isEqualTo(401)
+        assertThat(executar(filtro, "curta123").first.status).isEqualTo(401)
+        assertThat(executar(filtro, "chave-boa-0123456789").second.request).isNotNull()
+    }
+
+    @Test
+    fun `vinte chaves erradas do mesmo IP bloqueiam aquele IP com 429`() {
+        val filtro = ChaveDispositivoFilter(chaves)
+
+        repeat(ChaveDispositivoFilter.MAXIMO_CHAVES_ERRADAS) { executar(filtro, "chute-$it-0123456789") }
+
+        // Bloqueado: nem a chave certa passa até a janela vencer (quem tenta adivinhar não consegue continuar)
+        val (response, chain) = executar(filtro, "chave-longa-numero-um")
+        assertThat(response.status).isEqualTo(429)
+        assertThat(chain.request).isNull()
+    }
+
+    @Test
+    fun `bloqueio por chave errada vence com o tempo`() {
+        val relogio = object : java.time.Clock() {
+            var agora: java.time.Instant = java.time.Instant.parse("2026-11-04T10:00:00Z")
+            override fun instant() = agora
+            override fun getZone(): java.time.ZoneId = java.time.ZoneOffset.UTC
+            override fun withZone(zone: java.time.ZoneId?) = this
+        }
+        val filtro = ChaveDispositivoFilter(chaves, relogio)
+        repeat(ChaveDispositivoFilter.MAXIMO_CHAVES_ERRADAS) { executar(filtro, "chute-$it-0123456789") }
+
+        relogio.agora = relogio.agora.plus(ChaveDispositivoFilter.JANELA_CHAVES_ERRADAS).plusSeconds(1)
+
+        assertThat(executar(filtro, "chave-longa-numero-um").second.request).isNotNull()
+    }
 }

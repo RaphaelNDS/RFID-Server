@@ -26,21 +26,21 @@ class TentativasLoginServiceTest {
     fun `quatro erros ainda nao bloqueiam`() {
         errar("ana@x.com", 4)
 
-        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", null)).isNull()
+        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", "10.0.0.1")).isNull()
     }
 
     @Test
-    fun `quinto erro bloqueia o email por 15 minutos`() {
+    fun `quinto erro bloqueia o email por 15 minutos naquela origem`() {
         errar("ana@x.com", 5)
 
-        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", null)).isEqualTo(Duration.ofMinutes(15))
+        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", "10.0.0.1")).isEqualTo(Duration.ofMinutes(15))
     }
 
     @Test
     fun `bloqueio nao depende de maiusculas nem espacos`() {
         errar("Ana@X.com ", 5)
 
-        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", null)).isNotNull()
+        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", "10.0.0.1")).isNotNull()
     }
 
     @Test
@@ -55,10 +55,10 @@ class TentativasLoginServiceTest {
         errar("ana@x.com", 5)
 
         relogio.avancar(14)
-        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", null)).isEqualTo(Duration.ofMinutes(1))
+        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", "10.0.0.1")).isEqualTo(Duration.ofMinutes(1))
 
         relogio.avancar(1)
-        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", null)).isNull()
+        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", "10.0.0.1")).isNull()
     }
 
     @Test
@@ -67,7 +67,7 @@ class TentativasLoginServiceTest {
         relogio.avancar(16)
         errar("ana@x.com", 1)
 
-        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", null)).isNull()
+        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", "10.0.0.1")).isNull()
     }
 
     @Test
@@ -76,7 +76,7 @@ class TentativasLoginServiceTest {
         service.registrarSucesso("ana@x.com")
         errar("ana@x.com", 4)
 
-        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", null)).isNull()
+        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", "10.0.0.1")).isNull()
     }
 
     @Test
@@ -85,10 +85,10 @@ class TentativasLoginServiceTest {
         relogio.avancar(15)
 
         errar("ana@x.com", 4)
-        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", null)).isNull()
+        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", "10.0.0.1")).isNull()
 
         errar("ana@x.com", 1)
-        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", null)).isNotNull()
+        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", "10.0.0.1")).isNotNull()
     }
 
     @Test
@@ -111,13 +111,51 @@ class TentativasLoginServiceTest {
     }
 
     @Test
-    fun `limpeza remove registros vencidos sem desbloquear quem ainda esta bloqueado`() {
-        errar("velho@x.com", 2, ip = "10.0.0.9")
+    fun `email bloqueado numa origem continua entrando das outras`() {
+        // Antes qualquer pessoa na rede trancava o ADMIN para fora errando a senha dele de outra máquina
+        errar("admin@x.com", 5, ip = "10.9.9.9")
+
+        assertThat(service.tempoRestanteDeBloqueio("admin@x.com", "10.9.9.9")).isEqualTo(Duration.ofMinutes(15))
+        assertThat(service.tempoRestanteDeBloqueio("admin@x.com", "10.0.0.5")).isNull()
+    }
+
+    @Test
+    fun `login certo zera os erros do email em todas as origens`() {
+        errar("ana@x.com", 4, ip = "10.0.0.1")
+        errar("ana@x.com", 4, ip = "10.0.0.2")
+        service.registrarSucesso("ana@x.com")
+        errar("ana@x.com", 1, ip = "10.0.0.1")
+        errar("ana@x.com", 1, ip = "10.0.0.2")
+
+        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", "10.0.0.1")).isNull()
+        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", "10.0.0.2")).isNull()
+    }
+
+    @Test
+    fun `erros vindos de varias maquinas bloqueiam o email para todas`() {
+        // 4 máquinas, 5 erros cada = 20 no total: adivinhação distribuída
+        (1..4).forEach { errar("admin@x.com", 5, ip = "10.7.0.$it") }
+
+        assertThat(service.tempoRestanteDeBloqueio("admin@x.com", "10.7.0.99")).isEqualTo(Duration.ofMinutes(15))
+    }
+
+    @Test
+    fun `desbloquear libera o email em todas as origens`() {
+        errar("ana@x.com", 5, ip = "10.0.0.1")
+        errar("ana@x.com", 5, ip = "10.0.0.2")
+
+        assertThat(service.desbloquear("ana@x.com")).isTrue()
+        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", "10.0.0.1")).isNull()
+        assertThat(service.tempoRestanteDeBloqueio("ana@x.com", "10.0.0.2")).isNull()
+    }
+
+    @Test
+    fun `limpeza remove registros vencidos sem desbloquear quem ainda esta bloqueado`() {        errar("velho@x.com", 2, ip = "10.0.0.9")
         errar("bloqueado@x.com", 5, ip = "10.0.0.8")
         relogio.avancar(10)
 
         service.limparExpirados()
 
-        assertThat(service.tempoRestanteDeBloqueio("bloqueado@x.com", null)).isEqualTo(Duration.ofMinutes(5))
+        assertThat(service.tempoRestanteDeBloqueio("bloqueado@x.com", "10.0.0.8")).isEqualTo(Duration.ofMinutes(5))
     }
 }

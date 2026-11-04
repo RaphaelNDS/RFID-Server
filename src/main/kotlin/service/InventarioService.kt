@@ -105,33 +105,33 @@ class InventarioService(
             log.info("Inventário {} já finalizado recebendo {} etiqueta(s) atrasada(s) do dispositivo {}", id, lidos.size, dispositivo)
         }
 
-        val jaRegistradas = itens.tagsDoInventario(id).toMutableSet()
-        var novos = 0
+        // Em bloco, como o lote de leituras: só as tags deste envio que já estão no inventário, e as etiquetas e o
+        // catálogo delas numa consulta cada (antes: todas as tags do inventário a cada envio e 4 consultas por item)
+        val doEnvio = lidos.distinctBy { it.tag }
+        val jaRegistradas = if (doEnvio.isEmpty()) emptySet() else itens.tagsJaNoInventario(id, doEnvio.map { it.tag }).toSet()
+        val novas = doEnvio.filter { it.tag !in jaRegistradas }
+        val (cadastradas, nomes) = rfidService.carregarParaLote(novas.map { it.tag })
 
-        for (lido in lidos.distinctBy { it.tag }) {
-            if (!jaRegistradas.add(lido.tag)) continue
-
-            val cadastro = rfidService.buscarPorTag(lido.tag)
-            itens.save(
-                InventarioItemEntity(
-                    inventarioId = id,
-                    tag = lido.tag,
-                    lidoEm = horaDoColetor(lido.lidoEm, "leitura da tag ${lido.tag} no inventário $id"),
-                    cadastrada = cadastro != null,
-                    codigoInterno = cadastro?.codigoInterno,
-                    patrimonio = cadastro?.patrimonio,
-                    tipo = cadastro?.tipo,
-                    marca = cadastro?.marca,
-                    modelo = cadastro?.modelo,
-                    operador = operador
-                )
+        itens.saveAll(novas.map { lido ->
+            val cadastro = cadastradas[lido.tag]?.let { rfidService.resposta(it, nomes) }
+            InventarioItemEntity(
+                inventarioId = id,
+                tag = lido.tag,
+                lidoEm = horaDoColetor(lido.lidoEm, "leitura da tag ${lido.tag} no inventário $id"),
+                cadastrada = cadastro != null,
+                codigoInterno = cadastro?.codigoInterno,
+                patrimonio = cadastro?.patrimonio,
+                tipo = cadastro?.tipo,
+                marca = cadastro?.marca,
+                modelo = cadastro?.modelo,
+                operador = operador
             )
-            novos++
-        }
+        })
+        val novos = novas.size
 
         log.info(
-            "Inventário {}: {} etiqueta(s) recebida(s) do dispositivo {}, {} nova(s), total {}",
-            id, lidos.size, dispositivo, novos, jaRegistradas.size
+            "Inventário {}: {} etiqueta(s) recebida(s) do dispositivo {}, {} nova(s)",
+            id, lidos.size, dispositivo, novos
         )
         return ResultadoItens(recebidos = lidos.size, novos = novos)
     }
@@ -149,7 +149,7 @@ class InventarioService(
         inventario.status = StatusInventario.FINALIZADO
         inventario.finalizadoEm = horaDoColetor(finalizadoEm, "finalização do inventário $id")
 
-        val total = itens.tagsDoInventario(id).size
+        val total = itens.countByInventarioId(id)
         log.info("Inventário {} finalizado pelo dispositivo {}: {} etiqueta(s) lida(s)", id, dispositivo, total)
         return inventarios.save(inventario)
     }

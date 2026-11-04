@@ -35,12 +35,23 @@ class BloqueioLoginIntegracaoTest : IntegracaoBase() {
     }
 
     @Test
-    fun `bloqueio do email vale de qualquer IP`() {
+    fun `cinco erros de uma maquina nao trancam o dono que entra de outra`() {
         usuarios.criarAdminInicial(SetupAdminRequest("Ana", "bloqueio2@x.com", "Kx9mPq2v"))
 
         repeat(5) { entrar("bloqueio2@x.com", "errada", "10.2.0.1") }
 
-        entrar("bloqueio2@x.com", "Kx9mPq2v", "10.2.0.99").andExpect(redirectedUrl("/login?bloqueado=15"))
+        // A máquina que errou fica bloqueada; o dono, de outra, entra (antes ficava trancado para fora)
+        entrar("bloqueio2@x.com", "Kx9mPq2v", "10.2.0.1").andExpect(redirectedUrl("/login?bloqueado=15"))
+        entrar("bloqueio2@x.com", "Kx9mPq2v", "10.2.0.99").andExpect(redirectedUrl("/redirect"))
+    }
+
+    @Test
+    fun `erros vindos de varias maquinas bloqueiam o email em todas`() {
+        usuarios.criarAdminInicial(SetupAdminRequest("Ana", "bloqueio5@x.com", "Kx9mPq2v"))
+
+        (1..4).forEach { maquina -> repeat(5) { entrar("bloqueio5@x.com", "errada", "10.5.0.$maquina") } }
+
+        entrar("bloqueio5@x.com", "Kx9mPq2v", "10.5.0.99").andExpect(redirectedUrl("/login?bloqueado=15"))
     }
 
     @Test

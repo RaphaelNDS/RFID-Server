@@ -141,11 +141,11 @@ class RecuperacaoSenhaIntegracaoTest : IntegracaoBase() {
         @Test
         fun `gerar senha temporaria libera o login bloqueado por tentativas erradas`() {
             repeat(10) { tentativasLogin.registrarFalha("bruno@x.com", "10.8.8.8") }
-            assertThat(tentativasLogin.tempoRestanteDeBloqueio("bruno@x.com", null)).isNotNull()
+            assertThat(tentativasLogin.tempoRestanteDeBloqueio("bruno@x.com", "10.8.8.8")).isNotNull()
 
             recuperacao.gerarSenhaTemporaria(bruno.id!!)
 
-            assertThat(tentativasLogin.tempoRestanteDeBloqueio("bruno@x.com", null)).isNull()
+            assertThat(tentativasLogin.tempoRestanteDeBloqueio("bruno@x.com", "10.8.8.8")).isNull()
         }
 
         @Test
