@@ -32,8 +32,9 @@ antiga (ou desligue-a da rede) antes de ligar a nova.
 
 1. **Docker Desktop** instalado e funcionando (com WSL 2). Em *Settings → General*, marque
    **Start Docker Desktop when you sign in**.
-2. **Java 17**: o mesmo usado hoje (Microsoft Build of OpenJDK 17). Anote o caminho do `java.exe`
-   (ex.: `C:\Program Files\Microsoft\jdk-17...\bin\java.exe`).
+2. **Java 17**: se a pasta `RFID_Servidor\java\` já existe na máquina antiga, copie-a junto (passo 2) e não
+   precisa instalar nada. Senão, instale o mesmo usado hoje (Microsoft Build of OpenJDK 17) e copie a pasta dele
+   (ex.: `C:\Program Files\Microsoft\jdk-17...`) para `RFID_Servidor\java\` na máquina nova.
 3. **IP fixo** conforme o passo 0, e a rede como **Privada** (ou Domínio) no Windows: em rede *Pública* o firewall
    bloqueia os coletores.
 4. **Porta 5433 livre** (é a do banco). Se já houver outro PostgreSQL nela, troque `RFID_DB_PORTA` no `.env` e
@@ -129,12 +130,13 @@ Na pasta `C:\RFID_Servidor\docker` da máquina nova:
 
 ## 5. Ajuste o Java e o firewall
 
-1. No `iniciar-servidor.bat`, confira `set "JAVA=..."` com o caminho do `java.exe` anotado no passo 1.
+1. Confira que existe `RFID_Servidor\java\bin\java.exe` (passo 1). O `.bat` mostra na janela o Java que usou.
 2. Libere a entrada desse `java.exe` no Firewall do Windows. Ou aceite o aviso do firewall na primeira execução
-   (marque **Redes privadas**), ou, num PowerShell **como administrador**:
+   (marque **Redes privadas**), ou, num PowerShell **como administrador** (o `.bat` avisa e mostra este comando
+   com o caminho certo quando não encontra a regra):
 
    ```powershell
-   New-NetFirewallRule -DisplayName "Servidor RFID (Java)" -Direction Inbound -Action Allow -Program "C:\caminho\do\java.exe" -Profile Private,Domain
+   New-NetFirewallRule -DisplayName "Servidor RFID (Java)" -Direction Inbound -Action Allow -Program "C:\caminho\RFID_Servidor\java\bin\java.exe" -Profile Private,Domain
    ```
 
 ---
@@ -182,8 +184,8 @@ Só funciona sem perder nada se nenhuma leitura nova tiver sido gravada na máqu
 ## 9. Depois da migração
 
 1. **Serviço do Windows** (sobe sozinho ao ligar o computador e não cai ao fechar a janela): veja
-   "Serviço do Windows" no [README](../README.md#serviço-do-windows). No `servico\rfid-servidor.xml`, ajuste o
-   caminho do Java (`executable`) para o da máquina nova.
+   "Serviço do Windows" no [README](../README.md#serviço-do-windows). O serviço usa o mesmo Java da pasta
+   `RFID_Servidor\java\` (o `instalar-servico.bat` confere).
 2. **Backup fora da máquina:** copie periodicamente `docker\backups`, `data\backups`, o `.p12` + `.senha`,
    `config\application.properties` e `docker\.env` para outro lugar (outro disco, rede ou nuvem da empresa).
 3. Confira no dia seguinte se o backup automático rodou: tem de haver um arquivo novo em `docker\backups\daily`.
@@ -198,10 +200,10 @@ Só funciona sem perder nada se nenhuma leitura nova tiver sido gravada na máqu
 - [ ] IP decidido (mesmo IP ou novo) e máquina nova com IP fixo e rede Privada
 - [ ] Docker Desktop (inicia com o Windows) e Java 17 na máquina nova
 - [ ] Servidor antigo parado → `docker exec rfid-backup /backup.sh` → nome do dump anotado
-- [ ] Copiados: `.p12` + `.senha`, `config\application.properties`, `docker\.env`, `docker-compose.yml`, `docker\backups`, `data\app`, JAR e `.bat`
+- [ ] Copiados: `.p12` + `.senha`, `config\application.properties`, `docker\.env`, `docker-compose.yml`, `docker\backups`, `data\app`, JAR, `.bat` e `java\` (se existir)
 - [ ] `docker compose stop` na antiga (e IP trocado/fora da rede, se for o mesmo IP)
 - [ ] Na nova: `docker compose up -d postgres` → `pg_restore` → contagem conferida → `docker compose up -d`
-- [ ] Caminho do Java no `.bat` e firewall liberado
+- [ ] `RFID_Servidor\java\` com o JDK 17 e firewall liberado para `java\bin\java.exe`
 - [ ] Log com **"Certificado HTTPS carregado"** e a mesma impressão digital
 - [ ] Login web, Status, etiquetas e App dos coletores conferidos
 - [ ] Coletores: Testar conexão (e IP trocado, se for IP novo) e uma leitura de teste

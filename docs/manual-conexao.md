@@ -82,7 +82,8 @@ rfid.dispositivos.cadastro=coletor-01
 
 ### 2.3 Iniciar
 
-1. No `iniciar-servidor.bat`, confira a linha `set "JAVA=..."` com o caminho do `java.exe` 17.
+1. Java 17: o servidor usa o da pasta `java\` ao lado do `iniciar-servidor.bat` (copie um JDK 17 inteiro para
+   lá). Sem essa pasta, usa o caminho da linha `set "JAVA_RESERVA=..."` do `.bat`.
 2. Dê dois cliques no `.bat`. **A janela precisa ficar aberta**: fechar a janela desliga o servidor.
 3. Quando aparecer no log `Servidor RFID versão ... no ar na porta 8443`, o servidor está pronto.
 4. Na primeira vez, o **Firewall do Windows** pergunta se libera o Java: **permita em redes privadas**. Sem isso os
