@@ -1,5 +1,6 @@
 package org.example.service
 
+import org.example.model.AreaAuditoria
 import org.example.model.Role
 import org.example.model.SessaoOperadorEntity
 import org.example.model.UsuarioEntity
@@ -88,7 +89,8 @@ class SessaoOperadorService(
      * sem isso, um token vazado serviria para sempre mandando um X-Momento antigo.
      */
     @Value("\${rfid.operador.janela-sincronizacao:72h}") val janelaSincronizacao: Duration,
-    private val relogio: Clock
+    private val relogio: Clock,
+    private val auditoria: AuditoriaService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -162,6 +164,7 @@ class SessaoOperadorService(
 
         tentativas.registrarSucesso(email)
         log.warn("PIN das Configurações do coletor {} liberado pelo administrador {} (IP {})", dispositivo, usuario.email, ip)
+        auditoria?.registrar(AreaAuditoria.SENHAS, "PIN do coletor liberado", dispositivo, "Pelo administrador ${usuario.email} (IP ${ip ?: "desconhecido"})")
     }
 
     /** Bloqueio por tentativas, email e senha e usuário ativo: o mesmo para o login e para liberar o PIN. */

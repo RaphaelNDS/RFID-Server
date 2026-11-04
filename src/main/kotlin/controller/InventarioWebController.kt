@@ -1,6 +1,8 @@
 package org.example.controller
 
 import org.example.model.StatusInventario
+import org.example.model.AreaAuditoria
+import org.example.service.AuditoriaService
 import org.example.service.EsperadoInventarioService
 import org.example.service.InventarioService
 import org.example.util.FormatoPlanilha
@@ -22,7 +24,8 @@ import org.springframework.web.bind.annotation.RequestParam
 @RequestMapping("/admin/inventarios")
 class InventarioWebController(
     private val service: InventarioService,
-    private val esperados: EsperadoInventarioService
+    private val esperados: EsperadoInventarioService,
+    private val auditoria: AuditoriaService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -87,6 +90,8 @@ class InventarioWebController(
             auth.name, id, inventario.local, tipoArquivo.extensao.uppercase(), detalhe.itens.size,
             if (comparacao.referencia.temReferencia) " e ${comparacao.faltando.size} faltando em relação ao inventário ${comparacao.referencia.inventarioReferencia}"
             else " (primeiro inventário do local, sem comparação)")
+        auditoria.registrar(AreaAuditoria.EXPORTACAO, "Inventário exportado", "${inventario.local} ($id)",
+            "${detalhe.itens.size} etiqueta(s) lida(s), ${comparacao.faltando.size} faltando, em ${tipoArquivo.extensao.uppercase()}")
 
         // Ex.: inventario-almoxarifado-2026-10-14 (dia em que o inventário começou)
         return respostaPlanilha(planilha, tipoArquivo, "inventario-${inventario.local}-${inventario.iniciadoEm.toLocalDate()}")

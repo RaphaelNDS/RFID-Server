@@ -145,7 +145,7 @@ class ColetorService(
     }
 
     /** Versão do app publicada pelo servidor (tela "App dos coletores"), se houver. */
-    fun versaoPublicada(): VersaoAppEntity? = versoesApp?.findFirstByArquivoRemovidoFalseOrderByCodigoDesc()
+    fun versaoPublicada(): VersaoAppEntity? = versoesApp?.findFirstByArquivoRemovidoFalseAndRetiradaEmIsNullOrderByCodigoDesc()
 
     /** Para os testes de integração: o banco volta ao estado inicial a cada teste, a memória não. */
     internal fun esquecerContatosGravados() = gravados.clear()

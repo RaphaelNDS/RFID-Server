@@ -7,7 +7,9 @@ Tempo estimado: 1 a 2 horas, a maior parte preparando a máquina nova. Os coleto
 passos 3 e 7 (uns 30 minutos). Nesse intervalo eles continuam lendo e guardam tudo para enviar depois (até 72 h).
 
 Nos exemplos, a pasta do servidor é `C:\RFID_Servidor`. Use a pasta que preferir: o `iniciar-servidor.bat` usa a
-pasta onde ele está.
+pasta onde ele está. **Recomendado: fora do perfil de um usuário** (não em `Documentos` ou na Área de Trabalho):
+assim o servidor não depende daquele usuário existir, e dá para restringir a pasta `data` (certificado, senha dele
+e backups) só aos administradores da máquina (botão direito > Propriedades > Segurança).
 
 ---
 

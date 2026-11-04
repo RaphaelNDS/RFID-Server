@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import java.security.MessageDigest
 import org.example.response.TagViewAdmin
@@ -147,7 +148,17 @@ class RfidService(
      * série ou nome do tipo/marca/modelo. Antes vinham todas de uma vez e a busca era só no navegador, o que
      * fica pesado com milhares de etiquetas. [pagina] começa em 0. Carrega o catálogo uma vez só.
      */
-    fun listarParaAdmin(busca: String?, pagina: Int): Page<TagViewAdmin> {
+    fun listarParaAdmin(busca: String?, pagina: Int): Page<TagViewAdmin> =
+        buscarParaAdmin(busca) { consultar -> paginaValida(pagina) { p -> consultar(PageRequest.of(p, TAMANHO_PAGINA, ORDEM_ETIQUETAS)) } }
+
+    /** Todas as etiquetas da busca (exportação e relatórios), na mesma ordem da tela. */
+    fun listarTodasParaAdmin(busca: String?): List<TagViewAdmin> =
+        buscarParaAdmin(busca) { consultar -> consultar(Pageable.unpaged(ORDEM_ETIQUETAS)) }.content
+
+    private fun buscarParaAdmin(
+        busca: String?,
+        paginar: ((Pageable) -> Page<TagEntity>) -> Page<TagEntity>
+    ): Page<TagViewAdmin> {
         val tipos = tipoRepo.findAll().associate { it.id to it.nome }
         val marcas = marcaRepo.findAll().associate { it.id to it.nome }
         val modelos = modeloRepo.findAll().associate { it.id to it.nome }
@@ -159,10 +170,7 @@ class RfidService(
         fun ids(nomes: Map<Long, String>) =
             nomes.filterValues { termo.isNotEmpty() && it.lowercase().contains(termo) }.keys.ifEmpty { setOf(-1L) }
 
-        val ordem = Sort.by(Sort.Direction.DESC, "id")
-        val resultado = paginaValida(pagina) { p ->
-            repo.buscar(padrao, ids(tipos), ids(marcas), ids(modelos), PageRequest.of(p, TAMANHO_PAGINA, ordem))
-        }
+        val resultado = paginar { pedido -> repo.buscar(padrao, ids(tipos), ids(marcas), ids(modelos), pedido) }
 
         return resultado.map { tag ->
             TagViewAdmin(
@@ -339,6 +347,9 @@ class RfidService(
     companion object {
         /** Linhas por página nas telas de etiquetas e pendentes. */
         const val TAMANHO_PAGINA = 50
+
+        /** Etiquetas: as cadastradas por último primeiro. */
+        private val ORDEM_ETIQUETAS: Sort = Sort.by(Sort.Direction.DESC, "id")
 
         /**
          * Padrão do LIKE para a busca: "%termo%" em minúsculas, com % e _ do próprio texto escapados (a consulta

@@ -15,7 +15,9 @@ class UsuarioService(
     private val repo: UserRepository,
     private val encoder: PasswordEncoder,
     private val politicaSenha: PoliticaSenha,
-    private val sessoes: SessoesUsuarioService
+    private val sessoes: SessoesUsuarioService,
+    // Opcional para os testes que montam o service à mão; no Spring é sempre injetado
+    private val auditoria: AuditoriaService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -66,6 +68,7 @@ class UsuarioService(
         repo.save(salvo)
 
         log.info("Administrador inicial criado: {}", salvo.email)
+        auditoria?.registrar(AreaAuditoria.USUARIOS, "Administrador inicial criado", salvo.email)
     }
 
     @Transactional
@@ -111,6 +114,8 @@ class UsuarioService(
             SecurityContextHolder.getContext().authentication?.name ?: "sistema",
             permissoes.joinToString { "${it.modulo}_${it.acao}" }
         )
+        auditoria?.registrar(AreaAuditoria.USUARIOS, "Usuário criado", usuarioSalvo.email,
+            "Perfil $roleFinal; permissões: ${permissoes.joinToString { "${it.modulo}_${it.acao}" }.ifEmpty { "nenhuma" }}")
     }
 
     /** Permissões de cada perfil: ADMIN tudo, GESTOR ver/criar/editar, USER só ver, CUSTOM os módulos e ações marcados. */
@@ -159,6 +164,8 @@ class UsuarioService(
             "Usuário {} alterado por {}: perfil {} → {} [{}]", usuario.email, quemFez(), antes, role,
             usuario.permissoes.joinToString { "${it.modulo}_${it.acao}" }
         )
+        auditoria?.registrar(AreaAuditoria.USUARIOS, "Usuário alterado", usuario.email,
+            "Antes: $antes. Depois: $role [${usuario.permissoes.joinToString { "${it.modulo}_${it.acao}" }}]")
     }
 
     /** ADMIN desativa um usuário: ele não entra mais e as sessões abertas dele (web e coletores) caem na hora. */
@@ -177,6 +184,7 @@ class UsuarioService(
         repo.save(usuario)
         val encerradas = sessoes.encerrar(id, "usuário desativado")
         log.warn("Usuário {} desativado por {} ({} sessão(ões) encerrada(s))", usuario.email, quemFez(), encerradas.total)
+        auditoria?.registrar(AreaAuditoria.USUARIOS, "Usuário desativado", usuario.email, "${encerradas.total} sessão(ões) encerrada(s)")
     }
 
     @Transactional
@@ -187,6 +195,7 @@ class UsuarioService(
         usuario.ativo = true
         repo.save(usuario)
         log.info("Usuário {} reativado por {}", usuario.email, quemFez())
+        auditoria?.registrar(AreaAuditoria.USUARIOS, "Usuário reativado", usuario.email)
     }
 
     fun porId(id: Long): UsuarioEntity = buscarPorId(id)
@@ -253,6 +262,8 @@ class UsuarioService(
         log.info("Senha alterada pelo próprio usuário: {}{}{}", usuario.email,
             if (eraTemporaria) " (substituiu a senha temporária)" else "",
             if (tinhaPedido) "; pedido de nova senha em aberto encerrado" else "")
+        auditoria?.registrar(AreaAuditoria.SENHAS, "Senha trocada pelo próprio usuário", usuario.email,
+            if (eraTemporaria) "Substituiu a senha temporária" else null)
     }
 
     /** Troca o email (que também é o login). Exige a senha atual. Retorna o email gravado. */
@@ -285,6 +296,7 @@ class UsuarioService(
         repo.save(usuario)
 
         log.info("Email alterado pelo próprio usuário: {} -> {}", emailAntigo, emailNovo)
+        auditoria?.registrar(AreaAuditoria.USUARIOS, "Email trocado pelo próprio usuário", emailNovo, "Antes: $emailAntigo")
         return emailNovo
     }
 

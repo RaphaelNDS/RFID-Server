@@ -6,6 +6,8 @@ import org.example.util.FormatoPlanilha
 import org.example.util.Planilha
 import org.example.util.respostaPlanilha
 import org.slf4j.LoggerFactory
+import org.example.model.AreaAuditoria
+import org.example.service.AuditoriaService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.Authentication
@@ -20,7 +22,8 @@ import java.time.LocalDate
 @Controller
 @RequestMapping("/admin/leituras-android")
 class LeituraAndroidAdminController(
-    private val consulta: LeituraAndroidConsultaService
+    private val consulta: LeituraAndroidConsultaService,
+    private val auditoria: AuditoriaService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -106,6 +109,8 @@ class LeituraAndroidAdminController(
 
         log.info("{} exportou {} leitura(s) em {} (filtros: {})",
             auth.name, leituras.size, tipoArquivo.extensao.uppercase(), consulta.descreverFiltro(filtro))
+        auditoria.registrar(AreaAuditoria.EXPORTACAO, "Leituras exportadas", "${leituras.size} leitura(s) em ${tipoArquivo.extensao.uppercase()}",
+            "Filtros: ${consulta.descreverFiltro(filtro)}")
 
         // Ex.: leituras-2026-10-14 (dia filtrado ou o dia da exportação)
         return respostaPlanilha(planilha, tipoArquivo, "leituras-${diaFiltro ?: LocalDate.now()}")

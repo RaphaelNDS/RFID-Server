@@ -76,6 +76,7 @@
           <th>Tamanho</th>
           <th>O que mudou</th>
           <th>SHA-256</th>
+          <th class="acoes"><span class="sr-only">Ações</span></th>
         </tr>
         </thead>
         <tbody>
@@ -84,6 +85,8 @@
             <span th:text="${v.versaoNome}"></span>
             <span class="badge badge-online" th:if="${publicada != null and v.id == publicada.id}">Publicada</span>
             <span class="badge" th:if="${v.arquivoRemovido}">Arquivo removido</span>
+            <span class="badge badge-inativo" th:if="${v.retirada}"
+                  th:title="'Retirada em ' + ${#temporals.format(v.retiradaEm, 'dd/MM/yyyy HH:mm')} + ' por ' + ${v.retiradaPor} + ': ' + ${v.motivoRetirada}">Retirada</span>
           </td>
           <td th:text="${v.codigo}"></td>
           <td class="nowrap" th:text="${#temporals.format(v.publicadaEm, 'dd/MM/yyyy HH:mm')}"></td>
@@ -91,6 +94,15 @@
           <td class="nowrap" th:text="${#numbers.formatDecimal(v.tamanho / 1048576.0, 1, 'POINT', 1, 'COMMA')} + ' MB'"></td>
           <td th:text="${v.notas != null} ? ${v.notas} : '—'"></td>
           <td class="mono" th:text="${#strings.substring(v.sha256, 0, 16)} + '…'" th:title="${v.sha256}"></td>
+          <td class="acoes">
+            <!-- Só a versão oferecida agora: retirar faz os coletores voltarem a receber a anterior -->
+            <form th:if="${publicada != null and v.id == publicada.id}" method="post"
+                  th:action="@{/admin/app/{codigo}/retirar(codigo=${v.codigo})}" style="display:inline"
+                  onsubmit="var m = prompt('Motivo da retirada (fica no histórico). Os coletores que ainda não atualizaram voltam a receber a versão anterior; quem já instalou esta fica nela até sair uma versão nova.'); if (!m) return false; this.motivo.value = m; return true;">
+              <input type="hidden" name="motivo">
+              <button type="submit" class="btn btn-ghost btn-sm" title="Retirar esta versão (publicada com problema)">Retirar</button>
+            </form>
+          </td>
         </tr>
         </tbody>
       </table>

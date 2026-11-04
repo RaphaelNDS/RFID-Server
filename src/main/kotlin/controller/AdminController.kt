@@ -1,5 +1,7 @@
 package org.example.controller
 
+import org.example.model.AreaAuditoria
+import org.example.service.AuditoriaService
 import org.example.service.BackupService
 import org.example.service.RfidService
 import org.example.service.StatusService
@@ -21,7 +23,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 class AdminController(
     private val rfidService: RfidService,
     private val statusService: StatusService,
-    private val backupService: BackupService
+    private val backupService: BackupService,
+    private val auditoria: AuditoriaService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -73,6 +76,7 @@ class AdminController(
 
         try {
             val arquivo = backupService.fazerBackup("manual, por ${auth.name}")
+            auditoria.registrar(AreaAuditoria.BACKUP, "Backup manual do certificado", arquivo.fileName.toString())
             redirect.addFlashAttribute("msg", "Backup concluído: ${arquivo.fileName}")
         } catch (e: IllegalStateException) {
             redirect.addFlashAttribute("erro", e.message)

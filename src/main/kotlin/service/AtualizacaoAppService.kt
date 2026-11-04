@@ -1,5 +1,6 @@
 package org.example.service
 
+import org.example.model.AreaAuditoria
 import org.example.model.VersaoAppEntity
 import org.example.repository.VersaoAppRepository
 import org.example.util.LeitorApk
@@ -37,7 +38,8 @@ class AtualizacaoAppService(
     @Value("\${rfid.app.pasta:./data/app}") pasta: String,
     @Value("\${rfid.app.pacote:br.com.bkpbr.rfidandroid}") val pacoteEsperado: String,
     @Value("\${rfid.app.certificado-sha256:}") certificado: String,
-    @Value("\${rfid.app.versoes-guardadas:3}") versoesGuardadas: Int
+    @Value("\${rfid.app.versoes-guardadas:3}") versoesGuardadas: Int,
+    private val auditoria: AuditoriaService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -92,6 +94,8 @@ class AtualizacaoAppService(
 
             log.info("Versão {} (código {}) do app publicada por {}: {} bytes, SHA-256 {}, certificado {}",
                 versaoNome, codigo, usuario, tamanho, sha256, LeitorApk.formatarImpressao(versao.certificadoSha256))
+            auditoria?.registrar(AreaAuditoria.APP, "Versão do app publicada", "$versaoNome (código $codigo)",
+                "$tamanho bytes, SHA-256 $sha256")
             removerArquivosAntigos()
             return versao
         } catch (e: Exception) {
@@ -170,7 +174,7 @@ class AtualizacaoAppService(
 
     /** A versão que os coletores devem ter, ou null se nenhuma foi publicada (ou o arquivo sumiu do disco). */
     fun versaoPublicada(): VersaoAppEntity? {
-        val versao = repo.findFirstByArquivoRemovidoFalseOrderByCodigoDesc() ?: return null
+        val versao = repo.findFirstByArquivoRemovidoFalseAndRetiradaEmIsNullOrderByCodigoDesc() ?: return null
         if (!Files.isRegularFile(pasta.resolve(versao.arquivo))) {
             if (avisados.add("sumiu:${versao.codigo}")) {
                 log.error("O arquivo da versão publicada {} (código {}) não está em {}: os coletores não vão conseguir atualizar. Publique o APK de novo",
@@ -201,6 +205,31 @@ class AtualizacaoAppService(
     }
 
     fun historico(): List<VersaoAppEntity> = repo.findAllByOrderByCodigoDesc()
+
+    /**
+     * Retira uma versão publicada com problema: o servidor deixa de oferecê-la e volta a oferecer a anterior.
+     * Quem já instalou a retirada fica nela até sair uma versão nova (o Android não instala código menor por
+     * cima), e a próxima publicação continua precisando de código maior que o da retirada. Devolve a versão
+     * que passa a ser oferecida (null = nenhuma).
+     */
+    fun retirar(codigo: Int, motivo: String?, usuario: String): VersaoAppEntity? {
+        val versao = repo.findByCodigo(codigo) ?: throw NoSuchElementException("Versão com código $codigo não encontrada")
+        check(!versao.retirada) { "A versão ${versao.versaoNome} (código $codigo) já foi retirada" }
+        val explicacao = motivo?.trim()?.takeIf { it.isNotEmpty() }
+            ?: throw IllegalArgumentException("Informe o motivo da retirada (fica no histórico)")
+
+        versao.retiradaEm = LocalDateTime.now(relogio)
+        versao.retiradaPor = usuario
+        versao.motivoRetirada = explicacao.take(500)
+        repo.save(versao)
+
+        val agora = versaoPublicada()
+        log.warn("Versão {} (código {}) do app RETIRADA por {}: {}. Os coletores passam a receber {}",
+            versao.versaoNome, codigo, usuario, explicacao, agora?.let { "a ${it.versaoNome} (código ${it.codigo})" } ?: "nenhuma versão")
+        auditoria?.registrar(AreaAuditoria.APP, "Versão do app retirada", "${versao.versaoNome} (código $codigo)",
+            "Motivo: $explicacao. Passa a ser oferecida: ${agora?.let { "${it.versaoNome} (código ${it.codigo})" } ?: "nenhuma"}")
+        return agora
+    }
 
     private fun sha256Arquivo(arquivo: Path): String {
         val digest = MessageDigest.getInstance("SHA-256")

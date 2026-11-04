@@ -48,6 +48,15 @@ class MelhoriasBaixasIntegracaoTest : IntegracaoBase() {
         mvc.perform(get("/actuator/beans").with(Perfis.admin())).andExpect(status().isNotFound)
     }
 
+    @Test
+    fun `telas saem com Content-Security-Policy que so aceita o proprio servidor`() {
+        mvc.perform(get("/login"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                .string("Content-Security-Policy", containsString("default-src 'self'")))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                .string("Content-Security-Policy", containsString("object-src 'none'")))
+    }
+
     // ---------------- regra de segurança das rotas /admin ----------------
 
     @Test

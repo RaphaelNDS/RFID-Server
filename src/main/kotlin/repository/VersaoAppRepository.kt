@@ -12,5 +12,8 @@ interface VersaoAppRepository : JpaRepository<VersaoAppEntity, Long> {
     fun findFirstByOrderByCodigoDesc(): VersaoAppEntity?
 
     /** A versão que os coletores devem instalar: a mais nova que ainda tem o arquivo. */
-    fun findFirstByArquivoRemovidoFalseOrderByCodigoDesc(): VersaoAppEntity?
+    /** A versão oferecida aos coletores: a mais nova com arquivo no disco e que não foi retirada. */
+    fun findFirstByArquivoRemovidoFalseAndRetiradaEmIsNullOrderByCodigoDesc(): VersaoAppEntity?
+
+    fun findByCodigo(codigo: Int): VersaoAppEntity?
 }

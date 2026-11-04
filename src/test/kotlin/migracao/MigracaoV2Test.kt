@@ -75,7 +75,7 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("12") // V12 = email em minúsculas
+        assertThat(resultado.targetSchemaVersion).isEqualTo("14") // V14 = versão do app retirada
     }
 
     @Test
