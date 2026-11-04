@@ -37,7 +37,7 @@
     </div>
 
     <div class="table-wrap">
-      <table class="table" th:unless="${#lists.isEmpty(registros)}">
+      <table class="table table-cartoes" th:unless="${#lists.isEmpty(registros)}">
         <thead>
         <tr>
           <th>Quando</th>
@@ -51,13 +51,13 @@
         </thead>
         <tbody>
         <tr th:each="r : ${registros}">
-          <td class="nowrap" th:text="${#temporals.format(r.momento, 'dd/MM/yyyy HH:mm:ss')}"></td>
-          <td th:text="${r.usuario}"></td>
-          <td class="nowrap" th:text="${r.origem}"></td>
-          <td class="nowrap" th:text="${r.area.rotulo}"></td>
-          <td class="principal" th:text="${r.acao}"></td>
-          <td th:text="${r.alvo} ?: '—'"></td>
-          <td th:text="${r.detalhe} ?: '—'"></td>
+          <td class="nowrap cartao-titulo" th:text="${#temporals.format(r.momento, 'dd/MM/yyyy HH:mm:ss')}"></td>
+          <td data-rotulo="Quem" th:text="${r.usuario}"></td>
+          <td data-rotulo="Por onde" class="nowrap" th:text="${r.origem}"></td>
+          <td data-rotulo="Área" class="nowrap" th:text="${r.area.rotulo}"></td>
+          <td data-rotulo="Ação" class="principal" th:text="${r.acao}"></td>
+          <td data-rotulo="Sobre" th:text="${r.alvo} ?: '—'"></td>
+          <td data-rotulo="Detalhe" th:text="${r.detalhe} ?: '—'"></td>
         </tr>
         </tbody>
       </table>

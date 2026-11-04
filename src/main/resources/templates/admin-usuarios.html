@@ -43,7 +43,7 @@
       <h2>Pedidos de nova senha <span class="contagem" th:text="'(' + ${#lists.size(pedidos)} + ')'">(1)</span></h2>
     </div>
     <div class="table-wrap">
-      <table class="table">
+      <table class="table table-cartoes">
         <thead>
         <tr>
           <th>Nome</th>
@@ -54,9 +54,9 @@
         </thead>
         <tbody>
         <tr th:each="p : ${pedidos}">
-          <td class="principal" th:text="${p.nome}"></td>
-          <td th:text="${p.email}"></td>
-          <td class="muted nowrap" th:text="${#temporals.format(p.senhaPedidaEm, 'dd/MM/yyyy HH:mm')}"></td>
+          <td class="principal cartao-titulo" th:text="${p.nome}"></td>
+          <td data-rotulo="Email" th:text="${p.email}"></td>
+          <td data-rotulo="Pedido em" class="muted nowrap" th:text="${#temporals.format(p.senhaPedidaEm, 'dd/MM/yyyy HH:mm')}"></td>
           <td class="acoes">
             <form th:action="@{/admin/usuarios/{id}/senha-temporaria(id=${p.id})}" method="post" style="display:inline">
               <button type="submit" class="btn btn-primary btn-sm">Gerar senha temporária</button>
@@ -83,7 +83,7 @@
     </div>
 
     <div class="table-wrap">
-      <table class="table" id="tabela">
+      <table class="table table-cartoes" id="tabela">
         <thead>
         <tr>
           <th>Nome</th>
@@ -96,14 +96,14 @@
         </thead>
         <tbody>
         <tr th:each="u : ${usuarios}" th:classappend="${u.ativo} ? '' : 'inativo'">
-          <td class="principal">
+          <td class="principal cartao-titulo">
             <span style="display:inline-flex;align-items:center;gap:10px">
               <span class="avatar" th:text="${#strings.toUpperCase(#strings.substring(u.nome, 0, 1))}">A</span>
               <span th:text="${u.nome}"></span>
             </span>
           </td>
-          <td th:text="${u.email}"></td>
-          <td>
+          <td data-rotulo="Email" th:text="${u.email}"></td>
+          <td data-rotulo="Perfil">
             <span class="badge" th:classappend="'badge-' + ${u.role}" th:switch="${u.role.name()}">
               <th:block th:case="'ADMIN'">Administrador</th:block>
               <th:block th:case="'GESTOR'">Gestor</th:block>
@@ -111,8 +111,8 @@
               <th:block th:case="*">Personalizado</th:block>
             </span>
           </td>
-          <td class="muted" th:text="${u.role.name() == 'ADMIN'} ? 'Acesso total' : ${#lists.size(u.permissoes)} + ' permissão(ões)'"></td>
-          <td>
+          <td data-rotulo="Permissões" class="muted" th:text="${u.role.name() == 'ADMIN'} ? 'Acesso total' : ${#lists.size(u.permissoes)} + ' permissão(ões)'"></td>
+          <td data-rotulo="Situação">
             <span th:if="${u.ativo}" class="badge badge-online">Ativo</span>
             <span th:unless="${u.ativo}" class="badge badge-inativo">Desativado</span>
           </td>

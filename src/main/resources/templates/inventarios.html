@@ -34,7 +34,7 @@
     </div>
 
     <div class="table-wrap">
-      <table class="table" th:unless="${#lists.isEmpty(inventarios)}">
+      <table class="table table-cartoes" th:unless="${#lists.isEmpty(inventarios)}">
         <thead>
         <tr>
           <th>Início</th>
@@ -51,18 +51,18 @@
         </thead>
         <tbody>
         <tr th:each="i : ${inventarios}">
-          <td class="nowrap" th:text="${#temporals.format(i.iniciadoEm, 'dd/MM/yyyy HH:mm')}"></td>
-          <td class="principal" th:text="${i.local}"></td>
-          <td th:text="${i.dispositivo}"></td>
-          <td th:text="${i.operador != null} ? ${i.operador} : '—'"></td>
-          <td>
+          <td class="nowrap cartao-titulo" th:text="${#temporals.format(i.iniciadoEm, 'dd/MM/yyyy HH:mm')}"></td>
+          <td data-rotulo="Local" class="principal" th:text="${i.local}"></td>
+          <td data-rotulo="Coletor" th:text="${i.dispositivo}"></td>
+          <td data-rotulo="Operador" th:text="${i.operador != null} ? ${i.operador} : '—'"></td>
+          <td data-rotulo="Situação">
             <span class="badge badge-online" th:if="${i.status.name() == 'ABERTO'}">Em andamento</span>
             <span class="badge" th:unless="${i.status.name() == 'ABERTO'}">Finalizado</span>
           </td>
-          <td class="nowrap" th:text="${i.finalizadoEm != null} ? ${#temporals.format(i.finalizadoEm, 'dd/MM/yyyy HH:mm')} : '—'"></td>
-          <td th:text="${i.totalLidas}"></td>
-          <td th:text="${i.cadastradas}"></td>
-          <td th:text="${i.naoCadastradas}"></td>
+          <td data-rotulo="Fim" class="nowrap" th:text="${i.finalizadoEm != null} ? ${#temporals.format(i.finalizadoEm, 'dd/MM/yyyy HH:mm')} : '—'"></td>
+          <td data-rotulo="Lidas" th:text="${i.totalLidas}"></td>
+          <td data-rotulo="Cadastradas" th:text="${i.cadastradas}"></td>
+          <td data-rotulo="Não cadastradas" th:text="${i.naoCadastradas}"></td>
           <td><a th:href="@{/admin/inventarios/{id}(id=${i.id})}" class="btn btn-ghost">Ver</a></td>
         </tr>
         </tbody>

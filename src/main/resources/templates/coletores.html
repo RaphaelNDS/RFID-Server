@@ -43,7 +43,7 @@
     </div>
 
     <div class="table-wrap">
-      <table class="table" th:unless="${#lists.isEmpty(coletores)}">
+      <table class="table table-cartoes" th:unless="${#lists.isEmpty(coletores)}">
         <thead>
         <tr>
           <th>Coletor</th>
@@ -58,34 +58,34 @@
         </thead>
         <tbody>
         <tr th:each="c : ${coletores}">
-          <td class="principal mono" th:text="${c.nome}"></td>
-          <td>
+          <td class="principal mono cartao-titulo" th:text="${c.nome}"></td>
+          <td data-rotulo="Situação">
             <span class="badge badge-online" th:if="${c.situacao.name() == 'EM_USO'}" th:text="${c.situacao.rotulo}"></span>
             <span class="badge badge-CUSTOM" th:if="${c.situacao.name() == 'SEM_CONTATO' or c.situacao.name() == 'NUNCA' or c.situacao.name() == 'CHAVE_REMOVIDA'}"
                   th:text="${c.situacao.rotulo}"></span>
             <span class="badge" th:if="${c.situacao.name() == 'PARADO'}" th:text="${c.situacao.rotulo}"></span>
           </td>
-          <td class="nowrap">
+          <td data-rotulo="Último contato" class="nowrap">
             <span th:if="${c.ultimoContato != null}" th:text="${c.haQuantoTempo}"
                   th:title="${#temporals.format(c.ultimoContato, 'dd/MM/yyyy HH:mm:ss')}"></span>
             <span class="muted" th:if="${c.ultimoContato == null}">—</span>
           </td>
-          <td class="mono" th:text="${c.ultimoIp != null} ? ${c.ultimoIp} : '—'"></td>
-          <td class="nowrap">
+          <td data-rotulo="IP" class="mono" th:text="${c.ultimoIp != null} ? ${c.ultimoIp} : '—'"></td>
+          <td data-rotulo="Versão do app" class="nowrap">
             <span th:if="${c.codigoVersao != null}" th:text="${c.versaoApp} + ' (' + ${c.codigoVersao} + ')'"></span>
             <span class="muted" th:if="${c.codigoVersao == null and c.ultimoContato != null}" title="Apps anteriores à 1.4.0 não informam a versão">sem versão (anterior à 1.4.0)</span>
             <span class="muted" th:if="${c.ultimoContato == null}">—</span>
             <span class="badge badge-CUSTOM" th:if="${c.desatualizado}">desatualizado</span>
           </td>
-          <td class="nowrap">
+          <td data-rotulo="Erros (24 h)" class="nowrap">
             <a th:href="@{/admin/coletores/{nome}/erros(nome=${c.nome})}"
                th:with="qtd=${erros24h[c.nome] != null ? erros24h[c.nome] : 0}"
                th:classappend="${qtd > 0} ? 'badge badge-CUSTOM' : 'muted'"
                th:text="${qtd > 0} ? ${qtd} + ' erro(s)' : 'nenhum'"
                title="Ver os erros do app enviados por este coletor">nenhum</a>
           </td>
-          <td th:text="${c.ultimoOperador != null} ? ${c.ultimoOperador} : '—'"></td>
-          <td class="nowrap" th:text="${c.primeiroContato != null} ? ${#temporals.format(c.primeiroContato, 'dd/MM/yyyy')} : '—'"></td>
+          <td data-rotulo="Último operador" th:text="${c.ultimoOperador != null} ? ${c.ultimoOperador} : '—'"></td>
+          <td data-rotulo="Primeiro contato" class="nowrap" th:text="${c.primeiroContato != null} ? ${#temporals.format(c.primeiroContato, 'dd/MM/yyyy')} : '—'"></td>
         </tr>
         </tbody>
       </table>

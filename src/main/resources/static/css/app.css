@@ -888,6 +888,8 @@ code.quebra, .quebra { overflow-wrap: anywhere; word-break: break-all; }
   .table-cartoes tr { padding: 12px 16px; border-bottom: 1px solid var(--border); }
   .table-cartoes tbody tr:last-child { border-bottom: 0; }
   .table-cartoes tbody tr:hover td { background: none; }
+  /* Linha escondida pelo filtro da tela (atributo hidden): o display:block acima não pode reexibi-la */
+  .table-cartoes tr[hidden] { display: none; }
   .table.table-cartoes td {
     display: flex;
     justify-content: space-between;
@@ -905,11 +907,13 @@ code.quebra, .quebra { overflow-wrap: anywhere; word-break: break-all; }
     font-weight: 600;
     color: var(--muted);
     text-align: left;
+    font-family: var(--font); /* em coluna monoespaçada (EPC) o rótulo continua na fonte normal */
+    letter-spacing: normal;
   }
   .table-cartoes td.nowrap { white-space: normal; }
   .table.table-cartoes td.mono { min-width: 0; word-break: normal; }
-  /* Primeira linha do cartão: o nome (sem rótulo), com os selos ao lado */
-  .table.table-cartoes td.principal {
+  /* Primeira linha do cartão (primeira coluna, sem rótulo), com os selos ao lado */
+  .table.table-cartoes td.cartao-titulo {
     justify-content: flex-start;
     flex-wrap: wrap;
     gap: 6px;
@@ -917,7 +921,8 @@ code.quebra, .quebra { overflow-wrap: anywhere; word-break: break-all; }
     font-size: 15px;
     text-align: left;
   }
-  .table-cartoes td.principal::before { content: none; }
+  .table-cartoes td.cartao-titulo::before { content: none; }
+  .table.table-cartoes td.cartao-titulo { color: var(--text); font-weight: 600; }
   /* Ações embaixo, à esquerda, com o texto do botão (o celular normalmente só mostra o ícone) */
   .table.table-cartoes td.acoes { justify-content: flex-start; padding-top: 8px; }
   .table.table-cartoes td.acoes:not(:has(*)) { display: none; }

@@ -38,7 +38,7 @@
     </div>
 
     <div class="table-wrap">
-      <table class="table" th:unless="${#lists.isEmpty(etiquetas)}">
+      <table class="table table-cartoes" th:unless="${#lists.isEmpty(etiquetas)}">
         <thead>
         <tr>
           <th>Etiqueta (EPC)</th>
@@ -53,17 +53,17 @@
         </thead>
         <tbody>
         <tr th:each="v : ${etiquetas}">
-          <td class="mono" th:text="${v.etiqueta.tag}"></td>
-          <td class="principal" th:text="${v.etiqueta.codigoInterno}"></td>
-          <td th:text="${v.etiqueta.patrimonio}"></td>
-          <td th:text="${v.etiqueta.tipoNome} ?: '—'"></td>
-          <td th:text="${v.etiqueta.modeloNome} ?: '—'"></td>
-          <td class="nowrap">
+          <td class="mono cartao-titulo" th:text="${v.etiqueta.tag}"></td>
+          <td data-rotulo="Código" class="principal" th:text="${v.etiqueta.codigoInterno}"></td>
+          <td data-rotulo="Patrimônio" th:text="${v.etiqueta.patrimonio}"></td>
+          <td data-rotulo="Tipo" th:text="${v.etiqueta.tipoNome} ?: '—'"></td>
+          <td data-rotulo="Modelo" th:text="${v.etiqueta.modeloNome} ?: '—'"></td>
+          <td data-rotulo="Última vez vista" class="nowrap">
             <span th:if="${v.ultimaVez == null}" class="badge">Nunca vista</span>
             <span th:unless="${v.ultimaVez == null}"
                   th:text="${#temporals.format(v.ultimaVez, 'dd/MM/yyyy HH:mm')} + ' (' + ${v.diasSemSerVista} + ' dias)'"></span>
           </td>
-          <td th:text="${v.ultimoLocal} ?: '—'"></td>
+          <td data-rotulo="Último local" th:text="${v.ultimoLocal} ?: '—'"></td>
           <td class="acoes">
             <a th:href="@{/admin/etiquetas/historico(tag=${v.etiqueta.tag})}" class="btn btn-ghost btn-sm" title="Histórico da etiqueta">
               <svg class="ic"><use href="/img/icones.svg#relogio"/></svg><span class="texto-btn">Histórico</span>

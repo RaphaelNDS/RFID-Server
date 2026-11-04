@@ -88,7 +88,7 @@
         </thead>
         <tbody>
         <tr th:each="v : ${versoes}">
-          <td class="principal" data-rotulo="Versão">
+          <td class="principal cartao-titulo">
             <span th:text="${v.versaoNome}"></span>
             <span class="badge badge-online" th:if="${publicada != null and v.id == publicada.id}">Oferecida</span>
             <span class="badge" th:if="${v.arquivoRemovido}">Arquivo removido</span>
