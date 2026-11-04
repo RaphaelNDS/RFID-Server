@@ -86,7 +86,7 @@ class UsuarioAdminController(
     ): String {
         return try {
             service.editar(id, nome, role, telas, permissoes, quem.id)
-            redirect.addFlashAttribute("msg", "Usuário alterado. As permissões novas valem no próximo login dele na web e já na próxima ação no coletor.")
+            redirect.addFlashAttribute("msg", "Usuário alterado. Se o perfil ou as permissões mudaram, a sessão dele na web foi encerrada: ao entrar de novo já valem as novas. No coletor valem na próxima ação.")
             "redirect:/admin/usuarios"
         } catch (e: IllegalArgumentException) {
             redirect.addFlashAttribute("erro", e.message)

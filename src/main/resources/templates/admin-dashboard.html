@@ -25,6 +25,13 @@
     </form>
   </div>
 
+  <!-- Aparece quando o servidor avisa (SSE) que chegaram leituras: atualizar mantém os filtros (estão na URL) -->
+  <div class="alert alert-ok" id="avisoLeiturasNovas" role="status" hidden>
+    <svg class="ic"><use href="/img/icones.svg#sinal"/></svg>
+    <span>Há leituras novas desde que a página abriu.</span>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="location.reload()">Atualizar</button>
+  </div>
+
   <div class="alert alert-aviso" th:if="${aviso}" role="alert">
     <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${aviso}"></span>
   </div>
@@ -141,9 +148,11 @@
     desenhar();
     document.addEventListener("tema-alterado", desenhar);
 
-    // Recarrega quando o servidor avisa que chegaram leituras novas (os filtros ficam na URL)
+    // Leituras novas chegando: mostra o aviso com o botão Atualizar. Antes a página recarregava sozinha a cada
+    // 5 s durante um inventário (cada aba refazia todas as consultas, e o filtro sendo digitado se perdia)
+    const avisoNovas = document.getElementById("avisoLeiturasNovas");
     const evt = new EventSource('/admin/sse');
-    evt.onmessage = () => location.reload();
+    evt.onmessage = () => { avisoNovas.hidden = false; };
   </script>
 
 </section>

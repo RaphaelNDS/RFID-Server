@@ -51,20 +51,20 @@ class LeituraAndroidService(
             log.debug("Leitura ignorada: tag {} não está cadastrada", tagReal)
             return ResultadoLeitura.IGNORADA
         }
-        if (!completa(tag)) return ignorarIncompleta(tagReal)
-
+        // Cadastro incompleto (sem tipo, marca, modelo, patrimônio ou série) também grava, com o que houver: antes a
+        // leitura era descartada calada, o coletor recebia "cadastrada" e a etiqueta aparecia como "nunca vista"
         val nomes = NomesCatalogo(
-            tipos = mapOf(tag.tipoEquipamentoId!! to tipoRepo.findById(tag.tipoEquipamentoId!!).orElseThrow().nome),
-            marcas = mapOf(tag.marcaId!! to marcaRepo.findById(tag.marcaId!!).orElseThrow().nome),
-            modelos = mapOf(tag.modeloId!! to modeloRepo.findById(tag.modeloId!!).orElseThrow().nome)
+            tipos = tag.tipoEquipamentoId?.let { id -> tipoRepo.findById(id).orElse(null)?.let { mapOf(id to it.nome) } }.orEmpty(),
+            marcas = tag.marcaId?.let { id -> marcaRepo.findById(id).orElse(null)?.let { mapOf(id to it.nome) } }.orEmpty(),
+            modelos = tag.modeloId?.let { id -> modeloRepo.findById(id).orElse(null)?.let { mapOf(id to it.nome) } }.orEmpty()
         )
         return gravar(tag, nomes, lidoEm, operador,
-            jaGravada = { dataHora -> leituraRepo.existsByTagAndDataHora(tagReal, dataHora) })
+            jaGravada = { momento -> leituraRepo.existsByTagAndLidoEmColetor(tagReal, momento) })
     }
 
     /**
      * Lote: mesma regra do [salvarLeitura], com a etiqueta e o catálogo já carregados e as leituras já gravadas
-     * em [gravadas] (tag, hora), que é atualizado a cada gravação. Uma consulta (o INSERT) por leitura, em vez de 6.
+     * em [gravadas] (tag, hora informada pelo coletor), que é atualizado a cada gravação. Uma consulta (o INSERT) por leitura, em vez de 6.
      */
     fun salvarLeituraDoLote(
         tag: TagEntity,
@@ -73,26 +73,18 @@ class LeituraAndroidService(
         operador: String?,
         gravadas: MutableSet<Pair<String, LocalDateTime>>
     ): ResultadoLeitura {
-        if (!completa(tag)) return ignorarIncompleta(tag.tagReal)
-
         return gravar(tag, nomes, lidoEm, operador,
-            jaGravada = { dataHora -> (tag.tagReal to dataHora) in gravadas },
-            aoGravar = { dataHora -> gravadas += tag.tagReal to dataHora })
+            jaGravada = { momento -> (tag.tagReal to momento) in gravadas },
+            aoGravar = { momento -> gravadas += tag.tagReal to momento })
     }
 
-    /** (tag, hora) das leituras dessas tags já gravadas desde [inicio]: o lote confere reenvios sem uma consulta por item. */
+    /**
+     * (tag, hora informada pelo coletor) das leituras dessas tags já gravadas desde [inicio]: o lote confere reenvios
+     * sem uma consulta por item.
+     */
     fun gravadasDesde(tags: Collection<String>, inicio: LocalDateTime): MutableSet<Pair<String, LocalDateTime>> {
         if (tags.isEmpty()) return mutableSetOf()
         return leituraRepo.gravadasDesde(tags, inicio).mapTo(HashSet()) { (it[0] as String) to (it[1] as LocalDateTime) }
-    }
-
-    private fun completa(tag: TagEntity): Boolean =
-        !tag.codigoInterno.isNullOrBlank() && tag.tipoEquipamentoId != null && tag.marcaId != null &&
-            tag.modeloId != null && !tag.patrimonio.isNullOrBlank() && !tag.numeroSerie.isNullOrBlank()
-
-    private fun ignorarIncompleta(tagReal: String): ResultadoLeitura {
-        log.debug("Leitura ignorada: tag {} tem cadastro incompleto (tipo, marca, modelo, patrimônio ou série)", tagReal)
-        return ResultadoLeitura.IGNORADA
     }
 
     private fun gravar(
@@ -105,28 +97,33 @@ class LeituraAndroidService(
     ): ResultadoLeitura {
         val tagReal = tag.tagReal
         val dataHora = dataHoraDaLeitura(tagReal, lidoEm)
+        // A hora que o coletor informou, mesmo no futuro (relógio adiantado): é ela que identifica o reenvio. A
+        // [dataHora] de uma leitura "do futuro" vira a hora do recebimento, que muda a cada reenvio, e antes a mesma
+        // leitura era gravada de novo a cada reenvio
+        val momentoColetor = lidoEm?.let(::paraHoraDoServidor)
 
         // O coletor reenvia o que não teve resposta: a mesma tag com a mesma hora de leitura (até o milissegundo)
         // é o mesmo registro chegando de novo. Sem hora informada não dá para saber, então grava.
-        if (lidoEm != null && jaGravada(dataHora)) {
-            log.debug("Leitura repetida ignorada: tag {} lida em {} já estava registrada", tagReal, dataHora)
+        if (momentoColetor != null && jaGravada(momentoColetor)) {
+            log.debug("Leitura repetida ignorada: tag {} lida em {} já estava registrada", tagReal, momentoColetor)
             return ResultadoLeitura.REPETIDA
         }
 
         val leitura = LeituraAndroidEntity(
             tag = tagReal,
             codigoInterno = tag.codigoInterno,
-            tipo = nomes.tipos.getValue(tag.tipoEquipamentoId!!),
-            marca = nomes.marcas.getValue(tag.marcaId!!),
-            modelo = nomes.modelos.getValue(tag.modeloId!!),
+            tipo = tag.tipoEquipamentoId?.let { nomes.tipos[it] },
+            marca = tag.marcaId?.let { nomes.marcas[it] },
+            modelo = tag.modeloId?.let { nomes.modelos[it] },
             patrimonio = tag.patrimonio,
             numeroSerie = tag.numeroSerie,
             dataHora = dataHora,
+            lidoEmColetor = momentoColetor,
             operador = operador
         )
 
         // A conferência acima não pega duas requisições ao mesmo tempo (o coletor reenvia o lote quando a resposta
-        // demora): o índice único (tag, data_hora) da V10 recusa a segunda gravação, e ela conta como repetida
+        // demora): o índice único (tag, lido_em_coletor) da V16 recusa a segunda gravação, e ela conta como repetida
         try {
             leituraRepo.saveAndFlush(leitura)
         } catch (e: DataIntegrityViolationException) {
@@ -136,7 +133,7 @@ class LeituraAndroidService(
 
         log.debug("Leitura registrada: tag {} (patrimônio {}, operador {})", tagReal, tag.patrimonio, operador ?: "—")
 
-        aoGravar(dataHora)
+        momentoColetor?.let(aoGravar)
         eventos.publicar(leitura)
         return ResultadoLeitura.REGISTRADA
     }
@@ -146,11 +143,14 @@ class LeituraAndroidService(
      * para o fuso do servidor. Sem ela, ou se estiver no futuro (relógio do coletor adiantado),
      * vale a hora do recebimento.
      */
+    private fun paraHoraDoServidor(lidoEm: OffsetDateTime): LocalDateTime =
+        lidoEm.atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()
+
     private fun dataHoraDaLeitura(tagReal: String, lidoEm: OffsetDateTime?): LocalDateTime {
         val agora = LocalDateTime.now(relogio)
         if (lidoEm == null) return agora
 
-        val lida = lidoEm.atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()
+        val lida = paraHoraDoServidor(lidoEm)
 
         if (lida.isAfter(agora.plus(TOLERANCIA_RELOGIO))) {
             log.warn(

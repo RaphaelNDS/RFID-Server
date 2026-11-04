@@ -11,6 +11,9 @@ spring:
     show-sql: false
 
 rfid:
+  leituras:
+    # Sem cache dos atalhos de dia: o contexto do Spring é o mesmo entre os testes, e cada teste grava as suas
+    cache-dias-segundos: 0
   banco:
     # O banco de teste nasce vazio (não faz backup), mas sem Docker de produção o comando nem existiria
     backup-antes-migracao: ""

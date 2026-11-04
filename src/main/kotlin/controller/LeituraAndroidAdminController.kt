@@ -66,13 +66,15 @@ class LeituraAndroidAdminController(
         model.addAttribute("linkExcel", linkExportar("xlsx"))
         model.addAttribute("linkCsv", linkExportar("csv"))
 
-        val paginaAtual = resultado.number + 1
-        model.addAttribute("leituras", resultado.content)
-        model.addAttribute("totalLeituras", resultado.totalElements)
+        val paginaAtual = resultado.numero + 1
+        model.addAttribute("leituras", resultado.leituras)
+        // Acima do teto de contagem: total = teto e totalExato = false ("mais de N"); totalPaginas fica null
+        model.addAttribute("totalLeituras", resultado.total)
+        model.addAttribute("totalExato", resultado.totalExato)
         model.addAttribute("paginaAtual", paginaAtual)
-        model.addAttribute("totalPaginas", resultado.totalPages.coerceAtLeast(1))
-        model.addAttribute("linkAnterior", if (resultado.hasPrevious()) linkPagina(paginaAtual - 1) else null)
-        model.addAttribute("linkProxima", if (resultado.hasNext()) linkPagina(paginaAtual + 1) else null)
+        model.addAttribute("totalPaginas", resultado.totalPaginas)
+        model.addAttribute("linkAnterior", if (resultado.numero > 0) linkPagina(paginaAtual - 1) else null)
+        model.addAttribute("linkProxima", if (resultado.temProxima) linkPagina(paginaAtual + 1) else null)
         model.addAttribute("contadorPorDia", consulta.diasRecentes())
         model.addAttribute("diaSelecionado", dia)
 

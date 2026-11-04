@@ -75,7 +75,7 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("15") // V15 = índices trigram da busca de leituras
+        assertThat(resultado.targetSchemaVersion).isEqualTo("16") // V16 = hora informada pelo coletor (reenvio com relógio adiantado)
     }
 
     @Test

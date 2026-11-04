@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--
+  Tipo > marca > modelo encadeados do cadastro e da edição de etiqueta (ids tipoSelect, marcaSelect, modeloSelect).
+  Marca e modelo vêm da API do catálogo conforme a escolha anterior. Ao abrir, se já houver tipo escolhido (edição,
+  ou cadastro que voltou com erro), carrega e seleciona a marca e o modelo de data-inicial.
+-->
+<script th:fragment="script">
+    (function () {
+      const tipoSelect   = document.getElementById("tipoSelect");
+      const marcaSelect  = document.getElementById("marcaSelect");
+      const modeloSelect = document.getElementById("modeloSelect");
+
+      // Preenche um <select> com a lista vinda da API (texto via textContent, sem HTML)
+      function preencher(select, lista, vazio, nenhum, selecionado) {
+        select.innerHTML = "";
+        select.appendChild(new Option(lista.length ? vazio : nenhum, ""));
+        lista.forEach(item => select.appendChild(new Option(item.nome, item.id, false, String(item.id) === String(selecionado))));
+        select.disabled = lista.length === 0;
+      }
+
+      function carregar(url, select, vazio, nenhum, selecionado) {
+        select.disabled = true;
+        select.innerHTML = "";
+        select.appendChild(new Option("Carregando…", ""));
+        return fetch(url)
+          .then(res => { if (!res.ok) throw new Error(res.status); return res.json(); })
+          .then(lista => preencher(select, lista, vazio, nenhum, selecionado))
+          .catch(() => { select.innerHTML = ""; select.appendChild(new Option("Erro ao carregar", "")); });
+      }
+
+      function resetar(select, texto) {
+        select.innerHTML = "";
+        select.appendChild(new Option(texto, ""));
+        select.disabled = true;
+      }
+
+      function carregarMarcas(selecionada) {
+        return carregar("/api/catalogo/marcas?tipoId=" + tipoSelect.value, marcaSelect, "Selecione a marca", "Nenhuma marca para este tipo", selecionada);
+      }
+
+      function carregarModelos(selecionado) {
+        return carregar("/api/catalogo/modelos?marcaId=" + marcaSelect.value, modeloSelect, "Selecione o modelo", "Nenhum modelo para esta marca", selecionado);
+      }
+
+      tipoSelect.addEventListener("change", function () {
+        resetar(modeloSelect, "Escolha a marca primeiro");
+        if (!this.value) return resetar(marcaSelect, "Escolha o tipo primeiro");
+        carregarMarcas(null);
+      });
+
+      marcaSelect.addEventListener("change", function () {
+        if (!this.value) return resetar(modeloSelect, "Escolha a marca primeiro");
+        carregarModelos(null);
+      });
+
+      // Abre com o que já estava escolhido (edição, ou cadastro que voltou com erro do servidor)
+      if (tipoSelect.value) {
+        carregarMarcas(marcaSelect.dataset.inicial).then(function () {
+          if (marcaSelect.value) carregarModelos(modeloSelect.dataset.inicial);
+        });
+      }
+    })();
+  </script>
+</html>

@@ -855,6 +855,8 @@ tr.inativo td { opacity: .6; }
 }
 
 /* ============================ UTILITÁRIOS ============================ */
+/* Atributo hidden sempre esconde, mesmo em elementos com display próprio (.alert é flex, .vazio, linhas da tabela) */
+[hidden] { display: none !important; }
 .d-block { display: block; }
 
 /* Paginação no rodapé de um cartão (ex.: Leituras) */

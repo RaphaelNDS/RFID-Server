@@ -147,7 +147,7 @@ class LeituraLoteIntegracaoTest : IntegracaoBase() {
     }
 
     @Test
-    fun `etiqueta com cadastro incompleto volta como cadastrada mas nao grava leitura`() {
+    fun `etiqueta com cadastro incompleto tambem grava a leitura (antes sumia e aparecia como nunca vista)`() {
         rfidService.cadastrarTag(CadastroRequest(tag = "E-INCOMPLETA", codigoInterno = "TI-X"))
 
         enviar(item("E-INCOMPLETA", minutosAtras(1)))
@@ -155,7 +155,25 @@ class LeituraLoteIntegracaoTest : IntegracaoBase() {
             .andExpect(jsonPath("$.resultados[0].status").value("CADASTRADA"))
             .andExpect(jsonPath("$.resultados[0].dados.codigoInterno").value("TI-X"))
 
-        assertThat(leituras.findAll().none { it.tag == "E-INCOMPLETA" }).isTrue()
+        val gravada = leituras.findAll().single { it.tag == "E-INCOMPLETA" }
+        assertThat(gravada.codigoInterno).isEqualTo("TI-X")
+        assertThat(gravada.tipo).isNull()
+    }
+
+    @Test
+    fun `relogio do coletor adiantado nao duplica a leitura no reenvio do lote`() {
+        // 2 h no futuro: a hora gravada vira a do recebimento, que muda a cada reenvio
+        val futuro = LocalDateTime.now().plusHours(2).truncatedTo(ChronoUnit.MILLIS)
+        // A sessão precisa valer nesse "momento": o servidor trata o futuro como agora
+        repeat(3) {
+            enviar(item("E-LOTE-1", futuro)).andExpect(status().isOk)
+                .andExpect(jsonPath("$.resultados[0].status").value("CADASTRADA"))
+        }
+
+        val gravadas = leituras.findAll().filter { it.tag == "E-LOTE-1" }
+        assertThat(gravadas).hasSize(1)
+        assertThat(gravadas.single().lidoEmColetor).isEqualTo(futuro)
+        assertThat(gravadas.single().dataHora).isBefore(futuro)
     }
 
     @Test

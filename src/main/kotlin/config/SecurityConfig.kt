@@ -26,6 +26,7 @@ import org.springframework.security.web.access.AccessDeniedHandlerImpl
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter
 import org.springframework.security.web.csrf.CsrfException
+import org.springframework.security.web.csrf.CsrfFilter
 import java.time.Clock
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher
 
@@ -90,6 +91,8 @@ class SecurityConfig {
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .addFilterBefore(filtroChave, BasicAuthenticationFilter::class.java)
+            // A API dos coletores não recebe arquivo: multipart é recusado sem ler o corpo
+            .addFilterBefore(EnvioArquivoFilter(permitido = null), BasicAuthenticationFilter::class.java)
             // Depois do coletor, o operador logado nele (X-Sessao-Operador); login e ping não exigem
             .addFilterAfter(OperadorFilter(sessoesOperador, corteLoginOperador, relogio), ChaveDispositivoFilter::class.java)
             .authorizeHttpRequests { it.anyRequest().hasRole(ChaveDispositivoFilter.ROLE) }
@@ -159,6 +162,10 @@ class SecurityConfig {
 
             // Barra email/IP bloqueado por excesso de senhas erradas antes de conferir a senha
             .addFilterBefore(BloqueioLoginFilter(tentativasLogin), UsernamePasswordAuthenticationFilter::class.java)
+
+            // Antes do CsrfFilter, que faria o Tomcat ler o multipart inteiro (até 101 MB) antes de conferir permissão:
+            // arquivo só no POST de /admin/app por ADMIN
+            .addFilterBefore(EnvioArquivoFilter(), CsrfFilter::class.java)
 
             // Quem entrou com senha temporária só acessa a troca de senha até criar a nova
             .addFilterAfter(TrocaSenhaObrigatoriaFilter(), UsernamePasswordAuthenticationFilter::class.java)

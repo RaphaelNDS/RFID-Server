@@ -131,7 +131,7 @@ class LeituraLoteService(
 
     /**
      * A hora mais antiga entre as leituras com hora informada (só elas são conferidas como reenvio), no fuso do
-     * servidor; null se nenhuma tem hora. Hora no futuro vira "agora" na gravação, que é depois disso, então serve.
+     * servidor; null se nenhuma tem hora. É a mesma hora gravada em lido_em_coletor (mesmo no futuro), então serve.
      */
     private fun inicioDasLeituras(itens: List<ItemLote>): LocalDateTime? =
         itens.mapNotNull { it.lidoEm?.atZoneSameInstant(ZoneId.systemDefault())?.toLocalDateTime() }.minOrNull()

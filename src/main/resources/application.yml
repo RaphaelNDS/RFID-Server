@@ -18,8 +18,9 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
-  # Envio do APK na tela "App dos coletores" (o padrão do Spring é 1 MB). Leitura sob demanda: o arquivo só
-  # é lido depois da conferência de permissão (somente ADMIN), e o serviço para de gravar ao passar de 100 MB.
+  # Envio do APK na tela "App dos coletores" (o padrão do Spring é 1 MB). Envio de arquivo só passa no POST de
+  # /admin/app por um ADMIN logado (EnvioArquivoFilter, antes do CsrfFilter): nas outras rotas, ou sem login, é
+  # recusado sem ler o corpo. O serviço também para de gravar ao passar de 100 MB.
   servlet:
     multipart:
       max-file-size: 100MB
@@ -111,6 +112,9 @@ rfid:
   leituras:
     # Tela de leituras: quantas por página (10 a 200).
     por-pagina: ${RFID_LEITURAS_POR_PAGINA:50}
+    # Até quantas leituras a tela conta: acima disso mostra "mais de N" e navega por Anterior/Próxima (contar
+    # milhões de leituras a cada página levava segundos).
+    teto-contagem: ${RFID_LEITURAS_TETO_CONTAGEM:10000}
     # Retenção: apaga leituras com mais de N dias, 10 min depois de o servidor subir e a cada 24 h. 0 = desligada (guarda tudo).
     # Mínimo de 30 dias (leituras feitas offline chegam com a data antiga). Inventários não são afetados.
     # Apagar leituras muda os relatórios dos períodos apagados.

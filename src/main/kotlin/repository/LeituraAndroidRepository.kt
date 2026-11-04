@@ -50,16 +50,15 @@ interface LeituraAndroidRepository :
     """)
     fun contarPorMarcaEntre(@Param("inicio") inicio: LocalDateTime, @Param("fim") fim: LocalDateTime): List<Array<Any?>>
 
-    /** Reenvio do coletor: a mesma tag com a mesma hora de leitura já foi gravada. */
-    fun existsByTagAndDataHora(tag: String, dataHora: LocalDateTime): Boolean
+    /** Reenvio do coletor: a mesma tag com a mesma hora informada pelo coletor já foi gravada. */
+    fun existsByTagAndLidoEmColetor(tag: String, lidoEmColetor: LocalDateTime): Boolean
 
-    /** Lote: (tag, hora) das leituras já gravadas dessas tags desde [inicio], numa consulta só (reenvio do lote). */
-    @Query("select l.tag, l.dataHora from LeituraAndroidEntity l where l.tag in :tags and l.dataHora >= :inicio")
+    /**
+     * Lote: (tag, hora informada pelo coletor) das leituras já gravadas dessas tags desde [inicio], numa consulta só
+     * (reenvio do lote).
+     */
+    @Query("select l.tag, l.lidoEmColetor from LeituraAndroidEntity l where l.tag in :tags and l.lidoEmColetor >= :inicio")
     fun gravadasDesde(@Param("tags") tags: Collection<String>, @Param("inicio") inicio: LocalDateTime): List<Array<Any>>
-
-    /** Relatório "não vistas": [tag, hora da última leitura] de cada tag (usa o índice único tag + data_hora). */
-    @Query("select l.tag, max(l.dataHora) from LeituraAndroidEntity l group by l.tag")
-    fun ultimaLeituraPorTag(): List<Array<Any?>>
 
     // Retenção: um único DELETE em lote, sem carregar as leituras na memória
     @Modifying

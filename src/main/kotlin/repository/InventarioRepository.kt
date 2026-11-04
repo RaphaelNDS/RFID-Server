@@ -41,20 +41,6 @@ interface InventarioItemRepository : JpaRepository<InventarioItemEntity, Long> {
     @Query("select i.tag from InventarioItemEntity i where i.inventarioId = :inventarioId")
     fun tagsDoInventario(inventarioId: String): List<String>
 
-    /**
-     * Relatório "não vistas": [tag, hora, local] do inventário mais recente em que cada tag foi lida.
-     * DISTINCT ON é do PostgreSQL (o banco do servidor e dos testes): uma linha por tag, a de maior lido_em.
-     */
-    @Query(
-        value = """select distinct on (it.tag) it.tag, it.lido_em, l.nome
-                   from inventario_itens it
-                   join inventarios inv on inv.id = it.inventario_id
-                   join locais l on l.id = inv.local_id
-                   order by it.tag, it.lido_em desc""",
-        nativeQuery = true
-    )
-    fun ultimoInventarioPorTag(): List<Array<Any?>>
-
     /** [inventarioId, total de itens, itens cadastrados] só dos inventários da página (antes somava todos). */
     @Query(
         """select i.inventarioId, count(i), sum(case when i.cadastrada = true then 1 else 0 end)
