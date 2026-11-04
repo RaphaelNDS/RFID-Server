@@ -34,6 +34,8 @@ dependencies {
     // JPA
     // Banco: PostgreSQL (no Docker, ver docker/); o Flyway precisa do módulo do banco desde a versão 10
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    // /actuator/health (só ele, sem detalhes): o application.yml já configurava, mas sem este starter não existia
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
     runtimeOnly("org.postgresql:postgresql")
     implementation("org.flywaydb:flyway-core")
     implementation("org.flywaydb:flyway-database-postgresql")

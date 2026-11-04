@@ -4,6 +4,8 @@ import org.example.model.InventarioEntity
 import org.example.model.InventarioItemEntity
 import org.example.model.LocalEntity
 import org.example.model.StatusInventario
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import java.util.Optional
@@ -17,9 +19,10 @@ interface LocalRepository : JpaRepository<LocalEntity, Long> {
 
 interface InventarioRepository : JpaRepository<InventarioEntity, String> {
 
-    fun findAllByOrderByIniciadoEmDesc(): List<InventarioEntity>
+    /** Tela de inventários: uma página (a ordem vem no [pagina]). */
+    fun findAllBy(pagina: Pageable): Page<InventarioEntity>
 
-    fun findByLocalIdOrderByIniciadoEmDesc(localId: Long): List<InventarioEntity>
+    fun findByLocalId(localId: Long, pagina: Pageable): Page<InventarioEntity>
 
     /** Último inventário finalizado do local: base da lista do que é esperado no próximo inventário. */
     fun findFirstByLocalIdAndStatusOrderByFinalizadoEmDesc(localId: Long, status: StatusInventario): InventarioEntity?
@@ -38,10 +41,10 @@ interface InventarioItemRepository : JpaRepository<InventarioItemEntity, Long> {
     @Query("select i.tag from InventarioItemEntity i where i.inventarioId = :inventarioId")
     fun tagsDoInventario(inventarioId: String): List<String>
 
-    /** [inventarioId, total de itens, itens cadastrados] por inventário. */
+    /** [inventarioId, total de itens, itens cadastrados] só dos inventários da página (antes somava todos). */
     @Query(
         """select i.inventarioId, count(i), sum(case when i.cadastrada = true then 1 else 0 end)
-           from InventarioItemEntity i group by i.inventarioId"""
+           from InventarioItemEntity i where i.inventarioId in :ids group by i.inventarioId"""
     )
-    fun contarPorInventario(): List<Array<Any?>>
+    fun contarPorInventario(ids: Collection<String>): List<Array<Any?>>
 }

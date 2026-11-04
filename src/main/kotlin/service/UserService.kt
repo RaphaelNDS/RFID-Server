@@ -39,11 +39,12 @@ class UsuarioService(
             throw IllegalStateException("O sistema já foi configurado")
         }
 
-        politicaSenha.exigir(req.senha, req.email, req.nome, "configuração inicial")
+        val email = emailValidado(req.email)
+        politicaSenha.exigir(req.senha, email, req.nome, "configuração inicial")
 
         val usuario = UsuarioEntity(
             nome = req.nome,
-            email = req.email,
+            email = email,
             senha = encoder.encode(req.senha),
             role = Role.ADMIN
         )
@@ -70,12 +71,13 @@ class UsuarioService(
     @Transactional
     fun cadastrar(req: CadastroUsuarioRequest) {
 
-        if (repo.existsByEmailIgnoreCase(req.email.trim())) {
-            log.warn("Cadastro de usuário recusado: o email {} já está em uso", req.email)
+        val email = emailValidado(req.email)
+        if (repo.existsByEmailIgnoreCase(email)) {
+            log.warn("Cadastro de usuário recusado: o email {} já está em uso", email)
             throw IllegalArgumentException("Já existe um usuário com este email")
         }
 
-        politicaSenha.exigir(req.senha, req.email, req.nome, "cadastro de usuário")
+        politicaSenha.exigir(req.senha, email, req.nome, "cadastro de usuário")
 
         val roleFinal = if (!existeUsuario()) {
             Role.ADMIN
@@ -85,7 +87,7 @@ class UsuarioService(
 
         val usuario = UsuarioEntity(
             nome = req.nome,
-            email = req.email,
+            email = email,
             senha = encoder.encode(req.senha),
             role = roleFinal,
             permissoes = mutableListOf()
@@ -115,8 +117,8 @@ class UsuarioService(
     private fun permissoesDoPerfil(role: Role, modulosCustom: List<Modulo>, acoesCustom: List<Acao>, usuario: UsuarioEntity): List<PermissaoEntity> {
         val pares: List<Pair<Modulo, Acao>> = when (role) {
             Role.ADMIN -> Modulo.values().flatMap { m -> Acao.values().map { m to it } }
-            Role.GESTOR -> Modulo.values().flatMap { m -> listOf(Acao.READ, Acao.CREATE, Acao.UPDATE).map { m to it } }
-            Role.USER -> Modulo.values().map { it to Acao.READ }
+            Role.GESTOR -> modulosComEfeito.flatMap { m -> listOf(Acao.READ, Acao.CREATE, Acao.UPDATE).map { m to it } }
+            Role.USER -> modulosComEfeito.map { it to Acao.READ }
             Role.CUSTOM -> modulosCustom.flatMap { m -> acoesCustom.map { m to it } }
         }
         return pares.map { (modulo, acao) -> PermissaoEntity(modulo = modulo, acao = acao, usuario = usuario) }
@@ -196,7 +198,7 @@ class UsuarioService(
             throw IllegalArgumentException("Selecione pelo menos um módulo")
         }
         return telas.map { tela ->
-            Modulo.values().find { it.name == tela } ?: run {
+            modulosComEfeito.find { it.name == tela } ?: run {
                 log.warn("Cadastro de usuário recusado: módulo inexistente '{}' enviado pelo formulário", tela)
                 throw IllegalArgumentException("Módulo inválido: $tela")
             }
@@ -258,7 +260,7 @@ class UsuarioService(
     fun alterarEmail(usuarioId: Long, novoEmail: String, senhaAtual: String): String {
 
         val usuario = buscarPorId(usuarioId)
-        val emailNovo = novoEmail.trim()
+        val emailNovo = normalizarEmail(novoEmail)
 
         if (!encoder.matches(senhaAtual, usuario.senha)) {
             log.warn("Troca de email recusada para {}: senha atual incorreta", usuario.email)
@@ -292,7 +294,26 @@ class UsuarioService(
             IllegalStateException("Usuário não encontrado")
         }
 
+    /** Email normalizado e conferido (cadastro e configuração inicial). */
+    private fun emailValidado(email: String): String {
+        val normalizado = normalizarEmail(email)
+        if (!EMAIL_VALIDO.matches(normalizado)) {
+            log.warn("Cadastro de usuário recusado: email inválido '{}'", normalizado)
+            throw IllegalArgumentException("Email inválido")
+        }
+        return normalizado
+    }
+
     companion object {
+        /** Módulos que liberam algo de fato (USUARIO não: gestão de usuários é só do ADMIN). */
+        private val modulosComEfeito = Modulo.values().filter { it != Modulo.USUARIO }
+
         private val EMAIL_VALIDO = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
+
+        /**
+         * O email é o login: sempre gravado sem espaços e em minúsculas, e o login compara sem diferenciar
+         * maiúsculas. Antes, quem foi cadastrado como "Ana@Empresa.com " só entrava digitando exatamente assim.
+         */
+        fun normalizarEmail(email: String): String = email.trim().lowercase()
     }
 }

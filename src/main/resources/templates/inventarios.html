@@ -30,7 +30,7 @@
     </form>
 
     <div class="card-header">
-      <h2>Inventários <span class="contagem" th:text="'(' + ${#lists.size(inventarios)} + ')'"></span></h2>
+      <h2>Inventários <span class="contagem" th:text="'(' + ${#numbers.formatInteger(total, 1, 'POINT')} + ')'"></span></h2>
     </div>
 
     <div class="table-wrap">
@@ -74,6 +74,8 @@
         Os inventários aparecem aqui quando um coletor inicia um inventário num local.
       </div>
     </div>
+
+    <nav th:replace="~{layout/paginacao :: paginacao}"></nav>
   </div>
 
 </section>

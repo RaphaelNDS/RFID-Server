@@ -14,8 +14,6 @@ class DashboardController(
     fun dashboard(model: Model): String {
 
         model.addAttribute("isAdmin", authService.temRole("ADMIN"))
-        model.addAttribute("isGestor", authService.temRole("GESTOR"))
-        model.addAttribute("isUser", authService.temRole("USER"))
 
         return "dashboard"
     }

@@ -6,6 +6,7 @@ import org.example.repository.*
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
+import java.time.Clock
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
@@ -34,7 +35,9 @@ class LeituraAndroidService(
     private val tipoRepo: TipoEquipamentoRepository,
     private val marcaRepo: MarcaRepository,
     private val modeloRepo: ModeloRepository,
-    private val eventos: LeituraEventosService
+    private val eventos: LeituraEventosService,
+    // Padrão para os testes que montam o service à mão; no Spring vem o Clock da aplicação
+    private val relogio: Clock = Clock.systemDefaultZone()
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -144,7 +147,7 @@ class LeituraAndroidService(
      * vale a hora do recebimento.
      */
     private fun dataHoraDaLeitura(tagReal: String, lidoEm: OffsetDateTime?): LocalDateTime {
-        val agora = LocalDateTime.now()
+        val agora = LocalDateTime.now(relogio)
         if (lidoEm == null) return agora
 
         val lida = lidoEm.atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()

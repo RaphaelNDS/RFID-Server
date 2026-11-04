@@ -162,6 +162,45 @@ class InventarioIntegracaoTest : IntegracaoBase() {
     }
 
     @Test
+    fun `outro coletor nao envia etiquetas para o inventario nem o finaliza`() {
+        val id = abrir(local = "Sala 303")
+        operadores.criarUsuario(email = "outro-coletor@x.com")
+        val outro = operadores.entrar(mvc, "outro-coletor@x.com", chave = "chave-de-leitura-0123456789")
+
+        mvc.perform(
+            post("/api/android/inventarios/$id/itens").comoOperador(outro, chave = "chave-de-leitura-0123456789")
+                .contentType(MediaType.APPLICATION_JSON).content("""{"itens":[{"tag":"E-INTRUSA"}]}""")
+        ).andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.mensagem").value(containsString("aberto por outro coletor")))
+        mvc.perform(
+            post("/api/android/inventarios/$id/finalizar").comoOperador(outro, chave = "chave-de-leitura-0123456789")
+                .contentType(MediaType.APPLICATION_JSON).content("{}")
+        ).andExpect(status().isForbidden)
+
+        assertThat(itens.tagsDoInventario(id)).isEmpty()
+        assertThat(inventarios.findById(id).get().status).isEqualTo(StatusInventario.ABERTO)
+    }
+
+    @Test
+    fun `tela de inventarios pagina de 50 em 50 e conta so os itens de cada inventario`() {
+        val primeiro = abrir(local = "Almoxarifado", iniciadoEm = "2026-01-01T08:00:00-03:00")
+        enviarItens(primeiro, "E-P1", "E-P2").andExpect(status().isOk)
+        repeat(50) { abrir(local = "Almoxarifado", iniciadoEm = "2026-02-01T08:%02d:00-03:00".format(it)) }
+
+        mvc.perform(get("/admin/inventarios").with(Perfis.usuario()))
+            .andExpect(status().isOk)
+            .andExpect(content().string(containsString("(51)")))
+            .andExpect(content().string(containsString("Página 1 de 2")))
+            .andExpect(content().string(containsString("/admin/inventarios?pagina=2")))
+            .andExpect(content().string(not(containsString(primeiro))))
+
+        // O mais antigo fica na 2ª página, com as 2 etiquetas dele
+        mvc.perform(get("/admin/inventarios").param("pagina", "2").with(Perfis.usuario()))
+            .andExpect(content().string(containsString(primeiro)))
+            .andExpect(content().string(containsString("Página 2 de 2")))
+    }
+
+    @Test
     fun `tela de inventarios exige a permissao de leituras`() {
         mvc.perform(get("/admin/inventarios").with(Perfis.somenteCatalogo()))
             .andExpect(status().isForbidden)

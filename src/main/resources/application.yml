@@ -152,8 +152,14 @@ logging:
       total-size-cap: 1GB
 
 
+# Monitoramento: GET https://<servidor>:8443/actuator/health responde {"status":"UP"} (ou DOWN, com 503, se o
+# banco cair). Sem login e sem detalhes; nenhum outro endpoint do actuator fica exposto.
 management:
   endpoints:
     web:
       exposure:
         include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never

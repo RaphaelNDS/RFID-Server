@@ -57,3 +57,6 @@ data/
 
 ### WinSW (baixado à parte, ver README "Serviço do Windows") ###
 scripts/windows/servico/*.exe
+
+# Pasta do IntelliJ criada por engano dentro de src (configuração local)
+src/.idea/

@@ -128,7 +128,9 @@ class SecurityConfig {
                     "/js/**",
                     "/images/**",
                     "/img/**",
-                    "/webjars/**"
+                    "/webjars/**",
+                    // Monitoramento (ex.: Uptime Kuma): só "UP"/"DOWN", sem detalhes (application.yml)
+                    "/actuator/health"
                 ).permitAll()
                 it.requestMatchers(*rotasAntigasColetor).permitAll()
 

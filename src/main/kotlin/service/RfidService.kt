@@ -14,6 +14,7 @@ import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
 import java.security.MessageDigest
 import org.example.response.TagViewAdmin
+import java.time.Clock
 import java.time.LocalDateTime
 import org.slf4j.LoggerFactory
 import org.springframework.security.core.context.SecurityContextHolder
@@ -25,7 +26,8 @@ class RfidService(
     private val tipoRepo: TipoEquipamentoRepository,
     private val marcaRepo: MarcaRepository,
     private val modeloRepo: ModeloRepository,
-    private val historico: HistoricoEtiquetaService
+    private val historico: HistoricoEtiquetaService,
+    private val relogio: Clock = Clock.systemDefaultZone()
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -263,7 +265,7 @@ class RfidService(
         naoRepo.save(
             TagNaoCadastradaEntity(
                 tag = tag,
-                dataHora = LocalDateTime.now()
+                dataHora = LocalDateTime.now(relogio)
             )
         )
 
@@ -316,7 +318,7 @@ class RfidService(
      */
     fun registrarPendenteDoLote(tag: String) {
         try {
-            naoRepo.saveAndFlush(TagNaoCadastradaEntity(tag = tag, dataHora = LocalDateTime.now()))
+            naoRepo.saveAndFlush(TagNaoCadastradaEntity(tag = tag, dataHora = LocalDateTime.now(relogio)))
             log.info("Tag não cadastrada registrada: {} (por {})", tag, usuarioAtual())
         } catch (e: DataIntegrityViolationException) {
             log.debug("Tag não cadastrada {} já estava pendente (envio simultâneo)", tag)

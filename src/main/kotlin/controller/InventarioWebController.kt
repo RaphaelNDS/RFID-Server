@@ -29,8 +29,15 @@ class InventarioWebController(
 
     @PreAuthorize("@authService.temPermissao('LEITURA','READ')")
     @GetMapping
-    fun listar(@RequestParam(required = false) local: Long?, model: Model): String {
-        model.addAttribute("inventarios", service.listar(local))
+    fun listar(
+        @RequestParam(required = false) local: Long?,
+        @RequestParam(defaultValue = "1") pagina: Int,
+        model: Model
+    ): String {
+        // Na tela as páginas começam em 1; no serviço, em 0
+        val resultado = service.listar(local, pagina - 1)
+        model.addAttribute("inventarios", resultado.content)
+        model.adicionarPaginacao(resultado, "/admin/inventarios", mapOf("local" to local))
         model.addAttribute("locais", service.locaisCadastrados())
         model.addAttribute("localSelecionado", local)
         return "inventarios"

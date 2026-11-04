@@ -16,7 +16,8 @@ class CustomUserDetailsService(
 
     override fun loadUserByUsername(username: String): UserDetails {
 
-        val user = usuarioRepository.findByEmailFetchPermissoes(username)
+        // Login sem diferenciar maiúsculas nem espaços nas pontas (UserService.normalizarEmail)
+        val user = usuarioRepository.findByEmailFetchPermissoes(username.trim())
             ?: throw UsernameNotFoundException("Usuário não encontrado")
 
         val authorities = mutableListOf<GrantedAuthority>()
