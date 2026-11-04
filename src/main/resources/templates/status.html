@@ -1,5 +1,5 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
+d!DOCTYPE html>
+dhtml xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
 
@@ -19,6 +19,11 @@
   </div>
   <div class="alert alert-erro" th:if="${erro}" role="alert">
     <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+  <div class="alert alert-erro" th:if="${info.backupBancoComProblema}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+    <span>Backup do banco com problema: <span th:text="${info.backupBanco}"></span>. Confira se o Docker Desktop está
+      aberto e o contêiner <span class="mono">rfid-backup</span> no ar. Backup na hora: <span class="mono">docker exec rfid-backup /backup.sh</span></span>
   </div>
 
   <div class="card">

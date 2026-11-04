@@ -334,12 +334,15 @@ sessão trazem o mesmo `motivo`.
   | V12 | `db/migration/V12__email_minusculo.sql` | Emails já cadastrados em minúsculas e sem espaços |
   | V13 | `db/migration/V13__auditoria.sql` | Auditoria de usuários e configurações |
   | V14 | `db/migration/V14__versao_app_retirada.sql` | Versão do app retirada pelo ADMIN |
+  | V15 | `db/migration/V15__busca_leituras_trigram.sql` | Índices trigram (`pg_trgm`) para os filtros "contém" da tela de leituras |
 
 - **Backup do banco:** o contêiner `rfid-backup` roda o `pg_dump` ao subir e depois de 6 em 6 horas enquanto está no
   ar (horário fixo de madrugada não serve: com o computador desligado o backup nunca roda) e guarda em
   `docker/backups` (ou na pasta de `RFID_BACKUP_PASTA` do `.env`), em `daily/`, `weekly/` e `monthly/`, mantendo
   14 diários, 4 semanais e 6 mensais. Backup na hora: `docker exec rfid-backup /backup.sh`. Ao religar o
-  computador, ele espera o banco aceitar conexões (até 5 min) antes do backup ao subir.
+  computador, ele espera o banco aceitar conexões (até 5 min) antes do backup ao subir. A tela **Status** mostra o
+  último backup do banco (lido de `docker\backups\last`) e um alerta quando passa de 12 h sem backup ou quando a
+  última tentativa gerou um arquivo vazio; o mesmo aviso vai para o log a cada 6 h.
 - **Backup antes de migrar:** quando uma versão nova do servidor traz migração, o servidor roda
   `docker exec rfid-backup /backup.sh` antes de aplicá-la (`RFID_BACKUP_ANTES_MIGRACAO`). Se esse backup falhar,
   a migração não é aplicada e o servidor não sobe: o log diz o motivo (normalmente o Docker Desktop fechado).
@@ -536,6 +539,8 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_LEITURAS_POR_PAGINA` | `50` | Leituras por página na tela de leituras (10 a 200) |
 | `RFID_LEITURAS_RETER_DIAS` | `0` (desligada) | Apaga leituras com mais de N dias, 10 min depois de subir e a cada 24 h (mínimo 30; não afeta inventários) |
 | `RFID_BACKUP_ANTES_MIGRACAO` | `docker exec rfid-backup /backup.sh` | Backup do banco antes de aplicar migrações (vazio = migra sem backup) |
+| `RFID_BANCO_PASTA_BACKUPS` | `./docker/backups` | Pasta dos dumps do contêiner de backup (a mesma do `RFID_BACKUP_PASTA` do `docker\.env`), para a tela Status conferir |
+| `RFID_BANCO_BACKUP_ATRASADO_HORAS` | `12` | Horas sem backup do banco até a tela Status e o log avisarem |
 | `RFID_SENHA_TAMANHO_MINIMO` | `8` | Tamanho mínimo de senha |
 | `RFID_LOGIN_MAX_TENTATIVAS` | `5` | Erros por email até bloquear |
 | `RFID_LOGIN_MAX_TENTATIVAS_IP` | `20` | Erros por origem até bloquear (IP na web, coletor + IP no coletor) |
