@@ -8,6 +8,7 @@ import org.example.repository.UserRepository
 import org.example.security.UserPrincipal
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.security.core.userdetails.UsernameNotFoundException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -245,6 +246,22 @@ class SessaoOperadorService(
         return principal
     }
 
+    /**
+     * Limpeza: apaga as sessões que já não autorizam nada há mais de [GUARDAR_SESSOES_MORTAS]. Uma sessão morre de
+     * vez [janelaSincronizacao] depois do fim (logout ou expiração, o que vier antes); a conta usa a expiração, que
+     * é sempre o fim mais tardio, então nunca apaga sessão que ainda vale. Roda 10 min depois de o servidor subir
+     * e depois a cada 24 h (horário fixo de madrugada não roda com o computador desligado).
+     */
+    @Scheduled(initialDelayString = "PT10M", fixedDelayString = "PT24H")
+    @Transactional
+    fun apagarSessoesMortas(): Int {
+        val limite = LocalDateTime.now(relogio).minus(janelaSincronizacao).minus(TOLERANCIA).minus(GUARDAR_SESSOES_MORTAS)
+        return runCatching { sessoes.apagarExpiradasAntesDe(limite) }
+            .onSuccess { if (it > 0) log.info("Limpeza: {} sessão(ões) de operador expiradas antes de {} apagada(s)", it, limite.toLocalDate()) }
+            .onFailure { log.error("Limpeza das sessões de operador falhou: tenta de novo em 24 h", it) }
+            .getOrDefault(0)
+    }
+
     /** Origem das tentativas de login do coletor no TentativasLoginService: "coletor-01@10.0.0.5". */
     private fun origemDoLogin(dispositivo: String, ip: String?) = "$dispositivo@${ip ?: "desconhecido"}"
 
@@ -266,6 +283,9 @@ class SessaoOperadorService(
 
         /** Diferença aceita entre o relógio do coletor e o do servidor. */
         val TOLERANCIA: Duration = Duration.ofMinutes(5)
+
+        /** Quanto tempo a sessão morta continua no banco antes da limpeza (para conferir algum problema recente). */
+        val GUARDAR_SESSOES_MORTAS: Duration = Duration.ofDays(30)
 
         fun hash(token: String): String =
             MessageDigest.getInstance("SHA-256").digest(token.toByteArray()).joinToString("") { "%02x".format(it) }

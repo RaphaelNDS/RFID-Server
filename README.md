@@ -137,7 +137,7 @@ versão do app (para ver se o erro sumiu depois de uma atualização).
 - Contra app em loop de falha: o app agrupa os repetidos (número de vezes), o servidor aceita no máximo 50 por
   envio e `RFID_COLETORES_ERROS_POR_DIA` por coletor por dia (acima disso descarta, com um aviso por hora no log).
 - Reenvio não duplica (o id é gerado no coletor). Erros com mais de `RFID_COLETORES_DIAS_ERROS` dias são apagados
-  todo dia às 04:15.
+  10 min depois de o servidor subir e a cada 24 h.
 
 ### App dos coletores (atualização pelo servidor)
 
@@ -304,7 +304,12 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
 - **Backup do banco:** o contêiner `rfid-backup` roda o `pg_dump` ao subir e depois de 6 em 6 horas enquanto está no
   ar (horário fixo de madrugada não serve: com o computador desligado o backup nunca roda) e guarda em
   `docker/backups` (ou na pasta de `RFID_BACKUP_PASTA` do `.env`), em `daily/`, `weekly/` e `monthly/`, mantendo
-  14 diários, 4 semanais e 6 mensais. Backup na hora: `docker exec rfid-backup /backup.sh`.
+  14 diários, 4 semanais e 6 mensais. Backup na hora: `docker exec rfid-backup /backup.sh`. Ao religar o
+  computador, ele espera o banco aceitar conexões (até 5 min) antes do backup ao subir.
+- **Backup antes de migrar:** quando uma versão nova do servidor traz migração, o servidor roda
+  `docker exec rfid-backup /backup.sh` antes de aplicá-la (`RFID_BACKUP_ANTES_MIGRACAO`). Se esse backup falhar,
+  a migração não é aplicada e o servidor não sobe: o log diz o motivo (normalmente o Docker Desktop fechado).
+  Para migrar sem backup, defina `RFID_BACKUP_ANTES_MIGRACAO` vazio. Banco vazio (primeira instalação) não faz.
 
   **Restaurar o banco** (apaga os dados atuais do banco): pare o servidor e rode, na pasta `docker`:
 
@@ -424,8 +429,11 @@ RFID_Servidor\
 1. Em `config\application.properties`, coloque o nome e a chave de cada coletor (`rfid.dispositivos.chaves`) e
    os que podem cadastrar (`rfid.dispositivos.cadastro`). As outras opções vêm comentadas com o valor padrão.
    Esse arquivo faz o papel das variáveis de ambiente da tabela abaixo e **não vai para o git** (tem as chaves).
-2. No `iniciar-servidor.bat`, confira o caminho do Java (`JAVA`). Use o mesmo `java.exe` liberado no Firewall do
-   Windows; com outro, libere a entrada na porta 8443 para ele, senão os coletores não conectam.
+2. **Java 17:** copie um JDK 17 inteiro para a pasta `RFID_Servidor\java\` (ex.: o conteúdo de
+   `C:\Program Files\Microsoft\jdk-17...`). O `.bat` e o serviço usam `java\bin\java.exe` primeiro: é o Java do
+   servidor, vai junto numa migração e não muda quando o IntelliJ atualiza os JDKs dele. Sem essa pasta, o `.bat`
+   usa o caminho de `JAVA_RESERVA`. Libere no Firewall do Windows o `java.exe` usado, senão os coletores não
+   conectam (o `.bat` avisa quando não encontra a regra e mostra o comando que libera).
 3. Dê dois cliques no `.bat`. A janela fica aberta com o servidor no ar; para parar, **Ctrl+C** (o servidor fecha o
    banco antes de sair). O `.bat` não inicia se a porta 8443 já estiver em uso (ex.: o servidor do IntelliJ ainda
    rodando), para os dois não disputarem a porta e o banco.
@@ -443,8 +451,9 @@ logo depois de ligar o computador). Usa o [WinSW](https://github.com/winsw/winsw
    (`rfid-servidor.xml`, `instalar-servico.bat` e `remover-servico.bat`).
 2. Baixe o `WinSW-x64.exe` em <https://github.com/winsw/winsw/releases/tag/v2.12.0> e salve nessa pasta com o
    nome `rfid-servidor.exe` (o nome tem de ser igual ao do `.xml`). Ele não vai para o git.
-3. No `rfid-servidor.xml`, confira o caminho do Java (`executable`): o mesmo `java.exe` do `iniciar-servidor.bat`,
-   liberado no Firewall.
+3. O serviço usa o Java da pasta `RFID_Servidor\java\` (`executable` no `rfid-servidor.xml`), liberado no
+   Firewall. O `instalar-servico.bat` recusa instalar se ele não existir. Para usar outro Java, troque o caminho
+   em `executable`.
 4. Pare o servidor aberto pelo `.bat` (Ctrl+C na janela dele).
 5. Clique com o botão direito no `instalar-servico.bat` > **Executar como administrador**.
 
@@ -491,7 +500,8 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_DURACAO_SESSAO_OPERADOR` | `12h` | Duração do login no coletor |
 | `RFID_JANELA_SINCRONIZACAO` | `72h` | Tempo máximo que um coletor pode ficar offline sem perder ações |
 | `RFID_LEITURAS_POR_PAGINA` | `50` | Leituras por página na tela de leituras (10 a 200) |
-| `RFID_LEITURAS_RETER_DIAS` | `0` (desligada) | Apaga leituras com mais de N dias, todo dia às 03:30 (mínimo 30; não afeta inventários) |
+| `RFID_LEITURAS_RETER_DIAS` | `0` (desligada) | Apaga leituras com mais de N dias, 10 min depois de subir e a cada 24 h (mínimo 30; não afeta inventários) |
+| `RFID_BACKUP_ANTES_MIGRACAO` | `docker exec rfid-backup /backup.sh` | Backup do banco antes de aplicar migrações (vazio = migra sem backup) |
 | `RFID_SENHA_TAMANHO_MINIMO` | `8` | Tamanho mínimo de senha |
 | `RFID_LOGIN_MAX_TENTATIVAS` | `5` | Erros por email até bloquear |
 | `RFID_LOGIN_MAX_TENTATIVAS_IP` | `20` | Erros por origem até bloquear (IP na web, coletor + IP no coletor) |

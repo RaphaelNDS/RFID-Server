@@ -5,8 +5,9 @@
   Instalar/remover: instalar-servico.bat e remover-servico.bat (como administrador). Ver README,
   "Serviço do Windows".
 
-  - Roda o mesmo java.exe do iniciar-servidor.bat (o liberado no Firewall), na pasta RFID_Servidor
-    (usa .\data e .\config\application.properties).
+  - Roda o JDK próprio do servidor, em RFID_Servidor\java (o mesmo que o iniciar-servidor.bat usa primeiro;
+    liberado no Firewall), na pasta RFID_Servidor (usa .\data e .\config\application.properties).
+    O instalar-servico.bat confere se ele existe. Para usar outro Java, troque o caminho em executable.
   - Para parar, o WinSW manda Ctrl+C para o java (o servidor fecha o banco antes de sair).
   - Se o servidor cair ou não conseguir subir (ex.: Docker/banco ainda não está no ar logo depois de ligar
     o computador), o Windows tenta de novo a cada 30 segundos.
@@ -16,7 +17,7 @@
   <name>Servidor RFID</name>
   <description>Servidor RFID (coletores e telas web na porta 8443). Banco PostgreSQL no Docker (rfid-postgres).</description>
 
-  <executable>C:\Users\Dev\.jdks\ms-17.0.20\bin\java.exe</executable>
+  <executable>%BASE%\..\java\bin\java.exe</executable>
   <arguments>-Xmx1g -Dfile.encoding=UTF-8 -jar "%BASE%\..\servidor\rfid-server.jar"</arguments>
   <workingdirectory>%BASE%\..</workingdirectory>
 

@@ -40,6 +40,12 @@ spring:
 
 
 rfid:
+  banco:
+    # Backup do banco antes de aplicar migrações (versão nova do servidor que muda as tabelas): pede um pg_dump
+    # ao contêiner de backup (grava em docker\backups\last). Se falhar, a migração não é aplicada e o servidor
+    # não sobe (o log diz o motivo). Vazio = migra sem backup. Banco vazio (primeira instalação) não faz backup.
+    backup-antes-migracao: ${RFID_BACKUP_ANTES_MIGRACAO:docker exec rfid-backup /backup.sh}
+
   dispositivos:
     # Chaves dos coletores Android que podem usar /api/android/**, no formato nome:chave
     # separados por vírgula (ex.: coletor-01:chave-longa-1,coletor-02:chave-longa-2).
@@ -56,7 +62,7 @@ rfid:
     # ("Sem contato há muito tempo").
     dias-sem-contato: ${RFID_COLETORES_DIAS_SEM_CONTATO:7}
     # Erros do app enviados pelos coletores: limite por coletor por dia (contra app em loop de falha)
-    # e por quantos dias ficam guardados (apagados todo dia às 04:15).
+    # e por quantos dias ficam guardados (limpeza 10 min depois de o servidor subir e a cada 24 h).
     erros-por-dia: ${RFID_COLETORES_ERROS_POR_DIA:500}
     dias-erros: ${RFID_COLETORES_DIAS_ERROS:90}
 
@@ -100,7 +106,7 @@ rfid:
   leituras:
     # Tela de leituras: quantas por página (10 a 200).
     por-pagina: ${RFID_LEITURAS_POR_PAGINA:50}
-    # Retenção: apaga leituras com mais de N dias, todo dia às 03:30. 0 = desligada (guarda tudo).
+    # Retenção: apaga leituras com mais de N dias, 10 min depois de o servidor subir e a cada 24 h. 0 = desligada (guarda tudo).
     # Mínimo de 30 dias (leituras feitas offline chegam com a data antiga). Inventários não são afetados.
     # Apagar leituras muda os relatórios dos períodos apagados.
     reter-dias: ${RFID_LEITURAS_RETER_DIAS:0}
@@ -126,7 +132,7 @@ rfid:
     # Vazio = ./data/backups.
     # Recomendado apontar para outro disco ou pasta de rede: backup no mesmo disco não protege contra falha do disco.
     pasta: ${RFID_BACKUP_PASTA:}
-    # Horário no formato cron do Spring (segundo minuto hora dia mês dia-da-semana). Padrão: todo dia às 02:00.
+    # Horário no formato cron do Spring (segundo minuto hora dia mês dia-da-semana). Padrão: todo dia às 02:00. Com o computador desligado nesse horário,
     cron: ${RFID_BACKUP_CRON:0 0 2 * * *}
     # Quantos backups guardar; os mais antigos são apagados.
     manter: ${RFID_BACKUP_MANTER:14}

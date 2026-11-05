@@ -49,3 +49,7 @@ rfid.dispositivos.cadastro=coletor-01
 #rfid.backup.cron=0 0 2 * * *
 #rfid.backup.manter=14
 #rfid.backup.pasta=D:/Backups/RFID
+
+# Backup do banco antes de aplicar migrações (versão nova do servidor). Se falhar, o servidor não sobe e não migra.
+# Vazio = migra sem backup
+#rfid.banco.backup-antes-migracao=docker exec rfid-backup /backup.sh

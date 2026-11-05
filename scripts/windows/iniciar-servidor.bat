@@ -13,9 +13,13 @@ rem    O parametro /servico (nao espera tecla ao terminar) fica para outras ferr
 rem  - Versao nova do servidor: pare o servidor, troque servidor\rfid-server.jar e inicie de novo.
 rem ============================================================================================
 
-rem Java usado: o mesmo liberado no Firewall do Windows (regra de entrada para este java.exe).
-rem Trocou o Java? Libere o novo java.exe no firewall, senao os coletores nao conectam.
-set "JAVA=C:\Users\Dev\.jdks\ms-17.0.20\bin\java.exe"
+rem Java usado: primeiro o JDK proprio do servidor, na pasta java\ ao lado deste .bat (copie um JDK 17 inteiro
+rem para la: vai junto numa migracao e nao muda quando o IntelliJ atualiza os JDKs dele). Sem essa pasta, usa
+rem o caminho de JAVA_RESERVA. O java.exe usado precisa estar liberado no Firewall do Windows (regra de
+rem entrada), senao os coletores nao conectam: este .bat avisa quando nao encontra a regra.
+set "JAVA=%~dp0java\bin\java.exe"
+set "JAVA_RESERVA=C:\Users\Dev\.jdks\ms-17.0.20\bin\java.exe"
+if not exist "%JAVA%" set "JAVA=%JAVA_RESERVA%"
 set "JAR=%~dp0servidor\rfid-server.jar"
 set "MEMORIA=-Xmx1g"
 rem Porta HTTPS conferida antes de iniciar (a mesma de rfid.https.porta no config, padrao 8443)
@@ -56,6 +60,18 @@ if errorlevel 1 (
     goto :fim_erro
 )
 
+rem Regra do firewall para este java.exe (so avisa: o servidor sobe igual, mas os coletores nao conectam).
+rem Pelo PowerShell: o findstr trata a barra invertida do caminho como caractere especial e nunca acha.
+rem O -eq do PowerShell ignora maiusculas (o Windows grava o caminho da regra em minusculas).
+powershell -NoProfile -Command "if (Get-NetFirewallApplicationFilter | Where-Object { $_.Program -eq $env:JAVA }) { exit 0 } else { exit 1 }" >nul 2>&1
+if errorlevel 1 (
+    echo [AVISO] Nenhuma regra do Firewall do Windows libera %JAVA%
+    echo         Os coletores nao vao conectar. Num PowerShell como administrador:
+    echo         New-NetFirewallRule -DisplayName "Servidor RFID (Java)" -Direction Inbound -Action Allow -Program "%JAVA%" -Profile Private,Domain
+    echo.
+)
+
+echo Java: %JAVA%
 echo Iniciando o servidor RFID em %CD%
 echo Log: %CD%\data\logs\rfid-server.log
 echo Para parar: Ctrl+C nesta janela.

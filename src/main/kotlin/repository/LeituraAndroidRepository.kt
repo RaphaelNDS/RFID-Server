@@ -53,6 +53,10 @@ interface LeituraAndroidRepository :
     /** Reenvio do coletor: a mesma tag com a mesma hora de leitura já foi gravada. */
     fun existsByTagAndDataHora(tag: String, dataHora: LocalDateTime): Boolean
 
+    /** Lote: (tag, hora) das leituras já gravadas dessas tags desde [inicio], numa consulta só (reenvio do lote). */
+    @Query("select l.tag, l.dataHora from LeituraAndroidEntity l where l.tag in :tags and l.dataHora >= :inicio")
+    fun gravadasDesde(@Param("tags") tags: Collection<String>, @Param("inicio") inicio: LocalDateTime): List<Array<Any>>
+
     // Retenção: um único DELETE em lote, sem carregar as leituras na memória
     @Modifying
     @Query("delete from LeituraAndroidEntity l where l.dataHora < :limite")

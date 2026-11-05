@@ -30,6 +30,16 @@ if not exist "rfid-servidor.xml" (
     echo [ERRO] rfid-servidor.xml nao encontrado nesta pasta.
     goto :fim_erro
 )
+rem Java do servico: o da pasta java\ (padrao do rfid-servidor.xml). Sem barra invertida na busca: o findstr
+rem a trata como caractere especial
+findstr /c:"<executable>%%BASE%%" rfid-servidor.xml >nul
+if not errorlevel 1 if not exist "..\java\bin\java.exe" (
+    echo [ERRO] Java nao encontrado: %~dp0..\java\bin\java.exe
+    echo        Copie um JDK 17 inteiro para a pasta java ao lado do iniciar-servidor.bat ^(ex.: o conteudo de
+    echo        C:\Program Files\Microsoft\jdk-17...^) e libere java\bin\java.exe no Firewall do Windows.
+    echo        Ou troque o caminho em executable no rfid-servidor.xml.
+    goto :fim_erro
+)
 if not exist "..\servidor\rfid-server.jar" (
     echo [ERRO] Servidor nao encontrado: %~dp0..\servidor\rfid-server.jar
     goto :fim_erro

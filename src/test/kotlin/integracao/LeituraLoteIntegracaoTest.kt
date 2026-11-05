@@ -118,6 +118,55 @@ class LeituraLoteIntegracaoTest : IntegracaoBase() {
     }
 
     @Test
+    fun `mesma leitura repetida dentro do proprio lote grava uma vez so`() {
+        val lida = minutosAtras(4)
+
+        enviar(item("E-LOTE-1", lida), item("E-LOTE-1", lida))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultados[0].status").value("CADASTRADA"))
+            .andExpect(jsonPath("$.resultados[1].status").value("CADASTRADA"))
+            .andExpect(jsonPath("$.resultados[1].dados.patrimonio").value("PAT-1"))
+
+        assertThat(leituras.findAll().count { it.tag == "E-LOTE-1" }).isEqualTo(1)
+    }
+
+    @Test
+    fun `tag nao cadastrada repetida no lote vira uma pendencia so, e a ja pendente nao duplica`() {
+        val nova = "E-NOVA-${UUID.randomUUID()}"
+        val jaPendente = "E-PEND-${UUID.randomUUID()}"
+        rfidService.salvarNaoCadastrada(jaPendente)
+
+        enviar(item(nova, minutosAtras(3)), item(nova, minutosAtras(2)), item(jaPendente, minutosAtras(1)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultados[0].status").value("NAO_CADASTRADA"))
+            .andExpect(jsonPath("$.resultados[1].status").value("NAO_CADASTRADA"))
+            .andExpect(jsonPath("$.resultados[2].status").value("NAO_CADASTRADA"))
+
+        assertThat(naoCadastradas.findAll().count { it.tag == nova }).isEqualTo(1)
+        assertThat(naoCadastradas.findAll().count { it.tag == jaPendente }).isEqualTo(1)
+    }
+
+    @Test
+    fun `etiqueta com cadastro incompleto volta como cadastrada mas nao grava leitura`() {
+        rfidService.cadastrarTag(CadastroRequest(tag = "E-INCOMPLETA", codigoInterno = "TI-X"))
+
+        enviar(item("E-INCOMPLETA", minutosAtras(1)))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultados[0].status").value("CADASTRADA"))
+            .andExpect(jsonPath("$.resultados[0].dados.codigoInterno").value("TI-X"))
+
+        assertThat(leituras.findAll().none { it.tag == "E-INCOMPLETA" }).isTrue()
+    }
+
+    @Test
+    fun `leitura sem hora grava com a hora do recebimento`() {
+        enviar("""{"tag":"E-LOTE-2"}""").andExpect(status().isOk)
+            .andExpect(jsonPath("$.resultados[0].status").value("CADASTRADA"))
+
+        assertThat(leituras.findAll().count { it.tag == "E-LOTE-2" }).isEqualTo(1)
+    }
+
+    @Test
     fun `item invalido e recusado sem derrubar o resto do lote`() {
         enviar(item("  ", minutosAtras(1)), item("E-LOTE-1", minutosAtras(1)))
             .andExpect(status().isOk)

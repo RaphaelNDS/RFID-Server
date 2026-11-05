@@ -8,6 +8,10 @@ import org.example.request.CadastroRequest
 import org.example.request.TagNaoCadastradaView
 import org.example.response.TagResponse
 import org.springframework.stereotype.Service
+import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import java.security.MessageDigest
 import org.example.response.TagViewAdmin
 import java.time.LocalDateTime
@@ -136,13 +140,29 @@ class RfidService(
         }
     }
 
-    // Carrega o catálogo uma vez só (antes eram 3 consultas por etiqueta listada)
-    fun listarParaAdmin(): List<TagViewAdmin> {
+    /**
+     * Tela de etiquetas: uma página (mais recentes primeiro), com busca no servidor por EPC, código, patrimônio,
+     * série ou nome do tipo/marca/modelo. Antes vinham todas de uma vez e a busca era só no navegador, o que
+     * fica pesado com milhares de etiquetas. [pagina] começa em 0. Carrega o catálogo uma vez só.
+     */
+    fun listarParaAdmin(busca: String?, pagina: Int): Page<TagViewAdmin> {
         val tipos = tipoRepo.findAll().associate { it.id to it.nome }
         val marcas = marcaRepo.findAll().associate { it.id to it.nome }
         val modelos = modeloRepo.findAll().associate { it.id to it.nome }
 
-        return repo.findAll().map { tag ->
+        val padrao = padraoBusca(busca)
+        val termo = busca?.trim()?.lowercase().orEmpty()
+        // Busca pelo nome do catálogo vira busca pelos ids (o catálogo é pequeno e já está carregado).
+        // Lista vazia no IN não é aceita por todos os bancos: -1 não existe
+        fun ids(nomes: Map<Long, String>) =
+            nomes.filterValues { termo.isNotEmpty() && it.lowercase().contains(termo) }.keys.ifEmpty { setOf(-1L) }
+
+        val ordem = Sort.by(Sort.Direction.DESC, "id")
+        val resultado = paginaValida(pagina) { p ->
+            repo.buscar(padrao, ids(tipos), ids(marcas), ids(modelos), PageRequest.of(p, TAMANHO_PAGINA, ordem))
+        }
+
+        return resultado.map { tag ->
             TagViewAdmin(
                 id = tag.id,
                 tag = tag.tagReal,
@@ -250,15 +270,58 @@ class RfidService(
         log.info("Tag não cadastrada registrada: {} (por {})", tag, usuarioAtual())
     }
 
-    fun listarNaoCadastradas(): List<TagNaoCadastradaView> =
-        naoRepo.findAll()
-            .sortedByDescending { it.dataHora }
-            .map {
-                TagNaoCadastradaView(
-                    tag = it.tag,
-                    dataHora = it.dataHora
-                )
-            }
+    /** Tela Pendentes: uma página (mais recentes primeiro), com busca pelo EPC. [pagina] começa em 0. */
+    fun listarNaoCadastradas(busca: String?, pagina: Int): Page<TagNaoCadastradaView> {
+        val ordem = Sort.by(Sort.Direction.DESC, "dataHora").and(Sort.by(Sort.Direction.DESC, "id"))
+        return paginaValida(pagina) { p ->
+            naoRepo.buscar(padraoBusca(busca), PageRequest.of(p, TAMANHO_PAGINA, ordem))
+        }.map { TagNaoCadastradaView(tag = it.tag, dataHora = it.dataHora) }
+    }
+
+    /* ================= LOTE DO COLETOR ================= */
+
+    /**
+     * Lote: as etiquetas cadastradas entre [tags] (por EPC) e os nomes do catálogo delas, numa consulta para as
+     * etiquetas e uma para cada parte do catálogo, para o lote inteiro (antes eram 4 consultas por leitura).
+     */
+    fun carregarParaLote(tags: Collection<String>): Pair<Map<String, TagEntity>, NomesCatalogo> {
+        if (tags.isEmpty()) return emptyMap<String, TagEntity>() to NomesCatalogo(emptyMap(), emptyMap(), emptyMap())
+
+        val encontradas = repo.findAllByTagRealIn(tags)
+        val nomes = NomesCatalogo(
+            tipos = tipoRepo.findAllById(encontradas.mapNotNull { it.tipoEquipamentoId }.toSet()).associate { it.id to it.nome },
+            marcas = marcaRepo.findAllById(encontradas.mapNotNull { it.marcaId }.toSet()).associate { it.id to it.nome },
+            modelos = modeloRepo.findAllById(encontradas.mapNotNull { it.modeloId }.toSet()).associate { it.id to it.nome }
+        )
+        return encontradas.associateBy { it.tagReal } to nomes
+    }
+
+    /** Os dados da etiqueta para o coletor, com os nomes do catálogo já carregados. */
+    fun resposta(tag: TagEntity, nomes: NomesCatalogo) = TagResponse(
+        codigoInterno = tag.codigoInterno,
+        tipo = tag.tipoEquipamentoId?.let { nomes.tipos[it] },
+        marca = tag.marcaId?.let { nomes.marcas[it] },
+        modelo = tag.modeloId?.let { nomes.modelos[it] },
+        patrimonio = tag.patrimonio,
+        numeroSerie = tag.numeroSerie
+    )
+
+    /** Lote: quais destas tags já estão em "Não cadastradas" (uma consulta). */
+    fun jaPendentes(tags: Collection<String>): Set<String> =
+        if (tags.isEmpty()) emptySet() else naoRepo.jaPendentes(tags).toSet()
+
+    /**
+     * Lote: grava como não cadastrada uma tag que o lote já conferiu (não está cadastrada nem pendente).
+     * Outro envio ao mesmo tempo pode ter gravado antes: o índice único recusa e conta como já pendente.
+     */
+    fun registrarPendenteDoLote(tag: String) {
+        try {
+            naoRepo.saveAndFlush(TagNaoCadastradaEntity(tag = tag, dataHora = LocalDateTime.now()))
+            log.info("Tag não cadastrada registrada: {} (por {})", tag, usuarioAtual())
+        } catch (e: DataIntegrityViolationException) {
+            log.debug("Tag não cadastrada {} já estava pendente (envio simultâneo)", tag)
+        }
+    }
 
     /* ================= UTIL ================= */
 
@@ -269,6 +332,30 @@ class RfidService(
         val md = MessageDigest.getInstance("SHA-256")
         val bytes = md.digest(tag.toByteArray())
         return bytes.joinToString("") { "%02x".format(it) }
+    }
+
+    companion object {
+        /** Linhas por página nas telas de etiquetas e pendentes. */
+        const val TAMANHO_PAGINA = 50
+
+        /**
+         * Padrão do LIKE para a busca: "%termo%" em minúsculas, com % e _ do próprio texto escapados (a consulta
+         * usa ESCAPE '\'). Busca vazia = "" (a consulta traz tudo).
+         */
+        fun padraoBusca(busca: String?): String {
+            val termo = busca?.trim()?.lowercase().orEmpty()
+            if (termo.isEmpty()) return ""
+            return "%" + termo.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+        }
+
+        /** Página pedida além da última (ex.: link antigo depois de excluir etiquetas): mostra a última. */
+        fun <T> paginaValida(pagina: Int, buscar: (Int) -> Page<T>): Page<T> {
+            val resultado = buscar(pagina.coerceAtLeast(0))
+            if (resultado.content.isEmpty() && resultado.number > 0 && resultado.totalPages > 0) {
+                return buscar(resultado.totalPages - 1)
+            }
+            return resultado
+        }
     }
 }
 

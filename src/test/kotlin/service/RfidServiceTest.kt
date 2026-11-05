@@ -10,6 +10,10 @@ import org.example.model.*
 import org.example.repository.*
 import org.example.request.CadastroRequest
 import org.junit.jupiter.api.Test
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageImpl
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
 import java.security.MessageDigest
 import java.time.LocalDateTime
 import java.util.Optional
@@ -137,16 +141,60 @@ class RfidServiceTest {
         every { tipoRepo.findAll() } returns listOf(notebook)
         every { marcaRepo.findAll() } returns listOf(dell)
         every { modeloRepo.findAll() } returns listOf(latitude)
-        every { tagRepo.findAll() } returns (1..50).map {
-            TagEntity(tagHash = "h$it", tagReal = "E$it", tipoEquipamentoId = 1, marcaId = 2, modeloId = 3)
+        every { tagRepo.buscar(any(), any(), any(), any(), any()) } answers {
+            PageImpl((1..50).map {
+                TagEntity(tagHash = "h$it", tagReal = "E$it", tipoEquipamentoId = 1, marcaId = 2, modeloId = 3)
+            }, arg(4), 50)
         }
 
-        val lista = service.listarParaAdmin()
+        val lista = service.listarParaAdmin(null, 0)
 
-        assertThat(lista).hasSize(50).allMatch { it.tipoNome == "Notebook" && it.marcaNome == "Dell" && it.modeloNome == "Latitude" }
+        assertThat(lista.content).hasSize(50).allMatch { it.tipoNome == "Notebook" && it.marcaNome == "Dell" && it.modeloNome == "Latitude" }
         verify(exactly = 0) { tipoRepo.findById(any()) }
         verify(exactly = 0) { marcaRepo.findById(any()) }
         verify(exactly = 0) { modeloRepo.findById(any()) }
+    }
+
+    @Test
+    fun `busca pelo nome da marca vira busca pelo id da marca e pagina de 50 mais recentes primeiro`() {
+        every { tipoRepo.findAll() } returns listOf(notebook, monitor)
+        every { marcaRepo.findAll() } returns listOf(dell, lg)
+        every { modeloRepo.findAll() } returns listOf(latitude, ultrawide)
+        val pagina = slot<Pageable>()
+        every { tagRepo.buscar(any(), any(), any(), any(), capture(pagina)) } answers { PageImpl(emptyList(), arg(4), 0) }
+
+        service.listarParaAdmin("  DeLL ", 2)
+
+        verify { tagRepo.buscar("%dell%", setOf(-1L), setOf(2L), setOf(-1L), any()) }
+        assertThat(pagina.captured.pageNumber).isEqualTo(2)
+        assertThat(pagina.captured.pageSize).isEqualTo(RfidService.TAMANHO_PAGINA)
+        assertThat(pagina.captured.sort.getOrderFor("id")?.isDescending).isTrue()
+    }
+
+    @Test
+    fun `padrao da busca escapa os curingas do proprio texto`() {
+        assertThat(RfidService.padraoBusca(null)).isEqualTo("")
+        assertThat(RfidService.padraoBusca("   ")).isEqualTo("")
+        assertThat(RfidService.padraoBusca(" E200 ")).isEqualTo("%e200%")
+        assertThat(RfidService.padraoBusca("10%_a\\b")).isEqualTo("%10\\%\\_a\\\\b%")
+    }
+
+    @Test
+    fun `pagina alem da ultima mostra a ultima e pagina negativa mostra a primeira`() {
+        val pedidas = mutableListOf<Int>()
+        fun buscar(p: Int): Page<String> {
+            pedidas += p
+            // 120 itens = 3 páginas de 50 (0, 1, 2)
+            val conteudo = if (p <= 2) listOf("x") else emptyList()
+            return PageImpl(conteudo, PageRequest.of(p, 50), 120)
+        }
+
+        assertThat(RfidService.paginaValida(9, ::buscar).number).isEqualTo(2)
+        assertThat(pedidas).containsExactly(9, 2)
+
+        pedidas.clear()
+        assertThat(RfidService.paginaValida(-3, ::buscar).number).isEqualTo(0)
+        assertThat(pedidas).containsExactly(0)
     }
 
     @Test
@@ -279,14 +327,16 @@ class RfidServiceTest {
     }
 
     @Test
-    fun `pendentes saem da mais recente para a mais antiga`() {
-        val agora = LocalDateTime.now()
-        every { naoRepo.findAll() } returns listOf(
-            TagNaoCadastradaEntity(tag = "ANTIGA", dataHora = agora.minusDays(2)),
-            TagNaoCadastradaEntity(tag = "NOVA", dataHora = agora),
-            TagNaoCadastradaEntity(tag = "MEIO", dataHora = agora.minusDays(1))
-        )
+    fun `pendentes pedem ao banco a mais recente primeiro, com a busca pelo EPC`() {
+        val pagina = slot<Pageable>()
+        every { naoRepo.buscar(any(), capture(pagina)) } answers {
+            PageImpl(listOf(TagNaoCadastradaEntity(tag = "E200-NOVA", dataHora = LocalDateTime.now())), arg(1), 1)
+        }
 
-        assertThat(service.listarNaoCadastradas().map { it.tag }).containsExactly("NOVA", "MEIO", "ANTIGA")
+        val resultado = service.listarNaoCadastradas("e200", 0)
+
+        assertThat(resultado.content.map { it.tag }).containsExactly("E200-NOVA")
+        verify { naoRepo.buscar("%e200%", any()) }
+        assertThat(pagina.captured.sort.getOrderFor("dataHora")?.isDescending).isTrue()
     }
 }

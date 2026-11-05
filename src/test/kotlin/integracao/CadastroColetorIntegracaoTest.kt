@@ -87,7 +87,7 @@ class CadastroColetorIntegracaoTest : IntegracaoBase() {
         val tag = rfidService.buscarPorTag("E-COLETOR")!!
         assertThat(tag.patrimonio).isEqualTo("PAT-1")
         assertThat(tag.modelo).isEqualTo("Latitude")
-        assertThat(rfidService.listarNaoCadastradas().map { it.tag }).doesNotContain("E-COLETOR")
+        assertThat(rfidService.listarNaoCadastradas(null, 0).content.map { it.tag }).doesNotContain("E-COLETOR")
     }
 
     @Test
