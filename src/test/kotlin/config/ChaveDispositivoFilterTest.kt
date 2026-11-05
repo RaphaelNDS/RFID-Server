@@ -128,6 +128,23 @@ class ChaveDispositivoFilterTest {
     }
 
     @Test
+    fun `IP bloqueado nao derruba o coletor cuja chave ja funcionou daquele IP (varios coletores atras do mesmo roteador)`() {
+        val filtro = ChaveDispositivoFilter(chaves)
+        // coletor-01 sincronizando normalmente pelo IP do roteador
+        assertThat(executar(filtro, "chave-longa-numero-um").first.status).isEqualTo(200)
+
+        // Outro coletor atrás do mesmo IP ficou com a chave velha e bloqueia o IP
+        repeat(ChaveDispositivoFilter.MAXIMO_CHAVES_ERRADAS) { executar(filtro, "chave-velha-$it-0123456789") }
+        assertThat(executar(filtro, "chave-velha-de-novo-0123456789").first.status).isEqualTo(429)
+
+        // O coletor-01 continua passando; o coletor-02, que nunca entrou deste IP, espera o bloqueio vencer
+        val (resposta, chain) = executar(filtro, "chave-longa-numero-um")
+        assertThat(resposta.status).isEqualTo(200)
+        assertThat(chain.request).isNotNull()
+        assertThat(executar(filtro, "chave-longa-numero-dois").first.status).isEqualTo(429)
+    }
+
+    @Test
     fun `bloqueio por chave errada vence com o tempo`() {
         val relogio = object : java.time.Clock() {
             var agora: java.time.Instant = java.time.Instant.parse("2026-11-04T10:00:00Z")

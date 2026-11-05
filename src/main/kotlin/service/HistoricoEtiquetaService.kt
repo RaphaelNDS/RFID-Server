@@ -74,7 +74,7 @@ class HistoricoEtiquetaService(
         salvar(tagId, tagReal, AcaoHistorico.EXCLUSAO, null, antes.resumo(), null, usuario, origem)
     }
 
-    fun historico(tagReal: String): List<HistoricoEtiquetaEntity> = repo.findByTagRealOrderByMomentoDescIdDesc(tagReal.trim())
+    fun historico(tagReal: String): List<HistoricoEtiquetaEntity> = repo.findByTagRealOrderByMomentoDescIdDesc(org.example.util.normalizarEpc(tagReal))
 
     fun recentes(): List<HistoricoEtiquetaEntity> = repo.findTop200ByOrderByMomentoDescIdDesc()
 

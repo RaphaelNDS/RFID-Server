@@ -60,7 +60,10 @@ interface LeituraAndroidRepository :
     @Query("select l.tag, l.lidoEmColetor from LeituraAndroidEntity l where l.tag in :tags and l.lidoEmColetor >= :inicio")
     fun gravadasDesde(@Param("tags") tags: Collection<String>, @Param("inicio") inicio: LocalDateTime): List<Array<Any>>
 
-    // Retenção: um único DELETE em lote, sem carregar as leituras na memória
+    // Retenção: um único DELETE em lote, sem carregar as leituras na memória. A transação fica aqui: a tarefa
+    // agendada chamava o @Transactional do serviço de dentro da própria classe (sem passar pelo proxy) e o DELETE
+    // falhava com TransactionRequiredException toda vez que a retenção estava ligada
+    @org.springframework.transaction.annotation.Transactional
     @Modifying
     @Query("delete from LeituraAndroidEntity l where l.dataHora < :limite")
     fun apagarAnterioresA(@Param("limite") limite: LocalDateTime): Int

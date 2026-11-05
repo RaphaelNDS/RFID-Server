@@ -32,6 +32,16 @@
         return fetchOriginal(url, opts);
       };
     })();
+
+    // Formulário com data-confirmar (excluir, desativar...) só sai depois da janela de confirmação do app.js.
+    // Enquanto o app.js não carregou (página ainda abrindo, cache velho, falha de rede) o envio é barrado:
+    // sem isto o clique enviava direto, sem perguntar nada
+    document.addEventListener("submit", function (e) {
+      if (e.target instanceof HTMLFormElement && e.target.dataset.confirmar && !window.confirmacaoPronta) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+    }, true);
   </script>
   <script th:src="@{/js/app.js}" defer></script>
 </head>

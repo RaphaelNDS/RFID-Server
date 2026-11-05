@@ -38,7 +38,7 @@ class LoteSimultaneoIntegracaoTest : IntegracaoBase() {
     @Autowired lateinit var operadores: OperadorTeste
     @Autowired lateinit var jdbc: JdbcTemplate
 
-    private val prefixo = "E-SIMULT-${UUID.randomUUID().toString().take(8)}-"
+    private val prefixo = "E-SIMULT-${UUID.randomUUID().toString().take(8).uppercase()}-"
     private val email = "simultaneo-${UUID.randomUUID()}@x.com"
     private val inventario = UUID.randomUUID().toString()
 

@@ -75,7 +75,7 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("17") // V17 = versão da etiqueta e nomes únicos sem diferenciar maiúsculas
+        assertThat(resultado.targetSchemaVersion).isEqualTo("18") // V18 = etiqueta (EPC) sempre em maiúsculas
     }
 
     @Test

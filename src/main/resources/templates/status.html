@@ -20,7 +20,8 @@
   <div class="alert alert-erro" th:if="${erro}" role="alert">
     <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
   </div>
-  <div class="alert alert-erro" th:if="${info.backupBancoComProblema}" role="alert">
+  <!-- Instrução de administrador (docker exec): só para o ADMIN; os outros veem a situação na linha do backup -->
+  <div class="alert alert-erro" th:if="${info.backupBancoComProblema}" sec:authorize="hasRole('ADMIN')" role="alert">
     <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
     <span>Backup do banco com problema: <span th:text="${info.backupBanco}"></span>. Confira se o Docker Desktop está
       aberto e o contêiner <span class="mono">rfid-backup</span> no ar. Backup na hora: <span class="mono">docker exec rfid-backup /backup.sh</span></span>

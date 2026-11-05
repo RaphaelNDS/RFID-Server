@@ -883,7 +883,7 @@ tr.inativo td { opacity: .6; }
   .table .acoes .texto-btn { display: none; }
   .table .acoes .btn-sm { width: 32px; padding: 0; }
 
-  .stat-valor { font-size: 24px; }
+  .stat-valor { font-size: 24px; overflow-wrap: anywhere; }
   .stat-valor.texto { font-size: 15px; }
   /* Rótulo em cima do valor: no celular não sobra largura para os dois lado a lado */
   .dados > div { flex-direction: column; gap: 2px; }

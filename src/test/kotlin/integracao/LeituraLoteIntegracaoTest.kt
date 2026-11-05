@@ -78,7 +78,7 @@ class LeituraLoteIntegracaoTest : IntegracaoBase() {
     @Test
     fun `lote classifica cada tag e registra leitura e nao cadastrada de uma vez`() {
         val lida = minutosAtras(10)
-        val naoCadastrada = "E-NOVA-${UUID.randomUUID()}"
+        val naoCadastrada = "E-NOVA-${UUID.randomUUID().toString().uppercase()}"
 
         enviar(item("E-LOTE-1", lida), item(naoCadastrada, lida), item("E-LOTE-2", minutosAtras(5)))
             .andExpect(status().isOk)
@@ -132,8 +132,8 @@ class LeituraLoteIntegracaoTest : IntegracaoBase() {
 
     @Test
     fun `tag nao cadastrada repetida no lote vira uma pendencia so, e a ja pendente nao duplica`() {
-        val nova = "E-NOVA-${UUID.randomUUID()}"
-        val jaPendente = "E-PEND-${UUID.randomUUID()}"
+        val nova = "E-NOVA-${UUID.randomUUID().toString().uppercase()}"
+        val jaPendente = "E-PEND-${UUID.randomUUID().toString().uppercase()}"
         rfidService.salvarNaoCadastrada(jaPendente)
 
         enviar(item(nova, minutosAtras(3)), item(nova, minutosAtras(2)), item(jaPendente, minutosAtras(1)))

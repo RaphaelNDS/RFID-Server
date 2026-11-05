@@ -72,7 +72,7 @@ class HistoricoEtiquetasIntegracaoTest : IntegracaoBase() {
                 .param("tipoEquipamentoId", tipo.toString()).param("marcaId", marca.toString()).param("modeloId", modelo.toString())
         )
 
-    private fun epc() = "E-HIST-${UUID.randomUUID().toString().take(8)}"
+    private fun epc() = "E-HIST-${UUID.randomUUID().toString().take(8).uppercase()}"
 
     @Test
     fun `cadastro pela web fica no historico com quem fez e os nomes do catalogo`() {

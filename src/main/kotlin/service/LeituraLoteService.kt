@@ -58,18 +58,16 @@ class LeituraLoteService(
 
         // Tudo o que o lote precisa consultar, carregado de uma vez (antes: cerca de 6 consultas por leitura)
         val validas = itens.withIndex()
-            .filter { (indice, item) -> indice !in momentosInvalidos && tagAceita(item.tag.trim()) }
+            .filter { (indice, item) -> indice !in momentosInvalidos && tagAceita(org.example.util.normalizarEpc(item.tag)) }
             .map { it.value }
-        val epcs = validas.map { it.tag.trim() }.toSet()
+        val epcs = validas.map { org.example.util.normalizarEpc(it.tag) }.toSet()
         val (cadastradas, nomes) = rfidService.carregarParaLote(epcs)
-        // Banco com comparação sem diferenciar maiúsculas: "abc" cadastrada também conta para "ABC" (como antes)
-        val cadastradasSemCaixa = cadastradas.keys.mapTo(HashSet()) { it.lowercase() }
         val pendentes = rfidService.jaPendentes(epcs - cadastradas.keys).toMutableSet()
         val gravadas = inicioDasLeituras(validas)
             ?.let { leituraService.gravadasDesde(cadastradas.keys, it) } ?: mutableSetOf()
 
         val resultados = itens.mapIndexed { indice, item ->
-            val tag = item.tag.trim()
+            val tag = org.example.util.normalizarEpc(item.tag)
 
             momentosInvalidos[indice]?.let { recusa ->
                 return@mapIndexed ResultadoItemLote(indice, tag, StatusItemLote.RECUSADA, mensagem = recusa.message, motivo = recusa.motivo)
@@ -87,7 +85,7 @@ class LeituraLoteService(
                     ResultadoItemLote(indice, tag, StatusItemLote.CADASTRADA, dados = rfidService.resposta(cadastrada, nomes))
                 } else {
                     // A mesma tag pode vir várias vezes no lote: só a primeira grava a pendência
-                    if (tag !in pendentes && tag.lowercase() !in cadastradasSemCaixa) {
+                    if (tag !in pendentes) {
                         rfidService.registrarPendenteDoLote(tag)
                         pendentes += tag
                     }
