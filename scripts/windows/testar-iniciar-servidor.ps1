@@ -29,4 +29,5 @@ try {
 } finally {
     Remove-Item -Recurse -Force $pasta -ErrorAction SilentlyContinue
 }
-# O código 1 do .bat era o esperado: sem isto o PowerShell do CI terminaria o passo com ele 0
+# O código 1 do .bat era o esperado: sem isto o PowerShell do CI terminaria o passo com ele
+exit 0
