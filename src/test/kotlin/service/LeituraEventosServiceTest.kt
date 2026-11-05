@@ -105,4 +105,20 @@ class LeituraEventosServiceTest {
             .thenAwait(LeituraEventosService.HEARTBEAT)
             .verifyComplete()
     }
+
+    @Test
+    fun `sse termina tambem quando a sessao sumiu do registro (logout em outra aba, inatividade)`() {
+        val registro = org.springframework.security.core.session.SessionRegistryImpl()
+        registro.registerNewSession("sessao-2", "ana@x.com")
+        val comSessao = LeituraEventosService(registro)
+
+        StepVerifier.withVirtualTime { comSessao.comoSse("leituras", comSessao.leituras(), "sessao-2") }
+            .expectSubscription()
+            .thenAwait(LeituraEventosService.HEARTBEAT)
+            .expectNextMatches { it.comment() == "ping" }
+            // expireNow() seguido de outra requisição: o logout invalida a sessão e o registro a apaga
+            .then { registro.removeSessionInformation("sessao-2") }
+            .thenAwait(LeituraEventosService.HEARTBEAT)
+            .verifyComplete()
+    }
 }

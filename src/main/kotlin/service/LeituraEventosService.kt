@@ -76,8 +76,13 @@ class LeituraEventosService(
     }
 
     private fun sessaoAindaVale(sessaoWeb: String?, canal: String, usuario: String): Boolean {
-        val info = sessaoWeb?.let { sessoesWeb?.getSessionInformation(it) } ?: return true
-        if (!info.isExpired) return true
+        val registro = sessoesWeb ?: return true
+        if (sessaoWeb == null) return true
+        // Sessão que sumiu do registro também acabou: depois do expireNow(), a próxima requisição de outra aba faz o
+        // logout e invalida a sessão, e o registro a apaga (o mesmo no "Sair" e no tempo de inatividade). Antes só
+        // a "expirada" contava, e a tela continuava recebendo leituras para sempre nesses casos
+        val info = registro.getSessionInformation(sessaoWeb)
+        if (info != null && !info.isExpired) return true
         log.info("Tela em tempo real do canal '{}' encerrada: a sessão de {} foi encerrada", canal, usuario)
         return false
     }

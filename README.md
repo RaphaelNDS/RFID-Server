@@ -614,7 +614,7 @@ Tudo em português. Sai no console e no arquivo `./data/logs/rfid-server.log` (m
 um arquivo por dia (ou a cada 10 MB), guardando os últimos 30 dias. Exemplos do que aparece:
 
 ```
-Servidor RFID versão 1.4.0 no ar na porta 8443 (iniciado em 13/10/2026 11:17, pronto em 9,8 s)
+Servidor RFID versão 1.4.1 no ar na porta 8443 (iniciado em 13/10/2026 11:17, pronto em 9,8 s)
 Banco de dados: PostgreSQL (localhost:5433/rfid)
 Backup do certificado HTTPS concluído (agendado): rfid-certificado-2026-10-13_020000.zip (rfid-https.p12, rfid-https.p12.senha)
 Login de 'ana@empresa.com' bloqueado por 15 min após 5 tentativas com senha errada (última origem: coletor-01@10.0.0.5)

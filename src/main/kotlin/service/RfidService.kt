@@ -1,5 +1,6 @@
 package org.example.service
 
+import org.example.util.normalizarEpc
 import org.springframework.transaction.annotation.Transactional
 import org.example.model.TagEntity
 import org.example.model.TagNaoCadastradaEntity
@@ -80,7 +81,8 @@ class RfidService(
         )
     }
 
-    fun buscarPorTag(tagReal: String): TagResponse? {
+    fun buscarPorTag(tagBruta: String): TagResponse? {
+        val tagReal = normalizarEpc(tagBruta)
 
         val hash = hashTag(tagReal)
         val tag = repo.findByTagHash(hash) ?: return null
@@ -234,7 +236,7 @@ class RfidService(
 
     private fun normalizar(req: CadastroRequest): CadastroRequest {
         val limpo = req.copy(
-            tag = req.tag.trim(),
+            tag = normalizarEpc(req.tag),
             codigoInterno = req.codigoInterno.trim(),
             patrimonio = req.patrimonio.trim(),
             numeroSerie = req.numeroSerie.trim()
@@ -274,7 +276,8 @@ class RfidService(
 
     /* ================= NÃO CADASTRADAS ================= */
 
-    fun salvarNaoCadastrada(tag: String) {
+    fun salvarNaoCadastrada(tagBruta: String) {
+        val tag = normalizarEpc(tagBruta)
 
         require(tag.isNotBlank()) { "Informe a TAG RFID" }
 
@@ -314,7 +317,8 @@ class RfidService(
     fun carregarParaLote(tags: Collection<String>): Pair<Map<String, TagEntity>, NomesCatalogo> {
         if (tags.isEmpty()) return emptyMap<String, TagEntity>() to NomesCatalogo(emptyMap(), emptyMap(), emptyMap())
 
-        val encontradas = repo.findAllByTagRealIn(tags)
+        // Chaves do mapa na forma padrão: quem chama procura com normalizarEpc()
+        val encontradas = repo.findAllByTagRealIn(tags.map(::normalizarEpc).toSet())
         val nomes = NomesCatalogo(
             tipos = tipoRepo.findAllById(encontradas.mapNotNull { it.tipoEquipamentoId }.toSet()).associate { it.id to it.nome },
             marcas = marcaRepo.findAllById(encontradas.mapNotNull { it.marcaId }.toSet()).associate { it.id to it.nome },

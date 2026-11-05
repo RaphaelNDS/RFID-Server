@@ -71,10 +71,12 @@ document.addEventListener("DOMContentLoaded", function () {
  * campo de texto).
  */
 function confirmar(opcoes) {
+  // Uma janela por vez: a segunda repetiria os ids e os atalhos de teclado da primeira
+  if (document.querySelector(".modal-fundo.confirmar")) return Promise.resolve(null);
   return new Promise(function (resolver) {
     const o = opcoes || {};
     const fundo = document.createElement("div");
-    fundo.className = "modal-fundo aberto";
+    fundo.className = "modal-fundo aberto confirmar";
     fundo.innerHTML =
       '<div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="confirmarTitulo" aria-describedby="confirmarMensagem">' +
       '  <div class="modal-cabecalho"><h2 id="confirmarTitulo"></h2></div>' +
@@ -122,7 +124,23 @@ function confirmar(opcoes) {
     ok.addEventListener("click", confirmarAgora);
     fundo.querySelector('[data-acao="cancelar"]').addEventListener("click", function () { fechar(null); });
     fundo.querySelector("form").addEventListener("submit", function (e) { e.preventDefault(); confirmarAgora(); });
-    fundo.addEventListener("click", function (e) { if (e.target === fundo) fechar(null); });
+    // Clique fora fecha, mas só um clique de verdade no fundo: o mouse precisa descer E subir no fundo (arrastar a
+    // seleção do motivo até fora da caixa não apaga o texto) e não vale nos primeiros 400 ms (o segundo clique de
+    // um duplo clique no botão Excluir caía no fundo e fechava a janela na hora)
+    const abertaEm = Date.now();
+    let desceuNoFundo = false;
+    fundo.addEventListener("mousedown", function (e) { desceuNoFundo = e.target === fundo; });
+    fundo.addEventListener("click", function (e) {
+      if (e.target === fundo && desceuNoFundo && Date.now() - abertaEm > 400) fechar(null);
+    });
+    // Tab fica dentro da janela (aria-modal): antes saía para os botões da página e abria uma segunda janela
+    fundo.addEventListener("keydown", function (e) {
+      if (e.key !== "Tab") return;
+      const focaveis = Array.from(fundo.querySelectorAll("button, input")).filter(function (el) { return el.offsetParent !== null; });
+      const primeiro = focaveis[0], ultimo = focaveis[focaveis.length - 1];
+      if (e.shiftKey && document.activeElement === primeiro) { e.preventDefault(); ultimo.focus(); }
+      else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primeiro.focus(); }
+    });
     document.addEventListener("keydown", teclas, true);
 
     document.body.appendChild(fundo);
@@ -170,3 +188,5 @@ document.addEventListener("submit", function (e) {
     HTMLFormElement.prototype.submit.call(form);
   });
 });
+// Libera os formulários com data-confirmar (o layout barra o envio deles até esta linha rodar)
+window.confirmacaoPronta = true;

@@ -239,7 +239,13 @@
         enviar(`/api/catalogo/${tipoAtual}`, 'POST', payload);
     }
 
+    // Um envio por vez: o Enter no campo chama salvarDialog() pelo onsubmit mesmo com o botão Salvar desabilitado,
+    // e dois Enter rápidos mandavam dois POST (o segundo voltava "Já existe...")
+    let enviando = false;
+
     function enviar(url, metodo, payload){
+        if(enviando) return;
+        enviando = true;
         const botao = document.getElementById("botaoSalvar");
         botao.disabled = true;
 
@@ -250,11 +256,15 @@
         })
         .then(verificarResposta)
         .then(()=>{
+            // Continua "enviando" até a página recarregar
             fecharDialog();
             location.reload();
         })
-        .catch(e=>erroDialog(e.message || "Erro ao salvar registro."))
-        .finally(()=>{ botao.disabled = false; });
+        .catch(e=>{
+            erroDialog(e.message || "Erro ao salvar registro.");
+            enviando = false;
+            botao.disabled = false;
+        });
     }
 
     function excluir(btn,tipo){

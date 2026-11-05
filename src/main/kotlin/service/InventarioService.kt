@@ -93,12 +93,21 @@ class InventarioService(
     }
 
     @Transactional
-    fun registrarItens(id: String, lidos: List<ItemLido>, dispositivo: String, operador: String? = null): ResultadoItens {
+    fun registrarItens(id: String, lidosBrutos: List<ItemLido>, dispositivo: String, operador: String? = null): ResultadoItens {
         val inventario = buscar(id)
         exigirMesmoColetor(inventario, dispositivo, "envio de etiquetas")
 
-        require(lidos.size <= MAXIMO_ITENS_POR_ENVIO) { "Envie no máximo $MAXIMO_ITENS_POR_ENVIO etiquetas por vez" }
-        require(lidos.all { it.tag.isNotBlank() }) { "Informe a TAG RFID de todos os itens" }
+        require(lidosBrutos.size <= MAXIMO_ITENS_POR_ENVIO) { "Envie no máximo $MAXIMO_ITENS_POR_ENVIO etiquetas por vez" }
+        require(lidosBrutos.all { it.tag.isNotBlank() }) { "Informe a TAG RFID de todos os itens" }
+
+        // EPC na forma padrão (como no lote e no cadastro): " abc" não batia com o cadastro "ABC". Etiqueta acima do
+        // tamanho da coluna sai só ela: antes o banco recusava o envio inteiro (até 500 itens) com erro 400
+        val (lidos, longas) = lidosBrutos.map { it.copy(tag = org.example.util.normalizarEpc(it.tag)) }
+            .partition { it.tag.length <= LeituraLoteService.TAMANHO_MAXIMO_TAG }
+        if (longas.isNotEmpty()) {
+            log.warn("Inventário {}: {} etiqueta(s) com mais de {} caracteres ignorada(s) no envio do dispositivo {}",
+                id, longas.size, LeituraLoteService.TAMANHO_MAXIMO_TAG, dispositivo)
+        }
 
         if (inventario.status == StatusInventario.FINALIZADO) {
             // Leituras feitas antes da finalização que chegaram depois dela (ex.: reenvio): aceita

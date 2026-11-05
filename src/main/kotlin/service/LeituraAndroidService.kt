@@ -42,7 +42,8 @@ class LeituraAndroidService(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    fun salvarLeitura(tagReal: String, lidoEm: OffsetDateTime? = null, operador: String? = null): ResultadoLeitura {
+    fun salvarLeitura(tagBruta: String, lidoEm: OffsetDateTime? = null, operador: String? = null): ResultadoLeitura {
+        val tagReal = org.example.util.normalizarEpc(tagBruta)
 
         require(tagReal.isNotBlank()) { "Informe a TAG RFID" }
 

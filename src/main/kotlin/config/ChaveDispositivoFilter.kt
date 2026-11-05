@@ -38,12 +38,18 @@ class ChaveDispositivoFilter(
         const val MAXIMO_CHAVES_ERRADAS = 20
         val JANELA_CHAVES_ERRADAS: java.time.Duration = java.time.Duration.ofMinutes(15)
 
+        /** Chave que funcionou de um IP há menos que isto continua passando com o IP bloqueado (NAT). */
+        val JANELA_CHAVE_CONHECIDA: java.time.Duration = java.time.Duration.ofHours(24)
+
         /** Texto da chave de exemplo (application.properties.exemplo): copiada sem trocar, a chave é pública. */
         private val CHAVE_DE_EXEMPLO = Regex("(?i)troque")
     }
 
     /** IP -> horários das chaves erradas dentro da janela. */
     private val errosPorIp = java.util.concurrent.ConcurrentHashMap<String, ArrayDeque<java.time.Instant>>()
+
+    /** "coletor@IP" -> última vez que a chave daquele coletor funcionou daquele IP (passa mesmo com o IP bloqueado). */
+    private val sucessosPorColetorIp = java.util.concurrent.ConcurrentHashMap<String, java.time.Instant>()
 
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -64,23 +70,25 @@ class ChaveDispositivoFilter(
         val chave = request.getHeader(HEADER)
         val ip = request.remoteAddr ?: "?"
 
-        if (bloqueado(ip)) {
+        val nome = if (chave.isNullOrBlank()) null else identificar(chave)
+
+        // IP bloqueado: só passa a chave que JÁ funcionou deste IP nas últimas 24 h. Vários coletores saem pelo mesmo
+        // IP do roteador (NAT) e um só com a chave velha bloqueava também os de chave certa por 15 min. Liberar
+        // qualquer chave válida mostraria a quem tenta adivinhar quando ele acertou, por isso só a já conhecida
+        if (bloqueado(ip) && (nome == null || !conhecidoNoIp(nome, ip))) {
             log.warn("Requisição de dispositivo recusada: IP {} errou a chave {} vezes em {} min ({} {})", ip, maximoChavesErradas,
                 JANELA_CHAVES_ERRADAS.toMinutes(), request.method, request.requestURI)
             recusar(response, "Muitas tentativas com chave inválida. Aguarde alguns minutos.", HttpStatus.TOO_MANY_REQUESTS)
             return
         }
 
-        if (chave.isNullOrBlank()) {
-            log.warn("Requisição de dispositivo sem chave: {} {} (IP: {})", request.method, request.requestURI, request.remoteAddr)
-            recusar(response, "Chave do dispositivo não informada")
-            return
-        }
-
-        val nome = identificar(chave)
-
         if (nome == null) {
-            log.warn("Requisição de dispositivo com chave inválida: {} {} (IP: {})", request.method, request.requestURI, request.remoteAddr)
+            if (chave.isNullOrBlank()) {
+                log.warn("Requisição de dispositivo sem chave: {} {} (IP: {})", request.method, request.requestURI, ip)
+                recusar(response, "Chave do dispositivo não informada")
+                return
+            }
+            log.warn("Requisição de dispositivo com chave inválida: {} {} (IP: {})", request.method, request.requestURI, ip)
             registrarErro(ip)
             recusar(response, "Chave do dispositivo inválida")
             return
@@ -90,6 +98,7 @@ class ChaveDispositivoFilter(
             nome, null, listOf(SimpleGrantedAuthority("ROLE_$ROLE"))
         )
         SecurityContextHolder.getContext().authentication = autenticacao
+        registrarSucesso(nome, ip)
 
         log.debug("Dispositivo {} autenticado: {} {}", nome, request.method, request.requestURI)
 
@@ -128,6 +137,17 @@ class ChaveDispositivoFilter(
                     JANELA_CHAVES_ERRADAS.toMinutes(), maximoChavesErradas)
             }
         }
+    }
+
+    private fun registrarSucesso(nome: String, ip: String) {
+        // Memória limitada: são poucos coletores, mas o IP de cada um pode mudar (DHCP)
+        if (sucessosPorColetorIp.size > 10_000) sucessosPorColetorIp.clear()
+        sucessosPorColetorIp["$nome@$ip"] = relogio.instant()
+    }
+
+    private fun conhecidoNoIp(nome: String, ip: String): Boolean {
+        val ultimo = sucessosPorColetorIp["$nome@$ip"] ?: return false
+        return ultimo.isAfter(relogio.instant().minus(JANELA_CHAVE_CONHECIDA))
     }
 
     private fun descartarAntigos(erros: ArrayDeque<java.time.Instant>) {

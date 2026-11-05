@@ -80,6 +80,7 @@ class SecurityConfig {
         http: HttpSecurity,
         @Value("\${rfid.dispositivos.chaves:}") chaves: String,
         @Value("\${rfid.dispositivos.max-chaves-erradas:20}") maximoChavesErradas: Int,
+        @Value("\${rfid.dispositivos.max-corpo-bytes:8388608}") maximoCorpoBytes: Long,
         sessoesOperador: SessaoOperadorService,
         corteLoginOperador: CorteLoginOperador,
         relogio: Clock
@@ -94,6 +95,8 @@ class SecurityConfig {
             .addFilterBefore(filtroChave, BasicAuthenticationFilter::class.java)
             // A API dos coletores não recebe arquivo: multipart é recusado sem ler o corpo
             .addFilterBefore(EnvioArquivoFilter(permitido = null), BasicAuthenticationFilter::class.java)
+            // JSON grande demais é recusado antes de o Jackson carregar tudo na memória (padrão 8 MB)
+            .addFilterBefore(TamanhoCorpoFilter(maximoCorpoBytes), BasicAuthenticationFilter::class.java)
             // Depois do coletor, o operador logado nele (X-Sessao-Operador); login e ping não exigem
             .addFilterAfter(OperadorFilter(sessoesOperador, corteLoginOperador, relogio), ChaveDispositivoFilter::class.java)
             .authorizeHttpRequests { it.anyRequest().hasRole(ChaveDispositivoFilter.ROLE) }

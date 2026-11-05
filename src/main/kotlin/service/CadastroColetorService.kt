@@ -81,7 +81,7 @@ class CadastroColetorService(
         }
 
         val req = pedido.copy(
-            tag = pedido.tag.trim(),
+            tag = org.example.util.normalizarEpc(pedido.tag),
             codigoInterno = pedido.codigoInterno.trim(),
             patrimonio = pedido.patrimonio.trim(),
             numeroSerie = pedido.numeroSerie.trim()
