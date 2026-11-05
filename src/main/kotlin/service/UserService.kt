@@ -15,7 +15,9 @@ class UsuarioService(
     private val repo: UserRepository,
     private val encoder: PasswordEncoder,
     private val politicaSenha: PoliticaSenha,
-    private val sessoes: SessoesUsuarioService
+    private val sessoes: SessoesUsuarioService,
+    // Opcional para os testes que montam o service à mão; no Spring é sempre injetado
+    private val auditoria: AuditoriaService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -39,11 +41,12 @@ class UsuarioService(
             throw IllegalStateException("O sistema já foi configurado")
         }
 
-        politicaSenha.exigir(req.senha, req.email, req.nome, "configuração inicial")
+        val email = emailValidado(req.email)
+        politicaSenha.exigir(req.senha, email, req.nome, "configuração inicial")
 
         val usuario = UsuarioEntity(
             nome = req.nome,
-            email = req.email,
+            email = email,
             senha = encoder.encode(req.senha),
             role = Role.ADMIN
         )
@@ -65,17 +68,19 @@ class UsuarioService(
         repo.save(salvo)
 
         log.info("Administrador inicial criado: {}", salvo.email)
+        auditoria?.registrar(AreaAuditoria.USUARIOS, "Administrador inicial criado", salvo.email)
     }
 
     @Transactional
     fun cadastrar(req: CadastroUsuarioRequest) {
 
-        if (repo.existsByEmailIgnoreCase(req.email.trim())) {
-            log.warn("Cadastro de usuário recusado: o email {} já está em uso", req.email)
+        val email = emailValidado(req.email)
+        if (repo.existsByEmailIgnoreCase(email)) {
+            log.warn("Cadastro de usuário recusado: o email {} já está em uso", email)
             throw IllegalArgumentException("Já existe um usuário com este email")
         }
 
-        politicaSenha.exigir(req.senha, req.email, req.nome, "cadastro de usuário")
+        politicaSenha.exigir(req.senha, email, req.nome, "cadastro de usuário")
 
         val roleFinal = if (!existeUsuario()) {
             Role.ADMIN
@@ -85,7 +90,7 @@ class UsuarioService(
 
         val usuario = UsuarioEntity(
             nome = req.nome,
-            email = req.email,
+            email = email,
             senha = encoder.encode(req.senha),
             role = roleFinal,
             permissoes = mutableListOf()
@@ -109,14 +114,16 @@ class UsuarioService(
             SecurityContextHolder.getContext().authentication?.name ?: "sistema",
             permissoes.joinToString { "${it.modulo}_${it.acao}" }
         )
+        auditoria?.registrar(AreaAuditoria.USUARIOS, "Usuário criado", usuarioSalvo.email,
+            "Perfil $roleFinal; permissões: ${permissoes.joinToString { "${it.modulo}_${it.acao}" }.ifEmpty { "nenhuma" }}")
     }
 
     /** Permissões de cada perfil: ADMIN tudo, GESTOR ver/criar/editar, USER só ver, CUSTOM os módulos e ações marcados. */
     private fun permissoesDoPerfil(role: Role, modulosCustom: List<Modulo>, acoesCustom: List<Acao>, usuario: UsuarioEntity): List<PermissaoEntity> {
         val pares: List<Pair<Modulo, Acao>> = when (role) {
             Role.ADMIN -> Modulo.values().flatMap { m -> Acao.values().map { m to it } }
-            Role.GESTOR -> Modulo.values().flatMap { m -> listOf(Acao.READ, Acao.CREATE, Acao.UPDATE).map { m to it } }
-            Role.USER -> Modulo.values().map { it to Acao.READ }
+            Role.GESTOR -> modulosComEfeito.flatMap { m -> listOf(Acao.READ, Acao.CREATE, Acao.UPDATE).map { m to it } }
+            Role.USER -> modulosComEfeito.map { it to Acao.READ }
             Role.CUSTOM -> modulosCustom.flatMap { m -> acoesCustom.map { m to it } }
         }
         return pares.map { (modulo, acao) -> PermissaoEntity(modulo = modulo, acao = acao, usuario = usuario) }
@@ -157,6 +164,8 @@ class UsuarioService(
             "Usuário {} alterado por {}: perfil {} → {} [{}]", usuario.email, quemFez(), antes, role,
             usuario.permissoes.joinToString { "${it.modulo}_${it.acao}" }
         )
+        auditoria?.registrar(AreaAuditoria.USUARIOS, "Usuário alterado", usuario.email,
+            "Antes: $antes. Depois: $role [${usuario.permissoes.joinToString { "${it.modulo}_${it.acao}" }}]")
     }
 
     /** ADMIN desativa um usuário: ele não entra mais e as sessões abertas dele (web e coletores) caem na hora. */
@@ -175,6 +184,7 @@ class UsuarioService(
         repo.save(usuario)
         val encerradas = sessoes.encerrar(id, "usuário desativado")
         log.warn("Usuário {} desativado por {} ({} sessão(ões) encerrada(s))", usuario.email, quemFez(), encerradas.total)
+        auditoria?.registrar(AreaAuditoria.USUARIOS, "Usuário desativado", usuario.email, "${encerradas.total} sessão(ões) encerrada(s)")
     }
 
     @Transactional
@@ -185,6 +195,7 @@ class UsuarioService(
         usuario.ativo = true
         repo.save(usuario)
         log.info("Usuário {} reativado por {}", usuario.email, quemFez())
+        auditoria?.registrar(AreaAuditoria.USUARIOS, "Usuário reativado", usuario.email)
     }
 
     fun porId(id: Long): UsuarioEntity = buscarPorId(id)
@@ -196,7 +207,7 @@ class UsuarioService(
             throw IllegalArgumentException("Selecione pelo menos um módulo")
         }
         return telas.map { tela ->
-            Modulo.values().find { it.name == tela } ?: run {
+            modulosComEfeito.find { it.name == tela } ?: run {
                 log.warn("Cadastro de usuário recusado: módulo inexistente '{}' enviado pelo formulário", tela)
                 throw IllegalArgumentException("Módulo inválido: $tela")
             }
@@ -251,6 +262,8 @@ class UsuarioService(
         log.info("Senha alterada pelo próprio usuário: {}{}{}", usuario.email,
             if (eraTemporaria) " (substituiu a senha temporária)" else "",
             if (tinhaPedido) "; pedido de nova senha em aberto encerrado" else "")
+        auditoria?.registrar(AreaAuditoria.SENHAS, "Senha trocada pelo próprio usuário", usuario.email,
+            if (eraTemporaria) "Substituiu a senha temporária" else null)
     }
 
     /** Troca o email (que também é o login). Exige a senha atual. Retorna o email gravado. */
@@ -258,7 +271,7 @@ class UsuarioService(
     fun alterarEmail(usuarioId: Long, novoEmail: String, senhaAtual: String): String {
 
         val usuario = buscarPorId(usuarioId)
-        val emailNovo = novoEmail.trim()
+        val emailNovo = normalizarEmail(novoEmail)
 
         if (!encoder.matches(senhaAtual, usuario.senha)) {
             log.warn("Troca de email recusada para {}: senha atual incorreta", usuario.email)
@@ -283,6 +296,7 @@ class UsuarioService(
         repo.save(usuario)
 
         log.info("Email alterado pelo próprio usuário: {} -> {}", emailAntigo, emailNovo)
+        auditoria?.registrar(AreaAuditoria.USUARIOS, "Email trocado pelo próprio usuário", emailNovo, "Antes: $emailAntigo")
         return emailNovo
     }
 
@@ -292,7 +306,26 @@ class UsuarioService(
             IllegalStateException("Usuário não encontrado")
         }
 
+    /** Email normalizado e conferido (cadastro e configuração inicial). */
+    private fun emailValidado(email: String): String {
+        val normalizado = normalizarEmail(email)
+        if (!EMAIL_VALIDO.matches(normalizado)) {
+            log.warn("Cadastro de usuário recusado: email inválido '{}'", normalizado)
+            throw IllegalArgumentException("Email inválido")
+        }
+        return normalizado
+    }
+
     companion object {
+        /** Módulos que liberam algo de fato (USUARIO não: gestão de usuários é só do ADMIN). */
+        private val modulosComEfeito = Modulo.values().filter { it != Modulo.USUARIO }
+
         private val EMAIL_VALIDO = Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
+
+        /**
+         * O email é o login: sempre gravado sem espaços e em minúsculas, e o login compara sem diferenciar
+         * maiúsculas. Antes, quem foi cadastrado como "Ana@Empresa.com " só entrava digitando exatamente assim.
+         */
+        fun normalizarEmail(email: String): String = email.trim().lowercase()
     }
 }

@@ -43,5 +43,15 @@ class VersaoAppEntity(
     val publicadaPor: String,
 
     /** O arquivo foi apagado para economizar disco (só as últimas versões ficam guardadas). */
-    var arquivoRemovido: Boolean = false
-)
+    var arquivoRemovido: Boolean = false,
+
+    /** Retirada pelo ADMIN (publicada com problema): não é mais oferecida aos coletores (V14). */
+    var retiradaEm: LocalDateTime? = null,
+
+    var retiradaPor: String? = null,
+
+    @Column(length = 500)
+    var motivoRetirada: String? = null
+) {
+    val retirada: Boolean get() = retiradaEm != null
+}

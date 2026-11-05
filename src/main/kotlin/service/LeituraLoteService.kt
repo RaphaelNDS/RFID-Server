@@ -27,7 +27,9 @@ data class ResultadoItemLote(
     val tag: String,
     val status: StatusItemLote,
     val dados: TagResponse? = null,
-    val mensagem: String? = null
+    val mensagem: String? = null,
+    /** Só nos RECUSADA por sessão: o mesmo motivo do 401 (MotivoSessaoInvalida). */
+    val motivo: MotivoSessaoInvalida? = null
 )
 
 /**
@@ -69,8 +71,8 @@ class LeituraLoteService(
         val resultados = itens.mapIndexed { indice, item ->
             val tag = item.tag.trim()
 
-            momentosInvalidos[indice]?.let { motivo ->
-                return@mapIndexed ResultadoItemLote(indice, tag, StatusItemLote.RECUSADA, mensagem = motivo)
+            momentosInvalidos[indice]?.let { recusa ->
+                return@mapIndexed ResultadoItemLote(indice, tag, StatusItemLote.RECUSADA, mensagem = recusa.message, motivo = recusa.motivo)
             }
             if (!tagAceita(tag)) {
                 val motivo = if (tag.isEmpty()) "Informe a TAG RFID" else "TAG RFID com mais de $TAMANHO_MAXIMO_TAG caracteres"
@@ -108,7 +110,7 @@ class LeituraLoteService(
      * é um intervalo de tempo: se a leitura mais antiga e a mais nova do lote valem, todas valem (2 consultas
      * em vez de uma por item). Só quando uma das pontas falha confere item por item.
      */
-    private fun validarMomentos(itens: List<ItemLote>, token: String, dispositivo: String): Map<Int, String> {
+    private fun validarMomentos(itens: List<ItemLote>, token: String, dispositivo: String): Map<Int, SessaoInvalidaException> {
         if (itens.isEmpty()) return emptyMap()
 
         val momentos = itens.map { momentoDaLeitura(it.lidoEm) }
@@ -121,7 +123,7 @@ class LeituraLoteService(
             .toMap()
 
         log.warn("Lote do coletor {}: {} de {} leitura(s) feitas fora da sessão do operador foram recusadas ({})",
-            dispositivo, invalidos.size, itens.size, invalidos.values.distinct().joinToString("; "))
+            dispositivo, invalidos.size, itens.size, invalidos.values.map { it.message }.distinct().joinToString("; "))
         return invalidos
     }
 
@@ -134,12 +136,12 @@ class LeituraLoteService(
     private fun inicioDasLeituras(itens: List<ItemLote>): LocalDateTime? =
         itens.mapNotNull { it.lidoEm?.atZoneSameInstant(ZoneId.systemDefault())?.toLocalDateTime() }.minOrNull()
 
-    private fun motivoSeInvalido(token: String, dispositivo: String, momento: LocalDateTime): String? =
+    private fun motivoSeInvalido(token: String, dispositivo: String, momento: LocalDateTime): SessaoInvalidaException? =
         try {
             sessoes.validar(token, dispositivo, momento)
             null
         } catch (e: SessaoInvalidaException) {
-            e.message ?: "Sessão do operador inválida"
+            e
         }
 
     // Mesma regra do X-Momento (OperadorFilter): sem hora, ou com relógio do coletor adiantado, vale agora

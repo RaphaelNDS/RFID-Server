@@ -1,5 +1,7 @@
 package org.example.controller
 
+import org.example.model.AreaAuditoria
+import org.example.service.AuditoriaService
 import org.example.service.BackupService
 import org.example.service.RfidService
 import org.example.service.StatusService
@@ -14,7 +16,6 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
-import org.springframework.web.util.UriComponentsBuilder
 
 @PreAuthorize("hasRole('ADMIN')")
 @Controller
@@ -22,7 +23,8 @@ import org.springframework.web.util.UriComponentsBuilder
 class AdminController(
     private val rfidService: RfidService,
     private val statusService: StatusService,
-    private val backupService: BackupService
+    private val backupService: BackupService,
+    private val auditoria: AuditoriaService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -60,20 +62,11 @@ class AdminController(
         return "admin-tags"
     }
 
-    /** Total, página atual e links de anterior/próxima (que mantêm a busca) para as telas paginadas. */
+    /** Paginação das telas com busca: a busca vai no modelo (campo e "Limpar") e nos links das páginas. */
     private fun paginacao(model: Model, resultado: Page<*>, caminho: String, busca: String?) {
         val termo = busca?.trim().orEmpty()
-        fun link(numero: Int) = UriComponentsBuilder.fromPath(caminho)
-            .apply { if (termo.isNotEmpty()) queryParam("busca", termo) }
-            .queryParam("pagina", numero).encode().toUriString()
-
-        val paginaAtual = resultado.number + 1
         model.addAttribute("busca", termo)
-        model.addAttribute("total", resultado.totalElements)
-        model.addAttribute("paginaAtual", paginaAtual)
-        model.addAttribute("totalPaginas", resultado.totalPages.coerceAtLeast(1))
-        model.addAttribute("linkAnterior", if (resultado.hasPrevious()) link(paginaAtual - 1) else null)
-        model.addAttribute("linkProxima", if (resultado.hasNext()) link(paginaAtual + 1) else null)
+        model.adicionarPaginacao(resultado, caminho, mapOf("busca" to termo))
     }
 
     // Backup manual (só ADMIN, pela regra da classe), ex.: antes de atualizar o sistema
@@ -83,6 +76,7 @@ class AdminController(
 
         try {
             val arquivo = backupService.fazerBackup("manual, por ${auth.name}")
+            auditoria.registrar(AreaAuditoria.BACKUP, "Backup manual do certificado", arquivo.fileName.toString())
             redirect.addFlashAttribute("msg", "Backup concluído: ${arquivo.fileName}")
         } catch (e: IllegalStateException) {
             redirect.addFlashAttribute("erro", e.message)

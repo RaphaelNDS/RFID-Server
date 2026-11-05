@@ -1,5 +1,6 @@
 package org.example.service
 
+import org.example.model.AreaAuditoria
 import org.example.model.UsuarioEntity
 import org.example.repository.UserRepository
 import org.slf4j.LoggerFactory
@@ -30,7 +31,8 @@ class RecuperacaoSenhaService(
     private val politicaSenha: PoliticaSenha,
     private val tentativasLogin: TentativasLoginService,
     private val relogio: Clock,
-    private val sessoes: SessoesUsuarioService
+    private val sessoes: SessoesUsuarioService,
+    private val auditoria: AuditoriaService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -95,6 +97,9 @@ class RecuperacaoSenhaService(
             usuario.email, quemFez(),
             if (tinhaPedido) " (atendendo ao pedido de nova senha)" else "",
             if (desbloqueado) "; bloqueio de login por tentativas erradas removido" else "")
+        auditoria?.registrar(AreaAuditoria.SENHAS, "Senha temporária gerada", usuario.email,
+            listOfNotNull(if (tinhaPedido) "Atendeu ao pedido de nova senha" else null,
+                if (desbloqueado) "Bloqueio de login removido" else null).joinToString("; ").ifEmpty { null })
 
         return SenhaTemporaria(usuario.nome, usuario.email, senha)
     }
@@ -108,6 +113,7 @@ class RecuperacaoSenhaService(
         usuario.senhaPedidaEm = null
         repo.save(usuario)
         log.info("Pedido de nova senha de {} descartado por {} (a senha não foi alterada)", usuario.email, quemFez())
+        auditoria?.registrar(AreaAuditoria.SENHAS, "Pedido de nova senha descartado", usuario.email)
     }
 
     // Letras e números sem os que se confundem ao ditar ou ler (0/O, 1/l/I)

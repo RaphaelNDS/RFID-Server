@@ -45,6 +45,11 @@ rfid:
     # ao contêiner de backup (grava em docker\backups\last). Se falhar, a migração não é aplicada e o servidor
     # não sobe (o log diz o motivo). Vazio = migra sem backup. Banco vazio (primeira instalação) não faz backup.
     backup-antes-migracao: ${RFID_BACKUP_ANTES_MIGRACAO:docker exec rfid-backup /backup.sh}
+    # Pasta onde o contêiner rfid-backup grava os dumps (a mesma do RFID_BACKUP_PASTA do docker\.env), relativa à
+    # pasta do servidor. A tela de status mostra o último backup e avisa (também no log, a cada 6 h) quando passar
+    # de "backup-atrasado-horas" sem backup bom ou quando a última tentativa gerar um arquivo vazio.
+    pasta-backups: ${RFID_BANCO_PASTA_BACKUPS:./docker/backups}
+    backup-atrasado-horas: ${RFID_BANCO_BACKUP_ATRASADO_HORAS:12}
 
   dispositivos:
     # Chaves dos coletores Android que podem usar /api/android/**, no formato nome:chave
@@ -152,8 +157,14 @@ logging:
       total-size-cap: 1GB
 
 
+# Monitoramento: GET https://<servidor>:8443/actuator/health responde {"status":"UP"} (ou DOWN, com 503, se o
+# banco cair). Sem login e sem detalhes; nenhum outro endpoint do actuator fica exposto.
 management:
   endpoints:
     web:
       exposure:
         include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never

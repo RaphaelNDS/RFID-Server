@@ -1,5 +1,6 @@
 package org.example.service
 
+import org.example.model.AreaAuditoria
 import org.example.model.Role
 import org.example.model.SessaoOperadorEntity
 import org.example.model.UsuarioEntity
@@ -36,8 +37,32 @@ data class SessaoCriada(
 
 class LoginRecusadoException(val status: Int, mensagem: String, val retryAfterSegundos: Long? = null) : RuntimeException(mensagem)
 
+/**
+ * Por que a sessão não valeu, no campo "motivo" do 401 (e dos itens recusados do lote). DESCONHECIDA e
+ * OUTRO_COLETOR indicam problema do lado do servidor ou do coletor (ex.: banco restaurado, servidor trocado),
+ * não do operador: o app pode segurar as leituras na fila em vez de recusá-las de vez.
+ */
+enum class MotivoSessaoInvalida {
+    /** Token que o servidor não conhece (banco restaurado ou outro servidor). */
+    DESCONHECIDA,
+    /** Token de outro coletor. */
+    OUTRO_COLETOR,
+    /** Ação depois do "Sair" (ou antes do login). */
+    ENCERRADA,
+    /** Ação depois do fim das 12 h da sessão, ou token velho além do prazo de sincronização. */
+    EXPIRADA,
+    /** A ação chegou depois do prazo de sincronização (coletor ficou offline tempo demais). */
+    ANTIGA_DEMAIS,
+    /** O usuário da sessão foi excluído. */
+    USUARIO_INEXISTENTE,
+    /** O usuário foi desativado pelo ADMIN. */
+    DESATIVADO,
+    /** Requisição sem o header da sessão. */
+    SEM_OPERADOR
+}
+
 /** Motivo de uma sessão não valer para uma ação; vira 401 em JSON no OperadorFilter. */
-class SessaoInvalidaException(mensagem: String) : RuntimeException(mensagem)
+class SessaoInvalidaException(mensagem: String, val motivo: MotivoSessaoInvalida) : RuntimeException(mensagem)
 
 /**
  * Login do operador no coletor Android e validação das sessões (12h por padrão).
@@ -64,7 +89,8 @@ class SessaoOperadorService(
      * sem isso, um token vazado serviria para sempre mandando um X-Momento antigo.
      */
     @Value("\${rfid.operador.janela-sincronizacao:72h}") val janelaSincronizacao: Duration,
-    private val relogio: Clock
+    private val relogio: Clock,
+    private val auditoria: AuditoriaService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -138,6 +164,7 @@ class SessaoOperadorService(
 
         tentativas.registrarSucesso(email)
         log.warn("PIN das Configurações do coletor {} liberado pelo administrador {} (IP {})", dispositivo, usuario.email, ip)
+        auditoria?.registrar(AreaAuditoria.SENHAS, "PIN do coletor liberado", dispositivo, "Pelo administrador ${usuario.email} (IP ${ip ?: "desconhecido"})")
     }
 
     /** Bloqueio por tentativas, email e senha e usuário ativo: o mesmo para o login e para liberar o PIN. */
@@ -155,7 +182,7 @@ class SessaoOperadorService(
             throw LoginRecusadoException(429, "Muitas tentativas sem sucesso. Aguarde $minutos minuto(s) e tente de novo.", restante.toSeconds().coerceAtLeast(1))
         }
 
-        val usuario = usuarios.findByEmail(email)
+        val usuario = usuarios.findByEmailIgnoreCase(email.trim())
         if (usuario == null || !senhas.matches(senha, usuario.senha)) {
             tentativas.registrarFalha(email, origem)
             log.warn("{} no coletor {} recusado: email ou senha incorretos para '{}' (IP {})", acao, dispositivo, email.lowercase(), ip)
@@ -193,11 +220,11 @@ class SessaoOperadorService(
     @Transactional(readOnly = true)
     fun validar(token: String, dispositivo: String, momento: LocalDateTime): UserPrincipal {
         val sessao = sessoes.findById(hash(token)).orElse(null)
-            ?: throw SessaoInvalidaException("Sessão do operador desconhecida: faça login de novo")
+            ?: throw SessaoInvalidaException("Sessão do operador desconhecida: faça login de novo", MotivoSessaoInvalida.DESCONHECIDA)
 
         if (sessao.dispositivo != dispositivo) {
             log.warn("Sessão do coletor {} usada no coletor {}: recusada", sessao.dispositivo, dispositivo)
-            throw SessaoInvalidaException("Esta sessão é de outro coletor: faça login neste coletor")
+            throw SessaoInvalidaException("Esta sessão é de outro coletor: faça login neste coletor", MotivoSessaoInvalida.OUTRO_COLETOR)
         }
 
         // Expiração: tolera a diferença de relógio entre coletor e servidor. Logout (encerradaEm, relógio
@@ -211,8 +238,9 @@ class SessaoOperadorService(
         // Windows o relógio anda em passos de até ~15 ms, e a ação logo após o "Sair" pode ganhar a mesma hora)
         val depoisDoFim = if (encerrada != null) !momento.isBefore(limite) else momento.isAfter(limite)
 
+        val motivoEnum = if (encerrada != null) MotivoSessaoInvalida.ENCERRADA else MotivoSessaoInvalida.EXPIRADA
         if (momento.isBefore(sessao.criadaEm.minus(TOLERANCIA)) || depoisDoFim) {
-            throw SessaoInvalidaException("Sessão do operador $motivo: faça login de novo")
+            throw SessaoInvalidaException("Sessão do operador $motivo: faça login de novo", motivoEnum)
         }
 
         // O X-Momento vem do coletor: sozinho, permitiria usar um token velho para sempre. Pelo relógio do
@@ -221,27 +249,27 @@ class SessaoOperadorService(
         val agora = LocalDateTime.now(relogio)
         if (agora.isAfter(limite.plus(janelaSincronizacao))) {
             log.warn("Token de sessão {} há mais de {} h usado no coletor {}: recusado", motivo, janelaSincronizacao.toHours(), dispositivo)
-            throw SessaoInvalidaException("Sessão do operador $motivo: faça login de novo")
+            throw SessaoInvalidaException("Sessão do operador $motivo: faça login de novo", MotivoSessaoInvalida.EXPIRADA)
         }
         if (momento.isBefore(agora.minus(janelaSincronizacao))) {
             log.warn("Ação de {} no coletor {} chegou {} h depois de feita, além do prazo de sincronização: recusada",
                 momento, dispositivo, Duration.between(momento, agora).toHours())
-            throw SessaoInvalidaException("Ação antiga demais: chegou ao servidor depois do prazo de ${janelaSincronizacao.toHours()} h")
+            throw SessaoInvalidaException("Ação antiga demais: chegou ao servidor depois do prazo de ${janelaSincronizacao.toHours()} h", MotivoSessaoInvalida.ANTIGA_DEMAIS)
         }
 
         val usuario = usuarios.findById(sessao.usuarioId).orElse(null)
-            ?: throw SessaoInvalidaException("O usuário desta sessão não existe mais")
+            ?: throw SessaoInvalidaException("O usuário desta sessão não existe mais", MotivoSessaoInvalida.USUARIO_INEXISTENTE)
 
         val principal = try {
             detalhes.loadUserByUsername(usuario.email) as UserPrincipal
         } catch (e: UsernameNotFoundException) {
-            throw SessaoInvalidaException("O usuário desta sessão não existe mais")
+            throw SessaoInvalidaException("O usuário desta sessão não existe mais", MotivoSessaoInvalida.USUARIO_INEXISTENTE)
         }
 
         // Desativado depois do login: o token deixa de valer já na próxima ação (o ADMIN também encerra as sessões)
         if (!principal.isEnabled) {
             log.warn("Ação no coletor {} recusada: o usuário {} foi desativado", dispositivo, principal.email)
-            throw SessaoInvalidaException(MENSAGEM_DESATIVADO)
+            throw SessaoInvalidaException(MENSAGEM_DESATIVADO, MotivoSessaoInvalida.DESATIVADO)
         }
         return principal
     }

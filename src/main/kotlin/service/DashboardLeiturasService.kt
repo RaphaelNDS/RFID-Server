@@ -3,6 +3,7 @@ package org.example.service
 import org.example.repository.LeituraAndroidRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeParseException
@@ -28,7 +29,8 @@ data class DadosDashboard(
 
 @Service
 class DashboardLeiturasService(
-    private val leituraRepo: LeituraAndroidRepository
+    private val leituraRepo: LeituraAndroidRepository,
+    private val relogio: Clock = Clock.systemDefaultZone()
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -37,7 +39,7 @@ class DashboardLeiturasService(
      * Interpreta os filtros da tela. Sem filtro: últimos 7 dias (incluindo hoje).
      * Filtro inválido não derruba a página: volta ao padrão e devolve um aviso.
      */
-    fun resolverPeriodo(inicio: String?, fim: String?, hoje: LocalDate = LocalDate.now()): PeriodoDashboard {
+    fun resolverPeriodo(inicio: String?, fim: String?, hoje: LocalDate = LocalDate.now(relogio)): PeriodoDashboard {
         val padrao = PeriodoDashboard(hoje.minusDays(DIAS_PADRAO - 1), hoje)
 
         val dataInicio: LocalDate?
@@ -65,7 +67,7 @@ class DashboardLeiturasService(
     fun calcular(periodo: PeriodoDashboard): DadosDashboard {
         val inicioMs = System.currentTimeMillis()
 
-        val agora = LocalDateTime.now()
+        val agora = LocalDateTime.now(relogio)
         val hoje = agora.toLocalDate()
 
         // Intervalo semiaberto: do início do primeiro dia até a meia-noite seguinte ao último

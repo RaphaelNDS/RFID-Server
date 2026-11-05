@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<!-- Paginação das telas de etiquetas e pendentes: os links já levam a busca aplicada (AdminController.paginacao) -->
+<!-- Paginação das telas de lista: os links já levam os filtros aplicados (controller/Paginacao.kt, adicionarPaginacao) -->
 <nav th:fragment="paginacao" class="card-footer paginacao" th:if="${totalPaginas > 1}" aria-label="Páginas">
   <a th:if="${linkAnterior != null}" th:href="@{${linkAnterior}}" class="btn btn-secondary btn-sm" rel="prev">
     <svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Anterior

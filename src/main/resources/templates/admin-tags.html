@@ -12,6 +12,9 @@
       <p class="subtitulo">Equipamentos identificados por etiqueta RFID</p>
     </div>
     <div class="page-header-acoes">
+      <a th:href="@{/admin/etiquetas/nao-vistas}" class="btn btn-ghost" title="Equipamentos sem leitura nem inventário há N dias">
+        <svg class="ic"><use href="/img/icones.svg#busca"/></svg>Não vistas
+      </a>
       <a th:href="@{/admin/etiquetas/historico}" class="btn btn-ghost">
         <svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Histórico
       </a>
@@ -37,10 +40,17 @@
       <button type="submit" class="btn btn-primary">Buscar</button>
       <a th:if="${busca != ''}" th:href="@{/admin/tags-cadastradas}" class="btn btn-ghost">Limpar</a>
       <span class="muted nowrap" th:text="${#numbers.formatInteger(total, 1, 'POINT')} + ' etiqueta(s)'"></span>
+      <!-- Exporta todas as etiquetas da busca (não só esta página), com a última vez vista e o último local -->
+      <a th:if="${total > 0}" th:href="@{/admin/tags-cadastradas/exportar(busca=${busca != '' ? busca : null},formato='xlsx')}"
+         class="btn btn-secondary btn-sm" title="Exportar todas as etiquetas da busca">
+        <svg class="ic"><use href="/img/icones.svg#download"/></svg>Excel
+      </a>
+      <a th:if="${total > 0}" th:href="@{/admin/tags-cadastradas/exportar(busca=${busca != '' ? busca : null},formato='csv')}"
+         class="btn btn-ghost btn-sm" title="Para importar em outros sistemas. No Excel, use o botão Excel: o CSV perde zeros à esquerda do patrimônio">CSV</a>
     </form>
 
     <div class="table-wrap">
-      <table class="table" th:unless="${#lists.isEmpty(tags)}">
+      <table class="table table-cartoes" th:unless="${#lists.isEmpty(tags)}">
         <thead>
         <tr>
           <th>Etiqueta (EPC)</th>
@@ -55,13 +65,13 @@
         </thead>
         <tbody>
         <tr th:each="t : ${tags}">
-          <td class="mono" th:text="${t.tag}"></td>
-          <td class="principal" th:text="${t.codigoInterno}"></td>
-          <td th:text="${t.patrimonio}"></td>
-          <td th:text="${t.tipoNome} ?: '—'"></td>
-          <td th:text="${t.marcaNome} ?: '—'"></td>
-          <td th:text="${t.modeloNome} ?: '—'"></td>
-          <td th:text="${t.numeroSerie}"></td>
+          <td class="mono cartao-titulo" th:text="${t.tag}"></td>
+          <td data-rotulo="Código" class="principal" th:text="${t.codigoInterno}"></td>
+          <td data-rotulo="Patrimônio" th:text="${t.patrimonio}"></td>
+          <td data-rotulo="Tipo" th:text="${t.tipoNome} ?: '—'"></td>
+          <td data-rotulo="Marca" th:text="${t.marcaNome} ?: '—'"></td>
+          <td data-rotulo="Modelo" th:text="${t.modeloNome} ?: '—'"></td>
+          <td data-rotulo="Nº série" th:text="${t.numeroSerie}"></td>
           <td class="acoes">
             <a th:href="@{/admin/etiquetas/{id}/editar(id=${t.id})}" class="btn btn-ghost btn-sm"
                th:if="${@authService.temPermissao('RFID','UPDATE')}" title="Editar">Editar</a>

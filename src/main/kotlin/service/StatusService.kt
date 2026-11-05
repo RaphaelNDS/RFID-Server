@@ -23,7 +23,8 @@ class StatusService(
     buildProperties: ObjectProvider<BuildProperties>,
     // Opcionais (valor padrão) para os testes que montam o service à mão continuarem iguais
     private val certificado: CertificadoHttps? = null,
-    @Value("\${rfid.https.habilitado:true}") private val httpsHabilitado: Boolean = true
+    @Value("\${rfid.https.habilitado:true}") private val httpsHabilitado: Boolean = true,
+    private val backupBanco: BackupBancoService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -38,6 +39,7 @@ class StatusService(
     private val versao: String = buildProperties.ifAvailable?.version ?: "desenvolvimento"
 
     fun getStatus(): ServerStatusResponse {
+        val banco = backupBanco?.situacao()
         return ServerStatusResponse(
             status = "ONLINE",
             horaServidor = "Desde ${iniciadoEm.format(FORMATO_DATA)}",
@@ -48,7 +50,9 @@ class StatusService(
             certificadoHttps = when {
                 !httpsHabilitado -> "HTTPS desligado: o tráfego não é criptografado"
                 else -> certificado?.impressaoDigital ?: "—"
-            }
+            },
+            backupBanco = banco?.resumo ?: "—",
+            backupBancoComProblema = banco != null && (banco.atrasado || banco.ultimaTentativaFalhou)
         )
     }
 

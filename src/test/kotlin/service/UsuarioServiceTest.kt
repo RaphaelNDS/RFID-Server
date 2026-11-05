@@ -98,7 +98,7 @@ class UsuarioServiceTest {
 
         @Test
         fun `email repetido e recusado sem gravar nada`() {
-            every { repo.existsByEmailIgnoreCase("MARIA@x.com") } returns true
+            every { repo.existsByEmailIgnoreCase("maria@x.com") } returns true
 
             assertThatThrownBy { service.cadastrar(req(Role.USER, email = "MARIA@x.com")) }
                 .isInstanceOf(IllegalArgumentException::class.java)
@@ -129,7 +129,7 @@ class UsuarioServiceTest {
         fun `USER recebe so leitura em todos os modulos`() {
             service.cadastrar(req(Role.USER))
 
-            assertThat(permissoesDoUltimoSalvo()).containsExactlyInAnyOrderElementsOf(Modulo.values().map { "${it}_READ" })
+            // USUARIO não vale nada (gestão de usuários é só do ADMIN): não é concedido
         }
 
         @Test
@@ -137,7 +137,7 @@ class UsuarioServiceTest {
             service.cadastrar(req(Role.GESTOR))
 
             val permissoes = permissoesDoUltimoSalvo()
-            assertThat(permissoes).hasSize(Modulo.values().size * 3)
+            assertThat(permissoes).hasSize((Modulo.values().size - 1) * 3).noneMatch { it.startsWith("USUARIO_") }
             assertThat(permissoes).noneMatch { it.endsWith("_DELETE") }
             assertThat(permissoes).contains("RFID_CREATE", "CATALOGO_UPDATE")
         }

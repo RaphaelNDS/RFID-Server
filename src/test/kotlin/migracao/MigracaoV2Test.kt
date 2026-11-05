@@ -75,7 +75,7 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("11") // V11 = usuário ativo/desativado
+        assertThat(resultado.targetSchemaVersion).isEqualTo("15") // V15 = índices trigram da busca de leituras
     }
 
     @Test

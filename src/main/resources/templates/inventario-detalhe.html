@@ -88,7 +88,7 @@
         Inventário em andamento: a lista é provisória e diminui conforme o coletor lê e envia as etiquetas.
       </p>
 
-      <table class="table" th:if="${comparacao.referencia.temReferencia and !#lists.isEmpty(comparacao.faltando)}">
+      <table class="table table-cartoes" th:if="${comparacao.referencia.temReferencia and !#lists.isEmpty(comparacao.faltando)}">
         <thead>
         <tr>
           <th>Patrimônio</th>
@@ -101,12 +101,12 @@
         </thead>
         <tbody>
         <tr th:each="f : ${comparacao.faltando}">
-          <td class="principal" th:text="${f.patrimonio != null} ? ${f.patrimonio} : '—'"></td>
-          <td th:text="${f.codigoInterno}"></td>
-          <td th:text="${f.tipo}"></td>
-          <td th:text="${f.marca}"></td>
-          <td th:text="${f.modelo}"></td>
-          <td class="mono" th:text="${f.tag}"></td>
+          <td class="principal cartao-titulo" th:text="${f.patrimonio != null} ? ${f.patrimonio} : '—'"></td>
+          <td data-rotulo="Código" th:text="${f.codigoInterno}"></td>
+          <td data-rotulo="Tipo" th:text="${f.tipo}"></td>
+          <td data-rotulo="Marca" th:text="${f.marca}"></td>
+          <td data-rotulo="Modelo" th:text="${f.modelo}"></td>
+          <td data-rotulo="Etiqueta (EPC)" class="mono" th:text="${f.tag}"></td>
         </tr>
         </tbody>
       </table>
@@ -125,7 +125,7 @@
     </div>
 
     <div class="table-wrap">
-      <table class="table" th:unless="${#lists.isEmpty(itens)}">
+      <table class="table table-cartoes" th:unless="${#lists.isEmpty(itens)}">
         <thead>
         <tr>
           <th>Lida em</th>
@@ -141,18 +141,18 @@
         </thead>
         <tbody>
         <tr th:each="item : ${itens}">
-          <td class="nowrap" th:text="${#temporals.format(item.lidoEm, 'dd/MM/yyyy HH:mm:ss')}"></td>
-          <td class="mono" th:text="${item.tag}"></td>
-          <td>
+          <td class="nowrap cartao-titulo" th:text="${#temporals.format(item.lidoEm, 'dd/MM/yyyy HH:mm:ss')}"></td>
+          <td data-rotulo="Etiqueta (EPC)" class="mono" th:text="${item.tag}"></td>
+          <td data-rotulo="Situação">
             <span class="badge" th:if="${item.cadastrada}">Cadastrada</span>
             <span class="badge badge-CUSTOM" th:unless="${item.cadastrada}">Não cadastrada</span>
           </td>
-          <td class="principal" th:text="${item.patrimonio}"></td>
-          <td th:text="${item.codigoInterno}"></td>
-          <td th:text="${item.tipo}"></td>
-          <td th:text="${item.marca}"></td>
-          <td th:text="${item.modelo}"></td>
-          <td th:text="${item.operador != null} ? ${item.operador} : '—'"></td>
+          <td data-rotulo="Patrimônio" class="principal" th:text="${item.patrimonio}"></td>
+          <td data-rotulo="Código" th:text="${item.codigoInterno}"></td>
+          <td data-rotulo="Tipo" th:text="${item.tipo}"></td>
+          <td data-rotulo="Marca" th:text="${item.marca}"></td>
+          <td data-rotulo="Modelo" th:text="${item.modelo}"></td>
+          <td data-rotulo="Operador" th:text="${item.operador != null} ? ${item.operador} : '—'"></td>
         </tr>
         </tbody>
       </table>

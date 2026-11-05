@@ -124,6 +124,48 @@ class AtualizacaoAppIntegracaoTest : IntegracaoBase() {
     }
 
     @Test
+    fun `versao retirada deixa de ser oferecida e os coletores voltam a receber a anterior`() {
+        publicar("rfid-teste-1.0-1.apk")
+        publicar("rfid-teste-2.0-2.apk")
+
+        mvc.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/admin/app/2/retirar")
+                .param("motivo", "Trava ao abrir o inventário").with(Perfis.admin()).with(csrf())
+        ).andExpect(redirectedUrl("/admin/app"))
+            .andExpect(flash().attribute("msg", containsString("passam a receber a 1.0 (código 1)")))
+
+        coletor("/api/android/atualizacao", codigoInstalado = "0")
+            .andExpect(jsonPath("$.codigo").value(1))
+        val retirada = versoes.findAll().single { it.codigo == 2 }
+        assertThat(retirada.retirada).isTrue()
+        assertThat(retirada.motivoRetirada).isEqualTo("Trava ao abrir o inventário")
+
+        // A próxima publicação continua precisando de código maior que o da retirada
+        publicar("rfid-teste-2.0-2.apk").andExpect(flash().attribute("erro", containsString("não é mais nova")))
+        publicar("rfid-teste-3.0-3.apk")
+        coletor("/api/android/atualizacao", codigoInstalado = "0").andExpect(jsonPath("$.codigo").value(3))
+
+        mvc.perform(get("/admin/app").with(Perfis.admin()))
+            .andExpect(content().string(containsString("Retirada")))
+    }
+
+    @Test
+    fun `retirar exige o motivo e so o ADMIN retira`() {
+        publicar("rfid-teste-1.0-1.apk")
+
+        mvc.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/admin/app/1/retirar")
+                .param("motivo", " ").with(Perfis.admin()).with(csrf())
+        ).andExpect(flash().attribute("erro", containsString("Informe o motivo")))
+        mvc.perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/admin/app/1/retirar")
+                .param("motivo", "x").with(Perfis.gestor()).with(csrf())
+        ).andExpect(status().isForbidden)
+
+        coletor("/api/android/atualizacao", codigoInstalado = "0").andExpect(jsonPath("$.codigo").value(1))
+    }
+
+    @Test
     fun `versao igual ou menor que a publicada e recusada`() {
         publicar("rfid-teste-2.0-2.apk")
         publicar("rfid-teste-1.0-1.apk").andExpect(flash().attribute("erro", containsString("não é mais nova que a já publicada 2.0")))

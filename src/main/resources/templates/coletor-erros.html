@@ -36,7 +36,7 @@
     </div>
 
     <div class="table-wrap">
-      <table class="table" th:unless="${#lists.isEmpty(erros)}">
+      <table class="table table-cartoes" th:unless="${#lists.isEmpty(erros)}">
         <thead>
         <tr>
           <th>No coletor</th>
@@ -50,24 +50,24 @@
         </thead>
         <tbody>
         <tr th:each="e : ${erros}">
-          <td class="nowrap" th:text="${#temporals.format(e.momento, 'dd/MM/yyyy HH:mm:ss')}"
+          <td class="nowrap cartao-titulo" th:text="${#temporals.format(e.momento, 'dd/MM/yyyy HH:mm:ss')}"
               title="Hora do relógio do coletor"></td>
-          <td class="nowrap muted" th:text="${#temporals.format(e.recebidoEm, 'dd/MM/yyyy HH:mm')}"
+          <td data-rotulo="Recebido" class="nowrap muted" th:text="${#temporals.format(e.recebidoEm, 'dd/MM/yyyy HH:mm')}"
               title="Quando chegou ao servidor"></td>
-          <td>
+          <td data-rotulo="Tipo">
             <span class="badge badge-CUSTOM" th:if="${e.tipo == 'FALHA_GERAL'}">Travamento</span>
             <span class="badge" th:unless="${e.tipo == 'FALHA_GERAL'}" th:text="${e.tipo}"></span>
           </td>
-          <td>
+          <td data-rotulo="Mensagem">
             <span th:text="${e.mensagem}"></span>
             <details th:if="${e.detalhe != null}">
               <summary class="muted">Detalhe</summary>
               <pre class="mono" style="max-height:320px;overflow:auto;white-space:pre-wrap;font-size:12px" th:text="${e.detalhe}"></pre>
             </details>
           </td>
-          <td th:text="${e.ocorrencias}"></td>
-          <td th:text="${e.versaoApp != null} ? ${e.versaoApp} + (${e.codigoVersao != null} ? ' (' + ${e.codigoVersao} + ')' : '') : '—'"></td>
-          <td th:text="${e.operador != null} ? ${e.operador} : '—'"></td>
+          <td data-rotulo="Vezes" th:text="${e.ocorrencias}"></td>
+          <td data-rotulo="Versão" th:text="${e.versaoApp != null} ? ${e.versaoApp} + (${e.codigoVersao != null} ? ' (' + ${e.codigoVersao} + ')' : '') : '—'"></td>
+          <td data-rotulo="Operador" th:text="${e.operador != null} ? ${e.operador} : '—'"></td>
         </tr>
         </tbody>
       </table>

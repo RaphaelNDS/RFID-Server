@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.example.security.OperadorNoColetor
+import org.example.service.MotivoSessaoInvalida
 import org.example.service.SessaoInvalidaException
 import org.example.service.SessaoOperadorService
 import org.slf4j.LoggerFactory
@@ -80,16 +81,16 @@ class OperadorFilter(
             }
 
             log.warn("Requisição do coletor {} sem operador logado: {} {}", dispositivo, request.method, request.requestURI)
-            recusar(response, "Operador não identificado: faça login no coletor")
+            recusar(response, "Operador não identificado: faça login no coletor", MotivoSessaoInvalida.SEM_OPERADOR)
             return
         }
 
         val operador = try {
             sessoes.validar(token, dispositivo, momento)
         } catch (e: SessaoInvalidaException) {
-            log.warn("Sessão de operador recusada no coletor {} ({} {}, ação em {}): {}",
-                dispositivo, request.method, request.requestURI, momento, e.message)
-            recusar(response, e.message ?: "Sessão do operador inválida")
+            log.warn("Sessão de operador recusada no coletor {} ({} {}, ação em {}): {} [{}]",
+                dispositivo, request.method, request.requestURI, momento, e.message, e.motivo)
+            recusar(response, e.message ?: "Sessão do operador inválida", e.motivo)
             return
         }
 
@@ -144,10 +145,14 @@ class OperadorFilter(
         return momento
     }
 
-    private fun recusar(response: HttpServletResponse, mensagem: String) {
+    /**
+     * 401 com "codigo":"SESSAO_OPERADOR" (o app pede login de novo) e "motivo" (MotivoSessaoInvalida): DESCONHECIDA
+     * e OUTRO_COLETOR apontam problema do servidor/coletor, e o app pode segurar as leituras na fila.
+     */
+    private fun recusar(response: HttpServletResponse, mensagem: String, motivo: MotivoSessaoInvalida) {
         response.status = HttpStatus.UNAUTHORIZED.value()
         response.contentType = MediaType.APPLICATION_JSON_VALUE
         response.characterEncoding = "UTF-8"
-        response.writer.write("""{"status":401,"codigo":"SESSAO_OPERADOR","mensagem":"${mensagem.replace("\"", "'")}"}""")
+        response.writer.write("""{"status":401,"codigo":"SESSAO_OPERADOR","motivo":"$motivo","mensagem":"${mensagem.replace("\"", "'")}"}""")
     }
 }

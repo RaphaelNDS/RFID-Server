@@ -74,7 +74,7 @@
     </div>
 
     <div class="table-wrap">
-      <table class="table" th:unless="${#lists.isEmpty(leituras)}">
+      <table class="table table-cartoes" th:unless="${#lists.isEmpty(leituras)}">
         <thead>
         <tr>
           <th>Data/hora</th>
@@ -90,15 +90,15 @@
         </thead>
         <tbody>
         <tr th:each="l : ${leituras}">
-          <td class="nowrap" th:text="${#temporals.format(l.dataHora, 'dd/MM/yyyy HH:mm:ss')}"></td>
-          <td class="mono" th:text="${l.tag}"></td>
-          <td class="principal" th:text="${l.codigoInterno}"></td>
-          <td th:text="${l.patrimonio}"></td>
-          <td th:text="${l.tipo}"></td>
-          <td th:text="${l.marca}"></td>
-          <td th:text="${l.modelo}"></td>
-          <td th:text="${l.numeroSerie}"></td>
-          <td th:text="${l.operador != null} ? ${l.operador} : '—'"></td>
+          <td class="nowrap cartao-titulo" th:text="${#temporals.format(l.dataHora, 'dd/MM/yyyy HH:mm:ss')}"></td>
+          <td data-rotulo="Etiqueta (EPC)" class="mono" th:text="${l.tag}"></td>
+          <td data-rotulo="Código" class="principal" th:text="${l.codigoInterno}"></td>
+          <td data-rotulo="Patrimônio" th:text="${l.patrimonio}"></td>
+          <td data-rotulo="Tipo" th:text="${l.tipo}"></td>
+          <td data-rotulo="Marca" th:text="${l.marca}"></td>
+          <td data-rotulo="Modelo" th:text="${l.modelo}"></td>
+          <td data-rotulo="Nº série" th:text="${l.numeroSerie}"></td>
+          <td data-rotulo="Operador" th:text="${l.operador != null} ? ${l.operador} : '—'"></td>
         </tr>
         </tbody>
       </table>

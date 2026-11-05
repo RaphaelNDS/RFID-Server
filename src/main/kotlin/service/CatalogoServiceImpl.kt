@@ -1,6 +1,7 @@
 package org.example.service
 
 import org.springframework.transaction.annotation.Transactional
+import org.example.model.AreaAuditoria
 import org.example.model.MarcaEntity
 import org.example.model.ModeloEntity
 import org.example.model.TipoEquipamentoEntity
@@ -20,7 +21,8 @@ class CatalogoServiceImpl(
     private val tipoRepo: TipoEquipamentoRepository,
     private val marcaRepo: MarcaRepository,
     private val modeloRepo: ModeloRepository,
-    private val tagRepo: TagRepository
+    private val tagRepo: TagRepository,
+    private val auditoria: AuditoriaService? = null
 ) : CatalogoService {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -58,7 +60,10 @@ class CatalogoServiceImpl(
 
         return tipoRepo.save(
             TipoEquipamentoEntity(nome = nome)
-        ).also { log.info("Tipo de equipamento cadastrado: '{}' (id {}) por {}", it.nome, it.id, usuarioAtual()) }
+        ).also {
+            log.info("Tipo de equipamento cadastrado: '{}' (id {}) por {}", it.nome, it.id, usuarioAtual())
+            auditoria?.registrar(AreaAuditoria.CATALOGO, "Tipo de equipamento cadastrado", it.nome, "id ${it.id}")
+        }
     }
 
     /* =====================================================
@@ -91,7 +96,10 @@ class CatalogoServiceImpl(
                 nome = nome,
                 tipo = tipo
             )
-        ).also { log.info("Marca cadastrada: '{}' no tipo '{}' (id {}) por {}", it.nome, it.tipo.nome, it.id, usuarioAtual()) }
+        ).also {
+            log.info("Marca cadastrada: '{}' no tipo '{}' (id {}) por {}", it.nome, it.tipo.nome, it.id, usuarioAtual())
+            auditoria?.registrar(AreaAuditoria.CATALOGO, "Marca cadastrada", it.nome, "id ${it.id}")
+        }
     }
 
     /* =====================================================
@@ -124,7 +132,10 @@ class CatalogoServiceImpl(
                 nome = nome,
                 marca = marca
             )
-        ).also { log.info("Modelo cadastrado: '{}' na marca '{}' (id {}) por {}", it.nome, it.marca.nome, it.id, usuarioAtual()) }
+        ).also {
+            log.info("Modelo cadastrado: '{}' na marca '{}' (id {}) por {}", it.nome, it.marca.nome, it.id, usuarioAtual())
+            auditoria?.registrar(AreaAuditoria.CATALOGO, "Modelo cadastrado", it.nome, "id ${it.id}")
+        }
     }
 
     /* =====================================================
@@ -148,7 +159,10 @@ class CatalogoServiceImpl(
 
         tipo.nome = novoNome
         return tipoRepo.save(tipo)
-            .also { log.info("Tipo de equipamento editado: id {} agora se chama '{}' (por {})", it.id, it.nome, usuarioAtual()) }
+            .also {
+            log.info("Tipo de equipamento editado: id {} agora se chama '{}' (por {})", it.id, it.nome, usuarioAtual())
+            auditoria?.registrar(AreaAuditoria.CATALOGO, "Tipo de equipamento editado", it.nome, "id ${it.id}")
+        }
     }
 
     @Transactional
@@ -169,7 +183,10 @@ class CatalogoServiceImpl(
 
         marca.nome = novoNome
         return marcaRepo.save(marca)
-            .also { log.info("Marca editada: id {} agora se chama '{}' (por {})", it.id, it.nome, usuarioAtual()) }
+            .also {
+            log.info("Marca editada: id {} agora se chama '{}' (por {})", it.id, it.nome, usuarioAtual())
+            auditoria?.registrar(AreaAuditoria.CATALOGO, "Marca editada", it.nome, "id ${it.id}")
+        }
     }
 
     @Transactional
@@ -190,7 +207,10 @@ class CatalogoServiceImpl(
 
         modelo.nome = novoNome
         return modeloRepo.save(modelo)
-            .also { log.info("Modelo editado: id {} agora se chama '{}' (por {})", it.id, it.nome, usuarioAtual()) }
+            .also {
+            log.info("Modelo editado: id {} agora se chama '{}' (por {})", it.id, it.nome, usuarioAtual())
+            auditoria?.registrar(AreaAuditoria.CATALOGO, "Modelo editado", it.nome, "id ${it.id}")
+        }
     }
 
     /* =====================================================
@@ -212,6 +232,7 @@ class CatalogoServiceImpl(
 
         tipoRepo.deleteById(id)
         log.info("Tipo de equipamento excluído: '{}' (id {}) por {}", nome, id, usuarioAtual())
+        auditoria?.registrar(AreaAuditoria.CATALOGO, "Tipo de equipamento excluído", nome, "id $id")
     }
 
     @Transactional
@@ -226,6 +247,7 @@ class CatalogoServiceImpl(
 
         marcaRepo.deleteById(id)
         log.info("Marca excluída: '{}' (id {}) por {}", nome, id, usuarioAtual())
+        auditoria?.registrar(AreaAuditoria.CATALOGO, "Marca excluída", nome, "id $id")
     }
 
     @Transactional
@@ -238,6 +260,7 @@ class CatalogoServiceImpl(
 
         modeloRepo.deleteById(id)
         log.info("Modelo excluído: '{}' (id {}) por {}", nome, id, usuarioAtual())
+        auditoria?.registrar(AreaAuditoria.CATALOGO, "Modelo excluído", nome, "id $id")
     }
 
     // item com artigo, ex.: "esta marca"

@@ -57,6 +57,10 @@ interface LeituraAndroidRepository :
     @Query("select l.tag, l.dataHora from LeituraAndroidEntity l where l.tag in :tags and l.dataHora >= :inicio")
     fun gravadasDesde(@Param("tags") tags: Collection<String>, @Param("inicio") inicio: LocalDateTime): List<Array<Any>>
 
+    /** Relatório "não vistas": [tag, hora da última leitura] de cada tag (usa o índice único tag + data_hora). */
+    @Query("select l.tag, max(l.dataHora) from LeituraAndroidEntity l group by l.tag")
+    fun ultimaLeituraPorTag(): List<Array<Any?>>
+
     // Retenção: um único DELETE em lote, sem carregar as leituras na memória
     @Modifying
     @Query("delete from LeituraAndroidEntity l where l.dataHora < :limite")

@@ -1,5 +1,10 @@
 package org.example.service
 
+import org.springframework.data.domain.Page
+import org.springframework.http.HttpStatus
+import org.springframework.web.server.ResponseStatusException
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.transaction.annotation.Transactional
 import org.example.model.InventarioEntity
 import org.example.model.InventarioItemEntity
@@ -10,6 +15,7 @@ import org.example.repository.InventarioRepository
 import org.example.repository.LocalRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.time.Clock
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
@@ -53,7 +59,8 @@ class InventarioService(
     private val locais: LocalRepository,
     private val inventarios: InventarioRepository,
     private val itens: InventarioItemRepository,
-    private val rfidService: RfidService
+    private val rfidService: RfidService,
+    private val relogio: Clock = Clock.systemDefaultZone()
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -65,6 +72,7 @@ class InventarioService(
         validarId(id)
 
         inventarios.findById(id).orElse(null)?.let {
+            exigirMesmoColetor(it, dispositivo, "abertura")
             log.debug("Inventário {} reenviado pelo dispositivo {}: já existia", id, dispositivo)
             return it
         }
@@ -87,6 +95,7 @@ class InventarioService(
     @Transactional
     fun registrarItens(id: String, lidos: List<ItemLido>, dispositivo: String, operador: String? = null): ResultadoItens {
         val inventario = buscar(id)
+        exigirMesmoColetor(inventario, dispositivo, "envio de etiquetas")
 
         require(lidos.size <= MAXIMO_ITENS_POR_ENVIO) { "Envie no máximo $MAXIMO_ITENS_POR_ENVIO etiquetas por vez" }
         require(lidos.all { it.tag.isNotBlank() }) { "Informe a TAG RFID de todos os itens" }
@@ -130,6 +139,7 @@ class InventarioService(
     @Transactional
     fun finalizar(id: String, finalizadoEm: OffsetDateTime?, dispositivo: String): InventarioEntity {
         val inventario = buscar(id)
+        exigirMesmoColetor(inventario, dispositivo, "finalização")
 
         if (inventario.status == StatusInventario.FINALIZADO) {
             log.debug("Finalização do inventário {} reenviada pelo dispositivo {}: já estava finalizado", id, dispositivo)
@@ -144,16 +154,24 @@ class InventarioService(
         return inventarios.save(inventario)
     }
 
-    fun listar(localId: Long? = null): List<InventarioResumo> {
-        val lista = if (localId == null) inventarios.findAllByOrderByIniciadoEmDesc()
-        else inventarios.findByLocalIdOrderByIniciadoEmDesc(localId)
+    /**
+     * Tela de inventários: uma página (mais recentes primeiro), do local escolhido ou de todos. [pagina] começa
+     * em 0. Antes vinham todos de uma vez, e a contagem de itens somava os de todos os inventários.
+     */
+    fun listar(localId: Long? = null, pagina: Int = 0): Page<InventarioResumo> {
+        val ordem = Sort.by(Sort.Direction.DESC, "iniciadoEm").and(Sort.by(Sort.Direction.DESC, "id"))
+        val resultado = RfidService.paginaValida(pagina) { p ->
+            val pedido = PageRequest.of(p, RfidService.TAMANHO_PAGINA, ordem)
+            if (localId == null) inventarios.findAllBy(pedido) else inventarios.findByLocalId(localId, pedido)
+        }
 
+        val lista = resultado.content
         val nomes = locais.findAllById(lista.map { it.localId }.toSet()).associate { it.id to it.nome }
-        val contagens = itens.contarPorInventario().associate {
+        val contagens = if (lista.isEmpty()) emptyMap() else itens.contarPorInventario(lista.map { it.id }).associate {
             (it[0] as String) to Pair((it[1] as Number).toLong(), (it[2] as Number?)?.toLong() ?: 0L)
         }
 
-        return lista.map { resumo(it, nomes[it.localId].orEmpty(), contagens[it.id]) }
+        return resultado.map { resumo(it, nomes[it.localId].orEmpty(), contagens[it.id]) }
     }
 
     fun detalhar(id: String): InventarioDetalhe {
@@ -170,6 +188,16 @@ class InventarioService(
     fun locaisCadastrados(): List<LocalEntity> = locais.findAllByOrderByNomeAsc()
 
     // ================= INTERNOS =================
+
+    /**
+     * O inventário é do coletor que o abriu: outro coletor (por engano de id ou de propósito) não envia etiquetas
+     * para ele nem o finaliza. 403: o app trata como recusa definitiva e não fica reenviando.
+     */
+    private fun exigirMesmoColetor(inventario: InventarioEntity, dispositivo: String, acao: String) {
+        if (inventario.dispositivo == dispositivo) return
+        log.warn("Inventário {} ({}) recusado: é do coletor {}, e o pedido veio do coletor {}", inventario.id, acao, inventario.dispositivo, dispositivo)
+        throw ResponseStatusException(HttpStatus.FORBIDDEN, "Este inventário foi aberto por outro coletor (${inventario.dispositivo})")
+    }
 
     private fun resumo(i: InventarioEntity, local: String, contagem: Pair<Long, Long>?) = InventarioResumo(
         id = i.id,
@@ -212,7 +240,7 @@ class InventarioService(
      * futuro (relógio do coletor adiantado), vale a hora do recebimento.
      */
     private fun horaDoColetor(hora: OffsetDateTime?, descricao: String): LocalDateTime {
-        val agora = LocalDateTime.now()
+        val agora = LocalDateTime.now(relogio)
         if (hora == null) return agora
 
         val local = hora.atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()

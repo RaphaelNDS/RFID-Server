@@ -90,6 +90,8 @@
           <a th:href="@{/perfil/senha}" role="menuitem"><svg class="ic"><use href="/img/icones.svg#chave"/></svg>Alterar senha</a>
           <a th:href="@{/perfil/email}" role="menuitem"><svg class="ic"><use href="/img/icones.svg#email"/></svg>Alterar email</a>
           <a th:href="@{/status}" role="menuitem"><svg class="ic"><use href="/img/icones.svg#servidor"/></svg>Status do servidor</a>
+          <!-- Aqui e não na barra: com mais um item, o menu não cabia numa linha em 1280 px -->
+          <a th:href="@{/admin/auditoria}" role="menuitem" sec:authorize="hasRole('ADMIN')"><svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Auditoria</a>
 
           <form th:action="@{/logout}" method="post">
             <button type="submit" class="sair" role="menuitem"><svg class="ic"><use href="/img/icones.svg#sair"/></svg>Sair</button>

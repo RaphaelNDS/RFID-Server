@@ -27,7 +27,7 @@ interface UserRepository : JpaRepository<UsuarioEntity, Long> {
     @Query("""
         SELECT u FROM UsuarioEntity u
         LEFT JOIN FETCH u.permissoes
-        WHERE u.email = :email
+        WHERE lower(u.email) = lower(:email)
     """)
     fun findByEmailFetchPermissoes(@Param("email") email: String): UsuarioEntity?
 }

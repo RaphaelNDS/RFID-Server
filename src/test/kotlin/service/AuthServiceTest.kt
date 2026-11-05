@@ -64,13 +64,4 @@ class AuthServiceTest {
         assertThat(auth.temRole("GESTOR")).isTrue()
         assertThat(auth.temRole("ADMIN")).isFalse()
     }
-
-    @Test
-    fun `temAlgumaPermissao e temTodasPermissoes`() {
-        logado("ROLE_USER", "CATALOGO_READ")
-
-        assertThat(auth.temAlgumaPermissao("CATALOGO_READ", "RFID_CREATE")).isTrue()
-        assertThat(auth.temTodasPermissoes("CATALOGO_READ", "RFID_CREATE")).isFalse()
-        assertThat(auth.temTodasPermissoes("CATALOGO_READ")).isTrue()
-    }
 }

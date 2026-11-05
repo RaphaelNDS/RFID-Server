@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Não vistas · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Etiquetas não vistas</h1>
+      <p class="subtitulo">Equipamentos sem leitura nem inventário no período: podem ter sumido, sido emprestados ou estar com a etiqueta danificada</p>
+    </div>
+    <a th:href="@{/admin/tags-cadastradas}" class="btn btn-ghost">
+      <svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Etiquetas
+    </a>
+  </div>
+
+  <div class="card">
+    <form method="get" class="toolbar">
+      <div class="field">
+        <label for="f-dias">Não vistas há mais de (dias)</label>
+        <input id="f-dias" name="dias" type="number" min="1" max="3650" th:value="${dias}" required>
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <svg class="ic"><use href="/img/icones.svg#busca"/></svg>Filtrar
+      </button>
+    </form>
+
+    <div class="card-header">
+      <h2>Resultado <span class="contagem" th:text="'(' + ${#numbers.formatInteger(total, 1, 'POINT')} + ')'"></span></h2>
+      <div class="card-acoes" th:if="${total > 0}">
+        <a th:href="@{/admin/etiquetas/nao-vistas/exportar(dias=${dias},formato='xlsx')}" class="btn btn-secondary btn-sm" title="Exportar todas as não vistas do filtro">
+          <svg class="ic"><use href="/img/icones.svg#download"/></svg>Excel
+        </a>
+        <a th:href="@{/admin/etiquetas/nao-vistas/exportar(dias=${dias},formato='csv')}" class="btn btn-ghost btn-sm">CSV</a>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table table-cartoes" th:unless="${#lists.isEmpty(etiquetas)}">
+        <thead>
+        <tr>
+          <th>Etiqueta (EPC)</th>
+          <th>Código</th>
+          <th>Patrimônio</th>
+          <th>Tipo</th>
+          <th>Modelo</th>
+          <th>Última vez vista</th>
+          <th>Último local</th>
+          <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="v : ${etiquetas}">
+          <td class="mono cartao-titulo" th:text="${v.etiqueta.tag}"></td>
+          <td data-rotulo="Código" class="principal" th:text="${v.etiqueta.codigoInterno}"></td>
+          <td data-rotulo="Patrimônio" th:text="${v.etiqueta.patrimonio}"></td>
+          <td data-rotulo="Tipo" th:text="${v.etiqueta.tipoNome} ?: '—'"></td>
+          <td data-rotulo="Modelo" th:text="${v.etiqueta.modeloNome} ?: '—'"></td>
+          <td data-rotulo="Última vez vista" class="nowrap">
+            <span th:if="${v.ultimaVez == null}" class="badge">Nunca vista</span>
+            <span th:unless="${v.ultimaVez == null}"
+                  th:text="${#temporals.format(v.ultimaVez, 'dd/MM/yyyy HH:mm')} + ' (' + ${v.diasSemSerVista} + ' dias)'"></span>
+          </td>
+          <td data-rotulo="Último local" th:text="${v.ultimoLocal} ?: '—'"></td>
+          <td class="acoes">
+            <a th:href="@{/admin/etiquetas/historico(tag=${v.etiqueta.tag})}" class="btn btn-ghost btn-sm" title="Histórico da etiqueta">
+              <svg class="ic"><use href="/img/icones.svg#relogio"/></svg><span class="texto-btn">Histórico</span>
+            </a>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+
+      <div class="vazio" th:if="${#lists.isEmpty(etiquetas)}">
+        <svg class="ic"><use href="/img/icones.svg#ok"/></svg>
+        <strong>Todas as etiquetas foram vistas no período</strong>
+        Nenhuma etiqueta está sem leitura nem inventário há mais de <span th:text="${dias}">30</span> dias.
+      </div>
+    </div>
+
+    <nav th:replace="~{layout/paginacao :: paginacao}"></nav>
+  </div>
+
+</section>
+</html>

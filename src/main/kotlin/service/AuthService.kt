@@ -57,38 +57,4 @@ class AuthService {
             it.authority == "ROLE_ADMIN"
         }
     }
-
-    fun temAlgumaPermissao(vararg permissoes: String): Boolean {
-
-        val auth = SecurityContextHolder.getContext().authentication ?: return false
-
-        if (isAdmin()) return true
-
-        return permissoes.any { perm ->
-            auth.authorities.any { it.authority == perm }
-        }
-    }
-
-    fun temTodasPermissoes(vararg permissoes: String): Boolean {
-
-        val auth = SecurityContextHolder.getContext().authentication ?: return false
-
-        if (isAdmin()) return true
-
-        return permissoes.all { perm ->
-            auth.authorities.any { it.authority == perm }
-        }
-    }
-
-
-    fun temPermissaoDireta(permissao: String): Boolean {
-
-        val auth = SecurityContextHolder.getContext().authentication ?: return false
-
-        if (isAdmin()) return true
-
-        return auth.authorities.any {
-            it.authority == permissao
-        }
-    }
 }

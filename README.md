@@ -75,19 +75,22 @@ administrador; depois disso essa tela não aparece mais.
 | Tela | Endereço | Permissão |
 |---|---|---|
 | Início (atalhos conforme as permissões) | `/dashboard` | logado |
-| Etiquetas cadastradas (com busca) | `/admin/tags-cadastradas` | RFID · Ver |
-| Pendentes | `/admin/tags-pendentes` | RFID · Ver |
+| Etiquetas cadastradas (50 por página, busca no servidor; exportar Excel/CSV) | `/admin/tags-cadastradas` | RFID · Ver |
+| Etiquetas não vistas há N dias (sem leitura nem inventário; exportar) | `/admin/etiquetas/nao-vistas` | RFID · Ver |
+| Pendentes (50 por página, busca pelo EPC) | `/admin/tags-pendentes` | RFID · Ver |
 | Cadastrar etiqueta | `/admin/cadastro` | RFID · Criar |
 | Editar etiqueta (o EPC não muda) | `/admin/etiquetas/{id}/editar` | RFID · Editar |
 | Excluir etiqueta (botão em Etiquetas cadastradas) | `/admin/etiquetas/{id}/excluir` | RFID · Excluir |
 | Histórico das etiquetas (busca por EPC; acha também as excluídas) | `/admin/etiquetas/historico` | RFID · Ver |
 | Leituras (paginada; filtros por dia, etiqueta, tipo, operador…) | `/admin/leituras-android` | Leituras · Ver |
-| Inventários | `/admin/inventarios` | Leituras · Ver |
+| Inventários (50 por página) | `/admin/inventarios` | Leituras · Ver |
 | Catálogo | `/admin/catalogo` | Catálogo · Ver (criar/excluir exigem Criar/Excluir) |
 | Relatórios (gráficos, tempo real) | `/admin/dashboard` | Relatórios · Ver |
 | Usuários (+ pedidos de nova senha e senha temporária; editar perfil e permissões; desativar e reativar) | `/admin/usuarios` | somente ADMIN |
 | Coletores (último contato, IP, versão do app e operador de cada coletor) | `/admin/coletores` | somente ADMIN |
-| App dos coletores (publicar versão nova do app) | `/admin/app` | somente ADMIN |
+| App dos coletores (publicar versão nova do app; retirar a publicada com problema) | `/admin/app` | somente ADMIN |
+| Auditoria (quem fez o quê em usuários, senhas, catálogo, app, exportações e backup) | `/admin/auditoria` | somente ADMIN |
+| Monitoramento (`{"status":"UP"}`, sem login e sem detalhes) | `/actuator/health` | público |
 | Status do servidor (+ backup manual para ADMIN) | `/status` | logado |
 | Meu perfil, trocar senha e email | `/perfil` | logado |
 | Esqueceu a senha? (link na tela de login) | `/esqueci-senha` | público |
@@ -103,6 +106,24 @@ daquela etiqueta, mesmo que ela já tenha sido excluída. Cada mudança também 
 Etiqueta E2806894000050123456ABCD (patrimônio PAT-200) alterada por admin@empresa.com: patrimonio
 ```
 
+### Auditoria
+
+Ações de usuários e de configuração ficam numa tabela própria (V13), que não some depois de 30 dias como o log:
+criação, edição, desativação e reativação de usuários; senha temporária gerada, pedido de senha descartado, troca
+de senha e de email pelo próprio usuário; PIN do coletor liberado; cadastro, edição e exclusão no catálogo;
+publicação e retirada de versão do app; exportações (leituras, inventário, etiquetas, não vistas) e backup manual.
+Cada registro tem quando, quem (email na web, operador no coletor), por onde ("Web 10.0.0.5" ou "Coletor X"),
+área, ação, sobre quem/o quê e detalhe. A tela (somente ADMIN) filtra por área e busca em todos os campos.
+As mudanças nas etiquetas continuam no histórico próprio delas (abaixo).
+
+### Etiquetas não vistas
+
+`/admin/etiquetas/nao-vistas?dias=30` lista as etiquetas cadastradas sem nenhuma leitura nem inventário há mais
+de N dias (as nunca vistas primeiro), com a última vez vista e o **último local** (o do inventário mais recente em
+que a etiqueta foi lida). É o relatório de equipamento sumido, emprestado ou com a etiqueta danificada. O
+**Excel/CSV do cadastro** (botões na tela de etiquetas, respeitando a busca) traz as mesmas colunas: última
+leitura, último inventário, último local e dias sem ser vista.
+
 ### Coletores
 
 A tela **Coletores** (somente ADMIN) mostra cada coletor com chave em `RFID_CHAVES_DISPOSITIVOS`: situação (em uso
@@ -115,9 +136,10 @@ endereço nas Configurações do app.
 
 ### Exportar para Excel
 
-As telas de **Leituras** e de **detalhe do inventário** têm os botões **Excel** e **CSV**
-(`/admin/leituras-android/exportar` e `/admin/inventarios/{id}/exportar`, parâmetro `formato=xlsx|csv`), com a
-mesma permissão da tela. Em Leituras, exporta **todas** as leituras do filtro aplicado (não só a página), até
+As telas de **Leituras**, **detalhe do inventário**, **Etiquetas** e **Não vistas** têm os botões **Excel** e
+**CSV** (`/admin/leituras-android/exportar`, `/admin/inventarios/{id}/exportar`, `/admin/tags-cadastradas/exportar`
+e `/admin/etiquetas/nao-vistas/exportar`, parâmetro `formato=xlsx|csv`), com a mesma permissão da tela. Toda
+exportação fica na auditoria. Em Leituras, exporta **todas** as leituras do filtro aplicado (não só a página), até
 100 mil; acima disso pede para filtrar mais. O log registra quem exportou, o filtro e quantas linhas.
 
 - **Excel (.xlsx)**, o recomendado: textos ficam como texto (patrimônio `000123` não perde os zeros, EPC só com
@@ -254,8 +276,14 @@ marca, modelo) são os do cadastro atual. Local sem inventário finalizado respo
 lista vazia (primeiro inventário dele). A resposta traz também a data e o operador do inventário de referência.
 
 Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "caminho": "..."}`.
-401 = chave ou sessão inválida · 403 = sem permissão · 409 = conflito (ex.: item em uso) ·
+401 = chave ou sessão inválida · 403 = sem permissão (ou inventário aberto por outro coletor) · 409 = conflito (ex.: item em uso) ·
 410 = rota antiga removida (atualize o app) · 426 = chamada por HTTP (use HTTPS) · 429 = login bloqueado por tentativas (header `Retry-After`).
+
+O 401 de sessão do operador vem com `"codigo": "SESSAO_OPERADOR"` e `"motivo"`: `DESCONHECIDA` (token que o
+servidor não conhece, ex.: banco restaurado), `OUTRO_COLETOR`, `ENCERRADA` (depois do "Sair"), `EXPIRADA`,
+`ANTIGA_DEMAIS` (chegou depois do prazo de sincronização), `USUARIO_INEXISTENTE`, `DESATIVADO` ou `SEM_OPERADOR`.
+Os dois primeiros apontam problema do servidor ou do coletor, não do operador. No lote, os itens `RECUSADA` por
+sessão trazem o mesmo `motivo`.
 
 > As rotas antigas dos coletores (`/api/tags/...` e `/api/rfid/...`) foram **removidas**: respondem
 > **410** explicando que o app precisa ser atualizado, e o servidor registra no log (uma vez por hora por
@@ -274,6 +302,9 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
 | **Permissões** | Por módulo e ação, conferidas em cada rota (não só escondendo botões). |
 | **Usuário desativado** | Não entra na web nem no coletor, e as sessões abertas dele (web e coletores) caem na hora. Também caem as outras sessões quando a pessoa troca a própria senha ou o ADMIN gera uma senha temporária. O ADMIN não desativa a si mesmo nem o último ADMIN ativo. |
 | **CSRF** | Ativo em todas as telas; a API dos coletores não usa cookie, então não precisa. |
+| **Content-Security-Policy** | As telas só carregam scripts, estilos, imagens e conexões do próprio servidor, não abrem plugins e só enviam formulários para ele. Tudo é local (Chart.js e ícones inclusive), então funciona sem internet. |
+| **Rotas /admin** | Um teste confere que toda rota em `/admin` tem `@PreAuthorize` (sem isso ela abriria para qualquer usuário logado). |
+| **Emails** | Gravados sem espaços e em minúsculas; o login (web e coletor) não diferencia maiúsculas. |
 | **Sessões do coletor** | Token aleatório de 32 bytes; o banco guarda só o hash SHA-256. |
 | **Integridade** | Chaves estrangeiras impedem excluir tipo/marca/modelo usado por etiquetas. |
 | **Banco** | O PostgreSQL só aceita conexão da própria máquina (`127.0.0.1:5433`); a senha fica no `docker/.env` e no `config\application.properties`, fora do git. |
@@ -300,12 +331,18 @@ Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "camin
   | V9 | `db/migration/V9__historico_etiquetas.sql` | Histórico de cadastro, alteração e exclusão das etiquetas |
   | V10 | `db/migration/V10__leitura_unica.sql` | A mesma leitura (etiqueta + hora no coletor) só é gravada uma vez, mesmo com reenvio simultâneo |
   | V11 | `db/migration/V11__usuario_ativo.sql` | Usuário ativo/desativado |
+  | V12 | `db/migration/V12__email_minusculo.sql` | Emails já cadastrados em minúsculas e sem espaços |
+  | V13 | `db/migration/V13__auditoria.sql` | Auditoria de usuários e configurações |
+  | V14 | `db/migration/V14__versao_app_retirada.sql` | Versão do app retirada pelo ADMIN |
+  | V15 | `db/migration/V15__busca_leituras_trigram.sql` | Índices trigram (`pg_trgm`) para os filtros "contém" da tela de leituras |
 
 - **Backup do banco:** o contêiner `rfid-backup` roda o `pg_dump` ao subir e depois de 6 em 6 horas enquanto está no
   ar (horário fixo de madrugada não serve: com o computador desligado o backup nunca roda) e guarda em
   `docker/backups` (ou na pasta de `RFID_BACKUP_PASTA` do `.env`), em `daily/`, `weekly/` e `monthly/`, mantendo
   14 diários, 4 semanais e 6 mensais. Backup na hora: `docker exec rfid-backup /backup.sh`. Ao religar o
-  computador, ele espera o banco aceitar conexões (até 5 min) antes do backup ao subir.
+  computador, ele espera o banco aceitar conexões (até 5 min) antes do backup ao subir. A tela **Status** mostra o
+  último backup do banco (lido de `docker\backups\last`) e um alerta quando passa de 12 h sem backup ou quando a
+  última tentativa gerou um arquivo vazio; o mesmo aviso vai para o log a cada 6 h.
 - **Backup antes de migrar:** quando uma versão nova do servidor traz migração, o servidor roda
   `docker exec rfid-backup /backup.sh` antes de aplicá-la (`RFID_BACKUP_ANTES_MIGRACAO`). Se esse backup falhar,
   a migração não é aplicada e o servidor não sobe: o log diz o motivo (normalmente o Docker Desktop fechado).
@@ -502,6 +539,8 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_LEITURAS_POR_PAGINA` | `50` | Leituras por página na tela de leituras (10 a 200) |
 | `RFID_LEITURAS_RETER_DIAS` | `0` (desligada) | Apaga leituras com mais de N dias, 10 min depois de subir e a cada 24 h (mínimo 30; não afeta inventários) |
 | `RFID_BACKUP_ANTES_MIGRACAO` | `docker exec rfid-backup /backup.sh` | Backup do banco antes de aplicar migrações (vazio = migra sem backup) |
+| `RFID_BANCO_PASTA_BACKUPS` | `./docker/backups` | Pasta dos dumps do contêiner de backup (a mesma do `RFID_BACKUP_PASTA` do `docker\.env`), para a tela Status conferir |
+| `RFID_BANCO_BACKUP_ATRASADO_HORAS` | `12` | Horas sem backup do banco até a tela Status e o log avisarem |
 | `RFID_SENHA_TAMANHO_MINIMO` | `8` | Tamanho mínimo de senha |
 | `RFID_LOGIN_MAX_TENTATIVAS` | `5` | Erros por email até bloquear |
 | `RFID_LOGIN_MAX_TENTATIVAS_IP` | `20` | Erros por origem até bloquear (IP na web, coletor + IP no coletor) |

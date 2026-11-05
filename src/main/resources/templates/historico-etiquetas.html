@@ -30,7 +30,7 @@
     </form>
 
     <div class="table-wrap">
-      <table class="table" th:unless="${#lists.isEmpty(linhas)}">
+      <table class="table table-cartoes" th:unless="${#lists.isEmpty(linhas)}">
         <thead>
         <tr>
           <th>Quando</th>
@@ -45,20 +45,20 @@
         </thead>
         <tbody>
         <tr th:each="h : ${linhas}">
-          <td class="nowrap" th:text="${#temporals.format(h.momento, 'dd/MM/yyyy HH:mm:ss')}"></td>
-          <td class="mono" th:unless="${tagFiltrada != null}">
+          <td class="nowrap cartao-titulo" th:text="${#temporals.format(h.momento, 'dd/MM/yyyy HH:mm:ss')}"></td>
+          <td data-rotulo="Etiqueta (EPC)" class="mono" th:unless="${tagFiltrada != null}">
             <a th:href="@{/admin/etiquetas/historico(tag=${h.tagReal})}" th:text="${h.tagReal}"></a>
           </td>
-          <td>
+          <td data-rotulo="O que">
             <span class="badge badge-online" th:if="${h.acao.name() == 'CADASTRO'}" th:text="${h.acao.rotulo}"></span>
             <span class="badge" th:if="${h.acao.name() == 'ALTERACAO'}" th:text="${h.acao.rotulo}"></span>
             <span class="badge badge-CUSTOM" th:if="${h.acao.name() == 'EXCLUSAO'}" th:text="${h.acao.rotulo}"></span>
           </td>
-          <td th:text="${h.campo != null} ? ${h.campo} : '—'"></td>
-          <td th:text="${h.valorAntigo != null and !#strings.isEmpty(h.valorAntigo)} ? ${h.valorAntigo} : '—'"></td>
-          <td th:text="${h.valorNovo != null and !#strings.isEmpty(h.valorNovo)} ? ${h.valorNovo} : '—'"></td>
-          <td th:text="${h.usuario}"></td>
-          <td th:text="${h.origem}"></td>
+          <td data-rotulo="Campo" th:text="${h.campo != null} ? ${h.campo} : '—'"></td>
+          <td data-rotulo="Antes" th:text="${h.valorAntigo != null and !#strings.isEmpty(h.valorAntigo)} ? ${h.valorAntigo} : '—'"></td>
+          <td data-rotulo="Depois" th:text="${h.valorNovo != null and !#strings.isEmpty(h.valorNovo)} ? ${h.valorNovo} : '—'"></td>
+          <td data-rotulo="Quem" th:text="${h.usuario}"></td>
+          <td data-rotulo="Por onde" th:text="${h.origem}"></td>
         </tr>
         </tbody>
       </table>

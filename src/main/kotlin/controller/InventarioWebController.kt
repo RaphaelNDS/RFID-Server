@@ -1,6 +1,8 @@
 package org.example.controller
 
 import org.example.model.StatusInventario
+import org.example.model.AreaAuditoria
+import org.example.service.AuditoriaService
 import org.example.service.EsperadoInventarioService
 import org.example.service.InventarioService
 import org.example.util.FormatoPlanilha
@@ -22,15 +24,23 @@ import org.springframework.web.bind.annotation.RequestParam
 @RequestMapping("/admin/inventarios")
 class InventarioWebController(
     private val service: InventarioService,
-    private val esperados: EsperadoInventarioService
+    private val esperados: EsperadoInventarioService,
+    private val auditoria: AuditoriaService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
     @PreAuthorize("@authService.temPermissao('LEITURA','READ')")
     @GetMapping
-    fun listar(@RequestParam(required = false) local: Long?, model: Model): String {
-        model.addAttribute("inventarios", service.listar(local))
+    fun listar(
+        @RequestParam(required = false) local: Long?,
+        @RequestParam(defaultValue = "1") pagina: Int,
+        model: Model
+    ): String {
+        // Na tela as páginas começam em 1; no serviço, em 0
+        val resultado = service.listar(local, pagina - 1)
+        model.addAttribute("inventarios", resultado.content)
+        model.adicionarPaginacao(resultado, "/admin/inventarios", mapOf("local" to local))
         model.addAttribute("locais", service.locaisCadastrados())
         model.addAttribute("localSelecionado", local)
         return "inventarios"
@@ -80,6 +90,8 @@ class InventarioWebController(
             auth.name, id, inventario.local, tipoArquivo.extensao.uppercase(), detalhe.itens.size,
             if (comparacao.referencia.temReferencia) " e ${comparacao.faltando.size} faltando em relação ao inventário ${comparacao.referencia.inventarioReferencia}"
             else " (primeiro inventário do local, sem comparação)")
+        auditoria.registrar(AreaAuditoria.EXPORTACAO, "Inventário exportado", "${inventario.local} ($id)",
+            "${detalhe.itens.size} etiqueta(s) lida(s), ${comparacao.faltando.size} faltando, em ${tipoArquivo.extensao.uppercase()}")
 
         // Ex.: inventario-almoxarifado-2026-10-14 (dia em que o inventário começou)
         return respostaPlanilha(planilha, tipoArquivo, "inventario-${inventario.local}-${inventario.iniciadoEm.toLocalDate()}")
