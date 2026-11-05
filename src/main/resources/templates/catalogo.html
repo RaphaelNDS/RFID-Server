@@ -115,6 +115,8 @@
         </button>
       </div>
       <form class="modal-corpo" id="dialogCampos" onsubmit="salvarDialog(); return false;"></form>
+      <!-- Erro de preenchimento ou da API, dentro da janela (antes era um alert() do navegador) -->
+      <div class="alert alert-erro" id="dialogErro" role="alert" style="margin:0 20px 16px" hidden></div>
       <div class="modal-rodape">
         <button type="button" class="btn btn-ghost" onclick="fecharDialog()">Cancelar</button>
         <button type="button" class="btn btn-primary" id="botaoSalvar" onclick="salvarDialog()">Salvar</button>
@@ -140,6 +142,7 @@
         const nome = document.getElementById("dialogNome");
         nome.value = li.querySelector(".item-nome").textContent;
         document.getElementById("dialogTitulo").textContent = TITULOS_RENOMEAR[tipo];
+        erroDialog(null);
         document.getElementById("alertDialog").classList.add("aberto");
         nome.focus();
         nome.select();
@@ -174,6 +177,7 @@
         }
 
         document.getElementById("dialogTitulo").textContent = TITULOS[tipo];
+        erroDialog(null);
         document.getElementById("alertDialog").classList.add("aberto");
         document.getElementById(tipo === 'tipo' ? "dialogNome" : "selectTipo").focus();
     }
@@ -211,7 +215,7 @@
 
     function salvarDialog(){
         const nome = document.getElementById("dialogNome").value.trim();
-        if(!nome) return alert("Informe o nome.");
+        if(!nome) return erroDialog("Informe o nome.");
 
         let payload = { nome };
 
@@ -222,13 +226,13 @@
 
         if(tipoAtual === 'marca'){
             const tipoId = document.getElementById("selectTipo").value;
-            if(!tipoId) return alert("Selecione o tipo de equipamento.");
+            if(!tipoId) return erroDialog("Selecione o tipo de equipamento.");
             payload.tipoId = tipoId;
         }
 
         if(tipoAtual === 'modelo'){
             const marcaId = document.getElementById("selectMarca").value;
-            if(!marcaId) return alert("Selecione a marca.");
+            if(!marcaId) return erroDialog("Selecione a marca.");
             payload.marcaId = marcaId;
         }
 
@@ -249,22 +253,34 @@
             fecharDialog();
             location.reload();
         })
-        .catch(e=>alert(e.message || "Erro ao salvar registro."))
+        .catch(e=>erroDialog(e.message || "Erro ao salvar registro."))
         .finally(()=>{ botao.disabled = false; });
     }
 
     function excluir(btn,tipo){
         const li = btn.closest("li");
         const nome = li.querySelector(".item-nome").textContent;
-        if(!confirm(`Excluir "${nome}"?`)) return;
-
-        fetch(`/api/catalogo/${tipo}/${li.dataset.id}`,{method:'DELETE'})
-        .then(verificarResposta)
-        .then(()=>location.reload())
-        .catch(e=>alert(e.message || "Erro ao excluir."));
+        confirmar({ titulo: TITULOS_EXCLUIR[tipo], mensagem: `Excluir "${nome}"?`, botao: "Excluir", perigo: true })
+        .then(ok => {
+            if(!ok) return;
+            fetch(`/api/catalogo/${tipo}/${li.dataset.id}`,{method:'DELETE'})
+            .then(verificarResposta)
+            .then(()=>location.reload())
+            // Ex.: "não pode excluir: há etiquetas com este tipo"
+            .catch(e=>avisar(e.message || "Erro ao excluir.", "erro"));
+        });
     }
 
-    // Em caso de erro a API devolve {"mensagem": "..."}; repassa essa mensagem para o alert
+    const TITULOS_EXCLUIR = { tipo: "Excluir tipo", marca: "Excluir marca", modelo: "Excluir modelo" };
+
+    // Mostra (ou esconde, com null) o erro dentro da janela de cadastro
+    function erroDialog(mensagem){
+        const caixa = document.getElementById("dialogErro");
+        caixa.textContent = mensagem || "";
+        caixa.hidden = !mensagem;
+    }
+
+    // Em caso de erro a API devolve {"mensagem": "..."}; repassa essa mensagem para a tela
     function verificarResposta(r){
         if(r.ok) return r;
         return r.json()

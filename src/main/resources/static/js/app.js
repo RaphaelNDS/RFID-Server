@@ -60,3 +60,113 @@ document.addEventListener("DOMContentLoaded", function () {
     if (e.key === "Escape") fecharMenus();
   });
 });
+
+/* ============================ CONFIRMAÇÃO E AVISOS ============================ */
+// No lugar do confirm()/prompt()/alert() do navegador, que destoavam do resto do sistema (e no celular mostram
+// o endereço do servidor no título).
+
+/**
+ * Abre a janela de confirmação. Devolve uma Promise com null (cancelou), true (confirmou) ou, com `campo`,
+ * o texto digitado (obrigatório). Opções: titulo, mensagem, botao, perigo (botão vermelho), campo (rótulo do
+ * campo de texto).
+ */
+function confirmar(opcoes) {
+  return new Promise(function (resolver) {
+    const o = opcoes || {};
+    const fundo = document.createElement("div");
+    fundo.className = "modal-fundo aberto";
+    fundo.innerHTML =
+      '<div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="confirmarTitulo" aria-describedby="confirmarMensagem">' +
+      '  <div class="modal-cabecalho"><h2 id="confirmarTitulo"></h2></div>' +
+      '  <form class="modal-corpo" novalidate>' +
+      '    <p id="confirmarMensagem" class="confirmar-mensagem"></p>' +
+      '    <div class="field" hidden><label for="confirmarCampo"></label>' +
+      '      <input type="text" id="confirmarCampo" maxlength="255" autocomplete="off">' +
+      '      <span class="field-erro" hidden>Preencha este campo para continuar.</span></div>' +
+      '  </form>' +
+      '  <div class="modal-rodape">' +
+      '    <button type="button" class="btn btn-ghost" data-acao="cancelar">Cancelar</button>' +
+      '    <button type="button" class="btn" data-acao="ok"></button>' +
+      '  </div>' +
+      '</div>';
+    // textContent: nomes de usuário e etiquetas entram como texto, nunca como HTML
+    fundo.querySelector("#confirmarTitulo").textContent = o.titulo || "Confirmar";
+    fundo.querySelector("#confirmarMensagem").textContent = o.mensagem || "";
+    const ok = fundo.querySelector('[data-acao="ok"]');
+    ok.textContent = o.botao || "Confirmar";
+    ok.classList.add(o.perigo ? "btn-danger" : "btn-primary");
+    const campo = fundo.querySelector("#confirmarCampo");
+    const erroCampo = fundo.querySelector(".field-erro");
+    if (o.campo) {
+      campo.closest(".field").hidden = false;
+      fundo.querySelector('label[for="confirmarCampo"]').textContent = o.campo;
+    }
+
+    const focoAnterior = document.activeElement;
+    function fechar(resultado) {
+      document.removeEventListener("keydown", teclas, true);
+      fundo.remove();
+      if (focoAnterior && focoAnterior.focus) focoAnterior.focus();
+      resolver(resultado);
+    }
+    function confirmarAgora() {
+      if (!o.campo) return fechar(true);
+      const valor = campo.value.trim();
+      if (!valor) { erroCampo.hidden = false; campo.focus(); return; }
+      fechar(valor);
+    }
+    function teclas(e) {
+      if (e.key === "Escape") { e.stopPropagation(); fechar(null); }
+    }
+
+    ok.addEventListener("click", confirmarAgora);
+    fundo.querySelector('[data-acao="cancelar"]').addEventListener("click", function () { fechar(null); });
+    fundo.querySelector("form").addEventListener("submit", function (e) { e.preventDefault(); confirmarAgora(); });
+    fundo.addEventListener("click", function (e) { if (e.target === fundo) fechar(null); });
+    document.addEventListener("keydown", teclas, true);
+
+    document.body.appendChild(fundo);
+    (o.campo ? campo : ok).focus();
+  });
+}
+
+/** Aviso que some sozinho no canto da tela (tipo "erro" ou "ok"). */
+function avisar(mensagem, tipo) {
+  let pilha = document.getElementById("avisos");
+  if (!pilha) {
+    pilha = document.createElement("div");
+    pilha.id = "avisos";
+    pilha.className = "avisos";
+    pilha.setAttribute("aria-live", "assertive");
+    document.body.appendChild(pilha);
+  }
+  const aviso = document.createElement("div");
+  aviso.className = "alert " + (tipo === "ok" ? "alert-ok" : "alert-erro");
+  aviso.setAttribute("role", tipo === "ok" ? "status" : "alert");
+  aviso.textContent = mensagem;
+  pilha.appendChild(aviso);
+  setTimeout(function () { aviso.remove(); }, 6000);
+}
+
+// Formulário com data-confirmar="mensagem" pede confirmação antes de enviar. Opcionais: data-confirmar-titulo,
+// data-confirmar-botao, data-confirmar-perigo (botão vermelho) e data-confirmar-campo="rótulo" +
+// data-confirmar-destino="nome do input" (texto obrigatório copiado para esse input, ex.: motivo da retirada)
+document.addEventListener("submit", function (e) {
+  const form = e.target;
+  if (!(form instanceof HTMLFormElement) || !form.dataset.confirmar) return;
+  e.preventDefault();
+  confirmar({
+    titulo: form.dataset.confirmarTitulo,
+    mensagem: form.dataset.confirmar,
+    botao: form.dataset.confirmarBotao,
+    perigo: form.dataset.confirmarPerigo !== undefined,
+    campo: form.dataset.confirmarCampo
+  }).then(function (resposta) {
+    if (resposta === null) return;
+    if (form.dataset.confirmarDestino && form.elements[form.dataset.confirmarDestino]) {
+      form.elements[form.dataset.confirmarDestino].value = resposta;
+    }
+    // submit() direto não dispara este evento de novo
+    HTMLFormElement.prototype.submit.call(form);
+  });
+});
