@@ -23,9 +23,9 @@ class BackupIntegracaoTest : IntegracaoBase() {
             .andExpect(content().string(containsString("inativo (nenhum certificado HTTPS para guardar)")))
             .andExpect(content().string(containsString("Fazer backup do certificado agora")))
 
+        // Status só para o ADMIN (mostra o banco, os backups e a instrução docker exec)
         mvc.perform(get("/status").with(Perfis.gestor()))
-            .andExpect(status().isOk)
-            .andExpect(content().string(not(containsString("Fazer backup do certificado agora"))))
+            .andExpect(status().isForbidden)
     }
 
     @Test

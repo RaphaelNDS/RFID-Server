@@ -13,7 +13,9 @@ class UserPrincipal(
     /** Entrou com senha temporária: precisa criar uma senha nova antes de usar o sistema. */
     val trocarSenha: Boolean = false,
     /** Desativado pelo ADMIN: o Spring Security recusa o login (DisabledException). */
-    val ativo: Boolean = true
+    val ativo: Boolean = true,
+    /** Senha temporária gerada há mais que o prazo: o Spring Security recusa o login (CredentialsExpiredException). */
+    val senhaTemporariaVencida: Boolean = false
 ) : UserDetails {
 
     override fun getAuthorities(): Collection<GrantedAuthority> = authoritiesList
@@ -24,6 +26,6 @@ class UserPrincipal(
 
     override fun isAccountNonExpired() = true
     override fun isAccountNonLocked() = true
-    override fun isCredentialsNonExpired() = true
+    override fun isCredentialsNonExpired() = !senhaTemporariaVencida
     override fun isEnabled() = ativo
 }

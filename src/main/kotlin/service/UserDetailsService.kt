@@ -11,7 +11,9 @@ import org.springframework.stereotype.Service
 
 @Service
 class CustomUserDetailsService(
-    private val usuarioRepository: UserRepository
+    private val usuarioRepository: UserRepository,
+    private val relogio: java.time.Clock,
+    @org.springframework.beans.factory.annotation.Value("\${rfid.senha.prazo-temporaria:48h}") private val prazoTemporaria: java.time.Duration
 ) : UserDetailsService {
 
     override fun loadUserByUsername(username: String): UserDetails {
@@ -37,7 +39,10 @@ class CustomUserDetailsService(
             senha = user.senha,
             authoritiesList = authorities,
             trocarSenha = user.trocarSenha,
-            ativo = user.ativo
+            ativo = user.ativo,
+            // Senha temporária vale por [prazoTemporaria]: depois disso, só pedindo outra ao administrador
+            senhaTemporariaVencida = user.trocarSenha && user.senhaTemporariaEm?.plus(prazoTemporaria)
+                ?.isBefore(java.time.LocalDateTime.now(relogio)) == true
         )
     }
 }

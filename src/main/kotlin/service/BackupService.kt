@@ -1,5 +1,6 @@
 package org.example.service
 
+import org.example.util.CifraBackup
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.event.ApplicationReadyEvent
@@ -22,14 +23,17 @@ import java.util.zip.ZipOutputStream
  * O banco (PostgreSQL) tem backup próprio, feito pelo contêiner rfid-backup do docker/docker-compose.yml.
  * O certificado fica fora do banco e precisa do seu: sem ele, um servidor restaurado gera outro certificado
  * e todos os coletores precisam ser confirmados de novo.
- * Para restaurar: pare o servidor, extraia o .zip na pasta data (substituindo os arquivos) e suba de novo.
+ * Para restaurar: pare o servidor, extraia o .zip na pasta data (substituindo os arquivos) e suba de novo. Backup
+ * cifrado (.zip.cifrado, com RFID_BACKUP_SENHA): antes, java -jar rfid-server.jar --decifrar-backup arquivo.zip.cifrado
  */
 @Service
 class BackupService(
     @Value("\${rfid.backup.habilitado:true}") private val habilitado: Boolean,
     @Value("\${rfid.backup.pasta:}") pastaConfigurada: String,
     @Value("\${rfid.backup.manter:14}") private val manter: Int,
-    private val certificado: CertificadoHttps
+    private val certificado: CertificadoHttps,
+    /** Senha que cifra o backup (RFID_BACKUP_SENHA). Vazia: o .zip sai aberto, com a chave privada e a senha dela. */
+    @Value("\${rfid.backup.senha:}") private val senhaBackup: String = ""
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -65,6 +69,11 @@ class BackupService(
                 "O banco tem backup próprio (contêiner rfid-backup)",
             pasta.toAbsolutePath(), manter, ultimo?.let { "${it.fileName}, ${idade(it)}" } ?: "nenhum"
         )
+        if (senhaBackup.isBlank()) {
+            log.warn("O backup do certificado leva a chave privada do HTTPS e a senha dela SEM criptografia: quem copiar um " +
+                "backup consegue se passar pelo servidor para os coletores. Defina RFID_BACKUP_SENHA (guarde a senha fora " +
+                "desta máquina) para cifrar os próximos")
+        }
 
         // Garante que exista pelo menos um backup recente logo depois de instalar/atualizar
         if (ultimo == null || Duration.between(dataDoArquivo(ultimo), LocalDateTime.now()).toHours() >= 24) {
@@ -78,7 +87,8 @@ class BackupService(
     fun fazerBackup(motivo: String): Path {
         check(ativo) { "Backup indisponível: ${motivoInativo()}" }
 
-        val nome = "rfid-certificado-${LocalDateTime.now().format(FORMATO_NOME)}.zip"
+        val cifrado = senhaBackup.isNotBlank()
+        val nome = "rfid-certificado-${LocalDateTime.now().format(FORMATO_NOME)}.zip" + if (cifrado) EXTENSAO_CIFRADO else ""
         val destino = pasta.resolve(nome)
         val parcial = pasta.resolve("$nome.parcial")
         val arquivos = certificado.arquivosParaBackup()
@@ -96,6 +106,10 @@ class BackupService(
                 }
             }
             validar(parcial, arquivos.map { it.name })
+            if (cifrado) {
+                // A chave privada não sai aberta da máquina: só quem tem a senha (fora do backup) restaura
+                Files.write(parcial, CifraBackup.cifrar(Files.readAllBytes(parcial), senhaBackup))
+            }
 
             // Só vira um backup "de verdade" depois de pronto e validado.
             // Dois backups no mesmo segundo (ex.: duplo clique) têm o mesmo nome: o novo substitui o anterior.
@@ -107,7 +121,8 @@ class BackupService(
             throw IllegalStateException("Falha ao fazer o backup: ${e.message}", e)
         }
 
-        log.info("Backup do certificado HTTPS concluído ({}): {} ({})", motivo, nome, arquivos.joinToString { it.name })
+        log.info("Backup do certificado HTTPS concluído ({}): {} ({}{})", motivo, nome, arquivos.joinToString { it.name },
+            if (cifrado) ", cifrado com a senha de rfid.backup.senha" else "")
 
         removerAntigos()
         return destino
@@ -164,6 +179,7 @@ class BackupService(
     companion object {
         private val FORMATO_NOME = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss")
         private val FORMATO_TELA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
-        private val PADRAO_NOME = Regex("""^rfid-certificado-(\d{4}-\d{2}-\d{2}_\d{6})\.zip$""")
+        private val PADRAO_NOME = Regex("""^rfid-certificado-(\d{4}-\d{2}-\d{2}_\d{6})\.zip(\.cifrado)?$""")
+        const val EXTENSAO_CIFRADO = ".cifrado"
     }
 }

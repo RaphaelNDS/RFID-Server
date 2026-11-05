@@ -32,6 +32,10 @@ class UsuarioEntity(
     @Column(name = "trocar_senha")
     var trocarSenha: Boolean = false,
 
+    /** Quando o ADMIN gerou a senha temporária: depois do prazo (rfid.senha.prazo-temporaria) ela não entra mais. */
+    @Column(name = "senha_temporaria_em")
+    var senhaTemporariaEm: LocalDateTime? = null,
+
     /** Desativado pelo ADMIN: não entra mais (web e coletor), mas o histórico dele continua. */
     var ativo: Boolean = true
 )

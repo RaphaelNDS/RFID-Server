@@ -14,7 +14,7 @@
   <!-- Aplica o tema antes de desenhar a página (evita "piscar" claro ao abrir no escuro) -->
   <script th:replace="~{layout/tema :: tema}"></script>
 
-  <script>
+  <script th:attr="nonce=${cspNonce}">
     // Envia o token CSRF automaticamente em todo fetch que altera dados (POST/PUT/DELETE)
     (function () {
       const token  = document.querySelector('meta[name="_csrf"]')?.content;

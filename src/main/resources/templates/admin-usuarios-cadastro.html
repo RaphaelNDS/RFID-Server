@@ -85,7 +85,7 @@
     </div>
   </form>
 
-  <script>
+  <script th:attr="nonce=${cspNonce}">
     (function () {
       const perfil = document.getElementById("perfil");
       const descricao = document.getElementById("perfilDescricao");

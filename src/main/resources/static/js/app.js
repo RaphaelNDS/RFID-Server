@@ -7,6 +7,15 @@ function alternarTema() {
   document.dispatchEvent(new CustomEvent("tema-alterado", { detail: novo }));
 }
 
+// Ações por data-acao (no lugar de onclick="..." no HTML: a política de segurança CSP só aceita scripts com o nonce)
+document.addEventListener("click", function (e) {
+  const alvo = e.target.closest && e.target.closest("[data-acao]");
+  if (!alvo) return;
+  if (alvo.dataset.acao === "alternar-tema") alternarTema();
+  else if (alvo.dataset.acao === "recarregar") location.reload();
+  else if (alvo.dataset.acao === "voltar") history.back();
+});
+
 document.addEventListener("DOMContentLoaded", function () {
 
   // Destaca no menu a seção atual (o link mais específico que bate com a URL)

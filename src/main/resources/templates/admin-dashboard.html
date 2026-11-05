@@ -29,7 +29,7 @@
   <div class="alert alert-ok" id="avisoLeiturasNovas" role="status" hidden>
     <svg class="ic"><use href="/img/icones.svg#sinal"/></svg>
     <span>Há leituras novas desde que a página abriu.</span>
-    <button type="button" class="btn btn-secondary btn-sm" onclick="location.reload()">Atualizar</button>
+    <button type="button" class="btn btn-secondary btn-sm" data-acao="recarregar">Atualizar</button>
   </div>
 
   <div class="alert alert-aviso" th:if="${aviso}" role="alert">
@@ -80,7 +80,7 @@
   <!-- Chart.js 4.4.1 servido pelo próprio sistema (funciona sem internet) -->
   <script th:src="@{/js/chart.umd.min.js}"></script>
 
-  <script th:inline="javascript">
+  <script th:inline="javascript" th:attr="nonce=${cspNonce}">
     const porDia = [[${dadosPorDia}]];
     const tipo   = [[${dadosTipo}]];
     const marca  = [[${dadosMarca}]];

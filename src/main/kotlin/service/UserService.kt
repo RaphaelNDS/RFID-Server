@@ -156,6 +156,9 @@ class UsuarioService(
         val acoesCustom = if (role == Role.CUSTOM) converterAcoes(acoes.orEmpty()) else emptyList()
 
         val antes = "${usuario.role} [${usuario.permissoes.joinToString { "${it.modulo}_${it.acao}" }}]"
+        // Para decidir se a sessão cai: perfil + CONJUNTO de permissões. O texto acima dependia da ordem (a do
+        // formulário não é a do banco) e editar só o nome de um perfil CUSTOM podia deslogar a pessoa à toa
+        val acessoAntes = usuario.role to usuario.permissoes.map { "${it.modulo}_${it.acao}" }.toSet()
         usuario.nome = nome.trim()
         usuario.role = role
         usuario.permissoes.clear()
@@ -165,7 +168,8 @@ class UsuarioService(
         // A sessão web guarda o perfil e as permissões do login: sem derrubá-la, um ADMIN rebaixado continuaria
         // ADMIN até sair (e poderia, por exemplo, criar outro ADMIN). Só nome mudou: ninguém é deslogado
         val depois = "$role [${usuario.permissoes.joinToString { "${it.modulo}_${it.acao}" }}]"
-        val encerradas = if (depois != antes && id != quemEdita) sessoes.encerrarWeb(id, "perfil ou permissões alterados") else 0
+        val acessoDepois = role to usuario.permissoes.map { "${it.modulo}_${it.acao}" }.toSet()
+        val encerradas = if (acessoDepois != acessoAntes && id != quemEdita) sessoes.encerrarWeb(id, "perfil ou permissões alterados") else 0
 
         log.info(
             "Usuário {} alterado por {}: perfil {} → {} [{}]{}", usuario.email, quemFez(), antes, role,
@@ -257,6 +261,7 @@ class UsuarioService(
 
         usuario.senha = encoder.encode(novaSenha)
         usuario.trocarSenha = false
+        usuario.senhaTemporariaEm = null
         // Quem trocou a própria senha não precisa mais do pedido de "Esqueceu a senha?"
         usuario.senhaPedidaEm = null
         repo.save(usuario)

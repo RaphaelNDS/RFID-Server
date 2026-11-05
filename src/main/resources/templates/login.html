@@ -12,7 +12,7 @@
 
 <body>
 
-<button type="button" class="icon-btn auth-tema" onclick="alternarTema()" aria-label="Alternar tema claro/escuro">
+<button type="button" class="icon-btn auth-tema" data-acao="alternar-tema" aria-label="Alternar tema claro/escuro">
   <svg class="ic tema-claro-ic"><use href="/img/icones.svg#lua"/></svg>
   <svg class="ic tema-escuro-ic"><use href="/img/icones.svg#sol"/></svg>
 </button>
@@ -34,6 +34,11 @@
         <div class="alert alert-erro" th:if="${param.error}" role="alert">
           <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
           <span>Email ou senha incorretos.</span>
+        </div>
+
+        <div class="alert alert-erro" th:if="${param.senhaVencida}" role="alert">
+          <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+          <span>A senha temporária venceu. Peça outra pelo "Esqueceu a senha?" ou ao administrador.</span>
         </div>
 
         <div class="alert alert-aviso" th:if="${param.bloqueado}" role="alert">
