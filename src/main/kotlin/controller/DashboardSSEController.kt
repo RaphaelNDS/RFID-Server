@@ -18,6 +18,6 @@ class DashboardSSEController(
 
     // Envia "update" quando chegam leituras novas; a tela admin-dashboard recarrega ao receber
     @GetMapping(produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
-    fun stream(): Flux<ServerSentEvent<String>> =
-        eventos.comoSse("dashboard", eventos.avisosDashboard())
+    fun stream(request: jakarta.servlet.http.HttpServletRequest): Flux<ServerSentEvent<String>> =
+        eventos.comoSse("dashboard", eventos.avisosDashboard(), request.getSession(false)?.id)
 }

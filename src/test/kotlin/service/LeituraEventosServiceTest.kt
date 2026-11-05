@@ -89,4 +89,20 @@ class LeituraEventosServiceTest {
             .thenCancel()
             .verify()
     }
+
+    @Test
+    fun `sse termina no proximo ping quando a sessao web da pessoa foi encerrada`() {
+        val registro = org.springframework.security.core.session.SessionRegistryImpl()
+        registro.registerNewSession("sessao-1", "ana@x.com")
+        val comSessao = LeituraEventosService(registro)
+
+        StepVerifier.withVirtualTime { comSessao.comoSse("leituras", comSessao.leituras(), "sessao-1") }
+            .expectSubscription()
+            .thenAwait(LeituraEventosService.HEARTBEAT)
+            .expectNextMatches { it.comment() == "ping" }
+            // Usuário desativado (ou rebaixado, ou senha trocada): a sessão web expira
+            .then { registro.getSessionInformation("sessao-1")!!.expireNow() }
+            .thenAwait(LeituraEventosService.HEARTBEAT)
+            .verifyComplete()
+    }
 }

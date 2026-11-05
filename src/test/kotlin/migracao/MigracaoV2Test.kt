@@ -75,7 +75,7 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("16") // V16 = hora informada pelo coletor (reenvio com relógio adiantado)
+        assertThat(resultado.targetSchemaVersion).isEqualTo("17") // V17 = versão da etiqueta e nomes únicos sem diferenciar maiúsculas
     }
 
     @Test

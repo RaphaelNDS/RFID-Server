@@ -3,6 +3,7 @@ package org.example.controller
 import org.example.request.CadastroRequest
 import org.example.service.CatalogoService
 import org.example.service.HistoricoEtiquetaService
+import org.example.service.EdicaoConcorrenteException
 import org.example.service.RfidService
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Controller
@@ -33,7 +34,7 @@ class EtiquetaWebController(
         val tag = rfidService.buscarPorId(id)
         model.addAttribute("cadastro", CadastroRequest(
             tag = tag.tagReal, codigoInterno = tag.codigoInterno, patrimonio = tag.patrimonio, numeroSerie = tag.numeroSerie,
-            tipoEquipamentoId = tag.tipoEquipamentoId, marcaId = tag.marcaId, modeloId = tag.modeloId
+            tipoEquipamentoId = tag.tipoEquipamentoId, marcaId = tag.marcaId, modeloId = tag.modeloId, versao = tag.versao
         ))
         return formulario(id, model)
     }
@@ -49,7 +50,10 @@ class EtiquetaWebController(
             "redirect:/admin/tags-cadastradas"
         } catch (e: IllegalArgumentException) {
             model.addAttribute("erro", e.message)
-            cadastro.tag = rfidService.buscarPorId(id).tagReal
+            val atual = rfidService.buscarPorId(id)
+            cadastro.tag = atual.tagReal
+            // Mudada por outra pessoa: a tela volta com o que foi digitado e a versão atual (salvar de novo grava por cima)
+            if (e is EdicaoConcorrenteException) cadastro.versao = atual.versao
             formulario(id, model)
         }
     }

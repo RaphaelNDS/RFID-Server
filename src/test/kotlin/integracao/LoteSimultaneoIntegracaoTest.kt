@@ -40,9 +40,13 @@ class LoteSimultaneoIntegracaoTest : IntegracaoBase() {
 
     private val prefixo = "E-SIMULT-${UUID.randomUUID().toString().take(8)}-"
     private val email = "simultaneo-${UUID.randomUUID()}@x.com"
+    private val inventario = UUID.randomUUID().toString()
 
     @AfterEach
     fun apagar() {
+        jdbc.update("delete from inventario_itens where tag like ?", "$prefixo%")
+        jdbc.update("delete from inventarios where id = ?", inventario)
+        jdbc.update("delete from locais where nome = ?", "$prefixo-local")
         jdbc.update("delete from leituras_android where tag like ?", "$prefixo%")
         jdbc.update("delete from historico_etiquetas where tag_real like ?", "$prefixo%")
         jdbc.update("delete from tags where tag_real like ?", "$prefixo%")
@@ -87,5 +91,32 @@ class LoteSimultaneoIntegracaoTest : IntegracaoBase() {
             val status: List<String> = JsonPath.read(json, "$.resultados[*].status")
             assertThat(status).hasSize(quantidade).containsOnly("CADASTRADA")
         }
+    }
+
+    @Test
+    fun `mesmas etiquetas do inventario enviadas duas vezes ao mesmo tempo respondem 200 nas duas e gravam uma vez`() {
+        operadores.criarUsuario(email = email)
+        val token = operadores.entrar(mvc, email)
+        mvc.perform(post("/api/android/inventarios").comoOperador(token).contentType(MediaType.APPLICATION_JSON)
+            .content("""{"id":"$inventario","local":"$prefixo-local"}"""))
+
+        val corpo = """{"itens":[${(0 until 200).joinToString(",") { """{"tag":"$prefixo$it"}""" }}]}"""
+        val largada = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(2)
+        val status = (1..2).map {
+            executor.submit<Int> {
+                largada.await()
+                mvc.perform(post("/api/android/inventarios/$inventario/itens").comoOperador(token)
+                    .contentType(MediaType.APPLICATION_JSON).content(corpo)).andReturn().response.status
+            }
+        }
+        largada.countDown()
+        val codigos = status.map { it.get(60, TimeUnit.SECONDS) }
+        executor.shutdown()
+
+        // Antes, quem perdia a corrida recebia 409 "Registro duplicado" com tudo já gravado
+        assertThat(codigos).containsOnly(200)
+        val gravadas = jdbc.queryForObject("select count(*) from inventario_itens where inventario_id = ?", Long::class.java, inventario)
+        assertThat(gravadas).isEqualTo(200L)
     }
 }

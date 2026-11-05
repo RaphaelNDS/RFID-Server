@@ -13,7 +13,8 @@ import java.util.Optional
 
 interface LocalRepository : JpaRepository<LocalEntity, Long> {
 
-    fun findByNomeIgnoreCase(nome: String): Optional<LocalEntity>
+    /** O mais antigo com esse nome: se o banco tiver duplicados de antes da V17, não dá erro (era Optional único). */
+    fun findFirstByNomeIgnoreCaseOrderByIdAsc(nome: String): Optional<LocalEntity>
 
     fun findAllByOrderByNomeAsc(): List<LocalEntity>
 }

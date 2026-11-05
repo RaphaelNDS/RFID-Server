@@ -32,7 +32,7 @@
     </form>
 
     <div class="card-header">
-      <h2>Erros <span class="contagem" th:text="'(' + ${#lists.size(erros)} + ')'"></span></h2>
+      <h2>Erros <span class="contagem" th:text="${#lists.size(erros) >= 200} ? '(os 200 mais recentes)' : '(' + ${#lists.size(erros)} + ')'"></span></h2>
     </div>
 
     <div class="table-wrap">

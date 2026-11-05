@@ -20,6 +20,9 @@ import java.time.LocalDateTime
 import org.slf4j.LoggerFactory
 import org.springframework.security.core.context.SecurityContextHolder
 
+/** A etiqueta mudou desde que a tela de edição abriu (versão diferente). */
+class EdicaoConcorrenteException(mensagem: String) : IllegalArgumentException(mensagem)
+
 @Service
 class RfidService(
     private val repo: TagRepository,
@@ -200,6 +203,12 @@ class RfidService(
     @Transactional
     fun editarTag(id: Long, pedido: CadastroRequest): List<String> {
         val tag = buscarPorId(id)
+        // Outra pessoa salvou depois que esta tela abriu: sem isto, a última a salvar apagava a mudança da outra
+        if (pedido.versao != null && pedido.versao != tag.versao) {
+            log.warn("Edição da etiqueta {} recusada para {}: alterada por outra pessoa enquanto a tela estava aberta", tag.tagReal, usuarioAtual())
+            throw EdicaoConcorrenteException("Esta etiqueta foi alterada por outra pessoa enquanto você editava (veja o histórico). " +
+                "Os dados abaixo são os seus: confira e salve de novo para gravar por cima.")
+        }
         val req = normalizar(pedido)
         require(req.codigoInterno.isNotBlank()) { "Informe o código interno" }
         validarCatalogo(req.copy(tag = tag.tagReal))
@@ -223,12 +232,20 @@ class RfidService(
         return mudaram
     }
 
-    private fun normalizar(req: CadastroRequest) = req.copy(
-        tag = req.tag.trim(),
-        codigoInterno = req.codigoInterno.trim(),
-        patrimonio = req.patrimonio.trim(),
-        numeroSerie = req.numeroSerie.trim()
-    )
+    private fun normalizar(req: CadastroRequest): CadastroRequest {
+        val limpo = req.copy(
+            tag = req.tag.trim(),
+            codigoInterno = req.codigoInterno.trim(),
+            patrimonio = req.patrimonio.trim(),
+            numeroSerie = req.numeroSerie.trim()
+        )
+        // As colunas são varchar(255): o banco recusaria com uma mensagem confusa e a tela perderia o formulário
+        mapOf("etiqueta (EPC)" to limpo.tag, "código interno" to limpo.codigoInterno, "patrimônio" to limpo.patrimonio,
+            "nº de série" to limpo.numeroSerie).forEach { (campo, valor) ->
+            require(valor.length <= TAMANHO_MAXIMO_CAMPO) { "O campo $campo passa de $TAMANHO_MAXIMO_CAMPO caracteres (tem ${valor.length})" }
+        }
+        return limpo
+    }
 
     /**
      * Patrimônio identifica o equipamento: duas etiquetas com o mesmo número confundem o Localizar e os relatórios.
@@ -347,6 +364,9 @@ class RfidService(
     companion object {
         /** Linhas por página nas telas de etiquetas e pendentes. */
         const val TAMANHO_PAGINA = 50
+
+        /** Tamanho das colunas de texto das etiquetas (varchar 255). */
+        const val TAMANHO_MAXIMO_CAMPO = 255
 
         /** Etiquetas: as cadastradas por último primeiro. */
         private val ORDEM_ETIQUETAS: Sort = Sort.by(Sort.Direction.DESC, "id")

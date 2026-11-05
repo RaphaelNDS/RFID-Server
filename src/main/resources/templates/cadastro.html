@@ -26,7 +26,7 @@
 
         <div class="field span-2">
           <label for="tag">Etiqueta RFID (EPC) <span class="obrigatorio">*</span></label>
-          <input type="text" id="tag" th:field="*{tag}" class="mono"
+          <input type="text" id="tag" th:field="*{tag}" maxlength="255" class="mono"
                  th:readonly="${!#strings.isEmpty(cadastro.tag)}" required
                  placeholder="Leia a etiqueta no coletor ou digite o código">
           <span class="field-dica" th:if="${!#strings.isEmpty(cadastro.tag)}">Etiqueta vinda da lista de pendentes.</span>
@@ -34,12 +34,12 @@
 
         <div class="field">
           <label for="codigoInterno">Código interno <span class="obrigatorio">*</span></label>
-          <input type="text" id="codigoInterno" th:field="*{codigoInterno}" placeholder="Ex.: 0.111.222.333" required>
+          <input type="text" id="codigoInterno" th:field="*{codigoInterno}" maxlength="255" placeholder="Ex.: 0.111.222.333" required>
         </div>
 
         <div class="field">
           <label for="patrimonio">Patrimônio</label>
-          <input type="text" id="patrimonio" th:field="*{patrimonio}">
+          <input type="text" id="patrimonio" th:field="*{patrimonio}" maxlength="255">
         </div>
 
         <div class="field">
@@ -69,12 +69,12 @@
 
         <div class="field">
           <label for="numeroSerie">Nº de série</label>
-          <input type="text" id="numeroSerie" th:field="*{numeroSerie}">
+          <input type="text" id="numeroSerie" th:field="*{numeroSerie}" maxlength="255">
         </div>
 
       </div>
       <p class="field-dica" style="margin-top:16px">
-        Para aparecer nas leituras e relatórios, a etiqueta precisa de tipo, marca, modelo, patrimônio e nº de série.
+        Preencha tipo, marca, modelo, patrimônio e nº de série para os relatórios e as buscas ficarem completos (as leituras de uma etiqueta incompleta também são gravadas).
       </p>
     </div>
 

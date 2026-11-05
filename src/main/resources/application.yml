@@ -146,7 +146,8 @@ rfid:
     # Variável própria: RFID_BACKUP_PASTA é a pasta dos dumps do banco no docker\.env, e uma variável do Windows
     # com esse nome mudaria as duas pastas ao mesmo tempo.
     pasta: ${RFID_CERT_BACKUP_PASTA:}
-    # Horário no formato cron do Spring (segundo minuto hora dia mês dia-da-semana). Padrão: todo dia às 02:00. Com o computador desligado nesse horário,
+    # Horário no formato cron do Spring (segundo minuto hora dia mês dia-da-semana). Padrão: todo dia às 02:00. Com o
+    # computador desligado nesse horário, o backup é feito ao subir o servidor, se o último tiver mais de 24 h.
     cron: ${RFID_BACKUP_CRON:0 0 2 * * *}
     # Quantos backups guardar; os mais antigos são apagados.
     manter: ${RFID_BACKUP_MANTER:14}
@@ -159,6 +160,12 @@ logging:
     name: ${RFID_LOG_ARQUIVO:./data/logs/rfid-server.log}
   charset:
     file: UTF-8
+  # Quebra de linha dentro da mensagem vira " | ": um email digitado no login com uma quebra de linha não consegue
+  # forjar uma linha inteira no log (que é o que se usa para investigar incidentes). Exceções (stack trace) saem
+  # normalmente, em várias linhas, pelo %wEx.
+  pattern:
+    console: "%clr(%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}){faint} %clr(%5p) %clr(--- [%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %replace(%m){'[\\r\\n]+',' | '}%n%wEx"
+    file: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %5p --- [%t] %-40.40logger{39} : %replace(%m){'[\\r\\n]+',' | '}%n%wEx"
   logback:
     rollingpolicy:
       max-file-size: 10MB

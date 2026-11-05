@@ -96,6 +96,9 @@ class SessaoOperadorService(
     private val log = LoggerFactory.getLogger(javaClass)
     private val aleatorio = SecureRandom()
 
+    /** Hash de uma senha que ninguém sabe, só para o email inexistente levar o mesmo tempo que o existente. */
+    private val hashFicticio: String by lazy { senhas.encode("ficticia-" + gerarToken()) }
+
     @Transactional
     fun entrar(emailInformado: String, senha: String, dispositivo: String, ip: String?): SessaoCriada {
         val email = emailInformado.trim()
@@ -172,7 +175,7 @@ class SessaoOperadorService(
         // Bloqueio por origem = coletor + IP, e não só o IP: vários coletores costumam sair para o servidor pelo
         // mesmo IP (NAT do roteador), e um operador errando a senha travaria o login de todos. Para chegar aqui o
         // coletor já apresentou a chave dele, então um atacante não troca de "coletor" à vontade. O bloqueio por
-        // email continua o mesmo da web (5 erros naquela conta, venham de onde vierem).
+        // email segue a regra da web (5 erros naquela conta e origem; 20 somando as origens).
         val origem = origemDoLogin(dispositivo, ip)
 
         tentativas.tempoRestanteDeBloqueio(email, origem)?.let { restante ->
@@ -183,7 +186,10 @@ class SessaoOperadorService(
         }
 
         val usuario = usuarios.findByEmailIgnoreCase(email.trim())
-        if (usuario == null || !senhas.matches(senha, usuario.senha)) {
+        // Email inexistente também passa pelo BCrypt (com um hash fictício): sem isso a resposta voltava dezenas de ms
+        // antes, e medindo o tempo dava para montar a lista de emails válidos. A web já faz o mesmo (Spring Security)
+        val senhaConfere = senhas.matches(senha, usuario?.senha ?: hashFicticio)
+        if (usuario == null || !senhaConfere) {
             tentativas.registrarFalha(email, origem)
             log.warn("{} no coletor {} recusado: email ou senha incorretos para '{}' (IP {})", acao, dispositivo, email.lowercase(), ip)
             throw LoginRecusadoException(401, MENSAGEM_CREDENCIAIS)
@@ -219,6 +225,38 @@ class SessaoOperadorService(
      */
     @Transactional(readOnly = true)
     fun validar(token: String, dispositivo: String, momento: LocalDateTime): UserPrincipal {
+        val sessao = sessaoDoColetor(token, dispositivo)
+        val agora = LocalDateTime.now(relogio)
+        // Mesma ordem de sempre: fora da sessão, depois token morto, depois ação antiga demais, depois o usuário
+        val recusa = recusaDoMomento(sessao, momento, agora)
+        if (recusa != null && recusa.motivo != MotivoSessaoInvalida.ANTIGA_DEMAIS) throw recusa
+        exigirTokenVivo(sessao, dispositivo, agora)
+        if (recusa != null) {
+            log.warn("Ação de {} no coletor {} chegou {} h depois de feita, além do prazo de sincronização: recusada",
+                momento, dispositivo, Duration.between(momento, agora).toHours())
+            throw recusa
+        }
+        return operadorDa(sessao, dispositivo)
+    }
+
+    /**
+     * Lote: confere a hora de cada leitura contra a sessão com UMA consulta da sessão e do usuário (antes o lote
+     * chamava [validar] por item quando alguma leitura caía fora da sessão: até 1.500 consultas num lote de 500).
+     * Devolve índice -> recusa só dos momentos fora da sessão. O que não depende do momento (sessão desconhecida,
+     * de outro coletor, token morto, usuário inexistente ou desativado) lança [SessaoInvalidaException] para o lote todo.
+     */
+    @Transactional(readOnly = true)
+    fun conferirMomentos(token: String, dispositivo: String, momentos: List<LocalDateTime>): Map<Int, SessaoInvalidaException> {
+        val sessao = sessaoDoColetor(token, dispositivo)
+        val agora = LocalDateTime.now(relogio)
+        exigirTokenVivo(sessao, dispositivo, agora)
+        operadorDa(sessao, dispositivo)
+        return momentos.withIndex()
+            .mapNotNull { (indice, momento) -> recusaDoMomento(sessao, momento, agora)?.let { indice to it } }
+            .toMap()
+    }
+
+    private fun sessaoDoColetor(token: String, dispositivo: String): SessaoOperadorEntity {
         val sessao = sessoes.findById(hash(token)).orElse(null)
             ?: throw SessaoInvalidaException("Sessão do operador desconhecida: faça login de novo", MotivoSessaoInvalida.DESCONHECIDA)
 
@@ -226,37 +264,51 @@ class SessaoOperadorService(
             log.warn("Sessão do coletor {} usada no coletor {}: recusada", sessao.dispositivo, dispositivo)
             throw SessaoInvalidaException("Esta sessão é de outro coletor: faça login neste coletor", MotivoSessaoInvalida.OUTRO_COLETOR)
         }
+        return sessao
+    }
 
+    /** Fim da sessão: o logout (sem tolerância) ou a expiração (com a tolerância de relógio). */
+    private fun fimDa(sessao: SessaoOperadorEntity): Pair<LocalDateTime, Boolean> {
         // Expiração: tolera a diferença de relógio entre coletor e servidor. Logout (encerradaEm, relógio
         // do servidor): vale na hora, sem tolerância, para o token não continuar servindo depois do "Sair".
         val encerrada = sessao.encerradaEm?.takeIf { it.isBefore(sessao.expiraEm) }
-        val limite = encerrada ?: sessao.expiraEm.plus(TOLERANCIA)
+        return (encerrada ?: sessao.expiraEm.plus(TOLERANCIA)) to (encerrada != null)
+    }
 
-        val motivo = if (encerrada != null) "encerrada" else "expirada"
+    /** A recusa para uma ação feita em [momento] (hora do coletor), ou null se a sessão valia nesse momento. */
+    private fun recusaDoMomento(sessao: SessaoOperadorEntity, momento: LocalDateTime, agora: LocalDateTime): SessaoInvalidaException? {
+        val (limite, encerrada) = fimDa(sessao)
+        val motivo = if (encerrada) "encerrada" else "expirada"
 
         // Depois do "Sair" vale só o que aconteceu ANTES: uma ação no mesmo instante do logout é recusada (no
         // Windows o relógio anda em passos de até ~15 ms, e a ação logo após o "Sair" pode ganhar a mesma hora)
-        val depoisDoFim = if (encerrada != null) !momento.isBefore(limite) else momento.isAfter(limite)
-
-        val motivoEnum = if (encerrada != null) MotivoSessaoInvalida.ENCERRADA else MotivoSessaoInvalida.EXPIRADA
+        val depoisDoFim = if (encerrada) !momento.isBefore(limite) else momento.isAfter(limite)
         if (momento.isBefore(sessao.criadaEm.minus(TOLERANCIA)) || depoisDoFim) {
-            throw SessaoInvalidaException("Sessão do operador $motivo: faça login de novo", motivoEnum)
+            return SessaoInvalidaException("Sessão do operador $motivo: faça login de novo",
+                if (encerrada) MotivoSessaoInvalida.ENCERRADA else MotivoSessaoInvalida.EXPIRADA)
         }
+        // Nenhuma ação mais antiga que o prazo de sincronização (relógio do servidor) é aceita
+        if (momento.isBefore(agora.minus(janelaSincronizacao))) {
+            return SessaoInvalidaException("Ação antiga demais: chegou ao servidor depois do prazo de ${janelaSincronizacao.toHours()} h",
+                MotivoSessaoInvalida.ANTIGA_DEMAIS)
+        }
+        return null
+    }
 
-        // O X-Momento vem do coletor: sozinho, permitiria usar um token velho para sempre. Pelo relógio do
-        // SERVIDOR, a sessão morre de vez [janelaSincronizacao] depois do fim, e nenhuma ação mais antiga
-        // que essa janela é aceita (é o tempo máximo que um coletor pode ficar offline sem perder leituras).
-        val agora = LocalDateTime.now(relogio)
+    /**
+     * O X-Momento vem do coletor: sozinho, permitiria usar um token velho para sempre. Pelo relógio do SERVIDOR, a
+     * sessão morre de vez [janelaSincronizacao] depois do fim (o tempo máximo que um coletor fica offline).
+     */
+    private fun exigirTokenVivo(sessao: SessaoOperadorEntity, dispositivo: String, agora: LocalDateTime) {
+        val (limite, encerrada) = fimDa(sessao)
         if (agora.isAfter(limite.plus(janelaSincronizacao))) {
+            val motivo = if (encerrada) "encerrada" else "expirada"
             log.warn("Token de sessão {} há mais de {} h usado no coletor {}: recusado", motivo, janelaSincronizacao.toHours(), dispositivo)
             throw SessaoInvalidaException("Sessão do operador $motivo: faça login de novo", MotivoSessaoInvalida.EXPIRADA)
         }
-        if (momento.isBefore(agora.minus(janelaSincronizacao))) {
-            log.warn("Ação de {} no coletor {} chegou {} h depois de feita, além do prazo de sincronização: recusada",
-                momento, dispositivo, Duration.between(momento, agora).toHours())
-            throw SessaoInvalidaException("Ação antiga demais: chegou ao servidor depois do prazo de ${janelaSincronizacao.toHours()} h", MotivoSessaoInvalida.ANTIGA_DEMAIS)
-        }
+    }
 
+    private fun operadorDa(sessao: SessaoOperadorEntity, dispositivo: String): UserPrincipal {
         val usuario = usuarios.findById(sessao.usuarioId).orElse(null)
             ?: throw SessaoInvalidaException("O usuário desta sessão não existe mais", MotivoSessaoInvalida.USUARIO_INEXISTENTE)
 
@@ -273,7 +325,6 @@ class SessaoOperadorService(
         }
         return principal
     }
-
     /**
      * Limpeza: apaga as sessões que já não autorizam nada há mais de [GUARDAR_SESSOES_MORTAS]. Uma sessão morre de
      * vez [janelaSincronizacao] depois do fim (logout ou expiração, o que vier antes); a conta usa a expiração, que

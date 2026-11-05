@@ -106,21 +106,21 @@ class LeituraLoteService(
     }
 
     /**
-     * Índice → motivo, para os itens cuja hora de leitura está fora da sessão do operador. A validade da sessão
-     * é um intervalo de tempo: se a leitura mais antiga e a mais nova do lote valem, todas valem (2 consultas
-     * em vez de uma por item). Só quando uma das pontas falha confere item por item.
+     * Índice → motivo, para os itens cuja hora de leitura está fora da sessão do operador. A sessão e o usuário são
+     * carregados uma vez só para o lote inteiro (antes, se uma leitura caía fora da sessão, conferia item por item:
+     * até 1.500 consultas num lote de 500). O que vale para o lote todo (sessão desconhecida, usuário desativado...)
+     * recusa todos os itens com o mesmo motivo.
      */
     private fun validarMomentos(itens: List<ItemLote>, token: String, dispositivo: String): Map<Int, SessaoInvalidaException> {
         if (itens.isEmpty()) return emptyMap()
 
         val momentos = itens.map { momentoDaLeitura(it.lidoEm) }
-        val pontas = listOf(momentos.min(), momentos.max())
-
-        if (pontas.all { motivoSeInvalido(token, dispositivo, it) == null }) return emptyMap()
-
-        val invalidos = momentos.withIndex()
-            .mapNotNull { (indice, momento) -> motivoSeInvalido(token, dispositivo, momento)?.let { indice to it } }
-            .toMap()
+        val invalidos = try {
+            sessoes.conferirMomentos(token, dispositivo, momentos)
+        } catch (e: SessaoInvalidaException) {
+            itens.indices.associateWith { e }
+        }
+        if (invalidos.isEmpty()) return emptyMap()
 
         log.warn("Lote do coletor {}: {} de {} leitura(s) feitas fora da sessão do operador foram recusadas ({})",
             dispositivo, invalidos.size, itens.size, invalidos.values.map { it.message }.distinct().joinToString("; "))
@@ -136,13 +136,6 @@ class LeituraLoteService(
     private fun inicioDasLeituras(itens: List<ItemLote>): LocalDateTime? =
         itens.mapNotNull { it.lidoEm?.atZoneSameInstant(ZoneId.systemDefault())?.toLocalDateTime() }.minOrNull()
 
-    private fun motivoSeInvalido(token: String, dispositivo: String, momento: LocalDateTime): SessaoInvalidaException? =
-        try {
-            sessoes.validar(token, dispositivo, momento)
-            null
-        } catch (e: SessaoInvalidaException) {
-            e
-        }
 
     // Mesma regra do X-Momento (OperadorFilter): sem hora, ou com relógio do coletor adiantado, vale agora
     private fun momentoDaLeitura(lidoEm: OffsetDateTime?): LocalDateTime {

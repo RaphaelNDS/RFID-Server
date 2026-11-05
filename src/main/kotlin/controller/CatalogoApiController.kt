@@ -1,6 +1,7 @@
 package org.example.controller
 
 import org.example.dto.MarcaDTO
+import org.example.dto.TipoDTO
 import org.example.dto.ModeloDTO
 import org.example.service.CatalogoService
 import org.springframework.web.bind.annotation.*
@@ -36,7 +37,7 @@ class CatalogoApiController(
 
     @PreAuthorize("@authService.temPermissao('CATALOGO','READ')")
     @GetMapping("/tipos")
-    fun listarTipos() = service.listarTipos()
+    fun listarTipos() = service.listarTipos().map { TipoDTO(it.id, it.nome) }
 
     @PreAuthorize("@authService.temPermissao('CATALOGO','READ')")
     @GetMapping("/marcas")

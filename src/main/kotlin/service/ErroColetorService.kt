@@ -150,14 +150,16 @@ class ErroColetorService(
         repo.contarPorColetorDesde(LocalDateTime.now(relogio).minusHours(24))
             .associate { (it[0] as String) to (it[1] as Number).toLong() }
 
-    /** Os mais recentes do coletor, opcionalmente só de uma versão do app. */
+    /**
+     * Os 200 mais recentes do coletor, opcionalmente só de uma versão do app. O filtro é no banco: antes filtrava
+     * entre os 200 mais recentes, e um app novo em loop escondia os erros da versão anterior ("Nenhum erro").
+     */
     fun recentes(coletor: String, versaoApp: String? = null): List<ErroColetorEntity> =
-        repo.findTop200ByColetorOrderByMomentoDesc(coletor)
-            .filter { versaoApp.isNullOrBlank() || it.versaoApp == versaoApp }
+        if (versaoApp.isNullOrBlank()) repo.findTop200ByColetorOrderByMomentoDesc(coletor)
+        else repo.findTop200ByColetorAndVersaoAppOrderByMomentoDesc(coletor, versaoApp)
 
-    /** Versões do app que aparecem nos erros do coletor (filtro da tela). */
-    fun versoesComErro(coletor: String): List<String> =
-        repo.findTop200ByColetorOrderByMomentoDesc(coletor).mapNotNull { it.versaoApp }.distinct()
+    /** Todas as versões do app com erro guardado do coletor (filtro da tela), não só as dos 200 mais recentes. */
+    fun versoesComErro(coletor: String): List<String> = repo.versoesComErro(coletor)
 
     // Retenção: 10 min depois de o servidor subir e depois a cada 24 h. Era às 04:15, mas com o computador
     // desligado de madrugada nunca rodava

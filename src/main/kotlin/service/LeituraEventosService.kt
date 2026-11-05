@@ -15,7 +15,10 @@ import java.util.concurrent.atomic.AtomicInteger
  * Distribui as leituras recebidas do Android para as telas abertas (SSE).
  */
 @Service
-class LeituraEventosService {
+class LeituraEventosService(
+    // Opcional para os testes que montam o service à mão; no Spring é sempre injetado
+    private val sessoesWeb: org.springframework.security.core.session.SessionRegistry? = null
+) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -48,13 +51,16 @@ class LeituraEventosService {
      * O heartbeat é um comentário SSE (o navegador ignora); ele serve para manter proxies abertos
      * e para descobrir conexões mortas, já que só uma escrita falha revela que o cliente saiu.
      */
-    fun <T : Any> comoSse(canal: String, eventos: Flux<T>): Flux<ServerSentEvent<T>> {
+    fun <T : Any> comoSse(canal: String, eventos: Flux<T>, sessaoWeb: String? = null): Flux<ServerSentEvent<T>> {
         val usuario = SecurityContextHolder.getContext().authentication?.name ?: "anônimo"
 
         val heartbeat = Flux.interval(HEARTBEAT)
             .map { ServerSentEvent.builder<T>().comment("ping").build() }
 
         return Flux.merge(eventos.map { ServerSentEvent.builder(it).build() }, heartbeat)
+            // Sessão web encerrada (usuário desativado, rebaixado ou com a senha trocada): a conexão já aberta para no
+            // próximo evento ou ping (até 20 s). Antes continuava recebendo as leituras para sempre
+            .takeWhile { sessaoAindaVale(sessaoWeb, canal, usuario) }
             .doOnSubscribe {
                 log.info(
                     "Tela conectada ao canal '{}' em tempo real: {} ({} conexão(ões) ativa(s))",
@@ -67,6 +73,13 @@ class LeituraEventosService {
                     canal, usuario, motivo(sinal), conexoesAtivas.decrementAndGet()
                 )
             }
+    }
+
+    private fun sessaoAindaVale(sessaoWeb: String?, canal: String, usuario: String): Boolean {
+        val info = sessaoWeb?.let { sessoesWeb?.getSessionInformation(it) } ?: return true
+        if (!info.isExpired) return true
+        log.info("Tela em tempo real do canal '{}' encerrada: a sessão de {} foi encerrada", canal, usuario)
+        return false
     }
 
     private fun motivo(sinal: SignalType) = when (sinal) {

@@ -335,6 +335,8 @@ sessão trazem o mesmo `motivo`.
   | V13 | `db/migration/V13__auditoria.sql` | Auditoria de usuários e configurações |
   | V14 | `db/migration/V14__versao_app_retirada.sql` | Versão do app retirada pelo ADMIN |
   | V15 | `db/migration/V15__busca_leituras_trigram.sql` | Índices trigram (`pg_trgm`) para os filtros "contém" da tela de leituras |
+  | V16 | `db/migration/V16__leitura_hora_do_coletor.sql` | Hora informada pelo coletor em cada leitura (reconhece o reenvio mesmo com o relógio do coletor adiantado) e índice do último inventário por etiqueta |
+  | V17 | `db/migration/V17__versao_etiqueta_e_nomes_unicos.sql` | Versão de cada etiqueta (edição ao mesmo tempo é avisada) e nomes de local e catálogo únicos sem diferenciar maiúsculas |
 
 - **Backup do banco:** o contêiner `rfid-backup` roda o `pg_dump` ao subir e depois de 6 em 6 horas enquanto está no
   ar (horário fixo de madrugada não serve: com o computador desligado o backup nunca roda) e guarda em
@@ -460,7 +462,10 @@ RFID_Servidor\
 ├── iniciar-servidor.bat          ← copie de scripts\windows\
 ├── servidor\rfid-server.jar      ← o build/libs/rfid-server-<versão>.jar (./gradlew bootJar), renomeado
 ├── config\application.properties ← copie de scripts\windows\application.properties.exemplo e preencha
-└── data\                         ← criada na primeira execução (banco, certificado, logs, backups)
+├── java\                         ← JDK 17 do servidor (opcional; sem ela o .bat usa JAVA_RESERVA)
+├── docker\                       ← docker-compose.yml e .env do banco; backups\ com os dumps do PostgreSQL
+├── servico\                      ← WinSW e rfid-servidor.xml, se for instalar como serviço do Windows
+└── data\                         ← criada na primeira execução (certificado HTTPS, logs, APKs, backups do certificado)
 ```
 
 1. Em `config\application.properties`, coloque o nome e a chave de cada coletor (`rfid.dispositivos.chaves`) e
@@ -506,10 +511,10 @@ iniciar: `services.msc` > "Servidor RFID", ou, como administrador, `rfid-servido
 > O banco roda no Docker Desktop, que só sobe depois que alguém entra no Windows. Até lá o serviço fica tentando
 > de novo a cada 30 s e o servidor entra no ar sozinho assim que o banco estiver pronto.
 
-> Já tinha um banco do servidor rodando pelo IntelliJ? Ele fica em `data\` dentro da pasta de trabalho da
-> configuração de execução do IntelliJ.
-> Monte a pasta do servidor nesse mesmo lugar, ou copie a `data\` inteira (com o servidor parado) para a pasta
-> nova: assim o banco e o certificado são os mesmos e os coletores não precisam ser configurados de novo.
+> Já tinha um servidor rodando pelo IntelliJ? O certificado HTTPS dele fica em `data\` dentro da pasta de trabalho
+> da configuração de execução do IntelliJ. Copie a `data\` inteira (com o servidor parado) para a pasta nova: assim
+> o certificado é o mesmo e os coletores não precisam ser configurados de novo. O banco não fica mais em `data\`
+> (é o PostgreSQL no Docker): para levá-lo, siga o [passo a passo da migração](docs/migracao-servidor.md).
 
 ---
 
@@ -524,6 +529,7 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_COLETORES_DIAS_SEM_CONTATO` | `7` | Dias sem contato até o coletor aparecer destacado na tela Coletores |
 | `RFID_APP_CERTIFICADO_SHA256` | *(o da chave da empresa)* | Impressão digital do certificado da chave do app: só APK assinado com ela é publicado (vazio = publicação desligada) |
 | `RFID_APP_PASTA` | `./data/app` | Pasta dos APKs publicados (fora do backup automático) |
+| `RFID_APP_PACOTE` | `br.com.bkpbr.rfidandroid` | Pacote do app dos coletores: APK de outro pacote é recusado |
 | `RFID_APP_VERSOES_GUARDADAS` | `3` | Quantas versões mantêm o arquivo no disco |
 | `RFID_COLETORES_ERROS_POR_DIA` | `500` | Erros do app aceitos por coletor por dia (acima disso são descartados) |
 | `RFID_COLETORES_DIAS_ERROS` | `90` | Por quantos dias os erros dos coletores ficam guardados |
@@ -537,6 +543,7 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_DURACAO_SESSAO_OPERADOR` | `12h` | Duração do login no coletor |
 | `RFID_JANELA_SINCRONIZACAO` | `72h` | Tempo máximo que um coletor pode ficar offline sem perder ações |
 | `RFID_LEITURAS_POR_PAGINA` | `50` | Leituras por página na tela de leituras (10 a 200) |
+| `RFID_LEITURAS_TETO_CONTAGEM` | `10000` | Até quantas leituras a tela conta; acima disso mostra "mais de N" (contar milhões a cada página é lento) |
 | `RFID_LEITURAS_RETER_DIAS` | `0` (desligada) | Apaga leituras com mais de N dias, 10 min depois de subir e a cada 24 h (mínimo 30; não afeta inventários) |
 | `RFID_BACKUP_ANTES_MIGRACAO` | `docker exec rfid-backup /backup.sh` | Backup do banco antes de aplicar migrações (vazio = migra sem backup) |
 | `RFID_BANCO_PASTA_BACKUPS` | `./docker/backups` | Pasta dos dumps do contêiner de backup (a mesma do `RFID_BACKUP_PASTA` do `docker\.env`), para a tela Status conferir |
@@ -564,8 +571,10 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 
 Se aparecer `JAVA_HOME is not set`, aponte para um JDK 17.
 
-**CI:** a cada push (qualquer branch) e em pull requests, o GitHub Actions roda `./gradlew test`
-(`.github/workflows/testes.yml`). O resultado aparece na aba **Actions** do repositório; se algum teste falhar,
+**CI:** em pull requests e a cada push na `master` (commit só de documentação não roda), o GitHub Actions roda
+`./gradlew test` no Linux e, no Windows, os testes que não sobem banco (`./gradlew test -PsemDocker`) e o
+`iniciar-servidor.bat` de verdade (`scripts/windows/testar-iniciar-servidor.ps1`; ele também roda na máquina, com
+`-PortaBanco` numa porta livre se o banco estiver no ar) (`.github/workflows/testes.yml`). O resultado aparece na aba **Actions** do repositório; se algum teste falhar,
 o relatório HTML fica para download na própria execução (Artifacts).
 
 Estrutura (pacote `org.example`):
