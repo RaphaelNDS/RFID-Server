@@ -209,7 +209,7 @@ class ColetorService(
 
         fun haQuantoTempo(momento: LocalDateTime, agora: LocalDateTime): String {
             val passou = Duration.between(momento, agora)
-            return if (passou < Duration.ofMinutes(1)) "agora há pouco" else "há ${duracaoLegivel(passou)}"
+            return if (passou < Duration.ofMinutes(1)) "agora mesmo" else "há ${duracaoLegivel(passou)}"
         }
 
         fun duracaoLegivel(d: Duration): String = when {

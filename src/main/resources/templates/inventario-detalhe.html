@@ -58,7 +58,7 @@
 
   <!-- O que faltou em relação ao inventário finalizado anterior do mesmo local -->
   <div class="card" style="margin-bottom:16px">
-    <div class="card-header">
+    <div class="card-header empilhar">
       <h2>
         <span th:text="${inventario.status.name() == 'ABERTO'} ? 'Faltando até agora' : 'Faltaram'">Faltaram</span>
         <span class="contagem" th:if="${comparacao.referencia.temReferencia}" th:text="'(' + ${#lists.size(comparacao.faltando)} + ')'"></span>

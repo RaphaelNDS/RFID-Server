@@ -913,6 +913,18 @@ code.quebra, .quebra { overflow-wrap: anywhere; word-break: break-all; }
   /* Barra "empilhar": cada campo na linha inteira e o botão largo embaixo (formulário, não filtro) */
   .toolbar.empilhar .field { flex-basis: 100%; }
   .toolbar.empilhar .btn { width: 100%; justify-content: center; }
+
+  /* Busca na linha inteira: ao lado do botão e da contagem o texto digitado ficava cortado */
+  .toolbar .field.busca { flex-basis: 100%; }
+
+  /* Indicadores de dois em dois: um por linha ocupava a tela inteira antes da tabela */
+  .grid-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .stat { padding: 14px; }
+  .stat-rotulo { font-size: 12px; }
+  .stat-dica { font-size: 11px; }
+
+  /* Cabeçalho com título e um texto explicativo: o texto vai para baixo do título */
+  .card-header.empilhar { flex-direction: column; align-items: flex-start; gap: 4px; }
 }
 
 /* Tabela que vira cartões em tela estreita: cada linha é um bloco e cada valor mostra o nome da coluna
