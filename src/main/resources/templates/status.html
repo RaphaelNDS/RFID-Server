@@ -1,5 +1,5 @@
-d!DOCTYPE html>
-dhtml xmlns:th="http://www.thymeleaf.org"
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
 
@@ -39,7 +39,7 @@ dhtml xmlns:th="http://www.thymeleaf.org"
         <div><dt>Tempo no ar</dt><dd th:text="${info.tempoOnline}"></dd></div>
         <div><dt>Versão</dt><dd th:text="${info.versao}"></dd></div>
         <div><dt>Banco de dados</dt><dd th:text="${info.banco}"></dd></div>
-        <div><dt>Backup do banco</dt><dd>diário, pelo contêiner rfid-backup (docker)</dd></div>
+        <div><dt>Último backup do banco</dt><dd th:text="${info.backupBanco}"></dd></div>
         <div><dt>Último backup do certificado</dt><dd th:text="${info.ultimoBackup}"></dd></div>
         <div><dt>Certificado HTTPS (SHA-256)</dt><dd class="mono" style="word-break:break-all" th:text="${info.certificadoHttps}"></dd></div>
       </dl>

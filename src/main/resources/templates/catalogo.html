@@ -7,6 +7,7 @@
 
 <section class="page"
          th:with="podeCriar=${@authService.temPermissao('CATALOGO','CREATE')},
+                  podeEditar=${@authService.temPermissao('CATALOGO','UPDATE')},
                   podeExcluir=${@authService.temPermissao('CATALOGO','DELETE')}">
 
   <div class="page-header">
@@ -29,10 +30,16 @@
       <ul class="lista">
         <li th:each="t : ${tipos}" th:attr="data-id=${t.id}">
           <span class="item-nome" th:text="${t.nome}"></span>
+          <span class="item-acoes">
+          <button th:if="${podeEditar}" type="button" class="btn btn-ghost btn-icon"
+                  th:attr="aria-label='Renomear ' + ${t.nome}" title="Renomear" onclick="renomear(this,'tipo')">
+            <svg class="ic"><use href="/img/icones.svg#lapis"/></svg>
+          </button>
           <button th:if="${podeExcluir}" type="button" class="btn btn-danger-ghost btn-icon"
                   th:attr="aria-label='Excluir ' + ${t.nome}" title="Excluir" onclick="excluir(this,'tipo')">
             <svg class="ic"><use href="/img/icones.svg#lixeira"/></svg>
           </button>
+          </span>
         </li>
       </ul>
       <div class="vazio" th:if="${tipos.isEmpty()}"><strong>Nenhum tipo</strong>Comece cadastrando um tipo de equipamento.</div>
@@ -52,10 +59,16 @@
             <span class="item-nome" th:text="${m.nome}"></span>
             <span class="item-detalhe d-block" th:text="${m.tipo.nome}"></span>
           </span>
+          <span class="item-acoes">
+          <button th:if="${podeEditar}" type="button" class="btn btn-ghost btn-icon"
+                  th:attr="aria-label='Renomear ' + ${m.nome}" title="Renomear" onclick="renomear(this,'marca')">
+            <svg class="ic"><use href="/img/icones.svg#lapis"/></svg>
+          </button>
           <button th:if="${podeExcluir}" type="button" class="btn btn-danger-ghost btn-icon"
                   th:attr="aria-label='Excluir ' + ${m.nome}" title="Excluir" onclick="excluir(this,'marca')">
             <svg class="ic"><use href="/img/icones.svg#lixeira"/></svg>
           </button>
+          </span>
         </li>
       </ul>
       <div class="vazio" th:if="${marcas.isEmpty()}"><strong>Nenhuma marca</strong>Cada marca pertence a um tipo.</div>
@@ -75,10 +88,16 @@
             <span class="item-nome" th:text="${m.nome}"></span>
             <span class="item-detalhe d-block" th:text="${m.marca.nome} + ' · ' + ${m.marca.tipo.nome}"></span>
           </span>
+          <span class="item-acoes">
+          <button th:if="${podeEditar}" type="button" class="btn btn-ghost btn-icon"
+                  th:attr="aria-label='Renomear ' + ${m.nome}" title="Renomear" onclick="renomear(this,'modelo')">
+            <svg class="ic"><use href="/img/icones.svg#lapis"/></svg>
+          </button>
           <button th:if="${podeExcluir}" type="button" class="btn btn-danger-ghost btn-icon"
                   th:attr="aria-label='Excluir ' + ${m.nome}" title="Excluir" onclick="excluir(this,'modelo')">
             <svg class="ic"><use href="/img/icones.svg#lixeira"/></svg>
           </button>
+          </span>
         </li>
       </ul>
       <div class="vazio" th:if="${modelos.isEmpty()}"><strong>Nenhum modelo</strong>Cada modelo pertence a uma marca.</div>
@@ -105,8 +124,26 @@
 
   <script>
     let tipoAtual = null;
+    // Preenchido quando a janela está renomeando um item existente (PUT) em vez de cadastrar um novo (POST)
+    let idEditando = null;
 
     const TITULOS = { tipo: "Novo tipo de equipamento", marca: "Nova marca", modelo: "Novo modelo" };
+    const TITULOS_RENOMEAR = { tipo: "Renomear tipo", marca: "Renomear marca", modelo: "Renomear modelo" };
+
+    // Só o nome muda: o tipo da marca e a marca do modelo continuam os mesmos (as etiquetas apontam para eles)
+    function renomear(btn, tipo){
+        const li = btn.closest("li");
+        tipoAtual = tipo;
+        idEditando = li.dataset.id;
+        document.getElementById("dialogCampos").innerHTML =
+          campo("dialogNome", "Nome", `<input type="text" id="dialogNome" autocomplete="off" maxlength="255" required>`);
+        const nome = document.getElementById("dialogNome");
+        nome.value = li.querySelector(".item-nome").textContent;
+        document.getElementById("dialogTitulo").textContent = TITULOS_RENOMEAR[tipo];
+        document.getElementById("alertDialog").classList.add("aberto");
+        nome.focus();
+        nome.select();
+    }
 
     function campo(id, rotulo, html) {
       return `<div class="field"><label for="${id}">${rotulo}</label>${html}</div>`;
@@ -114,6 +151,7 @@
 
     function abrirDialog(tipo){
         tipoAtual = tipo;
+        idEditando = null;
         let html = '';
 
         if(tipo === 'marca' || tipo === 'modelo'){
@@ -124,7 +162,7 @@
             html += campo("selectMarca", "Marca",
               `<select id="selectMarca" disabled><option value="">Escolha o tipo primeiro</option></select>`);
         }
-        html += campo("dialogNome", "Nome", `<input type="text" id="dialogNome" autocomplete="off" required>`);
+        html += campo("dialogNome", "Nome", `<input type="text" id="dialogNome" autocomplete="off" maxlength="255" required>`);
 
         document.getElementById("dialogCampos").innerHTML = html;
 
@@ -177,6 +215,11 @@
 
         let payload = { nome };
 
+        if(idEditando){
+            enviar(`/api/catalogo/${tipoAtual}/${idEditando}`, 'PUT', payload);
+            return;
+        }
+
         if(tipoAtual === 'marca'){
             const tipoId = document.getElementById("selectTipo").value;
             if(!tipoId) return alert("Selecione o tipo de equipamento.");
@@ -189,11 +232,15 @@
             payload.marcaId = marcaId;
         }
 
+        enviar(`/api/catalogo/${tipoAtual}`, 'POST', payload);
+    }
+
+    function enviar(url, metodo, payload){
         const botao = document.getElementById("botaoSalvar");
         botao.disabled = true;
 
-        fetch(`/api/catalogo/${tipoAtual}`,{
-            method:'POST',
+        fetch(url,{
+            method:metodo,
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify(payload)
         })

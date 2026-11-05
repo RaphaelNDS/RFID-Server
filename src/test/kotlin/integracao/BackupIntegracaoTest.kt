@@ -17,8 +17,10 @@ class BackupIntegracaoTest : IntegracaoBase() {
     fun `status mostra o ultimo backup e o botao so para o admin`() {
         mvc.perform(get("/status").with(Perfis.admin()))
             .andExpect(content().string(containsString("Último backup do certificado")))
+            // Situação real do backup do banco (no teste a pasta dos backups não existe)
+            .andExpect(content().string(containsString("Último backup do banco")))
+            .andExpect(content().string(containsString("não conferido: pasta")))
             .andExpect(content().string(containsString("inativo (nenhum certificado HTTPS para guardar)")))
-            .andExpect(content().string(containsString("pelo contêiner rfid-backup")))
             .andExpect(content().string(containsString("Fazer backup do certificado agora")))
 
         mvc.perform(get("/status").with(Perfis.gestor()))

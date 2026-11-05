@@ -76,7 +76,7 @@
       <div class="vazio" th:if="${#lists.isEmpty(etiquetas)}">
         <svg class="ic"><use href="/img/icones.svg#ok"/></svg>
         <strong>Todas as etiquetas foram vistas no período</strong>
-        Nenhuma etiqueta está sem leitura nem inventário há mais de <span th:text="${dias}">30</span> dias.
+        Nenhuma etiqueta está sem leitura nem inventário há mais de <span th:text="${dias == 1} ? '1 dia' : ${dias} + ' dias'">30 dias</span>.
       </div>
     </div>
 

@@ -66,7 +66,7 @@
             </details>
           </td>
           <td data-rotulo="Vezes" th:text="${e.ocorrencias}"></td>
-          <td data-rotulo="Versão" th:text="${e.versaoApp != null} ? ${e.versaoApp} + (${e.codigoVersao != null} ? ' (' + ${e.codigoVersao} + ')' : '') : '—'"></td>
+          <td class="nowrap" data-rotulo="Versão" th:text="${e.versaoApp != null} ? ${e.versaoApp} + (${e.codigoVersao != null} ? ' (' + ${e.codigoVersao} + ')' : '') : '—'"></td>
           <td data-rotulo="Operador" th:text="${e.operador != null} ? ${e.operador} : '—'"></td>
         </tr>
         </tbody>

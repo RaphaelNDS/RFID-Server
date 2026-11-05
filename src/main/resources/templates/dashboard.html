@@ -39,6 +39,16 @@
       <span><span class="tile-titulo">Leituras</span><span class="tile-desc d-block">Histórico das leituras dos coletores</span></span>
     </a>
 
+    <a th:if="${@authService.temPermissao('LEITURA','READ')}" th:href="@{/admin/inventarios}" class="tile">
+      <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#ok"/></svg></span>
+      <span><span class="tile-titulo">Inventários</span><span class="tile-desc d-block">Conferências por local feitas nos coletores</span></span>
+    </a>
+
+    <a th:if="${@authService.temPermissao('RFID','READ')}" th:href="@{/admin/etiquetas/nao-vistas}" class="tile">
+      <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#alerta"/></svg></span>
+      <span><span class="tile-titulo">Não vistas</span><span class="tile-desc d-block">Equipamentos sem leitura há muitos dias</span></span>
+    </a>
+
     <a th:if="${@authService.temPermissao('CATALOGO','READ')}" th:href="@{/admin/catalogo}" class="tile">
       <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#pacote"/></svg></span>
       <span><span class="tile-titulo">Catálogo</span><span class="tile-desc d-block">Tipos, marcas e modelos de equipamento</span></span>
@@ -56,6 +66,18 @@
       <a th:href="@{/admin/usuarios}" class="tile">
         <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#usuarios"/></svg></span>
         <span><span class="tile-titulo">Usuários</span><span class="tile-desc d-block">Acessos e permissões</span></span>
+      </a>
+      <a th:href="@{/admin/coletores}" class="tile">
+        <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#servidor"/></svg></span>
+        <span><span class="tile-titulo">Coletores</span><span class="tile-desc d-block">Último contato, versão do app e erros</span></span>
+      </a>
+      <a th:href="@{/admin/app}" class="tile">
+        <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#download"/></svg></span>
+        <span><span class="tile-titulo">App dos coletores</span><span class="tile-desc d-block">Publicar uma versão nova do app</span></span>
+      </a>
+      <a th:href="@{/admin/auditoria}" class="tile">
+        <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#escudo"/></svg></span>
+        <span><span class="tile-titulo">Auditoria</span><span class="tile-desc d-block">Quem fez o quê no sistema</span></span>
       </a>
       <a th:href="@{/status}" class="tile">
         <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#servidor"/></svg></span>

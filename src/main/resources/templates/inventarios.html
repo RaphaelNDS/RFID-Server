@@ -53,7 +53,7 @@
         <tr th:each="i : ${inventarios}">
           <td class="nowrap cartao-titulo" th:text="${#temporals.format(i.iniciadoEm, 'dd/MM/yyyy HH:mm')}"></td>
           <td data-rotulo="Local" class="principal" th:text="${i.local}"></td>
-          <td data-rotulo="Coletor" th:text="${i.dispositivo}"></td>
+          <td class="nowrap" data-rotulo="Coletor" th:text="${i.dispositivo}"></td>
           <td data-rotulo="Operador" th:text="${i.operador != null} ? ${i.operador} : '—'"></td>
           <td data-rotulo="Situação">
             <span class="badge badge-online" th:if="${i.status.name() == 'ABERTO'}">Em andamento</span>
