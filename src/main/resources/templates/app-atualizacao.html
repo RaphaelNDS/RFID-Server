@@ -111,7 +111,9 @@
             <!-- Só a versão oferecida agora: retirar faz os coletores voltarem a receber a anterior -->
             <form th:if="${publicada != null and v.id == publicada.id}" method="post"
                   th:action="@{/admin/app/{codigo}/retirar(codigo=${v.codigo})}" style="display:inline"
-                  onsubmit="var m = prompt('Motivo da retirada (fica no histórico). Os coletores que ainda não atualizaram voltam a receber a versão anterior; quem já instalou esta fica nela até sair uma versão nova.'); if (!m) return false; this.motivo.value = m; return true;">
+                  data-confirmar="Os coletores que ainda não atualizaram voltam a receber a versão anterior; quem já instalou esta fica nela até sair uma versão nova."
+                  data-confirmar-titulo="Retirar esta versão" data-confirmar-botao="Retirar" data-confirmar-perigo
+                  data-confirmar-campo="Motivo da retirada (fica no histórico)" data-confirmar-destino="motivo">
               <input type="hidden" name="motivo">
               <button type="submit" class="btn btn-ghost btn-sm" title="Retirar esta versão (publicada com problema)" aria-label="Retirar esta versão">
                 <svg class="ic"><use href="/img/icones.svg#voltar"/></svg><span class="texto-btn">Retirar</span>

@@ -114,6 +114,12 @@
         y: { grid: { color: horizontal ? "transparent" : grade }, ticks: { precision: 0 }, beginAtZero: true },
       });
 
+      // Altura das barras pela quantidade de itens (a dos dois gráficos é a mesma, para os cartões lado a lado
+      // ficarem iguais): com a altura fixa de 280 px, dois itens viravam barras finas perdidas no quadro
+      const itens = Math.max(Object.keys(tipo).length, Object.keys(marca).length, 1);
+      const alturaBarras = Math.min(560, Math.max(150, itens * 38 + 50)) + "px";
+      ["graficoTipo", "graficoMarca"].forEach(id => { document.getElementById(id).parentElement.style.height = alturaBarras; });
+
       graficos = [
         new Chart(document.getElementById("graficoPorDia"), {
           type: "line",

@@ -773,6 +773,28 @@ tr.inativo td { opacity: .6; }
 .modal-cabecalho h2 { font-size: 18px; }
 .modal-corpo { display: flex; flex-direction: column; gap: 14px; padding: 18px 20px; }
 .modal-rodape { display: flex; justify-content: flex-end; gap: 8px; padding: 0 20px 20px; }
+.confirmar-mensagem { margin: 0; color: var(--text-2); line-height: 1.5; overflow-wrap: anywhere; }
+.field-erro { font-size: 12px; color: var(--danger); }
+
+/* Botão de ação destrutiva (excluir, desativar): vermelho fixo, legível nos dois temas */
+.btn-danger { background: #dc2626; border-color: #dc2626; color: #fff; }
+.btn-danger:hover { background: #b91c1c; border-color: #b91c1c; }
+
+/* Avisos que somem sozinhos (erros de ações feitas sem recarregar a página) */
+.avisos {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(420px, calc(100vw - 32px));
+}
+.avisos .alert { margin: 0; box-shadow: var(--shadow-lg); }
+/* Fundo sólido por baixo da cor suave (no tema escuro ela é transparente e o conteúdo vazaria) */
+.avisos .alert-erro { background: linear-gradient(var(--danger-soft), var(--danger-soft)) var(--surface); }
+.avisos .alert-ok { background: linear-gradient(var(--success-soft), var(--success-soft)) var(--surface); }
 
 /* --- Gráficos --- */
 .grafico { position: relative; height: 280px; }
@@ -898,6 +920,8 @@ input[type="file"]::file-selector-button:hover { background: var(--surface-hover
 
 /* Célula de texto livre (ex.: detalhe da auditoria): quebra a linha em vez de alargar a tabela além do cartão */
 .table td.celula-longa { min-width: 220px; max-width: 420px; white-space: normal; overflow-wrap: anywhere; }
+/* Texto curto de algumas palavras (ex.: ação da auditoria): largura mínima para não quebrar em três linhas */
+.table td.coluna-media { min-width: 170px; }
 
 /* Texto longo sem espaços (impressão digital, hash): quebra em qualquer ponto em vez de alargar a página */
 code.quebra, .quebra { overflow-wrap: anywhere; word-break: break-all; }
@@ -975,4 +999,11 @@ code.quebra, .quebra { overflow-wrap: anywhere; word-break: break-all; }
   .table.table-cartoes td.acoes:not(:has(*)) { display: none; }
   .table.table-cartoes .acoes .texto-btn { display: inline; }
   .table.table-cartoes .acoes .btn-sm { width: auto; padding: 0 12px; }
+}
+
+/* Ações secundárias só com ícone no computador (o nome fica no title/aria-label); nos cartões do celular,
+   com texto. Sem isso as três ações ocupavam um quarto da tabela de etiquetas e espremiam as colunas */
+@media (min-width: 721px) {
+  .table .acoes .texto-celular { display: none; }
+  .table .acoes .btn-sm:has(.texto-celular) { width: 32px; padding: 0; justify-content: center; }
 }

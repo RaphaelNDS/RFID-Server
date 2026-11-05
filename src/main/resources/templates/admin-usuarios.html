@@ -62,7 +62,8 @@
               <button type="submit" class="btn btn-primary btn-sm">Gerar senha temporária</button>
             </form>
             <form th:action="@{/admin/usuarios/{id}/descartar-pedido(id=${p.id})}" method="post" style="display:inline"
-                  onsubmit="return confirm('Descartar o pedido? A senha da pessoa não muda.')">
+                  data-confirmar="Descartar o pedido? A senha da pessoa não muda." data-confirmar-titulo="Descartar pedido"
+                  data-confirmar-botao="Descartar">
               <button type="submit" class="btn btn-ghost btn-sm">Descartar</button>
             </form>
           </td>
@@ -122,16 +123,16 @@
             </a>
             <!-- Para quem pediu pessoalmente, sem usar o "Esqueceu a senha?" -->
             <form th:action="@{/admin/usuarios/{id}/senha-temporaria(id=${u.id})}" method="post" style="display:inline"
-                  th:data-nome="${u.nome}"
-                  onsubmit="return confirm('Gerar uma senha temporária para ' + this.dataset.nome + '? A senha atual deixa de funcionar.')">
+                  th:attr="data-confirmar=${'Gerar uma senha temporária para ' + u.nome + '? A senha atual deixa de funcionar.'}"
+                  data-confirmar-titulo="Nova senha temporária" data-confirmar-botao="Gerar senha">
               <button type="submit" class="btn btn-ghost btn-sm" title="Gerar senha temporária">
                 <svg class="ic"><use href="/img/icones.svg#chave"/></svg><span class="texto-btn">Nova senha</span>
               </button>
             </form>
             <!-- Desativado não entra mais (web e coletor) e as sessões abertas caem; o histórico dele continua -->
             <form th:if="${u.ativo}" th:action="@{/admin/usuarios/{id}/desativar(id=${u.id})}" method="post" style="display:inline"
-                  th:data-nome="${u.nome}"
-                  onsubmit="return confirm('Desativar ' + this.dataset.nome + '? A pessoa não entra mais na web nem no coletor, e as sessões abertas dela são encerradas agora.')">
+                  th:attr="data-confirmar=${'Desativar ' + u.nome + '? A pessoa não entra mais na web nem no coletor, e as sessões abertas dela são encerradas agora.'}"
+                  data-confirmar-titulo="Desativar usuário" data-confirmar-botao="Desativar" data-confirmar-perigo>
               <button type="submit" class="btn btn-ghost btn-sm" title="Desativar o usuário">
                 <svg class="ic"><use href="/img/icones.svg#fechar"/></svg><span class="texto-btn">Desativar</span>
               </button>

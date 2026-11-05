@@ -77,15 +77,15 @@
                th:if="${@authService.temPermissao('RFID','UPDATE')}" title="Editar">
               <svg class="ic"><use href="/img/icones.svg#lapis"/></svg><span class="texto-btn">Editar</span>
             </a>
-            <a th:href="@{/admin/etiquetas/historico(tag=${t.tag})}" class="btn btn-ghost btn-sm" title="Histórico da etiqueta">
-              <svg class="ic"><use href="/img/icones.svg#relogio"/></svg><span class="texto-btn">Histórico</span>
+            <a th:href="@{/admin/etiquetas/historico(tag=${t.tag})}" class="btn btn-ghost btn-sm" title="Histórico da etiqueta" aria-label="Histórico da etiqueta">
+              <svg class="ic"><use href="/img/icones.svg#relogio"/></svg><span class="texto-btn texto-celular">Histórico</span>
             </a>
             <form th:action="@{/admin/etiquetas/{id}/excluir(id=${t.id})}" method="post" style="display:inline"
                   th:if="${@authService.temPermissao('RFID','DELETE')}"
-                  th:attr="data-tag=${t.tag}"
-                  onsubmit="return confirm('Excluir a etiqueta ' + this.dataset.tag + '? O histórico dela continua guardado.');">
-              <button type="submit" class="btn btn-ghost btn-sm" title="Excluir">
-                <svg class="ic"><use href="/img/icones.svg#lixeira"/></svg><span class="texto-btn">Excluir</span>
+                  th:attr="data-confirmar=${'Excluir a etiqueta ' + t.tag + '? O histórico dela continua guardado.'}"
+                  data-confirmar-titulo="Excluir etiqueta" data-confirmar-botao="Excluir" data-confirmar-perigo>
+              <button type="submit" class="btn btn-ghost btn-sm" title="Excluir" aria-label="Excluir a etiqueta">
+                <svg class="ic"><use href="/img/icones.svg#lixeira"/></svg><span class="texto-btn texto-celular">Excluir</span>
               </button>
             </form>
           </td>
