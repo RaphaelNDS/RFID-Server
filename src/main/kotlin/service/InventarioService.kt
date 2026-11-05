@@ -221,7 +221,7 @@ class InventarioService(
         require(limpo.isNotEmpty()) { "Informe o local do inventário" }
         require(limpo.length <= TAMANHO_MAXIMO_LOCAL) { "O nome do local pode ter no máximo $TAMANHO_MAXIMO_LOCAL caracteres" }
 
-        return locais.findByNomeIgnoreCase(limpo).orElseGet {
+        return locais.findFirstByNomeIgnoreCaseOrderByIdAsc(limpo).orElseGet {
             log.info("Novo local cadastrado pelo inventário: '{}'", limpo)
             locais.save(LocalEntity(nome = limpo))
         }

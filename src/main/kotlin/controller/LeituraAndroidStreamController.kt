@@ -18,6 +18,6 @@ class LeituraAndroidStreamController(
 
     @PreAuthorize("@authService.temPermissao('LEITURA','READ')")
     @GetMapping("/leituras", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
-    fun stream(): Flux<ServerSentEvent<LeituraAndroidEntity>> =
-        eventos.comoSse("leituras", eventos.leituras())
+    fun stream(request: jakarta.servlet.http.HttpServletRequest): Flux<ServerSentEvent<LeituraAndroidEntity>> =
+        eventos.comoSse("leituras", eventos.leituras(), request.getSession(false)?.id)
 }

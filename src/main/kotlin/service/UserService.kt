@@ -17,7 +17,9 @@ class UsuarioService(
     private val politicaSenha: PoliticaSenha,
     private val sessoes: SessoesUsuarioService,
     // Opcional para os testes que montam o service à mão; no Spring é sempre injetado
-    private val auditoria: AuditoriaService? = null
+    private val auditoria: AuditoriaService? = null,
+    // Senha atual errada em "Meu perfil" conta como erro de login (sem isso dava para testar senhas sem limite)
+    private val tentativas: TentativasLoginService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -238,10 +240,7 @@ class UsuarioService(
 
         val usuario = buscarPorId(usuarioId)
 
-        if (!encoder.matches(senhaAtual, usuario.senha)) {
-            log.warn("Troca de senha recusada para {}: senha atual incorreta", usuario.email)
-            throw IllegalArgumentException("Senha atual incorreta")
-        }
+        conferirSenhaAtual(usuario, senhaAtual, "Troca de senha")
 
         if (novaSenha != confirmarSenha) {
             throw IllegalArgumentException("A nova senha e a confirmação não conferem")
@@ -279,10 +278,7 @@ class UsuarioService(
         val usuario = buscarPorId(usuarioId)
         val emailNovo = normalizarEmail(novoEmail)
 
-        if (!encoder.matches(senhaAtual, usuario.senha)) {
-            log.warn("Troca de email recusada para {}: senha atual incorreta", usuario.email)
-            throw IllegalArgumentException("Senha atual incorreta")
-        }
+        conferirSenhaAtual(usuario, senhaAtual, "Troca de email")
 
         if (!EMAIL_VALIDO.matches(emailNovo)) {
             throw IllegalArgumentException("Email inválido")
@@ -311,6 +307,25 @@ class UsuarioService(
             log.error("Usuário logado com id {} não existe mais no banco", usuarioId)
             IllegalStateException("Usuário não encontrado")
         }
+
+    /**
+     * Senha atual da troca de senha ou de email: o erro conta como erro de login da origem (IP), e com o bloqueio
+     * nem a senha certa passa (igual ao login). Antes dava para testar senhas sem limite numa sessão aberta.
+     */
+    private fun conferirSenhaAtual(usuario: UsuarioEntity, senhaAtual: String, acao: String) {
+        val ip = (org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
+            as? org.springframework.web.context.request.ServletRequestAttributes)?.request?.remoteAddr
+        tentativas?.tempoRestanteDeBloqueio(usuario.email, ip)?.let { restante ->
+            val minutos = (restante.toSeconds() + 59) / 60
+            log.warn("{} recusada para {}: bloqueada por tentativas erradas (IP {}, mais {} min)", acao, usuario.email, ip, minutos)
+            throw IllegalArgumentException("Muitas tentativas com a senha errada. Aguarde $minutos minuto(s) e tente de novo.")
+        }
+        if (!encoder.matches(senhaAtual, usuario.senha)) {
+            tentativas?.registrarFalha(usuario.email, ip)
+            log.warn("{} recusada para {}: senha atual incorreta (IP {})", acao, usuario.email, ip)
+            throw IllegalArgumentException("Senha atual incorreta")
+        }
+    }
 
     /** Email normalizado e conferido (cadastro e configuração inicial). */
     private fun emailValidado(email: String): String {

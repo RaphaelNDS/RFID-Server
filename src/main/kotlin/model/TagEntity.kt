@@ -29,6 +29,10 @@ class TagEntity(
     var modeloId: Long? = null,
 
     var patrimonio: String = "",
-    var numeroSerie: String = ""
+    var numeroSerie: String = "",
+
+    /** Muda a cada gravação (V17): a tela de edição recusa salvar por cima da mudança de outra pessoa. */
+    @Version
+    var versao: Long = 0
 )
 

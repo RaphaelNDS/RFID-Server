@@ -32,7 +32,9 @@ class CadastroAndroidController(
     @PreAuthorize("@authService.temPermissao('RFID','CREATE')")
     @PostMapping("/tags")
     fun cadastrar(@RequestBody req: CadastroRequest, auth: Authentication, request: HttpServletRequest): Map<String, String> =
-        mapOf("resultado" to service.cadastrar(req, auth.name, request.remoteAddr, auth.nomeOperador()).name)
+        mapOf("resultado" to repetindoSeReenvioSimultaneo("Cadastro da etiqueta ${req.tag.trim()} pelo coletor") {
+            service.cadastrar(req, auth.name, request.remoteAddr, auth.nomeOperador())
+        }.name)
 
     // Fica aqui (e não no TratamentoErros global) porque é específico do coletor: 403 com a mensagem em JSON
     @ExceptionHandler(ColetorSemPermissaoException::class)

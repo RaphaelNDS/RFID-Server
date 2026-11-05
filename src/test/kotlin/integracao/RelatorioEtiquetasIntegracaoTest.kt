@@ -43,7 +43,7 @@ class RelatorioEtiquetasIntegracaoTest : IntegracaoBase() {
         leituras.save(LeituraAndroidEntity(tag = tag, dataHora = agora.minusDays(diasAtras)))
 
     private fun inventariada(tag: String, local: String, diasAtras: Long) {
-        val l = locais.findByNomeIgnoreCase(local).orElseGet { locais.save(LocalEntity(nome = local)) }
+        val l = locais.findFirstByNomeIgnoreCaseOrderByIdAsc(local).orElseGet { locais.save(LocalEntity(nome = local)) }
         val inv = inventarios.save(InventarioEntity(id = UUID.randomUUID().toString(), localId = l.id, dispositivo = "coletor-teste",
             iniciadoEm = agora.minusDays(diasAtras)))
         itens.save(InventarioItemEntity(inventarioId = inv.id, tag = tag, lidoEm = agora.minusDays(diasAtras), cadastrada = true))

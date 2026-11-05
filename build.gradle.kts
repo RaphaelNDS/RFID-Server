@@ -41,7 +41,7 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
 
     // HTTPS: gera o certificado próprio do servidor na primeira inicialização (CertificadoHttps)
-    implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.80") // 1.78.1 tinha a CVE-2025-8916
 
     // Kotlin
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
@@ -67,6 +67,10 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    // -PsemDocker: só os testes que não sobem PostgreSQL (Testcontainers), para o CI no Windows, que não tem Docker
+    if (project.hasProperty("semDocker")) {
+        exclude("**/integracao/**", "**/migracao/**", "**/repository/**")
+    }
     testLogging {
         events("failed", "skipped")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL

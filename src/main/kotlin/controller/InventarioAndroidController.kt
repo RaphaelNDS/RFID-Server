@@ -50,14 +50,18 @@ class InventarioAndroidController(
     @PreAuthorize(LEITURA)
     @PostMapping("/inventarios")
     fun abrir(@RequestBody req: AbrirInventarioRequest, auth: Authentication): Map<String, String> {
-        val inventario = service.abrir(req.id, req.local, req.iniciadoEm, auth.name, auth.nomeOperador())
+        val inventario = repetindoSeReenvioSimultaneo("Abertura do inventário ${req.id}") {
+            service.abrir(req.id, req.local, req.iniciadoEm, auth.name, auth.nomeOperador())
+        }
         return mapOf("id" to inventario.id, "status" to inventario.status.name)
     }
 
     @PreAuthorize(LEITURA)
     @PostMapping("/inventarios/{id}/itens")
     fun itens(@PathVariable id: String, @RequestBody req: ItensRequest, auth: Authentication): ResultadoItens =
-        service.registrarItens(id, req.itens.map { ItemLido(it.tag, it.lidoEm) }, auth.name, auth.nomeOperador())
+        repetindoSeReenvioSimultaneo("Etiquetas do inventário $id") {
+            service.registrarItens(id, req.itens.map { ItemLido(it.tag, it.lidoEm) }, auth.name, auth.nomeOperador())
+        }
 
     @PreAuthorize(LEITURA)
     @PostMapping("/inventarios/{id}/finalizar")

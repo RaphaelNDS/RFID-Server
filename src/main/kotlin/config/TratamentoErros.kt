@@ -76,8 +76,15 @@ object TradutorErros {
             is IllegalStateException ->
                 ErroTratado(HttpStatus.CONFLICT, ex.message ?: "Operação não permitida no estado atual")
 
+            // Texto maior que a coluna (varchar 255, SQLState 22001): antes saía "Registro duplicado", que confundia
             is DataIntegrityViolationException ->
-                ErroTratado(HttpStatus.CONFLICT, "Registro duplicado ou ainda em uso por outro cadastro")
+                if ((ex.mostSpecificCause as? java.sql.SQLException)?.sqlState == "22001")
+                    ErroTratado(HttpStatus.BAD_REQUEST, "Um dos campos passou do tamanho máximo (255 caracteres). Encurte o texto e tente de novo.")
+                else ErroTratado(HttpStatus.CONFLICT, "Registro duplicado ou ainda em uso por outro cadastro")
+
+            // Duas gravações do mesmo registro ao mesmo tempo (@Version)
+            is org.springframework.dao.OptimisticLockingFailureException ->
+                ErroTratado(HttpStatus.CONFLICT, "Este registro foi alterado por outra pessoa ao mesmo tempo. Abra de novo e confira.")
 
             is NoSuchElementException ->
                 ErroTratado(HttpStatus.NOT_FOUND, "Registro não encontrado")

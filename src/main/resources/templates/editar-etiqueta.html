@@ -21,23 +21,25 @@
   </div>
 
   <form class="card" th:action="@{/admin/etiquetas/{id}/editar(id=${etiquetaId})}" th:object="${cadastro}" method="post">
+      <!-- Versão da etiqueta quando a tela abriu: se outra pessoa salvar antes, o servidor avisa em vez de gravar por cima -->
+      <input type="hidden" name="versao" th:value="${cadastro.versao}">
     <div class="card-body">
       <div class="form-grid">
 
         <div class="field span-2">
           <label for="tag">Etiqueta RFID (EPC)</label>
-          <input type="text" id="tag" th:value="*{tag}" class="mono" readonly>
+          <input type="text" id="tag" th:value="*{tag}" maxlength="255" class="mono" readonly>
           <span class="field-dica">O EPC é a própria etiqueta e não muda. Para trocar a etiqueta física, exclua e cadastre a nova.</span>
         </div>
 
         <div class="field">
           <label for="codigoInterno">Código interno <span class="obrigatorio">*</span></label>
-          <input type="text" id="codigoInterno" th:field="*{codigoInterno}" required>
+          <input type="text" id="codigoInterno" th:field="*{codigoInterno}" maxlength="255" required>
         </div>
 
         <div class="field">
           <label for="patrimonio">Patrimônio</label>
-          <input type="text" id="patrimonio" th:field="*{patrimonio}">
+          <input type="text" id="patrimonio" th:field="*{patrimonio}" maxlength="255">
         </div>
 
         <!-- Valores atuais (data-inicial): o script carrega marcas e modelos e já seleciona -->
@@ -66,7 +68,7 @@
 
         <div class="field">
           <label for="numeroSerie">Nº de série</label>
-          <input type="text" id="numeroSerie" th:field="*{numeroSerie}">
+          <input type="text" id="numeroSerie" th:field="*{numeroSerie}" maxlength="255">
         </div>
 
       </div>

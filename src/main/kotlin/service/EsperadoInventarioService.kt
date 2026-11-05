@@ -68,7 +68,7 @@ class EsperadoInventarioService(
         val limpo = limparNomeLocal(nomeLocal)
         require(limpo.isNotEmpty()) { "Informe o local do inventário" }
 
-        val local = locais.findByNomeIgnoreCase(limpo).orElse(null)
+        val local = locais.findFirstByNomeIgnoreCaseOrderByIdAsc(limpo).orElse(null)
         val referencia = local?.let { inventarios.findFirstByLocalIdAndStatusOrderByFinalizadoEmDesc(it.id, StatusInventario.FINALIZADO) }
 
         if (local == null || referencia == null) {
