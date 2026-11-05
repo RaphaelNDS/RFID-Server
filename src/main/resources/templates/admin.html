@@ -26,7 +26,7 @@
     </div>
     <div class="stat">
       <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#servidor"/></svg>Banco de dados</div>
-      <div class="stat-valor" th:text="${info.banco}">H2</div>
+      <div class="stat-valor texto" th:text="${info.banco}">H2</div>
     </div>
     <div class="stat">
       <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#etiqueta"/></svg>Versão</div>
@@ -52,6 +52,22 @@
       <a th:href="@{/admin/dashboard}" class="tile">
         <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#grafico"/></svg></span>
         <span><span class="tile-titulo">Relatórios</span><span class="tile-desc d-block">Leituras por dia, tipo e marca</span></span>
+      </a>
+      <a th:href="@{/admin/coletores}" class="tile">
+        <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#servidor"/></svg></span>
+        <span><span class="tile-titulo">Coletores</span><span class="tile-desc d-block">Último contato, versão do app e erros</span></span>
+      </a>
+      <a th:href="@{/admin/app}" class="tile">
+        <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#download"/></svg></span>
+        <span><span class="tile-titulo">App dos coletores</span><span class="tile-desc d-block">Publicar uma versão nova do app</span></span>
+      </a>
+      <a th:href="@{/admin/auditoria}" class="tile">
+        <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#escudo"/></svg></span>
+        <span><span class="tile-titulo">Auditoria</span><span class="tile-desc d-block">Quem fez o quê no sistema</span></span>
+      </a>
+      <a th:href="@{/status}" class="tile">
+        <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#atividade"/></svg></span>
+        <span><span class="tile-titulo">Status do servidor</span><span class="tile-desc d-block">Backups e certificado HTTPS</span></span>
       </a>
     </div>
   </div>

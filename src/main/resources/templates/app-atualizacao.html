@@ -97,7 +97,7 @@
           <td data-rotulo="Código" th:text="${v.codigo}"></td>
           <td class="nowrap" data-rotulo="Publicada em" th:text="${#temporals.format(v.publicadaEm, 'dd/MM/yyyy HH:mm')}"></td>
           <td data-rotulo="Por" th:text="${v.publicadaPor}"></td>
-          <td class="nowrap" data-rotulo="Tamanho" th:text="${#numbers.formatDecimal(v.tamanho / 1048576.0, 1, 'POINT', 1, 'COMMA')} + ' MB'"></td>
+          <td class="nowrap" data-rotulo="Tamanho" th:text="${v.tamanho < 1048576} ? ${(v.tamanho + 1023) / 1024} + ' KB' : ${#numbers.formatDecimal(v.tamanho / 1048576.0, 1, 'POINT', 1, 'COMMA')} + ' MB'"></td>
           <td data-rotulo="O que mudou">
             <!-- Um bloco só: no cartão do celular o texto e o motivo ficam um embaixo do outro, não lado a lado -->
             <div>

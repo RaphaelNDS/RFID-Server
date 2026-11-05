@@ -444,6 +444,8 @@ a:hover { text-decoration: underline; }
 .stat-dica { margin-top: 2px; font-size: 12px; color: var(--muted); }
 .stat-valor.positivo { color: var(--success); }
 .stat-valor.negativo { color: var(--danger); }
+/* Valor em texto (ex.: nome do banco): menor e quebrando a linha sem estourar o cartão */
+.stat-valor.texto { font-size: 16px; font-weight: 600; letter-spacing: 0; line-height: 1.35; overflow-wrap: anywhere; }
 
 /* --- Tabela --- */
 .table-wrap { overflow-x: auto; }
@@ -726,6 +728,7 @@ tr.inativo td { opacity: .6; }
 .lista li:last-child { border-bottom: 0; }
 .lista li:hover { background: var(--surface-hover); }
 .lista .item-nome { font-weight: 500; }
+.lista .item-acoes { display: flex; flex-shrink: 0; gap: 4px; }
 .lista .item-detalhe { font-size: 12px; color: var(--muted); }
 
 /* Lista de pares rótulo/valor */
@@ -738,8 +741,8 @@ tr.inativo td { opacity: .6; }
   border-bottom: 1px solid var(--border);
 }
 .dados > div:last-child { border-bottom: 0; }
-.dados dt { color: var(--muted); font-size: 14px; }
-.dados dd { margin: 0; font-weight: 600; text-align: right; }
+.dados dt { flex-shrink: 0; color: var(--muted); font-size: 14px; }
+.dados dd { min-width: 0; margin: 0; font-weight: 600; text-align: right; overflow-wrap: anywhere; }
 
 /* --- Janela (modal) --- */
 .modal-fundo {
@@ -859,6 +862,10 @@ tr.inativo td { opacity: .6; }
   .table .acoes .btn-sm { width: 32px; padding: 0; }
 
   .stat-valor { font-size: 24px; }
+  .stat-valor.texto { font-size: 15px; }
+  /* Rótulo em cima do valor: no celular não sobra largura para os dois lado a lado */
+  .dados > div { flex-direction: column; gap: 2px; }
+  .dados dd { text-align: left; }
 }
 
 /* ============================ UTILITÁRIOS ============================ */
@@ -874,6 +881,23 @@ tr.inativo td { opacity: .6; }
 /* Campo de arquivo: o estilo dos campos de texto (altura fixa e padding) cortava o botão "Escolher arquivo" */
 .field input[type="file"],
 .toolbar input[type="file"] { height: auto; padding: 7px 8px; }
+/* Botão do campo de arquivo com a cara dos outros botões (o nativo do navegador destoava no tema escuro) */
+input[type="file"]::file-selector-button {
+  margin-right: 10px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+input[type="file"]::file-selector-button:hover { background: var(--surface-hover); }
+
+/* Célula de texto livre (ex.: detalhe da auditoria): quebra a linha em vez de alargar a tabela além do cartão */
+.table td.celula-longa { min-width: 220px; max-width: 420px; white-space: normal; overflow-wrap: anywhere; }
 
 /* Texto longo sem espaços (impressão digital, hash): quebra em qualquer ponto em vez de alargar a página */
 code.quebra, .quebra { overflow-wrap: anywhere; word-break: break-all; }
@@ -889,6 +913,18 @@ code.quebra, .quebra { overflow-wrap: anywhere; word-break: break-all; }
   /* Barra "empilhar": cada campo na linha inteira e o botão largo embaixo (formulário, não filtro) */
   .toolbar.empilhar .field { flex-basis: 100%; }
   .toolbar.empilhar .btn { width: 100%; justify-content: center; }
+
+  /* Busca na linha inteira: ao lado do botão e da contagem o texto digitado ficava cortado */
+  .toolbar .field.busca { flex-basis: 100%; }
+
+  /* Indicadores de dois em dois: um por linha ocupava a tela inteira antes da tabela */
+  .grid-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .stat { padding: 14px; }
+  .stat-rotulo { font-size: 12px; }
+  .stat-dica { font-size: 11px; }
+
+  /* Cabeçalho com título e um texto explicativo: o texto vai para baixo do título */
+  .card-header.empilhar { flex-direction: column; align-items: flex-start; gap: 4px; }
 }
 
 /* Tabela que vira cartões em tela estreita: cada linha é um bloco e cada valor mostra o nome da coluna

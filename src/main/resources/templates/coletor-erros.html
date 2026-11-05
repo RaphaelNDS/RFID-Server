@@ -56,7 +56,11 @@
               title="Quando chegou ao servidor"></td>
           <td data-rotulo="Tipo">
             <span class="badge badge-CUSTOM" th:if="${e.tipo == 'FALHA_GERAL'}">Travamento</span>
-            <span class="badge" th:unless="${e.tipo == 'FALHA_GERAL'}" th:text="${e.tipo}"></span>
+            <!-- Nome amigável dos tipos conhecidos; tipo novo do app aparece como veio (title guarda o código) -->
+            <span class="badge" th:unless="${e.tipo == 'FALHA_GERAL'}" th:title="${e.tipo}"
+                  th:text="${e.tipo == 'ENVIO_RECUSADO'} ? 'Envio recusado' : (${e.tipo == 'ERRO_SERVIDOR'} ? 'Erro no servidor' :
+                           (${e.tipo == 'LEITOR_RFID'} ? 'Leitor RFID' : (${e.tipo == 'ATUALIZACAO'} ? 'Atualização' :
+                           (${e.tipo == 'SINCRONIZACAO'} ? 'Sincronização' : ${e.tipo}))))"></span>
           </td>
           <td data-rotulo="Mensagem">
             <span th:text="${e.mensagem}"></span>
@@ -66,7 +70,7 @@
             </details>
           </td>
           <td data-rotulo="Vezes" th:text="${e.ocorrencias}"></td>
-          <td data-rotulo="Versão" th:text="${e.versaoApp != null} ? ${e.versaoApp} + (${e.codigoVersao != null} ? ' (' + ${e.codigoVersao} + ')' : '') : '—'"></td>
+          <td class="nowrap" data-rotulo="Versão" th:text="${e.versaoApp != null} ? ${e.versaoApp} + (${e.codigoVersao != null} ? ' (' + ${e.codigoVersao} + ')' : '') : '—'"></td>
           <td data-rotulo="Operador" th:text="${e.operador != null} ? ${e.operador} : '—'"></td>
         </tr>
         </tbody>

@@ -118,7 +118,7 @@
           </td>
           <td class="acoes">
             <a th:href="@{/admin/usuarios/{id}/editar(id=${u.id})}" class="btn btn-ghost btn-sm" title="Editar perfil e permissões">
-              <svg class="ic"><use href="/img/icones.svg#usuario"/></svg><span class="texto-btn">Editar</span>
+              <svg class="ic"><use href="/img/icones.svg#lapis"/></svg><span class="texto-btn">Editar</span>
             </a>
             <!-- Para quem pediu pessoalmente, sem usar o "Esqueceu a senha?" -->
             <form th:action="@{/admin/usuarios/{id}/senha-temporaria(id=${u.id})}" method="post" style="display:inline"
