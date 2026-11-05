@@ -60,9 +60,9 @@ class LeituraAndroidServiceTest {
     fun `leitura recusada pelo indice unico conta como repetida e nao vai para a tela`() {
         every { tagRepo.findByTagReal("E1") } returns Optional.of(tag())
         // Outra requisição gravou a mesma leitura entre a conferência e a gravação (envio simultâneo)
-        every { leituraRepo.existsByTagAndDataHora(any(), any()) } returns false
+        every { leituraRepo.existsByTagAndLidoEmColetor(any(), any()) } returns false
         every { leituraRepo.saveAndFlush(any<LeituraAndroidEntity>()) } throws
-            DataIntegrityViolationException("duplicate key value violates unique constraint \"uk_leituras_android_tag_data_hora\"")
+            DataIntegrityViolationException("duplicate key value violates unique constraint \"uk_leituras_android_tag_lido_em_coletor\"")
 
         val resultado = service.salvarLeitura("E1", OffsetDateTime.now().minusMinutes(5))
 
@@ -81,20 +81,42 @@ class LeituraAndroidServiceTest {
     }
 
     @Test
-    fun `tag sem modelo e ignorada`() {
+    fun `tag sem modelo grava a leitura com o que houver (antes era descartada calada)`() {
         every { tagRepo.findByTagReal("E1") } returns Optional.of(tag(modeloId = null))
+        val gravada = slot<LeituraAndroidEntity>()
 
-        service.salvarLeitura("E1")
+        val resultado = service.salvarLeitura("E1")
 
-        verify(exactly = 0) { leituraRepo.saveAndFlush(any<LeituraAndroidEntity>()) }
+        assertThat(resultado).isEqualTo(ResultadoLeitura.REGISTRADA)
+        verify { leituraRepo.saveAndFlush(capture(gravada)) }
+        assertThat(gravada.captured.modelo).isNull()
+        assertThat(gravada.captured.marca).isEqualTo("Dell")
     }
 
     @Test
-    fun `tag sem patrimonio e ignorada`() {
+    fun `tag sem patrimonio tambem grava a leitura`() {
         every { tagRepo.findByTagReal("E1") } returns Optional.of(tag(patrimonio = ""))
 
-        service.salvarLeitura("E1")
+        assertThat(service.salvarLeitura("E1")).isEqualTo(ResultadoLeitura.REGISTRADA)
+        verify { leituraRepo.saveAndFlush(any<LeituraAndroidEntity>()) }
+    }
 
-        verify(exactly = 0) { leituraRepo.saveAndFlush(any<LeituraAndroidEntity>()) }
+    @Test
+    fun `relogio do coletor adiantado grava a hora do recebimento e guarda a do coletor para reconhecer o reenvio`() {
+        every { tagRepo.findByTagReal("E1") } returns Optional.of(tag())
+        val futuro = OffsetDateTime.now().plusHours(2)
+        val gravada = slot<LeituraAndroidEntity>()
+        every { leituraRepo.existsByTagAndLidoEmColetor("E1", any()) } returns false
+
+        service.salvarLeitura("E1", futuro)
+
+        verify { leituraRepo.saveAndFlush(capture(gravada)) }
+        val horaDoColetor = futuro.atZoneSameInstant(java.time.ZoneId.systemDefault()).toLocalDateTime()
+        assertThat(gravada.captured.lidoEmColetor).isEqualTo(horaDoColetor)
+        assertThat(gravada.captured.dataHora).isBefore(horaDoColetor)
+
+        // Reenvio da mesma leitura: a conferência usa a hora do coletor, que não muda
+        every { leituraRepo.existsByTagAndLidoEmColetor("E1", horaDoColetor) } returns true
+        assertThat(service.salvarLeitura("E1", futuro)).isEqualTo(ResultadoLeitura.REPETIDA)
     }
 }

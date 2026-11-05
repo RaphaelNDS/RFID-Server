@@ -1,7 +1,6 @@
 package org.example.service
 
-import org.example.repository.InventarioItemRepository
-import org.example.repository.LeituraAndroidRepository
+import org.example.repository.TagRepository
 import org.example.response.TagViewAdmin
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
@@ -35,13 +34,12 @@ data class EtiquetaVista(
  * Relatórios do cadastro de patrimônio: exportação das etiquetas com a última vez vista e o último local, e a
  * lista das "não vistas há N dias" (equipamento sumido, emprestado ou com a etiqueta danificada).
  *
- * As últimas datas vêm de 2 consultas agrupadas (uma linha por tag), e não de uma por etiqueta.
+ * As últimas datas vêm de uma consulta só, que busca cada etiqueta pelos índices (sem agrupar a tabela de leituras).
  */
 @Service
 class RelatorioEtiquetasService(
     private val rfidService: RfidService,
-    private val leituras: LeituraAndroidRepository,
-    private val itensInventario: InventarioItemRepository,
+    private val tags: TagRepository,
     private val relogio: Clock
 ) {
 
@@ -52,15 +50,13 @@ class RelatorioEtiquetasService(
         val etiquetas = rfidService.listarTodasParaAdmin(busca)
         if (etiquetas.isEmpty()) return emptyList()
 
-        val ultimaLeitura = leituras.ultimaLeituraPorTag().associate { (it[0] as String) to data(it[1]) }
-        val ultimoInventario = itensInventario.ultimoInventarioPorTag().associate {
-            (it[0] as String) to Pair(data(it[1]), it[2] as String?)
-        }
+        // [tag, última leitura, último inventário, último local] por etiqueta, numa consulta só (ver TagRepository)
+        val ultimas = tags.ultimasVezesPorTag().associateBy { it[0] as String }
 
         val hoje = LocalDate.now(relogio)
         return etiquetas.map { e ->
-            val inventario = ultimoInventario[e.tag]
-            EtiquetaVista(e, ultimaLeitura[e.tag], inventario?.first, inventario?.second, hoje)
+            val u = ultimas[e.tag]
+            EtiquetaVista(e, data(u?.get(1)), data(u?.get(2)), u?.get(3) as String?, hoje)
         }
     }
 

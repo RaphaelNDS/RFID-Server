@@ -82,10 +82,10 @@ administrador; depois disso essa tela não aparece mais.
 | Editar etiqueta (o EPC não muda) | `/admin/etiquetas/{id}/editar` | RFID · Editar |
 | Excluir etiqueta (botão em Etiquetas cadastradas) | `/admin/etiquetas/{id}/excluir` | RFID · Excluir |
 | Histórico das etiquetas (busca por EPC; acha também as excluídas) | `/admin/etiquetas/historico` | RFID · Ver |
-| Leituras (paginada; filtros por dia, etiqueta, tipo, operador…) | `/admin/leituras-android` | Leituras · Ver |
+| Leituras (paginada; filtros por dia, etiqueta, tipo, operador…; conta até 10.000 e acima disso mostra "mais de") | `/admin/leituras-android` | Leituras · Ver |
 | Inventários (50 por página) | `/admin/inventarios` | Leituras · Ver |
 | Catálogo | `/admin/catalogo` | Catálogo · Ver (criar/excluir exigem Criar/Excluir) |
-| Relatórios (gráficos, tempo real) | `/admin/dashboard` | Relatórios · Ver |
+| Relatórios (gráficos; avisa quando chegam leituras novas; período de até 366 dias) | `/admin/dashboard` | Relatórios · Ver |
 | Usuários (+ pedidos de nova senha e senha temporária; editar perfil e permissões; desativar e reativar) | `/admin/usuarios` | somente ADMIN |
 | Coletores (último contato, IP, versão do app e operador de cada coletor) | `/admin/coletores` | somente ADMIN |
 | App dos coletores (publicar versão nova do app; retirar a publicada com problema) | `/admin/app` | somente ADMIN |

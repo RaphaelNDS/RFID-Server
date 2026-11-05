@@ -81,6 +81,41 @@ class UsuarioDesativadoIntegracaoTest : IntegracaoBase() {
             .andExpect(status().isUnauthorized)
     }
 
+    // ADMIN com id que não colide com os usuários criados no teste (senão vira "editar a si mesmo")
+    private val outroAdmin = Perfis.admin(id = 999_999)
+
+    @Test
+    fun `mudar o perfil derruba a sessao web aberta mas nao a do coletor`() {
+        operadores.criarUsuario(email = "rebaixa@x.com", role = Role.CUSTOM,
+            permissoes = arrayOf(Modulo.LEITURA to Acao.READ, Modulo.DASHBOARD to Acao.READ, Modulo.RFID to Acao.DELETE))
+        val sessaoWeb = entrarNaWeb("rebaixa@x.com")
+        val token = operadores.entrar(mvc, "rebaixa@x.com")
+        mvc.perform(get("/dashboard").session(sessaoWeb)).andExpect(status().isOk)
+
+        mvc.perform(post("/admin/usuarios/${idDe("rebaixa@x.com")}/editar").with(outroAdmin).with(csrf())
+            .param("nome", "Rebaixado").param("role", "USER"))
+            .andExpect(redirectedUrl("/admin/usuarios"))
+            .andExpect(flash().attribute("msg", containsString("sessão dele na web foi encerrada")))
+
+        // A sessão web antiga (com RFID/DELETE) não vale mais: entra de novo e já pega as permissões novas
+        mvc.perform(get("/dashboard").session(sessaoWeb)).andExpect(redirectedUrl("/login?encerrada"))
+        // O coletor continua: lá as permissões são recarregadas a cada ação
+        mvc.perform(get("/api/android/locais").comoOperador(token)).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `mudar so o nome nao derruba a sessao web`() {
+        operadores.criarUsuario(email = "renomeia@x.com", role = Role.USER,
+            permissoes = Modulo.values().filter { it != Modulo.USUARIO }.map { it to Acao.READ }.toTypedArray())
+        val sessaoWeb = entrarNaWeb("renomeia@x.com")
+
+        mvc.perform(post("/admin/usuarios/${idDe("renomeia@x.com")}/editar").with(outroAdmin).with(csrf())
+            .param("nome", "Nome Novo").param("role", "USER"))
+            .andExpect(redirectedUrl("/admin/usuarios"))
+
+        mvc.perform(get("/dashboard").session(sessaoWeb)).andExpect(status().isOk)
+    }
+
     @Test
     fun `admin edita o perfil e as permissoes pela tela`() {
         operadores.criarUsuario(email = "edita@x.com")

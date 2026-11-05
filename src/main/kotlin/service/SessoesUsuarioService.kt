@@ -46,4 +46,18 @@ class SessoesUsuarioService(
         }
         return SessoesEncerradas(web, coletores)
     }
+
+    /**
+     * Só as sessões web do usuário (o perfil e as permissões ficam guardados na sessão desde o login). As do
+     * coletor não precisam: lá as permissões são recarregadas a cada ação. Devolve quantas foram encerradas.
+     */
+    fun encerrarWeb(usuarioId: Long, motivo: String): Int {
+        val web = sessoesWeb.allPrincipals
+            .filter { (it as? UserPrincipal)?.id == usuarioId }
+            .flatMap { sessoesWeb.getAllSessions(it, false) }
+            .onEach { it.expireNow() }
+            .size
+        if (web > 0) log.info("Sessões web do usuário {} encerradas ({}): {}", usuarioId, motivo, web)
+        return web
+    }
 }

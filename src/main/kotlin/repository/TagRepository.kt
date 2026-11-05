@@ -43,6 +43,28 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
         pagina: Pageable
     ): Page<TagEntity>
 
+    /**
+     * Relatório "não vistas" e exportação do cadastro: [tag_real, última leitura, hora e local do último inventário]
+     * de cada etiqueta. Uma consulta por etiqueta usando os índices (tag, data_hora) das leituras e (tag, lido_em)
+     * dos itens de inventário (V16): antes agrupava a tabela de leituras inteira (milhões de linhas) a cada página.
+     */
+    @Query(
+        value = """select t.tag_real,
+                          (select max(l.data_hora) from leituras_android l where l.tag = t.tag_real),
+                          ui.lido_em, ui.nome
+                   from tags t
+                   left join lateral (
+                       select it.lido_em, lo.nome
+                       from inventario_itens it
+                       join inventarios inv on inv.id = it.inventario_id
+                       join locais lo on lo.id = inv.local_id
+                       where it.tag = t.tag_real
+                       order by it.lido_em desc
+                       limit 1
+                   ) ui on true""",
+        nativeQuery = true
+    )
+    fun ultimasVezesPorTag(): List<Array<Any?>>
     // Quantas etiquetas usam cada item do catálogo (para impedir exclusão de item em uso)
     fun countByTipoEquipamentoId(tipoId: Long): Long
 

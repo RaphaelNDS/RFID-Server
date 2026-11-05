@@ -61,6 +61,13 @@ class DashboardLeiturasService(
             return padrao.copy(aviso = "A data de início é depois da data de fim. Mostrando os últimos $DIAS_PADRAO dias.")
         }
 
+        // Sem teto, um início como 0001-01-01 montava ~740 mil dias no gráfico e contava a tabela inteira
+        val limite = periodoFim.minusDays(DIAS_MAXIMO - 1)
+        if (periodoInicio.isBefore(limite)) {
+            log.info("Filtro do dashboard de {} a {} passa de {} dias; usando {} a {}", periodoInicio, periodoFim, DIAS_MAXIMO, limite, periodoFim)
+            return PeriodoDashboard(limite, periodoFim, aviso = "O período vai até $DIAS_MAXIMO dias. Mostrando de ${limite.format(FORMATO_AVISO)} a ${periodoFim.format(FORMATO_AVISO)}.")
+        }
+
         return PeriodoDashboard(periodoInicio, periodoFim)
     }
 
@@ -118,6 +125,9 @@ class DashboardLeiturasService(
 
     companion object {
         const val DIAS_PADRAO = 7L
+        /** Maior período do dashboard (um ano e um dia). */
+        const val DIAS_MAXIMO = 366L
+        private val FORMATO_AVISO: java.time.format.DateTimeFormatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")
         private const val LIMITE_LENTO_MS = 1000L
         private val LOCALE_BR = java.util.Locale.forLanguageTag("pt-BR")
     }

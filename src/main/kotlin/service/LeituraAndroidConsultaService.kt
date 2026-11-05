@@ -1,5 +1,6 @@
 package org.example.service
 
+import jakarta.persistence.EntityManager
 import jakarta.persistence.criteria.Predicate
 import org.example.model.LeituraAndroidEntity
 import org.example.repository.LeituraAndroidRepository
@@ -24,6 +25,20 @@ data class FiltroLeituras(
     val operador: String? = null
 )
 
+/** Uma página da tela de leituras. [total] é exato só se [totalExato]; senão é o teto ("mais de [total]"). */
+data class PaginaLeituras(
+    val leituras: List<LeituraAndroidEntity>,
+    /** Começa em 0. */
+    val numero: Int,
+    val temProxima: Boolean,
+    val total: Long,
+    val totalExato: Boolean,
+    private val tamanhoPagina: Int
+) {
+    /** Quantas páginas há, ou null se o total passou do teto (não se sabe sem contar tudo). */
+    val totalPaginas: Int? = if (totalExato) ((total + tamanhoPagina - 1) / tamanhoPagina).toInt().coerceAtLeast(1) else null
+}
+
 /**
  * Consulta das leituras para a tela web: filtros + paginação (a tabela cresce sem parar com os
  * coletores rodando, então nunca é carregada inteira).
@@ -32,7 +47,12 @@ data class FiltroLeituras(
 class LeituraAndroidConsultaService(
     private val repo: LeituraAndroidRepository,
     private val relogio: Clock,
-    @Value("\${rfid.leituras.por-pagina:50}") porPagina: Int
+    @Value("\${rfid.leituras.por-pagina:50}") porPagina: Int,
+    private val em: EntityManager,
+    /** Até quantas leituras a tela conta (acima disso mostra "mais de"). */
+    @Value("\${rfid.leituras.teto-contagem:10000}") val tetoContagem: Long = 10_000,
+    /** Cache dos atalhos de dia, em segundos (0 = sem cache; os testes usam 0). */
+    @Value("\${rfid.leituras.cache-dias-segundos:60}") private val cacheDiasSegundos: Long = 60
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -40,31 +60,64 @@ class LeituraAndroidConsultaService(
     val tamanhoPagina: Int = porPagina.coerceIn(10, MAXIMO_POR_PAGINA)
 
     /**
-     * Uma página de leituras, da mais recente para a mais antiga.
-     * [pagina] começa em 0; se passar da última, devolve a última (ex.: link antigo depois de um filtro).
+     * Uma página de leituras, da mais recente para a mais antiga. [pagina] começa em 0.
+     *
+     * O total é contado só até [tetoContagem]: com milhões de leituras, contar a tabela inteira a cada página levava
+     * segundos. Até o teto, o total é exato e a página além da última mostra a última (ex.: link antigo depois de um
+     * filtro); acima dele a tela mostra "mais de N" e navega por Anterior/Próxima (a página traz um item a mais só
+     * para saber se existe a próxima).
      */
-    fun buscar(filtro: FiltroLeituras, pagina: Int): Page<LeituraAndroidEntity> {
+    fun buscar(filtro: FiltroLeituras, pagina: Int): PaginaLeituras {
         val inicio = System.currentTimeMillis()
         val spec = especificacao(filtro)
-        val ordem = Sort.by(Sort.Order.desc("dataHora"), Sort.Order.desc("id"))
 
-        var resultado = repo.findAll(spec, PageRequest.of(pagina.coerceAtLeast(0), tamanhoPagina, ordem))
-
-        if (resultado.content.isEmpty() && resultado.totalPages > 0 && pagina >= resultado.totalPages) {
-            resultado = repo.findAll(spec, PageRequest.of(resultado.totalPages - 1, tamanhoPagina, ordem))
+        val contados = contarAte(spec, tetoContagem + 1)
+        val exato = contados <= tetoContagem
+        var numero = pagina.coerceAtLeast(0)
+        if (exato) {
+            val ultima = ((contados + tamanhoPagina - 1) / tamanhoPagina - 1).coerceAtLeast(0).toInt()
+            numero = numero.coerceAtMost(ultima)
         }
+
+        val linhas = linhas(spec, numero.toLong() * tamanhoPagina, tamanhoPagina + 1)
+        val resultado = PaginaLeituras(
+            leituras = linhas.take(tamanhoPagina),
+            numero = numero,
+            temProxima = linhas.size > tamanhoPagina,
+            total = if (exato) contados else tetoContagem,
+            totalExato = exato,
+            tamanhoPagina = tamanhoPagina
+        )
 
         val duracao = System.currentTimeMillis() - inicio
         if (duracao > LIMITE_LENTO_MS) {
-            log.warn("Consulta de leituras demorou {} ms ({} resultado(s), filtros: {})", duracao, resultado.totalElements, descrever(filtro))
+            log.warn("Consulta de leituras demorou {} ms ({}{} resultado(s), filtros: {})",
+                duracao, if (exato) "" else "mais de ", resultado.total, descrever(filtro))
         } else {
-            log.debug("Consulta de leituras: página {} de {}, {} resultado(s) em {} ms (filtros: {})",
-                resultado.number + 1, resultado.totalPages, resultado.totalElements, duracao, descrever(filtro))
+            log.debug("Consulta de leituras: página {}, {}{} resultado(s) em {} ms (filtros: {})",
+                numero + 1, if (exato) "" else "mais de ", resultado.total, duracao, descrever(filtro))
         }
-
         return resultado
     }
 
+    /** Quantas leituras o filtro tem, parando em [limite] (não percorre o resto da tabela). */
+    private fun contarAte(spec: Specification<LeituraAndroidEntity>, limite: Long): Long {
+        val cb = em.criteriaBuilder
+        val q = cb.createQuery(java.lang.Long::class.java)
+        val root = q.from(LeituraAndroidEntity::class.java)
+        q.select(root.get("id"))
+        spec.toPredicate(root, q, cb)?.let { q.where(it) }
+        return em.createQuery(q).setMaxResults(limite.toInt()).resultList.size.toLong()
+    }
+
+    private fun linhas(spec: Specification<LeituraAndroidEntity>, deslocamento: Long, quantidade: Int): List<LeituraAndroidEntity> {
+        val cb = em.criteriaBuilder
+        val q = cb.createQuery(LeituraAndroidEntity::class.java)
+        val root = q.from(LeituraAndroidEntity::class.java)
+        spec.toPredicate(root, q, cb)?.let { q.where(it) }
+        q.orderBy(cb.desc(root.get<Any>("dataHora")), cb.desc(root.get<Any>("id")))
+        return em.createQuery(q).setFirstResult(deslocamento.toInt()).setMaxResults(quantidade).resultList
+    }
     /**
      * Todas as leituras do filtro, da mais recente para a mais antiga, para exportar. Acima de
      * [MAXIMO_EXPORTACAO] recusa com mensagem (IllegalArgumentException → 400), em vez de montar uma planilha
@@ -87,8 +140,17 @@ class LeituraAndroidConsultaService(
     /** Texto dos filtros aplicados, para o log de quem exportou o quê. */
     fun descreverFiltro(filtro: FiltroLeituras): String = descrever(filtro)
 
-    /** Leituras por dia nos últimos [dias] dias, do mais recente para o mais antigo (atalhos da tela). */
+    // Atalhos de dia: agrupar 31 dias a cada carga da tela pesa com milhões de leituras; 1 minuto de atraso não faz falta
+    @Volatile private var diasEmCache: Pair<java.time.Instant, Map<String, Long>>? = null
+
+    /** Leituras por dia nos últimos [dias] dias, do mais recente para o mais antigo (atalhos da tela; cache de 1 min). */
     fun diasRecentes(dias: Long = DIAS_ATALHO): Map<String, Long> {
+        val agora = relogio.instant()
+        diasEmCache?.let { (quando, valor) -> if (dias == DIAS_ATALHO && quando.plusSeconds(cacheDiasSegundos).isAfter(agora)) return valor }
+        return contarDiasRecentes(dias).also { if (dias == DIAS_ATALHO) diasEmCache = agora to it }
+    }
+
+    private fun contarDiasRecentes(dias: Long): Map<String, Long> {
         val hoje = LocalDate.now(relogio)
         return repo.contarPorDiaEntre(hoje.minusDays(dias - 1).atStartOfDay(), hoje.plusDays(1).atStartOfDay())
             .map { it[0].toString() to (it[1] as Number).toLong() }

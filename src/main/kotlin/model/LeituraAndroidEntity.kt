@@ -22,6 +22,12 @@ data class LeituraAndroidEntity(
 
     val dataHora: LocalDateTime = LocalDateTime.now(),
 
+    /**
+     * A hora que o coletor informou (no fuso do servidor), mesmo que esteja no futuro por relógio adiantado: identifica
+     * o reenvio da mesma leitura (índice único com a tag, V16). Nula quando o coletor não informou a hora.
+     */
+    val lidoEmColetor: LocalDateTime? = null,
+
     /** Nome do operador logado no coletor. Nulo nas leituras anteriores ao login de operador. */
     val operador: String? = null
 )

@@ -71,6 +71,24 @@ class DashboardLeiturasServiceTest {
             assertThat(p.fim).isEqualTo(hoje)
             assertThat(p.aviso).contains("depois da data de fim")
         }
+
+        @Test
+        fun `periodo maior que 366 dias fica nos ultimos 366 ate o fim, com aviso`() {
+            // Antes, 0001-01-01 montava ~740 mil dias no gráfico e contava a tabela inteira
+            val p = service.resolverPeriodo("0001-01-01", "2026-10-13", hoje)
+
+            assertThat(p.fim).isEqualTo(LocalDate.of(2026, 10, 13))
+            assertThat(p.inicio).isEqualTo(LocalDate.of(2026, 10, 13).minusDays(365))
+            assertThat(p.aviso).contains("366 dias")
+        }
+
+        @Test
+        fun `periodo de exatamente 366 dias passa sem aviso`() {
+            val p = service.resolverPeriodo("2025-10-13", "2026-10-13", hoje)
+
+            assertThat(p.inicio).isEqualTo(LocalDate.of(2025, 10, 13))
+            assertThat(p.aviso).isNull()
+        }
     }
 
     @Nested

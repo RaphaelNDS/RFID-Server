@@ -130,8 +130,8 @@ class UsuarioService(
     }
 
     /**
-     * ADMIN muda nome, perfil e permissões de outro usuário. As permissões novas valem no próximo login na web
-     * (a sessão aberta guarda as antigas) e na próxima ação no coletor (lá são conferidas a cada ação).
+     * ADMIN muda nome, perfil e permissões de outro usuário. Se o perfil ou as permissões mudaram, as sessões web
+     * dele caem (elas guardam as permissões do login); no coletor valem na próxima ação (conferidas a cada ação).
      */
     @Transactional
     fun editar(id: Long, nome: String, role: Role, telas: List<String>?, acoes: List<String>?, quemEdita: Long) {
@@ -160,9 +160,15 @@ class UsuarioService(
         usuario.permissoes.addAll(permissoesDoPerfil(role, modulosCustom, acoesCustom, usuario))
         repo.save(usuario)
 
+        // A sessão web guarda o perfil e as permissões do login: sem derrubá-la, um ADMIN rebaixado continuaria
+        // ADMIN até sair (e poderia, por exemplo, criar outro ADMIN). Só nome mudou: ninguém é deslogado
+        val depois = "$role [${usuario.permissoes.joinToString { "${it.modulo}_${it.acao}" }}]"
+        val encerradas = if (depois != antes && id != quemEdita) sessoes.encerrarWeb(id, "perfil ou permissões alterados") else 0
+
         log.info(
-            "Usuário {} alterado por {}: perfil {} → {} [{}]", usuario.email, quemFez(), antes, role,
-            usuario.permissoes.joinToString { "${it.modulo}_${it.acao}" }
+            "Usuário {} alterado por {}: perfil {} → {} [{}]{}", usuario.email, quemFez(), antes, role,
+            usuario.permissoes.joinToString { "${it.modulo}_${it.acao}" },
+            if (encerradas > 0) " ($encerradas sessão(ões) web encerrada(s): entra de novo com as permissões novas)" else ""
         )
         auditoria?.registrar(AreaAuditoria.USUARIOS, "Usuário alterado", usuario.email,
             "Antes: $antes. Depois: $role [${usuario.permissoes.joinToString { "${it.modulo}_${it.acao}" }}]")
