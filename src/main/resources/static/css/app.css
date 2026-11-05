@@ -22,6 +22,9 @@
   --primary-hover: #1d4ed8;
   --primary-soft: #eff6ff;
   --primary-text: #ffffff;
+  /* Fundo de botão e marcações com texto branco (no claro é o próprio --primary) */
+  --primary-fill: #2563eb;
+  --primary-fill-hover: #1d4ed8;
 
   --success: #15803d;
   --success-soft: #f0fdf4;
@@ -65,6 +68,10 @@
 
   --primary: #3b82f6;
   --primary-hover: #60a5fa;
+  /* Botão com texto branco: #3b82f6 dava contraste 3,7:1 (e 2,5:1 no hover), abaixo do mínimo de 4,5:1.
+     #2563eb dá 5,2:1 e #1d4ed8 dá 6,7:1. Os links continuam no --primary, que lê bem sobre o fundo escuro. */
+  --primary-fill: #2563eb;
+  --primary-fill-hover: #1d4ed8;
   --primary-soft: rgba(59, 130, 246, .14);
 
   --success: #4ade80;
@@ -170,7 +177,7 @@ a:hover { text-decoration: underline; }
   border-radius: 9px;
   display: grid;
   place-items: center;
-  background: var(--primary);
+  background: var(--primary-fill);
   color: #fff;
 }
 
@@ -499,8 +506,8 @@ a:hover { text-decoration: underline; }
 .btn .ic { width: 16px; height: 16px; }
 .btn:disabled { opacity: .55; cursor: not-allowed; }
 
-.btn-primary { background: var(--primary); color: var(--primary-text); }
-.btn-primary:hover { background: var(--primary-hover); color: var(--primary-text); }
+.btn-primary { background: var(--primary-fill); color: var(--primary-text); }
+.btn-primary:hover { background: var(--primary-fill-hover); color: var(--primary-text); }
 
 .btn-secondary { background: var(--surface); border-color: var(--border-strong); color: var(--text); }
 .btn-secondary:hover { background: var(--surface-hover); color: var(--text); }
@@ -673,8 +680,8 @@ tr.inativo td { opacity: .6; }
   color: var(--primary);
 }
 .chip input:checked + span::before {
-  border-color: var(--primary);
-  background-color: var(--primary);
+  border-color: var(--primary-fill);
+  background-color: var(--primary-fill);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
 }
 .chip input:focus-visible + span { box-shadow: var(--focus); }
@@ -696,7 +703,7 @@ tr.inativo td { opacity: .6; }
   white-space: nowrap;
 }
 .pill:hover { border-color: var(--primary); color: var(--primary); text-decoration: none; }
-.pill.ativo { background: var(--primary); border-color: var(--primary); color: #fff; }
+.pill.ativo { background: var(--primary-fill); border-color: var(--primary-fill); color: #fff; }
 .pill .qtd {
   padding: 0 7px;
   border-radius: 999px;

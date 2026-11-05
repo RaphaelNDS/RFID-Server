@@ -21,6 +21,9 @@ rfid:
     # coletor-leitura existe para testar um coletor válido SEM permissão de cadastro
     chaves: coletor-teste:chave-de-teste-0123456789,coletor-leitura:chave-de-leitura-0123456789
     cadastro: coletor-teste
+    # Todos os testes vêm de 127.0.0.1 e vários mandam chave errada de propósito: com o limite de produção (20)
+    # os testes seguintes seriam bloqueados com 429. O limite em si é testado no ChaveDispositivoFilterTest
+    max-chaves-erradas: 100000
   app:
     # APKs de teste (src/test/resources/apk, gerados por gerar-apks-teste.sh) são assinados com a chave de
     # teste "A": esta é a impressão digital dela. Os testes limpam a pasta antes de cada caso.

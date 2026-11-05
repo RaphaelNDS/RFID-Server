@@ -127,8 +127,11 @@ rfid:
 
   login:
     # Proteção contra adivinhação de senha. Os erros são contados dentro de "bloqueio-minutos".
-    # Erros seguidos no mesmo email que bloqueiam aquele login:
+    # Erros seguidos no mesmo email, vindos da MESMA origem (IP na web, coletor@IP no coletor), que bloqueiam
+    # aquele login só para essa origem (quem erra a senha do ADMIN de outra máquina não tranca o ADMIN):
     max-tentativas: ${RFID_LOGIN_MAX_TENTATIVAS:5}
+    # Erros no mesmo email somando todas as origens que bloqueiam aquele login para todas (adivinhação distribuída):
+    max-tentativas-email: ${RFID_LOGIN_MAX_TENTATIVAS_EMAIL:20}
     # Erros vindos do mesmo IP (em qualquer conta) que bloqueiam o IP:
     max-tentativas-ip: ${RFID_LOGIN_MAX_TENTATIVAS_IP:20}
     # Tempo de bloqueio (e janela de contagem), em minutos:
@@ -140,7 +143,9 @@ rfid:
     habilitado: ${RFID_BACKUP_HABILITADO:true}
     # Vazio = ./data/backups.
     # Recomendado apontar para outro disco ou pasta de rede: backup no mesmo disco não protege contra falha do disco.
-    pasta: ${RFID_BACKUP_PASTA:}
+    # Variável própria: RFID_BACKUP_PASTA é a pasta dos dumps do banco no docker\.env, e uma variável do Windows
+    # com esse nome mudaria as duas pastas ao mesmo tempo.
+    pasta: ${RFID_CERT_BACKUP_PASTA:}
     # Horário no formato cron do Spring (segundo minuto hora dia mês dia-da-semana). Padrão: todo dia às 02:00. Com o computador desligado nesse horário,
     cron: ${RFID_BACKUP_CRON:0 0 2 * * *}
     # Quantos backups guardar; os mais antigos são apagados.

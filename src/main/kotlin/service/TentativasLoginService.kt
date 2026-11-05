@@ -16,7 +16,12 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Proteção contra adivinhação de senha no login.
  *
- * - Por email: [maxTentativas] erros dentro da janela bloqueiam aquele login.
+ * - Por email E origem: [maxTentativas] erros dentro da janela bloqueiam aquele login SÓ para aquela origem. Antes
+ *   bloqueavam o email para todas: qualquer pessoa na rede, sem login, mantinha o ADMIN trancado para fora errando a
+ *   senha dele 5 vezes a cada 15 min.
+ * - Por email, somando todas as origens: [maxTentativasEmail] erros bloqueiam aquele login para todas (adivinhação
+ *   distribuída por várias máquinas). Como cada origem só erra [maxTentativas] vezes, trancar o email para todos
+ *   exige várias máquinas diferentes.
  * - Por origem: [maxTentativasIp] erros (em qualquer conta) bloqueiam a origem — pega quem testa a mesma senha em
  *   várias contas. Na web a origem é o IP; no coletor é "coletor@IP" (SessaoOperadorService), para vários coletores
  *   atrás do mesmo IP (NAT) não travarem uns aos outros por causa de um operador errando a senha.
@@ -28,6 +33,7 @@ import java.util.concurrent.ConcurrentHashMap
 class TentativasLoginService(
     @Value("\${rfid.login.max-tentativas:5}") private val maxTentativas: Int,
     @Value("\${rfid.login.max-tentativas-ip:20}") private val maxTentativasIp: Int,
+    @Value("\${rfid.login.max-tentativas-email:20}") private val maxTentativasEmail: Int = 20,
     @Value("\${rfid.login.bloqueio-minutos:15}") bloqueioMinutos: Long,
     private val relogio: Clock
 ) {
@@ -44,12 +50,15 @@ class TentativasLoginService(
 
     private val porEmail = ConcurrentHashMap<String, Registro>()
     private val porIp = ConcurrentHashMap<String, Registro>()
+    /** Erros do email somando todas as origens. */
+    private val porEmailTotal = ConcurrentHashMap<String, Registro>()
 
-    /** Quanto falta de bloqueio para esse email ou origem; null se o login está liberado. */
+    /** Quanto falta de bloqueio para esse email nessa origem, ou para a origem; null se o login está liberado. */
     fun tempoRestanteDeBloqueio(email: String?, origem: String?): Duration? {
         val agora = relogio.instant()
         return listOfNotNull(
-            email?.let { porEmail[normalizar(it)] },
+            email?.let { porEmail[chaveEmail(it, origem)] },
+            email?.let { porEmailTotal[normalizar(it)] },
             origem?.let { porIp[it] }
         ).mapNotNull { registro ->
             synchronized(registro) { registro.bloqueadoAte?.takeIf { it.isAfter(agora) } }
@@ -59,11 +68,16 @@ class TentativasLoginService(
     fun registrarFalha(email: String, origem: String?) {
         val chave = normalizar(email)
 
-        contar(porEmail.computeIfAbsent(chave) { Registro() }, maxTentativas)?.let { falhas ->
+        contar(porEmail.computeIfAbsent(chaveEmail(email, origem)) { Registro() }, maxTentativas)?.let { falhas ->
             log.warn(
-                "Login de '{}' bloqueado por {} min após {} tentativas com senha errada (última origem: {})",
-                chave, duracao.toMinutes(), falhas, origem ?: "desconhecido"
+                "Login de '{}' bloqueado por {} min para a origem {} após {} tentativas com senha errada (das outras origens continua entrando)",
+                chave, duracao.toMinutes(), origem ?: "desconhecida", falhas
             )
+        }
+
+        contar(porEmailTotal.computeIfAbsent(chave) { Registro() }, maxTentativasEmail)?.let { falhas ->
+            log.warn("Login de '{}' bloqueado por {} min para TODAS as origens após {} tentativas com senha errada vindas de várias origens (última: {})",
+                chave, duracao.toMinutes(), falhas, origem ?: "desconhecida")
         }
 
         if (origem != null) {
@@ -77,15 +91,26 @@ class TentativasLoginService(
     }
 
     fun registrarSucesso(email: String) {
-        val anterior = porEmail.remove(normalizar(email)) ?: return
-        val falhas = synchronized(anterior) { anterior.falhas.size }
+        // Entrou com a senha certa: zera os erros desse email em todas as origens. O total já soma as origens
+        val total = porEmailTotal[normalizar(email)]
+        val falhas = total?.let { synchronized(it) { it.falhas.size } } ?: 0
+        removerEmail(email)
         if (falhas > 0) {
             log.info("Login de '{}' realizado após {} tentativa(s) com senha errada", normalizar(email), falhas)
         }
     }
 
     /** Zera os erros e o bloqueio desse email (ex.: o ADMIN acabou de gerar uma senha nova para a pessoa). */
-    fun desbloquear(email: String): Boolean = porEmail.remove(normalizar(email)) != null
+    fun desbloquear(email: String): Boolean = removerEmail(email).isNotEmpty()
+
+    private fun chaveEmail(email: String, origem: String?) = normalizar(email) + "|" + (origem ?: "?")
+
+    /** Remove os registros desse email em todas as origens e devolve os removidos. */
+    private fun removerEmail(email: String): List<Registro> {
+        val prefixo = normalizar(email) + "|"
+        val chaves = porEmail.keys.filter { it.startsWith(prefixo) }
+        return chaves.mapNotNull { porEmail.remove(it) } + listOfNotNull(porEmailTotal.remove(normalizar(email)))
+    }
 
     // Integração com os eventos do Spring Security (o formulário de login dispara esses eventos)
 
@@ -101,7 +126,7 @@ class TentativasLoginService(
     fun limparExpirados() {
         val agora = relogio.instant()
         var removidos = 0
-        listOf(porEmail, porIp).forEach { mapa ->
+        listOf(porEmail, porIp, porEmailTotal).forEach { mapa ->
             mapa.entries.removeIf { (_, registro) ->
                 synchronized(registro) {
                     descartarAntigas(registro, agora)

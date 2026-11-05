@@ -53,3 +53,8 @@ rfid.dispositivos.cadastro=coletor-01
 # Backup do banco antes de aplicar migrações (versão nova do servidor). Se falhar, o servidor não sobe e não migra.
 # Vazio = migra sem backup
 #rfid.banco.backup-antes-migracao=docker exec rfid-backup /backup.sh
+
+# Pasta dos dumps do banco que a tela Status confere (a mesma do RFID_BACKUP_PASTA do docker\.env: se mudar lá,
+# mude aqui) e quantas horas sem backup até ela avisar
+#rfid.banco.pasta-backups=./docker/backups
+#rfid.banco.backup-atrasado-horas=12

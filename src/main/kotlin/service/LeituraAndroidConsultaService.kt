@@ -134,7 +134,14 @@ class LeituraAndroidConsultaService(
             )
         }
 
-        return repo.findAll(spec, Sort.by(Sort.Order.desc("dataHora"), Sort.Order.desc("id")))
+        // Somente leitura: o Hibernate não guarda a cópia de cada uma para detectar alteração (até 100 mil leituras;
+        // com o open-in-view elas ficariam na sessão até o fim da requisição, em dobro)
+        val cb = em.criteriaBuilder
+        val q = cb.createQuery(LeituraAndroidEntity::class.java)
+        val root = q.from(LeituraAndroidEntity::class.java)
+        spec.toPredicate(root, q, cb)?.let { q.where(it) }
+        q.orderBy(cb.desc(root.get<Any>("dataHora")), cb.desc(root.get<Any>("id")))
+        return em.createQuery(q).setHint(org.hibernate.jpa.HibernateHints.HINT_READ_ONLY, true).resultList
     }
 
     /** Texto dos filtros aplicados, para o log de quem exportou o quê. */

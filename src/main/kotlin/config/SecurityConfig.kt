@@ -79,12 +79,13 @@ class SecurityConfig {
     fun dispositivosFilterChain(
         http: HttpSecurity,
         @Value("\${rfid.dispositivos.chaves:}") chaves: String,
+        @Value("\${rfid.dispositivos.max-chaves-erradas:20}") maximoChavesErradas: Int,
         sessoesOperador: SessaoOperadorService,
         corteLoginOperador: CorteLoginOperador,
         relogio: Clock
     ): SecurityFilterChain {
 
-        val filtroChave = ChaveDispositivoFilter(chaves)
+        val filtroChave = ChaveDispositivoFilter(chaves, relogio, maximoChavesErradas)
 
         http
             .securityMatcher("/api/android/**")

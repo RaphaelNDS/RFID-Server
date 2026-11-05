@@ -4,7 +4,10 @@ import org.springframework.http.ContentDisposition
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
+import java.io.BufferedWriter
 import java.io.ByteArrayOutputStream
+import java.io.OutputStream
+import java.io.OutputStreamWriter
 import java.text.Normalizer
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -67,21 +70,34 @@ internal fun nomeArquivo(texto: String): String =
  */
 object GeradorPlanilha {
 
-    fun gerar(planilha: Planilha, formato: FormatoPlanilha): ByteArray = when (formato) {
-        FormatoPlanilha.XLSX -> xlsx(planilha)
-        FormatoPlanilha.CSV -> csv(planilha)
+    /**
+     * O arquivo pronto. O XML da planilha é escrito direto no zip (e o CSV direto nos bytes), sem montar o texto
+     * inteiro antes: com 100 mil linhas o XML passa de 70 MB, e antes ele existia como texto, depois como bytes e
+     * só então era compactado (algumas centenas de MB por exportação). Agora fica na memória só o resultado.
+     */
+    fun gerar(planilha: Planilha, formato: FormatoPlanilha): ByteArray {
+        val saida = ByteArrayOutputStream()
+        when (formato) {
+            FormatoPlanilha.XLSX -> xlsx(planilha, saida)
+            FormatoPlanilha.CSV -> csv(planilha, saida)
+        }
+        return saida.toByteArray()
     }
 
     // ================= CSV =================
 
     private val FORMATO_DATA_CSV: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
 
-    fun csv(planilha: Planilha): ByteArray {
-        val texto = StringBuilder("﻿")
-        (listOf(planilha.colunas) + planilha.linhas).forEach { linha ->
-            texto.append(linha.joinToString(";") { campoCsv(it) }).append("\r\n")
+    fun csv(planilha: Planilha): ByteArray = ByteArrayOutputStream().also { csv(planilha, it) }.toByteArray()
+
+    private fun csv(planilha: Planilha, saida: OutputStream) {
+        val escrita = BufferedWriter(OutputStreamWriter(saida, Charsets.UTF_8))
+        escrita.write(0xFEFF) // BOM: o Excel em português só reconhece os acentos com ele
+        (sequenceOf(planilha.colunas) + planilha.linhas.asSequence()).forEach { linha ->
+            escrita.write(linha.joinToString(";") { campoCsv(it) })
+            escrita.write("\r\n")
         }
-        return texto.toString().toByteArray(Charsets.UTF_8)
+        escrita.flush()
     }
 
     private fun campoCsv(valor: Any?): String {
@@ -102,27 +118,30 @@ object GeradorPlanilha {
 
     // ================= XLSX =================
 
-    fun xlsx(planilha: Planilha): ByteArray {
-        val saida = ByteArrayOutputStream()
+    fun xlsx(planilha: Planilha): ByteArray = ByteArrayOutputStream().also { xlsx(planilha, it) }.toByteArray()
+
+    private fun xlsx(planilha: Planilha, saida: OutputStream) {
         ZipOutputStream(saida).use { zip ->
-            fun arquivo(caminho: String, conteudo: String) {
+            // Escreve uma parte do arquivo direto no zip (o Writer não é fechado: fecharia o zip junto)
+            fun arquivo(caminho: String, conteudo: (Appendable) -> Unit) {
                 zip.putNextEntry(ZipEntry(caminho))
-                zip.write(conteudo.toByteArray(Charsets.UTF_8))
+                val escrita = BufferedWriter(OutputStreamWriter(zip, Charsets.UTF_8))
+                conteudo(escrita)
+                escrita.flush()
                 zip.closeEntry()
             }
 
-            arquivo("[Content_Types].xml", CONTENT_TYPES)
-            arquivo("_rels/.rels", RELS)
-            arquivo("xl/workbook.xml", workbook(planilha.nome))
-            arquivo("xl/_rels/workbook.xml.rels", WORKBOOK_RELS)
-            arquivo("xl/styles.xml", ESTILOS)
-            arquivo("xl/worksheets/sheet1.xml", folha(planilha))
+            arquivo("[Content_Types].xml") { it.append(CONTENT_TYPES) }
+            arquivo("_rels/.rels") { it.append(RELS) }
+            arquivo("xl/workbook.xml") { it.append(workbook(planilha.nome)) }
+            arquivo("xl/_rels/workbook.xml.rels") { it.append(WORKBOOK_RELS) }
+            arquivo("xl/styles.xml") { it.append(ESTILOS) }
+            arquivo("xl/worksheets/sheet1.xml") { folha(planilha, it) }
         }
-        return saida.toByteArray()
     }
 
-    private fun folha(planilha: Planilha): String {
-        val xml = StringBuilder(XML_DECL)
+    private fun folha(planilha: Planilha, xml: Appendable) {
+        xml.append(XML_DECL)
         xml.append("""<worksheet xmlns="$NS">""")
         // Cabeçalho congelado: continua visível ao rolar
         xml.append("""<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>""")
@@ -156,7 +175,6 @@ object GeradorPlanilha {
         }
 
         xml.append("</sheetData></worksheet>")
-        return xml.toString()
     }
 
     private fun textoParaLargura(valor: Any?): String = when (valor) {
