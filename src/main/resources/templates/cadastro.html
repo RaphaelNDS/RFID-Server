@@ -21,7 +21,20 @@
   </div>
 
   <form class="card" th:action="@{/admin/cadastro/salvar}" th:object="${cadastro}" method="post">
+    <!-- Veio de Pendentes: depois de salvar volta para lá, na mesma busca e página -->
+    <input type="hidden" name="origem" th:if="${origem != null}" th:value="${origem}">
+    <input type="hidden" name="busca" th:if="${voltarBusca != null}" th:value="${voltarBusca}">
+    <input type="hidden" name="pagina" th:if="${voltarPagina != null}" th:value="${voltarPagina}">
+    <!-- O que vai para o servidor (layout/catalogo-selects): os selects não têm name, porque desabilitados enquanto
+         carregam não seriam enviados. Voltou com erro: começam com a marca e o modelo que estavam escolhidos -->
+    <input type="hidden" id="marcaValor" name="marcaId" th:value="${cadastro.marcaId}">
+    <input type="hidden" id="modeloValor" name="modeloId" th:value="${cadastro.modeloId}">
     <div class="card-body">
+      <div class="alert alert-erro" id="catalogoErro" role="alert" hidden>
+        <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+        <span>Não foi possível carregar as marcas e os modelos do catálogo. Recarregue a página para escolhê-los
+          (ao salvar agora, ficam a marca e o modelo que já estavam escolhidos).</span>
+      </div>
       <div class="form-grid">
 
         <div class="field span-2">
@@ -46,7 +59,7 @@
           <label for="tipoSelect">Tipo de equipamento</label>
           <select id="tipoSelect" name="tipoEquipamentoId">
             <option value="">Selecione o tipo</option>
-            <!-- Voltou com erro do servidor: mantém o tipo, e o script recarrega marca e modelo (data-inicial).
+            <!-- Voltou com erro do servidor: mantém o tipo, e o script recarrega marca e modelo (marcaValor e modeloValor).
                  Antes voltava tudo vazio, e quem corrigia só o patrimônio salvava a etiqueta sem catálogo -->
             <option th:each="t : ${tipos}" th:value="${t.id}" th:text="${t.nome}"
                     th:selected="${cadastro.tipoEquipamentoId != null and t.id == cadastro.tipoEquipamentoId}"></option>
@@ -55,14 +68,14 @@
 
         <div class="field">
           <label for="marcaSelect">Marca</label>
-          <select id="marcaSelect" name="marcaId" disabled th:attr="data-inicial=${cadastro.marcaId}">
+          <select id="marcaSelect" disabled>
             <option value="">Escolha o tipo primeiro</option>
           </select>
         </div>
 
         <div class="field">
           <label for="modeloSelect">Modelo</label>
-          <select id="modeloSelect" name="modeloId" disabled th:attr="data-inicial=${cadastro.modeloId}">
+          <select id="modeloSelect" disabled>
             <option value="">Escolha a marca primeiro</option>
           </select>
         </div>
@@ -79,7 +92,7 @@
     </div>
 
     <div class="card-footer">
-      <a th:href="@{/admin/tags-pendentes}" class="btn btn-ghost">Cancelar</a>
+      <a th:href="@{${linkVoltar}}" class="btn btn-ghost">Cancelar</a>
       <button type="submit" class="btn btn-primary">Salvar etiqueta</button>
     </div>
   </form>

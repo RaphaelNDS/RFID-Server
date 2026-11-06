@@ -73,7 +73,7 @@
           <td data-rotulo="Modelo" th:text="${t.modeloNome} ?: '—'"></td>
           <td class="nowrap" data-rotulo="Nº série" th:text="${t.numeroSerie}"></td>
           <td class="acoes">
-            <a th:href="@{/admin/etiquetas/{id}/editar(id=${t.id})}" class="btn btn-ghost btn-sm"
+            <a th:href="@{/admin/etiquetas/{id}/editar(id=${t.id},busca=${busca != '' ? busca : null},pagina=${paginaAtual > 1 ? paginaAtual : null})}" class="btn btn-ghost btn-sm"
                th:if="${@authService.temPermissao('RFID','UPDATE')}" title="Editar">
               <svg class="ic"><use href="/img/icones.svg#lapis"/></svg><span class="texto-btn">Editar</span>
             </a>

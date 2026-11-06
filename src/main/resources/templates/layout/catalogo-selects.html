@@ -3,13 +3,40 @@
 <!--
   Tipo > marca > modelo encadeados do cadastro e da edição de etiqueta (ids tipoSelect, marcaSelect, modeloSelect).
   Marca e modelo vêm da API do catálogo conforme a escolha anterior. Ao abrir, se já houver tipo escolhido (edição,
-  ou cadastro que voltou com erro), carrega e seleciona a marca e o modelo de data-inicial.
+  ou cadastro que voltou com erro), carrega e seleciona a marca e o modelo atuais.
+
+  O que vai para o servidor são os campos ocultos marcaId e modeloId (ids marcaValor e modeloValor), não os <select>:
+  select desabilitado não é enviado, e enquanto a API carregava (ou se ela falhasse) a edição salvava a etiqueta
+  com marca e modelo vazios. Os ocultos começam com o valor atual e só mudam quando a pessoa escolhe outra coisa.
+  Enquanto marca/modelo carregam, o botão de salvar fica desabilitado; se a API falhar, aparece o aviso
+  catalogoErro e salvar mantém a marca e o modelo atuais.
 -->
 <script th:fragment="script" th:attr="nonce=${cspNonce}">
     (function () {
       const tipoSelect   = document.getElementById("tipoSelect");
       const marcaSelect  = document.getElementById("marcaSelect");
       const modeloSelect = document.getElementById("modeloSelect");
+      const marcaValor   = document.getElementById("marcaValor");
+      const modeloValor  = document.getElementById("modeloValor");
+      const aviso        = document.getElementById("catalogoErro");
+      const form         = tipoSelect.form;
+      const botaoSalvar  = form && form.querySelector("button[type='submit']");
+
+      // Quantas cargas da API estão em andamento: com alguma, o formulário não sai (mandaria marca/modelo errados)
+      let carregando = 0;
+      function atualizarBotao() {
+        if (botaoSalvar) botaoSalvar.disabled = carregando > 0;
+      }
+      if (form) {
+        form.addEventListener("submit", function (e) {
+          if (carregando > 0) e.preventDefault();
+        });
+      }
+
+      function mostrarErro() {
+        if (!aviso) return;
+        aviso.hidden = false;
+      }
 
       // Preenche um <select> com a lista vinda da API (texto via textContent, sem HTML)
       function preencher(select, lista, vazio, nenhum, selecionado) {
@@ -23,10 +50,18 @@
         select.disabled = true;
         select.innerHTML = "";
         select.appendChild(new Option("Carregando…", ""));
+        carregando++;
+        atualizarBotao();
         return fetch(url)
           .then(res => { if (!res.ok) throw new Error(res.status); return res.json(); })
-          .then(lista => preencher(select, lista, vazio, nenhum, selecionado))
-          .catch(() => { select.innerHTML = ""; select.appendChild(new Option("Erro ao carregar", "")); });
+          .then(lista => { preencher(select, lista, vazio, nenhum, selecionado); return true; })
+          .catch(() => {
+            select.innerHTML = "";
+            select.appendChild(new Option("Erro ao carregar", ""));
+            mostrarErro();
+            return false;
+          })
+          .finally(() => { carregando--; atualizarBotao(); });
       }
 
       function resetar(select, texto) {
@@ -36,28 +71,39 @@
       }
 
       function carregarMarcas(selecionada) {
-        return carregar("/api/catalogo/marcas?tipoId=" + tipoSelect.value, marcaSelect, "Selecione a marca", "Nenhuma marca para este tipo", selecionada);
+        return carregar("/api/catalogo/marcas?tipoId=" + encodeURIComponent(tipoSelect.value), marcaSelect,
+          "Selecione a marca", "Nenhuma marca para este tipo", selecionada);
       }
 
       function carregarModelos(selecionado) {
-        return carregar("/api/catalogo/modelos?marcaId=" + marcaSelect.value, modeloSelect, "Selecione o modelo", "Nenhum modelo para esta marca", selecionado);
+        return carregar("/api/catalogo/modelos?marcaId=" + encodeURIComponent(marcaSelect.value), modeloSelect,
+          "Selecione o modelo", "Nenhum modelo para esta marca", selecionado);
       }
 
+      // Só a escolha da pessoa muda o que vai para o servidor
       tipoSelect.addEventListener("change", function () {
+        marcaValor.value = "";
+        modeloValor.value = "";
         resetar(modeloSelect, "Escolha a marca primeiro");
         if (!this.value) return resetar(marcaSelect, "Escolha o tipo primeiro");
         carregarMarcas(null);
       });
 
       marcaSelect.addEventListener("change", function () {
+        marcaValor.value = this.value;
+        modeloValor.value = "";
         if (!this.value) return resetar(modeloSelect, "Escolha a marca primeiro");
         carregarModelos(null);
       });
 
+      modeloSelect.addEventListener("change", function () {
+        modeloValor.value = this.value;
+      });
+
       // Abre com o que já estava escolhido (edição, ou cadastro que voltou com erro do servidor)
       if (tipoSelect.value) {
-        carregarMarcas(marcaSelect.dataset.inicial).then(function () {
-          if (marcaSelect.value) carregarModelos(modeloSelect.dataset.inicial);
+        carregarMarcas(marcaValor.value).then(function (ok) {
+          if (ok && marcaSelect.value) carregarModelos(modeloValor.value);
         });
       }
     })();

@@ -13,6 +13,11 @@
     </div>
   </div>
 
+  <!-- Ex.: "Etiqueta X cadastrada." ao voltar do cadastro aberto por esta lista -->
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+
   <div class="card">
     <div class="card-header">
       <h2>Aguardando cadastro <span class="contagem" th:text="'(' + ${#numbers.formatInteger(total, 1, 'POINT')} + ')'"></span></h2>
@@ -45,7 +50,7 @@
           <td class="acoes">
             <a class="btn btn-secondary btn-sm" aria-label="Cadastrar esta etiqueta"
                th:if="${@authService.temPermissao('RFID','CREATE')}"
-               th:href="@{/admin/cadastro(tag=${t.tag})}">
+               th:href="@{/admin/cadastro(tag=${t.tag},origem='pendentes',busca=${busca != '' ? busca : null},pagina=${paginaAtual > 1 ? paginaAtual : null})}">
               <svg class="ic"><use href="/img/icones.svg#mais"/></svg><span class="texto-btn">Cadastrar</span>
             </a>
           </td>

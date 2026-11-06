@@ -30,18 +30,35 @@ class EtiquetaWebController(
 
     @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
     @GetMapping("/{id}/editar")
-    fun editar(@PathVariable id: Long, model: Model): String {
+    fun editar(
+        @PathVariable id: Long,
+        @RequestParam(required = false) busca: String?,
+        @RequestParam(required = false) pagina: String?,
+        model: Model
+    ): String {
         val tag = rfidService.buscarPorId(id)
         model.addAttribute("cadastro", CadastroRequest(
             tag = tag.tagReal, codigoInterno = tag.codigoInterno, patrimonio = tag.patrimonio, numeroSerie = tag.numeroSerie,
             tipoEquipamentoId = tag.tipoEquipamentoId, marcaId = tag.marcaId, modeloId = tag.modeloId, versao = tag.versao
         ))
-        return formulario(id, model)
+        return formulario(id, RetornoLista.de(busca, pagina), model)
     }
 
+    /**
+     * Salvar volta para a lista na mesma busca e página de onde a pessoa veio (campos busca e pagina do formulário,
+     * validados em [RetornoLista]); antes voltava sempre para a lista limpa, na primeira página.
+     */
     @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
     @PostMapping("/{id}/editar")
-    fun salvar(@PathVariable id: Long, @ModelAttribute("cadastro") cadastro: CadastroRequest, model: Model, redirect: RedirectAttributes): String {
+    fun salvar(
+        @PathVariable id: Long,
+        @ModelAttribute("cadastro") cadastro: CadastroRequest,
+        @RequestParam(required = false) busca: String?,
+        @RequestParam(required = false) pagina: String?,
+        model: Model,
+        redirect: RedirectAttributes
+    ): String {
+        val retorno = RetornoLista.de(busca, pagina)
         return try {
             val mudaram = try {
                 rfidService.editarTag(id, cadastro)
@@ -55,6 +72,7 @@ class EtiquetaWebController(
             redirect.addFlashAttribute("msg",
                 if (mudaram.isEmpty()) "Nada foi alterado na etiqueta ${rfidService.buscarPorId(id).tagReal}."
                 else "Etiqueta alterada (${mudaram.joinToString()}). A mudança ficou no histórico.")
+            retorno.noRedirect(redirect)
             "redirect:/admin/tags-cadastradas"
         } catch (e: IllegalArgumentException) {
             model.addAttribute("erro", e.message)
@@ -62,7 +80,7 @@ class EtiquetaWebController(
             cadastro.tag = atual.tagReal
             // Mudada por outra pessoa: a tela volta com o que foi digitado e a versão atual (salvar de novo grava por cima)
             if (e is EdicaoConcorrenteException) cadastro.versao = atual.versao
-            formulario(id, model)
+            formulario(id, retorno, model)
         }
     }
 
@@ -84,8 +102,10 @@ class EtiquetaWebController(
         return "historico-etiquetas"
     }
 
-    private fun formulario(id: Long, model: Model): String {
+    private fun formulario(id: Long, retorno: RetornoLista, model: Model): String {
         model.addAttribute("etiquetaId", id)
+        retorno.noModelo(model)
+        model.addAttribute("linkVoltar", retorno.link("/admin/tags-cadastradas"))
         model.addAttribute("tipos", catalogoService.listarTipos())
         return "editar-etiqueta"
     }

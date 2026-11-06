@@ -33,7 +33,7 @@
 
         <div class="field">
           <label for="nome">Nome <span class="obrigatorio">*</span></label>
-          <input id="nome" name="nome" th:value="${usuario.nome}" autocomplete="off" required>
+          <input id="nome" name="nome" th:value="${nomeForm}" autocomplete="off" required>
         </div>
 
         <div class="field">
@@ -45,10 +45,10 @@
         <div class="field">
           <label for="perfil">Perfil</label>
           <select name="role" id="perfil">
-            <option value="USER" th:selected="${usuario.role.name() == 'USER'}">Usuário</option>
-            <option value="GESTOR" th:selected="${usuario.role.name() == 'GESTOR'}">Gestor</option>
-            <option value="ADMIN" th:selected="${usuario.role.name() == 'ADMIN'}">Administrador</option>
-            <option value="CUSTOM" th:selected="${usuario.role.name() == 'CUSTOM'}">Personalizado</option>
+            <option value="USER" th:selected="${perfilForm == 'USER'}">Usuário</option>
+            <option value="GESTOR" th:selected="${perfilForm == 'GESTOR'}">Gestor</option>
+            <option value="ADMIN" th:selected="${perfilForm == 'ADMIN'}">Administrador</option>
+            <option value="CUSTOM" th:selected="${perfilForm == 'CUSTOM'}">Personalizado</option>
           </select>
           <span class="field-dica" id="perfilDescricao"></span>
         </div>

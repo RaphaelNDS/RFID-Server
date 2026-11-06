@@ -48,11 +48,17 @@ class AtualizacaoAppWebController(
             redirect.addFlashAttribute("msg",
                 "Versão ${versao.versaoNome} (código ${versao.codigo}) publicada. Os coletores vão oferecer a atualização na tela de login.")
         } catch (e: IllegalArgumentException) {
-            redirect.addFlashAttribute("erro", e.message)
+            recusado(e.message, notas, redirect)
         } catch (e: IllegalStateException) {
-            redirect.addFlashAttribute("erro", e.message)
+            recusado(e.message, notas, redirect)
         }
         return "redirect:/admin/app"
+    }
+
+    /** APK recusado: a tela volta com o erro e com as notas que foram digitadas (antes o campo voltava vazio). */
+    private fun recusado(mensagem: String?, notas: String?, redirect: RedirectAttributes) {
+        redirect.addFlashAttribute("erro", mensagem)
+        notas?.takeIf { it.isNotBlank() }?.let { redirect.addFlashAttribute("notas", it) }
     }
 
     /** Retira uma versão publicada com problema (os coletores voltam a receber a anterior). */

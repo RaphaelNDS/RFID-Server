@@ -91,7 +91,7 @@ administrador; depois disso essa tela não aparece mais.
 | App dos coletores (publicar versão nova do app; retirar a publicada com problema) | `/admin/app` | somente ADMIN |
 | Auditoria (quem fez o quê em usuários, senhas, catálogo, app, exportações e backup) | `/admin/auditoria` | somente ADMIN |
 | Monitoramento (`{"status":"UP"}`, sem login e sem detalhes) | `/actuator/health` | público |
-| Status do servidor (+ backup manual para ADMIN) | `/status` | logado |
+| Status do servidor (impressão digital do certificado, backups e backup manual) | `/status` | somente ADMIN |
 | Meu perfil, trocar senha e email | `/perfil` | logado |
 | Esqueceu a senha? (link na tela de login) | `/esqueci-senha` | público |
 
@@ -295,7 +295,7 @@ sessão trazem o mesmo `motivo`.
 
 | Proteção | Como funciona |
 |---|---|
-| **HTTPS** | Porta 8443 com certificado próprio gerado na primeira execução (10 anos). A porta HTTP 8082 só redireciona as telas e recusa a API com 426. Os coletores fixam a **impressão digital** do certificado, mostrada em `/status`. |
+| **HTTPS** | Porta 8443 com certificado próprio gerado na primeira execução (10 anos). A porta HTTP 8082 só redireciona as telas e recusa a API com 426. Os coletores fixam a **impressão digital** do certificado, mostrada no log a cada inicialização e em `/status` (só ADMIN). |
 | **Configuração inicial** | `/setup` só funciona com o banco vazio; depois ninguém cria outro administrador por ali. |
 | **Senhas** | Mínimo 8 caracteres, letras e números, sem o nome/email, sem senhas comuns, até 72 bytes. Quem entra com senha antiga fora da regra só acessa a troca de senha até criar uma nova (na web; o coletor só avisa). Senhas guardadas com BCrypt. |
 | **Tentativas de login** | Em 15 min: 5 erros no mesmo email vindos da mesma origem bloqueiam aquele login só para essa origem (quem erra a senha do ADMIN de outra máquina não tranca o ADMIN); 20 erros no mesmo email somando as origens, ou 20 na mesma origem em qualquer conta, bloqueiam por 15 min. A origem é o IP na web e o **coletor + IP** no coletor: vários coletores atrás do mesmo IP (NAT) não se bloqueiam por causa de um operador errando a senha. Durante o bloqueio nem a senha certa entra. Email inexistente recebe a mesma resposta que senha errada. |
@@ -387,6 +387,10 @@ sessão trazem o mesmo `motivo`.
   > Copie as duas pastas de backup para **outro disco ou pasta de rede**: backup no mesmo disco não protege contra
   > falha do disco. O zip do certificado tem a chave privada e a senha dela, e o dump tem os dados: acesso só para
   > quem administra o servidor. Senha informada em `RFID_HTTPS_SENHA` não vai para o backup: guarde-a à parte.
+  > **Defina a senha do backup:** só com `RFID_BACKUP_SENHA` (ou `rfid.backup.senha` no
+  > `config\application.properties`) o backup sai cifrado; sem ela o `.zip` sai aberto, com a chave privada, e o log
+  > avisa ao subir. **Guarde essa senha fora desta máquina** (cofre de senhas, papel guardado): se o disco morrer,
+  > sem ela o backup não restaura e os coletores terão de confirmar um certificado novo.
   > Com `RFID_BACKUP_SENHA` definida, o backup sai cifrado (`rfid-certificado-<data>.zip.cifrado`). Para restaurar,
   > decifre antes com `java -jar servidor\rfid-server.jar --decifrar-backup <arquivo>.zip.cifrado` (pede a senha) e
   > extraia o `.zip` gerado em `./data`.
@@ -414,7 +418,7 @@ Requisitos: **Java 17** (para rodar), **Docker Desktop** (para o banco) e o Grad
 Na primeira execução o servidor:
 
 1. cria as tabelas no PostgreSQL (migrações do Flyway);
-2. gera o certificado HTTPS em `./data/rfid-https.p12` (veja a impressão digital no log ou em `/status`);
+2. gera o certificado HTTPS em `./data/rfid-https.p12` (veja a impressão digital no log ou em `/status`, só ADMIN);
 3. faz o primeiro backup do certificado.
 
 Depois:
@@ -448,8 +452,9 @@ dos operadores.
 
 **1. Pegue a impressão digital SHA-256 no servidor** (32 pares, ex.: `63:0F:85:…:92:36`):
 
-- na tela **Status** (`/status`, logado), no campo da impressão digital do certificado HTTPS; ou
-- no **log**, que mostra a digital a cada inicialização. Na pasta de onde o servidor roda:
+- na tela **Status** (`/status`, **só ADMIN**), no campo da impressão digital do certificado HTTPS; ou
+- no **log**, que mostra a digital a cada inicialização (o caminho para quem não é ADMIN). Na pasta de onde o
+  servidor roda:
   ```powershell
   Select-String "SHA-256 do certificado HTTPS" .\data\logs\rfid-server.log | Select-Object -Last 1
   ```
@@ -477,7 +482,7 @@ RFID_Servidor\
 ├── config\application.properties ← copie de scripts\windows\application.properties.exemplo e preencha
 ├── java\                         ← JDK 17 do servidor (opcional; sem ela o .bat usa JAVA_RESERVA)
 ├── docker\                       ← docker-compose.yml e .env do banco; backups\ com os dumps do PostgreSQL
-├── servico\                      ← WinSW e rfid-servidor.xml, se for instalar como serviço do Windows
+├── servico\                      ← opcional, não usado: WinSW e rfid-servidor.xml, só para instalar como serviço do Windows
 └── data\                         ← criada na primeira execução (certificado HTTPS, logs, APKs, backups do certificado)
 ```
 
@@ -491,12 +496,41 @@ RFID_Servidor\
    conectam (o `.bat` avisa quando não encontra a regra e mostra o comando que libera).
 3. Dê dois cliques no `.bat`. A janela fica aberta com o servidor no ar; para parar, **Ctrl+C** (o servidor fecha o
    banco antes de sair). O `.bat` não inicia se a porta 8443 já estiver em uso (ex.: o servidor do IntelliJ ainda
-   rodando), para os dois não disputarem a porta e o banco.
+   rodando), para os dois não disputarem a porta e o banco. Se o banco (porta 5433) não estiver no ar, ele desiste
+   na hora; com o parâmetro **`/aguardar`** (`iniciar-servidor.bat /aguardar`), tenta de novo a cada 10 s por até
+   5 min antes de desistir (útil logo depois de ligar o computador, com o Docker Desktop ainda subindo).
+
+> **Não clique dentro da janela do `.bat`.** Com o **"Modo de Edição Rápida"** do console do Windows ligado (o
+> padrão), um clique na janela começa a selecionar texto e **pausa o servidor**: as telas e os coletores ficam sem
+> resposta até alguém apertar **Esc** (ou clicar com o botão direito) na janela. Prefira abrir o `.bat` pelo
+> **Windows Terminal** (Windows 11: já é o padrão), ou desligue a opção: botão direito na barra de título da
+> janela, **Propriedades**, desmarque **Modo de Edição Rápida**. Servidor "travado" sem nada no log? Confira se o
+> título da janela começa com "Selecionar".
 
 **Versão nova do servidor:** pare com Ctrl+C, troque `servidor\rfid-server.jar` e inicie de novo. Os dados e o
 certificado ficam em `data\` e não mudam.
 
-#### Serviço do Windows
+#### Depois de reiniciar o Windows (sem serviço)
+
+Nesta instalação o servidor roda pela janela do `iniciar-servidor.bat`, **sem serviço do Windows**. Para ele voltar
+ao ar depois de uma reinicialização (atualização do Windows, falta de energia):
+
+1. **Docker Desktop inicia com o Windows:** em *Settings > General*, deixe ligado *Start Docker Desktop when you
+   sign in to your computer*. Os contêineres do banco e do backup voltam sozinhos com ele (`restart: unless-stopped`).
+2. **Suspensão desligada na tomada:** em *Configurações > Sistema > Energia* (ou *Opções de energia*), "Quando
+   conectado, colocar o dispositivo em suspensão após": **Nunca**. Desligar só a tela pode. Com o computador
+   suspenso, o servidor para e os coletores ficam sem conexão.
+3. **Depois de reiniciar:** entre no Windows e abra o `iniciar-servidor.bat` com `/aguardar` (ele espera o Docker
+   Desktop terminar de subir o banco). A janela precisa ficar aberta (minimizada serve).
+   - **Opção:** para abrir sozinho quando alguém entra no Windows, crie um atalho na pasta **Inicializar**
+     (`Win+R` > `shell:startup`) com o destino `"C:\RFID_Servidor\iniciar-servidor.bat" /aguardar` e *Iniciar em*
+     `C:\RFID_Servidor`. Ainda depende de alguém entrar no Windows (o Docker Desktop também).
+4. Confira no log (ou na janela) a linha `Servidor RFID versão ... no ar na porta 8443`.
+
+#### Serviço do Windows (opcional, não usado nesta instalação)
+
+> A pasta `scripts\windows\servico\` (WinSW) continua no repositório como opção, mas **não é usada**: a decisão foi
+> rodar pelo `.bat` (acima). As instruções ficam aqui para referência, caso isso mude.
 
 Com o servidor instalado como serviço ("Servidor RFID"), ele sobe sozinho ao ligar o computador, não depende de
 uma janela aberta e volta sozinho se cair (nova tentativa a cada 30 s, o que também cobre o Docker ainda subindo
@@ -568,7 +602,7 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_LOGIN_BLOQUEIO_MINUTOS` | `15` | Tempo de bloqueio |
 | `RFID_BACKUP_HABILITADO` | `true` | Backup automático do certificado HTTPS (o do banco é no `docker/.env`) |
 | `RFID_CERT_BACKUP_PASTA` | `./data/backups` | Pasta dos backups do certificado (`RFID_BACKUP_PASTA` é a dos dumps do banco, no `docker\.env`) |
-| `RFID_BACKUP_SENHA` | (vazio) | Senha que **cifra** o backup do certificado (`.zip.cifrado`). Guarde-a fora desta máquina: sem ela o backup não restaura. Vazio: o `.zip` sai aberto, com a chave privada |
+| `RFID_BACKUP_SENHA` | (vazio) | Senha que **cifra** o backup do certificado (`.zip.cifrado`); no `config\application.properties`, `rfid.backup.senha`. Guarde-a fora desta máquina: sem ela o backup não restaura. Vazio: o `.zip` sai aberto, com a chave privada |
 | `RFID_BACKUP_CRON` | `0 0 2 * * *` | Horário (todo dia às 02:00) |
 | `RFID_BACKUP_MANTER` | `14` | Quantos backups do certificado guardar |
 | `RFID_LOG_ARQUIVO` | `./data/logs/rfid-server.log` | Arquivo de log (vazio = só console); um por dia, guarda 30 dias |
@@ -628,7 +662,7 @@ Tudo em português. Sai no console e no arquivo `./data/logs/rfid-server.log` (m
 um arquivo por dia (ou a cada 10 MB), guardando os últimos 30 dias. Exemplos do que aparece:
 
 ```
-Servidor RFID versão 1.4.2 no ar na porta 8443 (iniciado em 13/10/2026 11:17, pronto em 9,8 s)
+Servidor RFID versão 1.4.3 no ar na porta 8443 (iniciado em 13/10/2026 11:17, pronto em 9,8 s)
 Banco de dados: PostgreSQL (localhost:5433/rfid)
 Backup do certificado HTTPS concluído (agendado): rfid-certificado-2026-10-13_020000.zip (rfid-https.p12, rfid-https.p12.senha)
 Login de 'ana@empresa.com' bloqueado por 15 min após 5 tentativas com senha errada (última origem: coletor-01@10.0.0.5)
@@ -648,11 +682,12 @@ detalhe técnico completo.
 | Coletor recebe 401 em tudo | Chave não configurada ou diferente da do app (`RFID_CHAVES_DISPOSITIVOS`, reiniciar o servidor). |
 | Coletor recebe 426 | O app está usando `http://…:8082`; troque para `https://…:8443`. |
 | Coletor recebe 410 / log "Rota antiga dos coletores chamada" | O coletor está com um app antigo (rotas /api/tags ou /api/rfid): atualize o app. O log mostra o IP do coletor. |
-| Coletor diz que o certificado não confere | A impressão digital no app difere da de `/status` (certificado foi trocado ou restaurado de outro servidor). Confirme de novo em cada coletor, conferindo a digital nova: ver [Cadastrar o certificado nos coletores](#cadastrar-o-certificado-nos-coletores). |
+| Coletor diz que o certificado não confere | A impressão digital no app difere da do servidor (log ou `/status`, só ADMIN) (certificado foi trocado ou restaurado de outro servidor). Confirme de novo em cada coletor, conferindo a digital nova: ver [Cadastrar o certificado nos coletores](#cadastrar-o-certificado-nos-coletores). |
 | "Muitas tentativas sem sucesso" | Bloqueio de login: espere o tempo indicado (ou reinicie o servidor, que zera os contadores). |
 | Etiqueta lida não aparece nas leituras | Cadastro incompleto (falta tipo, marca, modelo, patrimônio ou nº de série). |
 | Servidor não sobe: certificado não abre | O `.p12` ou o `.senha` foi alterado/perdido. Restaure os dois do backup — não apague, senão um novo certificado é gerado e os coletores precisam ser pareados de novo. |
 | Não consigo excluir um modelo/marca/tipo | Ele está em uso por etiquetas (a mensagem diz quantas). |
-| Servidor não sobe: `Connection to localhost:5433 refused` | O banco não está no ar: abra o Docker Desktop e, na pasta `docker`, `docker compose up -d` (`docker compose ps` mostra a situação). |
+| Servidor não sobe: `Connection to localhost:5433 refused` | O banco não está no ar: abra o Docker Desktop e, na pasta `docker`, `docker compose up -d` (`docker compose ps` mostra a situação). Logo depois de ligar o computador, use `iniciar-servidor.bat /aguardar`. |
+| Telas e coletores sem resposta, sem erro no log, e a janela do `.bat` com título "Selecionar…" | Alguém clicou na janela com o "Modo de Edição Rápida" ligado: o console pausou o servidor. Aperte **Esc** na janela; para não repetir, use o Windows Terminal ou desligue a Edição Rápida (ver [Rodar no Windows fora do IntelliJ](#rodar-no-windows-fora-do-intellij)). |
 | Servidor não sobe: `password authentication failed` | A senha em `config\application.properties` (ou `RFID_DB_PASSWORD`) é diferente da do `docker/.env`. |
 | Certificado sumiu depois de mover o servidor de pasta | O certificado é relativo à pasta de execução (`./data`): use a pasta original ou defina `RFID_HTTPS_KEYSTORE`. |

@@ -15,7 +15,8 @@
         <span th:text="'iniciado em ' + ${#temporals.format(inventario.iniciadoEm, 'dd/MM/yyyy HH:mm')}"></span>
       </p>
     </div>
-    <a th:href="@{/admin/inventarios}" class="btn btn-ghost">
+    <!-- Volta para a lista no mesmo local e página de onde veio (linkVoltar, montado e validado no controller) -->
+    <a th:href="@{${linkVoltar}}" class="btn btn-ghost">
       <svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Voltar
     </a>
   </div>

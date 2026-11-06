@@ -32,6 +32,13 @@
     <button type="button" class="btn btn-secondary btn-sm" data-acao="recarregar">Atualizar</button>
   </div>
 
+  <!-- A conexão em tempo real (SSE) caiu de vez: leituras novas não serão mais avisadas até recarregar -->
+  <div class="alert alert-aviso" id="avisoTempoRealInterrompido" role="alert" hidden>
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+    <span>Atualização em tempo real interrompida — recarregue a página.</span>
+    <button type="button" class="btn btn-secondary btn-sm" data-acao="recarregar">Recarregar</button>
+  </div>
+
   <div class="alert alert-aviso" th:if="${aviso}" role="alert">
     <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${aviso}"></span>
   </div>
@@ -157,8 +164,14 @@
     // Leituras novas chegando: mostra o aviso com o botão Atualizar. Antes a página recarregava sozinha a cada
     // 5 s durante um inventário (cada aba refazia todas as consultas, e o filtro sendo digitado se perdia)
     const avisoNovas = document.getElementById("avisoLeiturasNovas");
+    const avisoInterrompida = document.getElementById("avisoTempoRealInterrompido");
     const evt = new EventSource('/admin/sse');
     evt.onmessage = () => { avisoNovas.hidden = false; };
+    // Queda passageira: o navegador reconecta sozinho (CONNECTING). CLOSED é definitivo (sessão encerrada, servidor
+    // reiniciado com outra resposta, sem permissão): antes a tela ficava parada sem avisar
+    evt.onerror = () => {
+      if (evt.readyState === EventSource.CLOSED) avisoInterrompida.hidden = false;
+    };
   </script>
 
 </section>

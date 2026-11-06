@@ -183,7 +183,9 @@
     }
 
     function carregarTipos(){
+        // Falha da API (sessão caída, sem permissão, servidor fora): antes o campo ficava em "Carregando…" sem aviso
         fetch('/api/catalogo/tipos')
+        .then(verificarResposta)
         .then(r => r.json())
         .then(data => {
             const sel = document.getElementById("selectTipo");
@@ -191,6 +193,11 @@
             sel.innerHTML = "";
             sel.appendChild(new Option("Selecione o tipo", ""));
             data.forEach(t => sel.appendChild(new Option(t.nome, t.id)));
+        })
+        .catch(e => {
+            const sel = document.getElementById("selectTipo");
+            if(sel){ sel.innerHTML = ""; sel.appendChild(new Option("Erro ao carregar", "")); }
+            erroDialog("Não foi possível carregar os tipos de equipamento (" + (e.message || "erro de rede") + "). Feche a janela e tente de novo.");
         });
     }
 
@@ -204,12 +211,22 @@
             return;
         }
 
-        fetch(`/api/catalogo/marcas?tipoId=${tipoId}`)
+        sel.appendChild(new Option("Carregando…", ""));
+        sel.disabled = true;
+        fetch(`/api/catalogo/marcas?tipoId=${encodeURIComponent(tipoId)}`)
+        .then(verificarResposta)
         .then(r=>r.json())
         .then(data=>{
+            sel.innerHTML = "";
             sel.appendChild(new Option(data.length ? "Selecione a marca" : "Nenhuma marca para este tipo", ""));
             data.forEach(m => sel.appendChild(new Option(m.nome, m.id)));
             sel.disabled = data.length === 0;
+        })
+        .catch(e=>{
+            sel.innerHTML = "";
+            sel.appendChild(new Option("Erro ao carregar", ""));
+            sel.disabled = true;
+            erroDialog("Não foi possível carregar as marcas deste tipo (" + (e.message || "erro de rede") + "). Escolha o tipo de novo para tentar outra vez.");
         });
     }
 
