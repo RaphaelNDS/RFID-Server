@@ -40,11 +40,13 @@ data class EsperadoLocal(
 )
 
 /**
- * Lista do que é esperado num local = as etiquetas CADASTRADAS encontradas no último inventário FINALIZADO
- * daquele local (decisão do usuário: não há campo de local no cadastro da etiqueta).
+ * Lista do que é esperado num local = as etiquetas encontradas no último inventário FINALIZADO daquele local que
+ * estão CADASTRADAS AGORA (decisão do usuário: não há campo de local no cadastro da etiqueta).
  *
  * Regras:
- *  - etiquetas não cadastradas no inventário de referência não entram (não há o que localizar);
+ *  - vale o cadastro de agora, e não a marca "cadastrada" do item do inventário: etiqueta que ainda não tinha
+ *    cadastro no inventário de referência e foi cadastrada depois entra; a que segue sem cadastro não entra
+ *    (não há o que localizar);
  *  - etiqueta que foi EXCLUÍDA do cadastro depois não entra (o patrimônio deixou de existir);
  *  - os dados (patrimônio, tipo, marca, modelo) são os do cadastro de AGORA, e não a cópia do inventário,
  *    para o coletor localizar pelo patrimônio atual. Cadastro incompleto continua entrando (o objeto existe),
@@ -114,8 +116,14 @@ class EsperadoInventarioService(
 
     /** Lista do esperado a partir do inventário de referência. Devolve também quantas foram excluídas do cadastro depois. */
     private fun montarEsperado(nomeLocal: String, referencia: InventarioEntity): Pair<EsperadoLocal, Int> {
-        val encontradas = itens.findByInventarioIdOrderByLidoEmAsc(referencia.id).filter { it.cadastrada }.map { it.tag }
+        // Todas as lidas na referência: o findAllByTagRealIn só devolve as que têm cadastro AGORA (inclusive as
+        // cadastradas depois do inventário); as que seguem sem cadastro ficam de fora sozinhas
+        val lidasNaReferencia = itens.findByInventarioIdOrderByLidoEmAsc(referencia.id)
+        val encontradas = lidasNaReferencia.map { it.tag }.distinct()
         val cadastro = if (encontradas.isEmpty()) emptyList() else tags.findAllByTagRealIn(encontradas)
+        val comCadastroAgora = cadastro.map { it.tagReal }.toSet()
+        // Excluídas = estavam cadastradas no inventário de referência e não estão mais
+        val excluidas = lidasNaReferencia.count { it.cadastrada && it.tag !in comCadastroAgora }
 
         val nomesTipo = tipos.findAllById(cadastro.mapNotNull { it.tipoEquipamentoId }.toSet()).associate { it.id to it.nome }
         val nomesMarca = marcas.findAllById(cadastro.mapNotNull { it.marcaId }.toSet()).associate { it.id to it.nome }
@@ -142,7 +150,7 @@ class EsperadoInventarioService(
             operador = referencia.operador,
             itens = esperados
         )
-        return esperado to (encontradas.size - esperados.size)
+        return esperado to excluidas
     }
 }
 

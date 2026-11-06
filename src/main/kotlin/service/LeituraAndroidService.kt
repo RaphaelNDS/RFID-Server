@@ -124,10 +124,16 @@ class LeituraAndroidService(
         )
 
         // A conferência acima não pega duas requisições ao mesmo tempo (o coletor reenvia o lote quando a resposta
-        // demora): o índice único (tag, lido_em_coletor) da V16 recusa a segunda gravação, e ela conta como repetida
+        // demora): o índice único (tag, lido_em_coletor) da V16 recusa a segunda gravação, e ela conta como repetida.
+        // Só a violação de índice único: outro erro de integridade (coluna obrigatória, texto grande demais...) não é
+        // reenvio e sobe, para o lote marcar ERRO em vez de sumir com a leitura como "repetida"
         try {
             leituraRepo.saveAndFlush(leitura)
         } catch (e: DataIntegrityViolationException) {
+            if (!org.example.util.violacaoDeUnicidade(e)) {
+                log.error("Leitura da tag {} lida em {} recusada pelo banco por erro de integridade (não é reenvio)", tagReal, dataHora, e)
+                throw e
+            }
             log.debug("Leitura repetida recusada pelo banco: tag {} lida em {} (envio simultâneo)", tagReal, dataHora)
             return ResultadoLeitura.REPETIDA
         }

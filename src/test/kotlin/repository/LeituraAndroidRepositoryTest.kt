@@ -63,10 +63,27 @@ class LeituraAndroidRepositoryTest {
     @Test
     fun `exclusao da retencao apaga so o que for anterior ao limite`() {
         // limite = início do dia: apaga a leitura de 23:59 do dia anterior, mantém as do dia em diante
-        val apagadas = repo.apagarAnterioresA(dia.atStartOfDay())
+        val apagadas = repo.apagarLoteAnterioresA(dia.atStartOfDay(), 1000)
 
         assertThat(apagadas).isEqualTo(1)
         assertThat(repo.count()).isEqualTo(4)
+    }
+
+    @Test
+    fun `exclusao da retencao apaga no maximo um lote por vez`() {
+        repeat(3) { leitura(dia.minusDays(10).atTime(10, it)) } // 4 antigas no total
+
+        assertThat(repo.apagarLoteAnterioresA(dia.atStartOfDay(), 3)).isEqualTo(3)
+        assertThat(repo.apagarLoteAnterioresA(dia.atStartOfDay(), 3)).isEqualTo(1)
+        assertThat(repo.apagarLoteAnterioresA(dia.atStartOfDay(), 3)).isZero()
+        assertThat(repo.count()).isEqualTo(4)
+    }
+
+    @Test
+    fun `checagem barata da subida roda no PostgreSQL`() {
+        // A estimativa depende do autovacuum (pode ser -1 numa tabela nunca analisada): só precisa responder
+        assertThat(repo.estimativaDoTotal()).isNotNull()
+        assertThat(repo.existeAlguma()).isTrue()
     }
 
     @Test

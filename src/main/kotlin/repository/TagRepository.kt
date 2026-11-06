@@ -45,8 +45,9 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
 
     /**
      * Relatório "não vistas" e exportação do cadastro: [tag_real, última leitura, hora e local do último inventário]
-     * de cada etiqueta. Uma consulta por etiqueta usando os índices (tag, data_hora) das leituras e (tag, lido_em)
-     * dos itens de inventário (V16): antes agrupava a tabela de leituras inteira (milhões de linhas) a cada página.
+     * de cada etiqueta. Uma consulta por etiqueta usando os índices (tag, data_hora) das leituras (V20, não único: o
+     * da V10 virou parcial na V19 e não serve aqui) e (tag, lido_em) dos itens de inventário (V16): antes agrupava a
+     * tabela de leituras inteira (milhões de linhas) a cada página.
      */
     @Query(
         value = """select t.tag_real,

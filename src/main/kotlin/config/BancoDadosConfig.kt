@@ -36,13 +36,29 @@ class BancoDadosConfig(
 
         val usuarios = userRepository.count()
         log.info(
-            "Dados carregados: {} usuário(s), {} etiqueta(s) cadastrada(s), {} leitura(s) registrada(s)",
-            usuarios, tagRepository.count(), leituraRepository.count()
+            "Dados carregados: {} usuário(s), {} etiqueta(s) cadastrada(s), {}",
+            usuarios, tagRepository.count(), leiturasRegistradas()
         )
 
         if (usuarios == 0L) {
             log.warn("Nenhum usuário cadastrado: acesse /setup para criar o administrador inicial")
         }
+    }
+
+    /**
+     * Quantas leituras há, sem count(): a tabela de leituras chega a milhões de linhas e o count() a varria inteira
+     * a cada subida só para esta linha de log. Usa a estimativa do PostgreSQL e, sem ela, só confere se há alguma.
+     */
+    fun leiturasRegistradas(): String = try {
+        val estimativa = leituraRepository.estimativaDoTotal() ?: -1L
+        when {
+            estimativa > 0 -> "cerca de $estimativa leitura(s) registrada(s) (estimativa do PostgreSQL)"
+            leituraRepository.existeAlguma() -> "leituras registradas (total ainda não estimado pelo PostgreSQL)"
+            else -> "nenhuma leitura registrada"
+        }
+    } catch (e: Exception) {
+        log.warn("Não foi possível estimar o total de leituras para o log de inicialização: {}", e.message)
+        "total de leituras desconhecido"
     }
 }
 

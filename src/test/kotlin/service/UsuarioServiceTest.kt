@@ -55,6 +55,9 @@ class UsuarioServiceTest {
     private fun req(role: Role, telas: List<String> = emptyList(), permissoes: List<String> = emptyList(), email: String = "novo@x.com") =
         CadastroUsuarioRequest(nome = "Novo", email = email, senha = "Kx9mPq2v", role = role, telas = telas, permissoes = permissoes)
 
+    /** [n] ADMINs ativos, como o UserRepository.travarAtivosDoPerfil devolve. */
+    private fun admins(n: Int) = (1..n).map { UsuarioEntity(id = 100L + it, nome = "Admin $it", email = "admin$it@x.com", senha = "h", role = Role.ADMIN) }
+
     private fun permissoesDoUltimoSalvo() = salvos.last().permissoes.map { "${it.modulo}_${it.acao}" }.toSet()
 
     @Nested
@@ -305,11 +308,26 @@ class UsuarioServiceTest {
         @Test
         fun `o ultimo administrador ativo nao pode ser desativado`() {
             usuarioExistente().role = Role.ADMIN
-            every { repo.countByRoleAndAtivoTrue(Role.ADMIN) } returns 1
+            every { repo.travarAtivosDoPerfil(Role.ADMIN) } returns admins(1)
 
             assertThatThrownBy { service.desativar(7, quemDesativa = 1) }
                 .isInstanceOf(IllegalStateException::class.java)
                 .hasMessageContaining("último administrador ativo")
+        }
+
+        @Test
+        fun `desativar admin conta os admins ativos com trava antes de ler o usuario`() {
+            val ana = usuarioExistente().apply { role = Role.ADMIN }
+            every { repo.travarAtivosDoPerfil(Role.ADMIN) } returns admins(2)
+
+            service.desativar(7, quemDesativa = 1)
+
+            assertThat(ana.ativo).isFalse()
+            // A trava (select ... for update) vem antes da leitura: a segunda operação simultânea espera e conta de novo
+            io.mockk.verifyOrder {
+                repo.travarAtivosDoPerfil(Role.ADMIN)
+                repo.findById(7)
+            }
         }
 
         @Test
@@ -340,7 +358,7 @@ class UsuarioServiceTest {
         @Test
         fun `o ultimo administrador ativo nao perde o perfil de administrador`() {
             usuarioExistente().role = Role.ADMIN
-            every { repo.countByRoleAndAtivoTrue(Role.ADMIN) } returns 1
+            every { repo.travarAtivosDoPerfil(Role.ADMIN) } returns admins(1)
 
             assertThatThrownBy { service.editar(7, "Ana", Role.USER, null, null, quemEdita = 1) }
                 .hasMessageContaining("último administrador ativo")
@@ -367,7 +385,7 @@ class UsuarioServiceTest {
         @Test
         fun `ninguem tira o proprio acesso de administrador`() {
             usuarioExistente().role = Role.ADMIN
-            every { repo.countByRoleAndAtivoTrue(Role.ADMIN) } returns 2
+            every { repo.travarAtivosDoPerfil(Role.ADMIN) } returns admins(2)
 
             val logger = LoggerFactory.getLogger(UsuarioService::class.java) as Logger
             val avisos = ListAppender<ILoggingEvent>().also { it.start(); logger.addAppender(it) }

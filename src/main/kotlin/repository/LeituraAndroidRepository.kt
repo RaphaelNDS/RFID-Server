@@ -60,11 +60,31 @@ interface LeituraAndroidRepository :
     @Query("select l.tag, l.lidoEmColetor from LeituraAndroidEntity l where l.tag in :tags and l.lidoEmColetor >= :inicio")
     fun gravadasDesde(@Param("tags") tags: Collection<String>, @Param("inicio") inicio: LocalDateTime): List<Array<Any>>
 
-    // Retenção: um único DELETE em lote, sem carregar as leituras na memória. A transação fica aqui: a tarefa
-    // agendada chamava o @Transactional do serviço de dentro da própria classe (sem passar pelo proxy) e o DELETE
-    // falhava com TransactionRequiredException toda vez que a retenção estava ligada
+    /**
+     * Estimativa do total de leituras pelas estatísticas do PostgreSQL (pg_class.reltuples), sem varrer a tabela:
+     * o count() lia os milhões de linhas a cada subida só para uma linha de log. -1 (ou null) = ainda sem
+     * estatística (tabela nunca analisada pelo autovacuum).
+     */
+    @Query(value = "select cast(reltuples as bigint) from pg_class where oid = to_regclass('leituras_android')", nativeQuery = true)
+    fun estimativaDoTotal(): Long?
+
+    /** Há pelo menos uma leitura? Para quando ainda não há estimativa (para no primeiro registro, sem varrer a tabela). */
+    @Query(value = "select exists(select 1 from leituras_android)", nativeQuery = true)
+    fun existeAlguma(): Boolean
+
+    /**
+     * Retenção: apaga UM LOTE de até [lote] leituras anteriores a [limite], sem carregá-las na memória, e devolve
+     * quantas apagou. Quem chama repete até voltar menos que [lote] (RetencaoLeiturasService). Um DELETE só de
+     * milhões de linhas segurava a tabela e o WAL numa transação enorme; em lotes cada transação é curta e as
+     * gravações dos coletores seguem entre um lote e outro. A transação fica aqui, uma por lote (a tarefa agendada
+     * chama de dentro da própria classe do serviço, sem passar pelo proxy dele). Usa o índice de data_hora da V1.
+     */
     @org.springframework.transaction.annotation.Transactional
     @Modifying
-    @Query("delete from LeituraAndroidEntity l where l.dataHora < :limite")
-    fun apagarAnterioresA(@Param("limite") limite: LocalDateTime): Int
+    @Query(
+        value = """delete from leituras_android where id in (
+                       select id from leituras_android where data_hora < :limite limit :lote)""",
+        nativeQuery = true
+    )
+    fun apagarLoteAnterioresA(@Param("limite") limite: LocalDateTime, @Param("lote") lote: Int): Int
 }

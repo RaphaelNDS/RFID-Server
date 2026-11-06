@@ -75,7 +75,27 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("19") // V19 = prazo da senha temporária e leitura única sem hora do coletor
+        assertThat(resultado.targetSchemaVersion).isEqualTo("20") // V20 = índice (tag, data_hora) para a última leitura de cada etiqueta
+    }
+
+    @Test
+    fun `V20 cria o indice nao unico tag data_hora das leituras`() {
+        flyway().migrate()
+
+        val definicao = conectar().use { c ->
+            c.prepareStatement("select indexdef from pg_indexes where schemaname = ? and indexname = 'idx_leituras_android_tag_data_hora'").use { ps ->
+                ps.setString(1, schema)
+                ps.executeQuery().use { rs -> if (rs.next()) rs.getString(1) else null }
+            }
+        }
+        assertThat(definicao).isNotNull()
+        assertThat(definicao!!.lowercase()).contains("(tag, data_hora)").doesNotContain("unique").doesNotContain("where")
+
+        // Não único: a mesma (tag, data_hora) com horas do coletor diferentes continua aceita
+        sql(
+            "insert into leituras_android (tag, data_hora, lido_em_coletor) values ('E7', '2026-11-06 10:00:00', '2026-11-06 10:30:00.100')",
+            "insert into leituras_android (tag, data_hora, lido_em_coletor) values ('E7', '2026-11-06 10:00:00', '2026-11-06 10:30:00.200')"
+        )
     }
 
     @Test

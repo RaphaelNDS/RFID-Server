@@ -117,7 +117,9 @@ class OperadorFilter(
         val caminho = request.requestURI.removePrefix(request.contextPath)
         val endpointDaFilaAntiga = when (request.method) {
             "POST" -> caminho == "/api/android/leitura" || caminho == "/api/android/naocadastrada"
-            "GET" -> caminho.startsWith("/api/android/tags/") && !caminho.startsWith("/api/android/tags/patrimonio/")
+            // Localizar por patrimônio (rota antiga /patrimonio/{p} e a nova /patrimonio?valor=) sempre exige operador
+            "GET" -> caminho.startsWith("/api/android/tags/") && caminho != "/api/android/tags/patrimonio" &&
+                !caminho.startsWith("/api/android/tags/patrimonio/")
             else -> false
         }
 

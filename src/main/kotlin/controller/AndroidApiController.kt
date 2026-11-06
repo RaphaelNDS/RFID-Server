@@ -46,10 +46,26 @@ class AndroidApiController(
         return ResponseEntity.ok(tag)
     }
 
+    /** Rota antiga (apps até a 1.4.2): patrimônio com "/" (ex.: 0123/2019) não chega inteiro no caminho. */
     @PreAuthorize("@authService.temPermissao('LEITURA','READ')")
     @GetMapping("/tags/patrimonio/{patrimonio}")
-    fun buscarPorPatrimonio(@PathVariable patrimonio: String, auth: Authentication): ResponseEntity<Map<String, String>> {
-        val encontradas = tagRepository.findAllByPatrimonio(patrimonio.trim())
+    fun buscarPorPatrimonio(@PathVariable patrimonio: String, auth: Authentication): ResponseEntity<Map<String, String>> =
+        localizarPorPatrimonio(patrimonio, auth)
+
+    /** Localização pelo patrimônio no parâmetro (?valor=0123/2019): aceita qualquer caractere, inclusive "/". */
+    @PreAuthorize("@authService.temPermissao('LEITURA','READ')")
+    @GetMapping("/tags/patrimonio")
+    fun buscarPorPatrimonioParametro(@RequestParam valor: String, auth: Authentication): ResponseEntity<Map<String, String>> {
+        if (valor.isBlank()) {
+            log.warn("Localização recusada: patrimônio em branco (dispositivo {})", auth.name)
+            return ResponseEntity.badRequest().body(mapOf("mensagem" to "Informe o patrimônio"))
+        }
+        return localizarPorPatrimonio(valor, auth)
+    }
+
+    private fun localizarPorPatrimonio(patrimonioInformado: String, auth: Authentication): ResponseEntity<Map<String, String>> {
+        val patrimonio = patrimonioInformado.trim()
+        val encontradas = tagRepository.findAllByPatrimonio(patrimonio)
 
         // Etiquetas antigas com o mesmo patrimônio: o operador não saberia qual procurar
         if (encontradas.size > 1) {

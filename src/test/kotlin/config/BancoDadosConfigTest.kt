@@ -19,4 +19,22 @@ class BancoDadosConfigTest {
 
         assertThat(config.descricao).isEqualTo(esperado)
     }
+
+    @org.junit.jupiter.api.Test
+    fun `leituras na subida vem da estimativa e nunca do count que varre a tabela`() {
+        val leituras = mockk<org.example.repository.LeituraAndroidRepository>()
+        val config = BancoDadosConfig("jdbc:postgresql://x/rfid", mockk(), mockk(), leituras)
+
+        io.mockk.every { leituras.estimativaDoTotal() } returns 1_234_567
+        assertThat(config.leiturasRegistradas()).isEqualTo("cerca de 1234567 leitura(s) registrada(s) (estimativa do PostgreSQL)")
+
+        // Sem estatística ainda (-1): só confere se há alguma
+        io.mockk.every { leituras.estimativaDoTotal() } returns -1
+        io.mockk.every { leituras.existeAlguma() } returns true
+        assertThat(config.leiturasRegistradas()).isEqualTo("leituras registradas (total ainda não estimado pelo PostgreSQL)")
+        io.mockk.every { leituras.existeAlguma() } returns false
+        assertThat(config.leiturasRegistradas()).isEqualTo("nenhuma leitura registrada")
+
+        io.mockk.verify(exactly = 0) { leituras.count() }
+    }
 }

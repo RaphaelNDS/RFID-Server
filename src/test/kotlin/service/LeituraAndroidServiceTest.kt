@@ -62,12 +62,35 @@ class LeituraAndroidServiceTest {
         // Outra requisição gravou a mesma leitura entre a conferência e a gravação (envio simultâneo)
         every { leituraRepo.existsByTagAndLidoEmColetor(any(), any()) } returns false
         every { leituraRepo.saveAndFlush(any<LeituraAndroidEntity>()) } throws
-            DataIntegrityViolationException("duplicate key value violates unique constraint \"uk_leituras_android_tag_lido_em_coletor\"")
+            DataIntegrityViolationException("could not execute statement",
+                java.sql.SQLException("duplicate key value violates unique constraint \"uk_leituras_android_tag_lido_em_coletor\"", "23505"))
 
         val resultado = service.salvarLeitura("E1", OffsetDateTime.now().minusMinutes(5))
 
         assertThat(resultado).isEqualTo(ResultadoLeitura.REPETIDA)
         verify(exactly = 0) { eventos.publicar(any()) }
+    }
+
+    @Test
+    fun `outro erro de integridade nao vira repetida e sobe`() {
+        every { tagRepo.findByTagReal("E1") } returns Optional.of(tag())
+        every { leituraRepo.existsByTagAndLidoEmColetor(any(), any()) } returns false
+        // NOT NULL (23502) ou texto maior que a coluna (22001): não é reenvio, a leitura não pode sumir calada
+        every { leituraRepo.saveAndFlush(any<LeituraAndroidEntity>()) } throws
+            DataIntegrityViolationException("could not execute statement",
+                RuntimeException("envoltório", java.sql.SQLException("null value in column \"tag\" violates not-null constraint", "23502")))
+
+        org.assertj.core.api.Assertions.assertThatThrownBy { service.salvarLeitura("E1", OffsetDateTime.now().minusMinutes(5)) }
+            .isInstanceOf(DataIntegrityViolationException::class.java)
+        verify(exactly = 0) { eventos.publicar(any()) }
+    }
+
+    @Test
+    fun `violacao de unicidade e achada no meio da cadeia de causas`() {
+        val profunda = DataIntegrityViolationException("x", RuntimeException("y", java.sql.SQLException("dup", "23505")))
+        assertThat(org.example.util.violacaoDeUnicidade(profunda)).isTrue()
+        assertThat(org.example.util.violacaoDeUnicidade(DataIntegrityViolationException("sem causa"))).isFalse()
+        assertThat(org.example.util.violacaoDeUnicidade(DataIntegrityViolationException("fk", java.sql.SQLException("fk", "23503")))).isFalse()
     }
 
     @Test
