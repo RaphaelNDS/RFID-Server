@@ -37,17 +37,8 @@ class SecurityConfig {
 
     private val log = LoggerFactory.getLogger(SecurityConfig::class.java)
 
-    private companion object {
-        /**
-         * Content-Security-Policy das telas: tudo só do próprio servidor (o Chart.js e os ícones já são locais, o
-         * sistema funciona sem internet). Scripts e estilos embutidos ainda são permitidos ('unsafe-inline': as
-         * telas usam onsubmit/onclick e pequenos <script>), mas um script injetado não consegue carregar nada de
-         * fora, mandar dados para outro site (connect-src, form-action), trocar o <base> nem abrir plugins.
-         */
-        const val POLITICA_CONTEUDO = "default-src 'self'; script-src 'self' 'unsafe-inline'; " +
-            "style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; " +
-            "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
-    }
+    // Content-Security-Policy das telas: tudo só do próprio servidor (o Chart.js e os ícones são locais, o sistema
+    // funciona sem internet) e scripts embutidos só com o nonce da requisição: ver NonceCspFilter.politica
 
     // AntPathRequestMatcher foi depreciado no Spring Security 6.5; PathPatternRequestMatcher é o substituto
     private val caminhos = PathPatternRequestMatcher.withDefaults()
@@ -178,6 +169,15 @@ class SecurityConfig {
                 it.loginPage("/login")
                 // Vai para /redirect; quem entrar com senha fora das regras é levado à troca de senha
                 it.successHandler(SucessoLoginHandler(politicaSenha))
+                // Senha temporária vencida (só chega aqui com a senha certa): mensagem própria, e não "senha incorreta"
+                it.failureHandler { request, response, excecao ->
+                    if (excecao is org.springframework.security.authentication.CredentialsExpiredException) {
+                        log.warn("Login web recusado: senha temporária vencida (IP {})", request.remoteAddr)
+                        response.sendRedirect(request.contextPath + "/login?senhaVencida")
+                    } else {
+                        response.sendRedirect(request.contextPath + "/login?error")
+                    }
+                }
                 it.permitAll()
             }
 
@@ -199,9 +199,13 @@ class SecurityConfig {
             }
 
         // Outros sites não podem embutir o sistema em frames (clickjacking)
+        // CSP com um nonce por requisição: só os <script> das próprias telas rodam (NonceCspFilter)
+        http.addFilterBefore(NonceCspFilter(), org.springframework.security.web.header.HeaderWriterFilter::class.java)
         http.headers { headers ->
             headers.frameOptions { it.sameOrigin() }
-            headers.contentSecurityPolicy { it.policyDirectives(POLITICA_CONTEUDO) }
+            headers.addHeaderWriter { request, response ->
+                response.setHeader("Content-Security-Policy", NonceCspFilter.politica(request.getAttribute(NonceCspFilter.ATRIBUTO) as? String))
+            }
         }
 
         return http.build()

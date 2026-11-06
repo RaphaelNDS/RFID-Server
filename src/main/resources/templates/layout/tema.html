@@ -1,5 +1,5 @@
 <!-- Fragmento usado no <head> de todas as páginas (inclusive login) -->
-<script th:fragment="tema" xmlns:th="http://www.thymeleaf.org">
+<script th:fragment="tema" th:attr="nonce=${cspNonce}" xmlns:th="http://www.thymeleaf.org">
   // Tema salvo pelo usuário; sem escolha salva, segue o tema do sistema operacional
   (function () {
     let tema = null;

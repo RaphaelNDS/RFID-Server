@@ -181,6 +181,27 @@ class RecuperacaoSenhaIntegracaoTest : IntegracaoBase() {
         }
 
         @Test
+        fun `senha temporaria vencida nao entra e a tela diz o motivo`() {
+            val temporaria = recuperacao.gerarSenhaTemporaria(bruno.id!!).senha
+            // Gerada há mais que o prazo (48 h): antes valia para sempre
+            usuarios.save(recarregar().apply { senhaTemporariaEm = java.time.LocalDateTime.now().minusHours(49) })
+
+            mvc.perform(post("/login").with(csrf()).with { it.remoteAddr = ip; it }
+                .param("username", "bruno@x.com").param("password", temporaria))
+                .andExpect(redirectedUrl("/login?senhaVencida"))
+            mvc.perform(get("/login").param("senhaVencida", ""))
+                .andExpect(content().string(containsString("A senha temporária venceu")))
+        }
+
+        @Test
+        fun `senha temporaria dentro do prazo continua entrando e some ao criar a nova`() {
+            val temporaria = recuperacao.gerarSenhaTemporaria(bruno.id!!).senha
+            assertThat(recarregar().senhaTemporariaEm).isNotNull()
+
+            entrar(temporaria)
+        }
+
+        @Test
         fun `quem entra com senha temporaria so acessa a troca de senha`() {
             val temporaria = recuperacao.gerarSenhaTemporaria(bruno.id!!).senha
             val sessao = entrar(temporaria)

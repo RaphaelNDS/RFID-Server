@@ -256,6 +256,25 @@ class SessaoOperadorService(
             .toMap()
     }
 
+    /**
+     * Horas informadas pelo coletor no corpo (leitura avulsa, itens de inventário) contra a sessão, com a mesma regra
+     * do lote: o OperadorFilter só confere o X-Momento, e o corpo podia trazer qualquer data passada (ex.: uma leitura
+     * de 2025 gravada no período antigo dos relatórios). Hora ausente ou no futuro vale como "agora".
+     */
+    fun conferirHorasDoColetor(token: String, dispositivo: String, horas: List<java.time.OffsetDateTime?>): Map<Int, SessaoInvalidaException> {
+        if (horas.isEmpty() || token.isBlank()) return emptyMap()
+        val agora = LocalDateTime.now(relogio)
+        val momentos = horas.map { hora ->
+            val local = hora?.atZoneSameInstant(java.time.ZoneId.systemDefault())?.toLocalDateTime() ?: agora
+            if (local.isAfter(agora.plus(TOLERANCIA))) agora else local
+        }
+        return try {
+            conferirMomentos(token, dispositivo, momentos)
+        } catch (e: SessaoInvalidaException) {
+            horas.indices.associateWith { e }
+        }
+    }
+
     private fun sessaoDoColetor(token: String, dispositivo: String): SessaoOperadorEntity {
         val sessao = sessoes.findById(hash(token)).orElse(null)
             ?: throw SessaoInvalidaException("Sessão do operador desconhecida: faça login de novo", MotivoSessaoInvalida.DESCONHECIDA)

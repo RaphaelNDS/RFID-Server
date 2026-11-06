@@ -5,7 +5,7 @@
   Marca e modelo vêm da API do catálogo conforme a escolha anterior. Ao abrir, se já houver tipo escolhido (edição,
   ou cadastro que voltou com erro), carrega e seleciona a marca e o modelo de data-inicial.
 -->
-<script th:fragment="script">
+<script th:fragment="script" th:attr="nonce=${cspNonce}">
     (function () {
       const tipoSelect   = document.getElementById("tipoSelect");
       const marcaSelect  = document.getElementById("marcaSelect");

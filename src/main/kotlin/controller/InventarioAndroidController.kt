@@ -21,7 +21,8 @@ import java.time.OffsetDateTime
 @RequestMapping("/api/android")
 class InventarioAndroidController(
     private val service: InventarioService,
-    private val esperados: EsperadoInventarioService
+    private val esperados: EsperadoInventarioService,
+    private val sessoes: org.example.service.SessaoOperadorService
 ) {
 
     data class AbrirInventarioRequest(
@@ -58,10 +59,22 @@ class InventarioAndroidController(
 
     @PreAuthorize(LEITURA)
     @PostMapping("/inventarios/{id}/itens")
-    fun itens(@PathVariable id: String, @RequestBody req: ItensRequest, auth: Authentication): ResultadoItens =
-        repetindoSeReenvioSimultaneo("Etiquetas do inventário $id") {
-            service.registrarItens(id, req.itens.map { ItemLido(it.tag, it.lidoEm) }, auth.name, auth.nomeOperador())
+    fun itens(@PathVariable id: String, @RequestBody req: ItensRequest, auth: Authentication,
+              request: jakarta.servlet.http.HttpServletRequest): ResultadoItens {
+        // Hora de leitura fora da sessão do operador (qualquer data passada era aceita): o item continua no
+        // inventário, com a hora do recebimento. Recusar só o item faria o app reenviar para sempre
+        val token = request.getHeader(org.example.config.OperadorFilter.HEADER_SESSAO)?.trim().orEmpty()
+        val foraDaSessao = sessoes.conferirHorasDoColetor(token, auth.name, req.itens.map { it.lidoEm })
+        if (foraDaSessao.isNotEmpty()) {
+            org.slf4j.LoggerFactory.getLogger(javaClass).warn(
+                "Inventário {}: {} etiqueta(s) com hora de leitura fora da sessão do operador no coletor {}: gravadas com a hora do recebimento",
+                id, foraDaSessao.size, auth.name)
         }
+        val lidos = req.itens.mapIndexed { i, it -> ItemLido(it.tag, if (i in foraDaSessao) null else it.lidoEm) }
+        return repetindoSeReenvioSimultaneo("Etiquetas do inventário $id") {
+            service.registrarItens(id, lidos, auth.name, auth.nomeOperador())
+        }
+    }
 
     @PreAuthorize(LEITURA)
     @PostMapping("/inventarios/{id}/finalizar")

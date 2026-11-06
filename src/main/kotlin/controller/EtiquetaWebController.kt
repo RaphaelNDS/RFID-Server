@@ -43,7 +43,15 @@ class EtiquetaWebController(
     @PostMapping("/{id}/editar")
     fun salvar(@PathVariable id: Long, @ModelAttribute("cadastro") cadastro: CadastroRequest, model: Model, redirect: RedirectAttributes): String {
         return try {
-            val mudaram = rfidService.editarTag(id, cadastro)
+            val mudaram = try {
+                rfidService.editarTag(id, cadastro)
+            } catch (e: org.springframework.dao.OptimisticLockingFailureException) {
+                // As duas pessoas salvaram no mesmo instante: a conferência da versão passou para as duas e o banco
+                // recusou a segunda na gravação (@Version). Antes ia para a página genérica de erro, sem o formulário
+                org.slf4j.LoggerFactory.getLogger(javaClass).warn("Edição da etiqueta {} recusada na gravação: salva por outra pessoa no mesmo instante", id)
+                throw EdicaoConcorrenteException("Esta etiqueta foi alterada por outra pessoa no mesmo instante (veja o histórico). " +
+                    "Os dados abaixo são os seus: confira e salve de novo para gravar por cima.")
+            }
             redirect.addFlashAttribute("msg",
                 if (mudaram.isEmpty()) "Nada foi alterado na etiqueta ${rfidService.buscarPorId(id).tagReal}."
                 else "Etiqueta alterada (${mudaram.joinToString()}). A mudança ficou no histórico.")

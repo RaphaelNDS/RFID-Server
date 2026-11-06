@@ -337,6 +337,16 @@ sessão trazem o mesmo `motivo`.
   | V15 | `db/migration/V15__busca_leituras_trigram.sql` | Índices trigram (`pg_trgm`) para os filtros "contém" da tela de leituras |
   | V16 | `db/migration/V16__leitura_hora_do_coletor.sql` | Hora informada pelo coletor em cada leitura (reconhece o reenvio mesmo com o relógio do coletor adiantado) e índice do último inventário por etiqueta |
   | V17 | `db/migration/V17__versao_etiqueta_e_nomes_unicos.sql` | Versão de cada etiqueta (edição ao mesmo tempo é avisada) e nomes de local e catálogo únicos sem diferenciar maiúsculas |
+  | V18 | `db/migration/V18__epc_maiusculo.sql` | Etiqueta (EPC) sempre em maiúsculas e sem espaços nas pontas (a mesma etiqueta gravada nas duas formas fica como está e é avisada no log ao subir) |
+  | V19 | `db/migration/V19__senha_temporaria_prazo_e_leitura_unica.sql` | Prazo da senha temporária (48 h, `RFID_SENHA_PRAZO_TEMPORARIA`) e índice único (etiqueta, hora) só para leituras sem a hora do coletor |
+
+  > **Atualizar uma instalação com muitas leituras (centenas de milhares ou mais):** a V16 reescreve a tabela de
+  > leituras inteira ao subir, numa transação só: o servidor fica alguns minutos sem responder e a tabela cresce no
+  > disco. Atualize fora do horário de uso e, depois, rode
+  > `docker exec rfid-postgres psql -U rfid -d rfid -c "vacuum analyze leituras_android"`.
+  >
+  > Nomes repetidos que só diferem em maiúsculas (locais, catálogo) impedem a V17 de criar a proteção contra
+  > duplicata: o servidor avisa no log ao subir e cria a proteção sozinho quando as repetições forem resolvidas.
 
 - **Backup do banco:** o contêiner `rfid-backup` roda o `pg_dump` ao subir e depois de 6 em 6 horas enquanto está no
   ar (horário fixo de madrugada não serve: com o computador desligado o backup nunca roda) e guarda em
@@ -377,6 +387,9 @@ sessão trazem o mesmo `motivo`.
   > Copie as duas pastas de backup para **outro disco ou pasta de rede**: backup no mesmo disco não protege contra
   > falha do disco. O zip do certificado tem a chave privada e a senha dela, e o dump tem os dados: acesso só para
   > quem administra o servidor. Senha informada em `RFID_HTTPS_SENHA` não vai para o backup: guarde-a à parte.
+  > Com `RFID_BACKUP_SENHA` definida, o backup sai cifrado (`rfid-certificado-<data>.zip.cifrado`). Para restaurar,
+  > decifre antes com `java -jar servidor\rfid-server.jar --decifrar-backup <arquivo>.zip.cifrado` (pede a senha) e
+  > extraia o `.zip` gerado em `./data`.
 
 ---
 
@@ -555,6 +568,7 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_LOGIN_BLOQUEIO_MINUTOS` | `15` | Tempo de bloqueio |
 | `RFID_BACKUP_HABILITADO` | `true` | Backup automático do certificado HTTPS (o do banco é no `docker/.env`) |
 | `RFID_CERT_BACKUP_PASTA` | `./data/backups` | Pasta dos backups do certificado (`RFID_BACKUP_PASTA` é a dos dumps do banco, no `docker\.env`) |
+| `RFID_BACKUP_SENHA` | (vazio) | Senha que **cifra** o backup do certificado (`.zip.cifrado`). Guarde-a fora desta máquina: sem ela o backup não restaura. Vazio: o `.zip` sai aberto, com a chave privada |
 | `RFID_BACKUP_CRON` | `0 0 2 * * *` | Horário (todo dia às 02:00) |
 | `RFID_BACKUP_MANTER` | `14` | Quantos backups do certificado guardar |
 | `RFID_LOG_ARQUIVO` | `./data/logs/rfid-server.log` | Arquivo de log (vazio = só console); um por dia, guarda 30 dias |
@@ -614,7 +628,7 @@ Tudo em português. Sai no console e no arquivo `./data/logs/rfid-server.log` (m
 um arquivo por dia (ou a cada 10 MB), guardando os últimos 30 dias. Exemplos do que aparece:
 
 ```
-Servidor RFID versão 1.4.1 no ar na porta 8443 (iniciado em 13/10/2026 11:17, pronto em 9,8 s)
+Servidor RFID versão 1.4.2 no ar na porta 8443 (iniciado em 13/10/2026 11:17, pronto em 9,8 s)
 Banco de dados: PostgreSQL (localhost:5433/rfid)
 Backup do certificado HTTPS concluído (agendado): rfid-certificado-2026-10-13_020000.zip (rfid-https.p12, rfid-https.p12.senha)
 Login de 'ana@empresa.com' bloqueado por 15 min após 5 tentativas com senha errada (última origem: coletor-01@10.0.0.5)

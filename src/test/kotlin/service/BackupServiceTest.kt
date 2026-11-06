@@ -34,8 +34,9 @@ class BackupServiceTest {
         habilitado: Boolean = true,
         pasta: String = dir.resolve("backups").toString(),
         manter: Int = 14,
-        certificado: CertificadoHttps = CertificadoHttps(p12.toString(), "", "")
-    ) = BackupService(habilitado, pasta, manter, certificado)
+        certificado: CertificadoHttps = CertificadoHttps(p12.toString(), "", ""),
+        senhaBackup: String = ""
+    ) = BackupService(habilitado, pasta, manter, certificado, senhaBackup)
 
     private fun nomeEm(quando: LocalDateTime) =
         "rfid-certificado-${quando.format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss"))}.zip"
@@ -150,6 +151,26 @@ class BackupServiceTest {
             s.fazerBackup("segundo")
 
             assertThat(s.listarBackups()).isNotEmpty()
+        }
+
+        @Test
+        fun `com RFID_BACKUP_SENHA o backup sai cifrado e so abre com a senha`() {
+            val s = service(senhaBackup = "senha-do-backup-fora-da-maquina")
+
+            val arquivo = s.fazerBackup("teste")
+
+            assertThat(arquivo.fileName.toString()).endsWith(".zip.cifrado")
+            assertThat(s.listarBackups()).containsExactly(arquivo)
+            val bytes = Files.readAllBytes(arquivo)
+            // Não é um zip legível (a senha do certificado não aparece em texto)
+            assertThat(String(bytes, Charsets.ISO_8859_1)).doesNotContain("senha-gerada")
+            assertThatThrownBy { org.example.util.CifraBackup.decifrar(bytes, "outra") }
+                .isInstanceOf(IllegalArgumentException::class.java)
+
+            val zip = dir.resolve("decifrado.zip")
+            Files.write(zip, org.example.util.CifraBackup.decifrar(bytes, "senha-do-backup-fora-da-maquina"))
+            assertThat(conteudo(zip, "rfid-https.p12")).containsExactly(1, 2, 3, 4)
+            assertThat(conteudo(zip, "rfid-https.p12.senha")).isEqualTo("senha-gerada".toByteArray())
         }
     }
 

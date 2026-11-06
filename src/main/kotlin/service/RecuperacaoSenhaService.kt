@@ -86,6 +86,7 @@ class RecuperacaoSenhaService(
         val tinhaPedido = usuario.senhaPedidaEm != null
         usuario.senha = encoder.encode(senha)
         usuario.trocarSenha = true
+        usuario.senhaTemporariaEm = LocalDateTime.now(relogio)
         usuario.senhaPedidaEm = null
         repo.save(usuario)
 

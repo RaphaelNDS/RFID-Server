@@ -75,7 +75,7 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("18") // V18 = etiqueta (EPC) sempre em maiúsculas
+        assertThat(resultado.targetSchemaVersion).isEqualTo("19") // V19 = prazo da senha temporária e leitura única sem hora do coletor
     }
 
     @Test
@@ -87,7 +87,7 @@ class MigracaoV2Test {
             "insert into leituras_android (tag, data_hora) values ('E1', '2026-10-19 10:05:00')"
         )
 
-        flyway().migrate()
+        flyway("10").migrate()
 
         val restantes = conectar().use { c ->
             c.createStatement().executeQuery("select count(*) from leituras_android where tag = 'E1'").use { rs -> rs.next(); rs.getInt(1) }
@@ -96,6 +96,23 @@ class MigracaoV2Test {
         assertThatThrownBy { sql("insert into leituras_android (tag, data_hora) values ('E1', '2026-10-19 10:00:00')") }
             .isInstanceOf(SQLException::class.java)
             .satisfies({ assertThat(it.message!!.lowercase()).contains("uk_leituras_android_tag_data_hora") })
+    }
+
+    @Test
+    fun `V19 deixa o indice da V10 so para leituras sem a hora do coletor`() {
+        flyway().migrate()
+
+        // Com a hora do coletor (o reenvio é identificado pela V16): a mesma tag lida duas vezes com o relógio do
+        // coletor adiantado ganha a mesma data_hora e as duas ficam (antes a segunda era descartada como repetida)
+        sql(
+            "insert into leituras_android (tag, data_hora, lido_em_coletor) values ('E9', '2026-11-05 10:00:00', '2026-11-05 10:30:00.100')",
+            "insert into leituras_android (tag, data_hora, lido_em_coletor) values ('E9', '2026-11-05 10:00:00', '2026-11-05 10:30:00.200')"
+        )
+        // Sem a hora do coletor, a mesma (tag, data_hora) continua recusada
+        sql("insert into leituras_android (tag, data_hora) values ('E8', '2026-11-05 10:00:00')")
+        assertThatThrownBy { sql("insert into leituras_android (tag, data_hora) values ('E8', '2026-11-05 10:00:00')") }
+            .isInstanceOf(SQLException::class.java)
+            .satisfies({ assertThat(it.message!!.lowercase()).contains("uk_leituras_android_tag_data_hora_sem_hora_coletor") })
     }
 
     companion object {

@@ -77,6 +77,14 @@ class LeituraAndroidConsultaService(
         if (exato) {
             val ultima = ((contados + tamanhoPagina - 1) / tamanhoPagina - 1).coerceAtLeast(0).toInt()
             numero = numero.coerceAtMost(ultima)
+        } else {
+            // Acima do teto o total não é conhecido: sem limite, ?pagina=5000000 fazia o banco pular 250 milhões de
+            // linhas e ?pagina=50000000 estourava o Int (deslocamento negativo, erro 500). Mais fundo que isso, filtre
+            val maxima = (MAXIMO_DESLOCAMENTO / tamanhoPagina).toInt()
+            if (numero > maxima) {
+                log.info("Página {} das Leituras pedida acima do teto de contagem: mostrando a página {} (use os filtros)", numero + 1, maxima + 1)
+                numero = maxima
+            }
         }
 
         val linhas = linhas(spec, numero.toLong() * tamanhoPagina, tamanhoPagina + 1)
@@ -202,6 +210,8 @@ class LeituraAndroidConsultaService(
     companion object {
         const val MAXIMO_POR_PAGINA = 200
         const val MAXIMO_EXPORTACAO = 100_000L
+        /** Até onde a paginação sem total (acima do teto) vai: o mesmo máximo da exportação. */
+        const val MAXIMO_DESLOCAMENTO = 100_000L
         const val DIAS_ATALHO = 31L
         private const val LIMITE_LENTO_MS = 1000L
     }

@@ -1,6 +1,6 @@
 <!-- Busca instantânea em tabela: filtra as linhas de #tabela pelo texto de #filtroTabela.
      Opcional: #contagem (mostra quantas linhas aparecem) e #semResultado (aviso de busca vazia). -->
-<script th:fragment="script" xmlns:th="http://www.thymeleaf.org">
+<script th:fragment="script" th:attr="nonce=${cspNonce}" xmlns:th="http://www.thymeleaf.org">
   (function () {
     const campo = document.getElementById("filtroTabela");
     const tabela = document.getElementById("tabela");

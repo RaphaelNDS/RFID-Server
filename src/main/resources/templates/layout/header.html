@@ -68,7 +68,7 @@
 
     <div class="topbar-actions">
 
-      <button type="button" class="icon-btn" onclick="alternarTema()" aria-label="Alternar tema claro/escuro" title="Alternar tema">
+      <button type="button" class="icon-btn" data-acao="alternar-tema" aria-label="Alternar tema claro/escuro" title="Alternar tema">
         <svg class="ic tema-claro-ic"><use href="/img/icones.svg#lua"/></svg>
         <svg class="ic tema-escuro-ic"><use href="/img/icones.svg#sol"/></svg>
       </button>
@@ -89,7 +89,7 @@
           <a th:href="@{/perfil}" role="menuitem"><svg class="ic"><use href="/img/icones.svg#usuario"/></svg>Meu perfil</a>
           <a th:href="@{/perfil/senha}" role="menuitem"><svg class="ic"><use href="/img/icones.svg#chave"/></svg>Alterar senha</a>
           <a th:href="@{/perfil/email}" role="menuitem"><svg class="ic"><use href="/img/icones.svg#email"/></svg>Alterar email</a>
-          <a th:href="@{/status}" role="menuitem"><svg class="ic"><use href="/img/icones.svg#servidor"/></svg>Status do servidor</a>
+          <a th:href="@{/status}" role="menuitem" sec:authorize="hasRole('ADMIN')"><svg class="ic"><use href="/img/icones.svg#servidor"/></svg>Status do servidor</a>
           <!-- Aqui e não na barra: com mais um item, o menu não cabia numa linha em 1280 px -->
           <a th:href="@{/admin/auditoria}" role="menuitem" sec:authorize="hasRole('ADMIN')"><svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Auditoria</a>
 

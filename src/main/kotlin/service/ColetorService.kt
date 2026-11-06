@@ -70,13 +70,18 @@ class ColetorService(
     // Último contato GRAVADO de cada coletor (em memória: evita um UPDATE por requisição)
     private val gravados = ConcurrentHashMap<String, Pair<Contato, LocalDateTime>>()
 
+    // Só coletores com chave válida chegam aqui (poucos nomes): o mapa não cresce sem limite
+    private val travas = ConcurrentHashMap<String, Any>()
+
     /**
      * Registra um contato aceito do coletor [nome]. Nunca lança erro: um problema aqui não pode derrubar a
      * requisição do coletor. [operador] null (login, ping) não apaga o último operador conhecido.
      */
     fun registrarContato(nome: String, ip: String?, versaoApp: String?, codigoVersao: Int?, operador: String?) {
         try {
-            synchronized(this) { registrar(nome, ip?.take(64), versaoApp, codigoVersao, operador) }
+            // Uma trava por coletor (antes uma só para todos, com o acesso ao banco dentro: com o banco lento, todos os
+            // coletores faziam fila atrás de um). Por coletor ainda evita gravar o primeiro contato duas vezes
+            synchronized(travas.computeIfAbsent(nome) { Any() }) { registrar(nome, ip?.take(64), versaoApp, codigoVersao, operador) }
         } catch (e: Exception) {
             log.warn("Não foi possível registrar o contato do coletor {}: {}", nome, e.message)
         }

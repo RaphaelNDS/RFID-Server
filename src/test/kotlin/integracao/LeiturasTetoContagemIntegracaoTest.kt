@@ -51,6 +51,14 @@ class LeiturasTetoContagemIntegracaoTest : IntegracaoBase() {
     }
 
     @Test
+    fun `pagina absurda acima do teto nao estoura nem faz o banco pular milhoes de linhas`() {
+        // Antes: ?pagina=50000000 estourava o Int (deslocamento negativo) e dava erro 500
+        abrir("pagina" to "50000000")
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk)
+            .andExpect(model().attribute("leituras", hasSize<Any>(0)))
+    }
+
+    @Test
     fun `com filtro abaixo do teto o total volta a ser exato`() {
         abrir("tag" to "e11")
             .andExpect(model().attribute("totalExato", true))
