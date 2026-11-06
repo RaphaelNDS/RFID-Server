@@ -350,6 +350,11 @@ class RfidService(
             naoRepo.saveAndFlush(TagNaoCadastradaEntity(tag = tag, dataHora = LocalDateTime.now(relogio)))
             log.info("Tag não cadastrada registrada: {} (por {})", tag, usuarioAtual())
         } catch (e: DataIntegrityViolationException) {
+            // Só o índice único quer dizer "já pendente"; outro erro de integridade sobe e o lote marca ERRO
+            if (!org.example.util.violacaoDeUnicidade(e)) {
+                log.error("Tag não cadastrada {} recusada pelo banco por erro de integridade (não é envio simultâneo)", tag, e)
+                throw e
+            }
             log.debug("Tag não cadastrada {} já estava pendente (envio simultâneo)", tag)
         }
     }

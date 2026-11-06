@@ -55,6 +55,32 @@ class SecurityConfig {
     @Bean
     fun passwordEncoder() = BCryptPasswordEncoder()
 
+    /**
+     * Login da web. O padrão do Spring confere "usuário ativo" ANTES da senha: o desativado era recusado sem passar
+     * pelo BCrypt, a resposta voltava dezenas de ms antes e, medindo o tempo, dava para saber quais contas estavam
+     * desativadas. Aqui "ativo" vai para DEPOIS da senha (como no coletor, SessaoOperadorService): senha errada é
+     * sempre "senha incorreta" (e conta no bloqueio por tentativas); só com a senha certa o motivo é "desativado".
+     * A senha temporária vencida já era conferida depois da senha e continua assim.
+     */
+    @Bean
+    fun provedorLoginWeb(
+        detalhes: org.example.service.CustomUserDetailsService,
+        senhas: org.springframework.security.crypto.password.PasswordEncoder
+    ): org.springframework.security.authentication.dao.DaoAuthenticationProvider =
+        org.springframework.security.authentication.dao.DaoAuthenticationProvider(detalhes).apply {
+            setPasswordEncoder(senhas)
+            setPreAuthenticationChecks { usuario ->
+                if (!usuario.isAccountNonLocked) throw org.springframework.security.authentication.LockedException("Conta bloqueada")
+                if (!usuario.isAccountNonExpired) throw org.springframework.security.authentication.AccountExpiredException("Conta expirada")
+            }
+            setPostAuthenticationChecks { usuario ->
+                if (!usuario.isEnabled) throw org.springframework.security.authentication.DisabledException("Usuário desativado")
+                if (!usuario.isCredentialsNonExpired) {
+                    throw org.springframework.security.authentication.CredentialsExpiredException("Senha temporária vencida")
+                }
+            }
+        }
+
     // Faz o Spring Security publicar eventos de acesso negado (logados em SecurityEventLogger)
     @Bean
     fun authorizationEventPublisher(publisher: ApplicationEventPublisher): AuthorizationEventPublisher =
@@ -118,7 +144,8 @@ class SecurityConfig {
         http: HttpSecurity,
         tentativasLogin: TentativasLoginService,
         politicaSenha: PoliticaSenha,
-        sessoesWeb: SessionRegistry
+        sessoesWeb: SessionRegistry,
+        @Value("\${rfid.web.max-corpo-bytes:1048576}") maximoCorpoWeb: Long
     ): SecurityFilterChain {
 
         http
@@ -161,6 +188,10 @@ class SecurityConfig {
             // Antes do CsrfFilter, que faria o Tomcat ler o multipart inteiro (até 101 MB) antes de conferir permissão:
             // arquivo só no POST de /admin/app por ADMIN
             .addFilterBefore(EnvioArquivoFilter(), CsrfFilter::class.java)
+
+            // Corpo das telas (formulários e o JSON da API do catálogo) limitado a 1 MB antes de qualquer leitura: o
+            // JSON era desserializado antes de o @PreAuthorize conferir a permissão. Multipart tem limite próprio
+            .addFilterBefore(TamanhoCorpoFilter(maximoCorpoWeb, origem = "das telas", ignorarMultipart = true), CsrfFilter::class.java)
 
             // Quem entrou com senha temporária só acessa a troca de senha até criar a nova
             .addFilterAfter(TrocaSenhaObrigatoriaFilter(), UsernamePasswordAuthenticationFilter::class.java)

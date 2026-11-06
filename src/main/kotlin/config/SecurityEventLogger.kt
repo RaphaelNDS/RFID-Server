@@ -2,6 +2,7 @@ package org.example.config
 
 import jakarta.servlet.http.HttpServletRequest
 import org.aopalliance.intercept.MethodInvocation
+import org.example.util.EmailLogin
 import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener
 import org.springframework.security.authentication.AnonymousAuthenticationToken
@@ -23,9 +24,10 @@ class SecurityEventLogger {
 
     @EventListener
     fun loginComFalha(event: AbstractAuthenticationFailureEvent) {
+        // O nome é o que foi digitado por quem nem fez login: vai cortado e sem caracteres de controle (EmailLogin)
         log.warn(
             "Falha de login para '{}' (IP: {}): {}",
-            event.authentication.name, ip(event.authentication.details), event.exception.message
+            EmailLogin.normalizar(event.authentication.name), ip(event.authentication.details), event.exception.message
         )
     }
 

@@ -3,7 +3,9 @@
 # derruba no fim; precisa do Docker ligado). Mesma versão do docker/docker-compose.yml de produção.
 spring:
   datasource:
-    url: jdbc:tc:postgresql:16-alpine:///rfid-teste
+    # TC_DAEMON: o contêiner fica de pé até o fim dos testes. Sem isso o Testcontainers o derruba quando a última
+    # conexão fecha, e as migrações usam conexão própria (fora do pool): o banco migrado sumia antes de a aplicação usar
+    url: jdbc:tc:postgresql:16-alpine:///rfid-teste?TC_DAEMON=true
     driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
     username: rfid
     password: rfid

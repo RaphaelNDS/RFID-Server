@@ -154,17 +154,24 @@ class AtualizacaoAppService(
     }
 
     /**
-     * Apaga os arquivos das versões além das [versoesGuardadas] mais novas. Nunca derruba a publicação: se um
-     * arquivo não puder ser apagado (no Windows, um coletor baixando aquele APK no momento), fica para a próxima.
+     * Apaga os arquivos das versões mais antigas que as [versoesGuardadas] mais novas NÃO retiradas. As retiradas não
+     * contam no limite: antes, com versões novas retiradas, o arquivo da última versão boa (a que volta a ser
+     * oferecida) podia ser apagado e os coletores ficavam sem atualização nenhuma. A versão oferecida agora (a mais
+     * nova não retirada) nunca é apagada. Nunca derruba a publicação: se um arquivo não puder ser apagado (no
+     * Windows, um coletor baixando aquele APK no momento), fica para a próxima.
      */
     private fun removerArquivosAntigos() {
-        repo.findAllByOrderByCodigoDesc().filter { !it.arquivoRemovido }.drop(versoesGuardadas).forEach { antiga ->
+        val comArquivo = repo.findAllByOrderByCodigoDesc().filter { !it.arquivoRemovido }
+        val guardadas = comArquivo.filter { !it.retirada }.take(versoesGuardadas)
+        // Sem nenhuma versão boa com arquivo, não apaga nada
+        val maisAntigaGuardada = guardadas.lastOrNull()?.codigo ?: return
+        comArquivo.filter { it.codigo < maisAntigaGuardada }.forEach { antiga ->
             try {
                 Files.deleteIfExists(pasta.resolve(antiga.arquivo))
                 antiga.arquivoRemovido = true
                 repo.save(antiga)
-                log.info("Arquivo da versão {} (código {}) do app removido do disco: só as {} últimas versões ficam guardadas",
-                    antiga.versaoNome, antiga.codigo, versoesGuardadas)
+                log.info("Arquivo da versão {} (código {}{}) do app removido do disco: só as {} últimas versões não retiradas ficam guardadas",
+                    antiga.versaoNome, antiga.codigo, if (antiga.retirada) ", retirada" else "", versoesGuardadas)
             } catch (e: Exception) {
                 log.warn("Não foi possível apagar o arquivo da versão antiga {} (código {}) do app: {}; tenta de novo na próxima publicação",
                     antiga.versaoNome, antiga.codigo, e.message)
@@ -210,8 +217,10 @@ class AtualizacaoAppService(
      * Retira uma versão publicada com problema: o servidor deixa de oferecê-la e volta a oferecer a anterior.
      * Quem já instalou a retirada fica nela até sair uma versão nova (o Android não instala código menor por
      * cima), e a próxima publicação continua precisando de código maior que o da retirada. Devolve a versão
-     * que passa a ser oferecida (null = nenhuma).
+     * que passa a ser oferecida (null = nenhuma). Sincronizado com [publicar]: a limpeza dos arquivos de uma
+     * publicação não pode decidir o que guardar enquanto uma retirada muda qual versão é oferecida.
      */
+    @Synchronized
     fun retirar(codigo: Int, motivo: String?, usuario: String): VersaoAppEntity? {
         val versao = repo.findByCodigo(codigo) ?: throw NoSuchElementException("Versão com código $codigo não encontrada")
         check(!versao.retirada) { "A versão ${versao.versaoNome} (código $codigo) já foi retirada" }

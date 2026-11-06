@@ -172,6 +172,32 @@ class BackupServiceTest {
             assertThat(conteudo(zip, "rfid-https.p12")).containsExactly(1, 2, 3, 4)
             assertThat(conteudo(zip, "rfid-https.p12.senha")).isEqualTo("senha-gerada".toByteArray())
         }
+
+        @Test
+        fun `sobra de backup interrompido e apagada no proximo backup`() {
+            val pasta = dir.resolve("backups")
+            Files.createDirectories(pasta)
+            // O que ficava se o servidor caísse no meio: o .zip ABERTO com a chave privada, com nome .parcial
+            val sobra = pasta.resolve("rfid-certificado-2026-11-01_020000.zip.cifrado.parcial")
+            Files.writeString(sobra, "zip aberto com a chave privada")
+
+            service(senhaBackup = "senha-do-backup").fazerBackup("teste")
+
+            assertThat(sobra).doesNotExist()
+            assertThat(pasta.listDirectoryEntries().map { it.name }).noneMatch { it.endsWith(".parcial") }
+        }
+
+        @Test
+        fun `backup cifrado nao deixa nenhum zip aberto na pasta`() {
+            service(senhaBackup = "senha-do-backup").fazerBackup("teste")
+
+            // Tudo o que existe na pasta de backup é cifrado: a senha do certificado não aparece em nenhum arquivo
+            val arquivos = dir.resolve("backups").listDirectoryEntries()
+            assertThat(arquivos).hasSize(1)
+            arquivos.forEach {
+                assertThat(String(Files.readAllBytes(it), Charsets.ISO_8859_1)).doesNotContain("senha-gerada")
+            }
+        }
     }
 
     @Nested
@@ -211,6 +237,20 @@ class BackupServiceTest {
         @Test
         fun `agendado com backup inativo nao faz nada nem falha`() {
             service(habilitado = false).backupAgendado()
+        }
+
+        @Test
+        fun `ao subir apaga sobras de backup interrompido mesmo com o backup desligado`() {
+            val pasta = dir.resolve("backups")
+            Files.createDirectories(pasta)
+            val sobra = pasta.resolve("rfid-certificado-2026-11-01_020000.zip.parcial")
+            Files.writeString(sobra, "zip aberto")
+            Files.writeString(pasta.resolve("outro.parcial"), "não é do backup do certificado")
+
+            service(habilitado = false).verificarNaInicializacao()
+
+            assertThat(sobra).doesNotExist()
+            assertThat(pasta.resolve("outro.parcial")).exists()
         }
     }
 

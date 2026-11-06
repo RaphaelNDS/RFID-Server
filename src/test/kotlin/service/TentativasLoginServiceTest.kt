@@ -158,4 +158,34 @@ class TentativasLoginServiceTest {
 
         assertThat(service.tempoRestanteDeBloqueio("bloqueado@x.com", "10.0.0.8")).isEqualTo(Duration.ofMinutes(5))
     }
+
+    @Test
+    fun `recusa durante o bloqueio so e marcada para log na primeira vez de cada bloqueio`() {
+        errar("ana@x.com", 5)
+
+        val primeira = service.consultarBloqueio("ana@x.com", "10.0.0.1")
+        val segunda = service.consultarBloqueio("ana@x.com", "10.0.0.1")
+
+        assertThat(primeira!!.primeiraRecusa).isTrue()
+        assertThat(primeira.restante).isEqualTo(Duration.ofMinutes(15))
+        assertThat(segunda!!.primeiraRecusa).isFalse()
+
+        // Bloqueio novo depois que o anterior venceu: volta a valer um log
+        relogio.avancar(16)
+        assertThat(service.consultarBloqueio("ana@x.com", "10.0.0.1")).isNull()
+        errar("ana@x.com", 5)
+        assertThat(service.consultarBloqueio("ana@x.com", "10.0.0.1")!!.primeiraRecusa).isTrue()
+    }
+
+    @Test
+    fun `email gigante ou com caracteres de controle vira chave curta`() {
+        val gigante = "A".repeat(2_000_000)
+
+        errar(gigante, 5)
+
+        // A chave é o email cortado em 255, sem controle e em minúsculas: o mesmo bloqueio vale para essa forma
+        assertThat(service.tempoRestanteDeBloqueio("a".repeat(255), "10.0.0.1")).isNotNull()
+        errar("bia@x.com\r\n​", 5, ip = "10.0.0.5")
+        assertThat(service.tempoRestanteDeBloqueio("bia@x.com", "10.0.0.5")).isNotNull()
+    }
 }

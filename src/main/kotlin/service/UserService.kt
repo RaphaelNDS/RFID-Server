@@ -137,13 +137,15 @@ class UsuarioService(
      */
     @Transactional
     fun editar(id: Long, nome: String, role: Role, telas: List<String>?, acoes: List<String>?, quemEdita: Long) {
+        // Trava os ADMINs ativos ANTES de ler o usuário: a regra do último ADMIN conta com dados atuais
+        val adminsAtivos = adminsAtivosTravados()
         val usuario = buscarPorId(id)
         if (nome.isBlank()) {
             log.warn("Edição de {} recusada: o nome veio em branco", usuario.email)
             throw IllegalArgumentException("Informe o nome")
         }
 
-        if (usuario.role == Role.ADMIN && role != Role.ADMIN && usuario.ativo && repo.countByRoleAndAtivoTrue(Role.ADMIN) <= 1) {
+        if (usuario.role == Role.ADMIN && role != Role.ADMIN && usuario.ativo && adminsAtivos <= 1) {
             log.warn("Edição de {} recusada: é o último administrador ativo", usuario.email)
             throw IllegalStateException("Este é o último administrador ativo: o sistema ficaria sem ninguém para administrar")
         }
@@ -183,11 +185,13 @@ class UsuarioService(
     /** ADMIN desativa um usuário: ele não entra mais e as sessões abertas dele (web e coletores) caem na hora. */
     @Transactional
     fun desativar(id: Long, quemDesativa: Long) {
+        // Trava os ADMINs ativos ANTES de ler o usuário (ver UserRepository.travarAtivosDoPerfil)
+        val adminsAtivos = adminsAtivosTravados()
         val usuario = buscarPorId(id)
         if (!usuario.ativo) return
 
         if (id == quemDesativa) throw IllegalStateException("Você não pode desativar o próprio usuário")
-        if (usuario.role == Role.ADMIN && repo.countByRoleAndAtivoTrue(Role.ADMIN) <= 1) {
+        if (usuario.role == Role.ADMIN && adminsAtivos <= 1) {
             log.warn("Desativação de {} recusada: é o último administrador ativo", usuario.email)
             throw IllegalStateException("Este é o último administrador ativo: o sistema ficaria sem ninguém para administrar")
         }
@@ -212,7 +216,13 @@ class UsuarioService(
 
     fun porId(id: Long): UsuarioEntity = buscarPorId(id)
 
-    private fun quemFez() = SecurityContextHolder.getContext().authentication?.name ?: "sistema"
+    /**
+     * Quantos ADMINs ativos há, com as linhas deles travadas até o fim da transação: desativar e rebaixar ADMIN
+     * ficam em fila, e duas operações ao mesmo tempo não deixam mais o sistema sem nenhum ADMIN.
+     */
+    private fun adminsAtivosTravados(): Int = repo.travarAtivosDoPerfil(Role.ADMIN).size
+
+    private fun quemFez() =SecurityContextHolder.getContext().authentication?.name ?: "sistema"
 
     private fun converterModulos(telas: List<String>): List<Modulo> {
         if (telas.isEmpty()) {

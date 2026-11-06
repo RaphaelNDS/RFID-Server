@@ -20,7 +20,9 @@
   <div class="alert alert-erro" th:if="${erro}" role="alert">
     <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
   </div>
-  <!-- Instrução de administrador (docker exec): só para o ADMIN; os outros veem a situação na linha do backup -->
+  <!-- A tela inteira é só do ADMIN (StatusWebController); o sec:authorize abaixo é redundante, mas fica como proteção.
+       Quem não é ADMIN pega a impressão digital do certificado no log:
+       Select-String "SHA-256 do certificado HTTPS" .\data\logs\rfid-server.log | Select-Object -Last 1 -->
   <div class="alert alert-erro" th:if="${info.backupBancoComProblema}" sec:authorize="hasRole('ADMIN')" role="alert">
     <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
     <span>Backup do banco com problema: <span th:text="${info.backupBanco}"></span>. Confira se o Docker Desktop está

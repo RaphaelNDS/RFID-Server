@@ -178,9 +178,48 @@ function avisar(mensagem, tipo) {
 // Formulário com data-confirmar="mensagem" pede confirmação antes de enviar. Opcionais: data-confirmar-titulo,
 // data-confirmar-botao, data-confirmar-perigo (botão vermelho) e data-confirmar-campo="rótulo" +
 // data-confirmar-destino="nome do input" (texto obrigatório copiado para esse input, ex.: motivo da retirada)
+//
+// Formulário com data-enviar-uma-vez trava o botão de envio no primeiro envio (duplo clique mandava dois POST, ex.:
+// duas senhas temporárias ou dois APKs); com data-enviando="texto" no botão, ele mostra esse texto enquanto envia.
+function travarEnvio(form) {
+  form.dataset.enviado = "1";
+  // Depois do evento: desabilitar o botão durante o próprio submit poderia tirá-lo dos dados enviados
+  setTimeout(function () {
+    form.querySelectorAll("button[type='submit'], button:not([type])").forEach(function (b) {
+      if (b.disabled) return;
+      b.disabled = true;
+      b.dataset.travado = "1";
+      if (b.dataset.enviando) {
+        b.dataset.htmlOriginal = b.innerHTML;
+        b.textContent = b.dataset.enviando;
+      }
+    });
+  }, 0);
+}
+
+// Voltar para a página pelo histórico (cache do navegador) não pode deixar o botão travado. Só destrava os
+// botões travados aqui (um botão desabilitado pela própria tela continua desabilitado)
+window.addEventListener("pageshow", function (e) {
+  if (!e.persisted) return;
+  document.querySelectorAll("form[data-enviado]").forEach(function (form) {
+    delete form.dataset.enviado;
+    form.querySelectorAll("button[data-travado]").forEach(function (b) {
+      b.disabled = false;
+      delete b.dataset.travado;
+      if (b.dataset.htmlOriginal !== undefined) b.innerHTML = b.dataset.htmlOriginal;
+    });
+  });
+});
+
 document.addEventListener("submit", function (e) {
   const form = e.target;
-  if (!(form instanceof HTMLFormElement) || !form.dataset.confirmar) return;
+  if (!(form instanceof HTMLFormElement)) return;
+  const umaVez = form.dataset.enviarUmaVez !== undefined;
+  if (umaVez && form.dataset.enviado) { e.preventDefault(); return; }
+  if (!form.dataset.confirmar) {
+    if (umaVez && !e.defaultPrevented) travarEnvio(form);
+    return;
+  }
   e.preventDefault();
   confirmar({
     titulo: form.dataset.confirmarTitulo,
@@ -193,6 +232,7 @@ document.addEventListener("submit", function (e) {
     if (form.dataset.confirmarDestino && form.elements[form.dataset.confirmarDestino]) {
       form.elements[form.dataset.confirmarDestino].value = resposta;
     }
+    if (umaVez) travarEnvio(form);
     // submit() direto não dispara este evento de novo
     HTMLFormElement.prototype.submit.call(form);
   });

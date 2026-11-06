@@ -50,6 +50,13 @@ rfid.dispositivos.cadastro=coletor-01
 #rfid.backup.manter=14
 #rfid.backup.pasta=D:/Backups/RFID
 
+# Senha que CIFRA o backup do certificado (sai rfid-certificado-<data>.zip.cifrado). Sem ela o .zip sai aberto,
+# com a chave privada do certificado e a senha dela: quem copiar o arquivo pode se passar pelo servidor.
+# Guarde esta senha FORA desta máquina (cofre de senhas, papel guardado): se o disco morrer, sem ela o backup não
+# restaura. Restaurar: java -jar servidor\rfid-server.jar --decifrar-backup <arquivo>.zip.cifrado (pede a senha)
+# e extraia o .zip gerado em .\data. Ou use a variável de ambiente RFID_BACKUP_SENHA
+#rfid.backup.senha=
+
 # Backup do banco antes de aplicar migrações (versão nova do servidor). Se falhar, o servidor não sobe e não migra.
 # Vazio = migra sem backup
 #rfid.banco.backup-antes-migracao=docker exec rfid-backup /backup.sh

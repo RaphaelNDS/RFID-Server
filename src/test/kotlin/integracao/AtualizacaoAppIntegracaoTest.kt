@@ -183,6 +183,29 @@ class AtualizacaoAppIntegracaoTest : IntegracaoBase() {
         coletor("/api/android/atualizacao").andExpect(jsonPath("$.codigo").value(4))
     }
 
+    private fun retirar(codigo: Int) = mvc.perform(
+        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/admin/app/$codigo/retirar")
+            .param("motivo", "Com defeito").with(Perfis.admin()).with(csrf())
+    ).andExpect(redirectedUrl("/admin/app"))
+
+    @Test
+    fun `versoes retiradas nao contam no limite e o arquivo da ultima versao boa fica`() {
+        publicar("rfid-teste-1.0-1.apk")
+        publicar("rfid-teste-2.0-2.apk"); retirar(2)
+        publicar("rfid-teste-3.0-3.apk"); retirar(3)
+        // Antes: 4, 3, 2 eram as "três últimas" e o arquivo da 1 (a única versão boa além da 4) era apagado aqui
+        publicar("rfid-teste-4.0-4.apk")
+
+        val porCodigo = versoes.findAll().associateBy { it.codigo }
+        assertThat(porCodigo.values).allMatch { !it.arquivoRemovido }
+        assertThat(Files.exists(service.pasta.resolve("rfid-android-1.0-1.apk"))).isTrue()
+
+        // A 4 também com defeito: os coletores voltam para a 1, que ainda tem o arquivo
+        retirar(4)
+        coletor("/api/android/atualizacao", codigoInstalado = "0").andExpect(status().isOk).andExpect(jsonPath("$.codigo").value(1))
+        coletor("/api/android/atualizacao/apk").andExpect(status().isOk)
+    }
+
     @Test
     fun `coletor abaixo da versao publicada aparece como desatualizado na tela Coletores`() {
         publicar("rfid-teste-2.0-2.apk")

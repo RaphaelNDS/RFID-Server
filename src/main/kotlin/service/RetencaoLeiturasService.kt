@@ -7,7 +7,6 @@ import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.time.LocalDate
 
@@ -25,7 +24,9 @@ import java.time.LocalDate
 class RetencaoLeiturasService(
     private val repo: LeituraAndroidRepository,
     private val relogio: Clock,
-    @Value("\${rfid.leituras.reter-dias:0}") configurado: Long
+    @Value("\${rfid.leituras.reter-dias:0}") configurado: Long,
+    /** Leituras apagadas por transação (ver [apagarAntigas]); menor só nos testes. */
+    @Value("\${rfid.leituras.lote-retencao:10000}") tamanhoLote: Int = LOTE_PADRAO
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -44,6 +45,8 @@ class RetencaoLeiturasService(
     }
 
     val ativa: Boolean get() = reterDias > 0
+
+    private val tamanhoLote: Int = tamanhoLote.coerceAtLeast(1)
 
     @EventListener(ApplicationReadyEvent::class)
     fun informarConfiguracao() {
@@ -64,19 +67,31 @@ class RetencaoLeiturasService(
             .onFailure { log.error("Falha ao apagar leituras antigas (retenção de {} dias): {}", reterDias, it.message, it) }
     }
 
-    /** Apaga as leituras anteriores ao limite e devolve quantas foram apagadas. */
-    @Transactional
+    /**
+     * Apaga as leituras anteriores ao limite em lotes de [tamanhoLote], cada lote na sua transação curta (no
+     * repositório), até não sobrar nenhuma; devolve o total apagado. Sem @Transactional aqui de propósito: uma
+     * transação em volta do laço juntaria tudo num DELETE gigante de novo. Se um lote falhar, os anteriores já
+     * ficam apagados e o resto sai na próxima execução.
+     */
     fun apagarAntigas(): Int {
         if (!ativa) return 0
 
         val limite = LocalDate.now(relogio).minusDays(reterDias).atStartOfDay()
         val inicio = System.currentTimeMillis()
-        val apagadas = repo.apagarAnterioresA(limite)
+        var apagadas = 0
+        var lotes = 0
+        while (true) {
+            val noLote = repo.apagarLoteAnterioresA(limite, tamanhoLote)
+            apagadas += noLote
+            lotes++
+            if (noLote < tamanhoLote) break
+            log.debug("Retenção de leituras: lote {} com {} leitura(s) apagado(s); continuando", lotes, noLote)
+        }
 
         if (apagadas > 0) {
             log.info(
-                "Retenção de leituras: {} leitura(s) anteriores a {} apagada(s) em {} ms (guardando {} dias)",
-                apagadas, limite.toLocalDate(), System.currentTimeMillis() - inicio, reterDias
+                "Retenção de leituras: {} leitura(s) anteriores a {} apagada(s) em {} lote(s) de até {} em {} ms (guardando {} dias)",
+                apagadas, limite.toLocalDate(), lotes, tamanhoLote, System.currentTimeMillis() - inicio, reterDias
             )
         } else {
             log.debug("Retenção de leituras: nenhuma leitura anterior a {}", limite.toLocalDate())
@@ -86,5 +101,8 @@ class RetencaoLeiturasService(
 
     companion object {
         const val MINIMO_DIAS = 30L
+
+        /** 10.000 leituras por transação: rápido o bastante por lote e sem segurar a tabela por minutos. */
+        const val LOTE_PADRAO = 10_000
     }
 }

@@ -76,9 +76,14 @@ spring.datasource.password=<senha do banco>
 rfid.dispositivos.chaves=coletor-01:<chave longa do coletor-01>
 # Coletores que podem cadastrar etiquetas (opcional)
 rfid.dispositivos.cadastro=coletor-01
+# Senha que cifra o backup do certificado HTTPS (sem ela o backup sai aberto, com a chave privada)
+rfid.backup.senha=<senha longa só para o backup>
 ```
 
 > Esse arquivo tem a senha do banco e as chaves dos coletores: **não mande por email nem coloque no git**.
+>
+> **Guarde a senha do backup (`rfid.backup.senha` ou `RFID_BACKUP_SENHA`) fora desta máquina** (cofre de senhas,
+> papel guardado): o backup do certificado só sai cifrado com ela, e sem ela ele não restaura se o disco morrer.
 
 ### 2.3 Iniciar
 
@@ -89,8 +94,16 @@ rfid.dispositivos.cadastro=coletor-01
 4. Na primeira vez, o **Firewall do Windows** pergunta se libera o Java: **permita em redes privadas**. Sem isso os
    coletores não conectam (o navegador no próprio servidor funciona, o que engana).
 
-Para o servidor subir sozinho ao ligar o computador (e não cair ao fechar a janela), instale-o como serviço do
-Windows com o `instalar-servico.bat`. Veja "Serviço do Windows" no [README](../README.md#serviço-do-windows).
+5. **Não clique dentro da janela do `.bat`**: com o "Modo de Edição Rápida" do console ligado, o clique pausa o
+   servidor até alguém apertar **Esc**. Prefira abrir pelo Windows Terminal ou desligue a Edição Rápida (botão
+   direito na barra de título > Propriedades).
+
+O servidor roda pela janela do `.bat`, **sem serviço do Windows**. Para voltar ao ar depois de reiniciar o
+computador: deixe o **Docker Desktop iniciando com o Windows**, **desligue a suspensão** quando conectado na tomada
+e, depois de reiniciar, abra o `iniciar-servidor.bat /aguardar` (ele espera o banco subir por até 5 min). Opcional:
+um atalho do `.bat` com `/aguardar` na pasta **Inicializar** (`Win+R` > `shell:startup`) abre o servidor sozinho
+quando alguém entra no Windows. Veja "Depois de reiniciar o Windows (sem serviço)" no
+[README](../README.md#depois-de-reiniciar-o-windows-sem-serviço).
 
 ---
 
@@ -102,8 +115,8 @@ Windows com o `instalar-servico.bat`. Veja "Serviço do Windows" no [README](../
 3. Cadastre o **catálogo** (tipos → marcas → modelos) e os **usuários** dos operadores (tela Usuários). O operador
    precisa de pelo menos **Leituras · Ver** para usar o coletor; para cadastrar etiquetas pelo coletor, também
    **RFID · Criar**.
-4. Anote a **impressão digital SHA-256 do certificado** do servidor, na tela **Status** (`/status`). Ela é usada no
-   passo 6. Também aparece no log:
+4. Anote a **impressão digital SHA-256 do certificado** do servidor, na tela **Status** (`/status`, só o ADMIN
+   vê). Ela é usada no passo 6. Também aparece no log a cada inicialização (o caminho para quem não é ADMIN):
    ```powershell
    Select-String "SHA-256 do certificado HTTPS" .\data\logs\rfid-server.log | Select-Object -Last 1
    ```
@@ -147,7 +160,7 @@ Depois da primeira instalação, as próximas versões chegam pelo próprio serv
 3. **Chave do coletor:** a chave do passo 4.
 4. Toque em **Salvar**.
 5. **Confirmar o servidor:** o app mostra a impressão digital do certificado em 4 linhas de 8 pares. Compare
-   **todos os pares** com a da tela Status do servidor (passo 3). Iguais: **"É igual, confiar"**. Qualquer
+   **todos os pares** com a anotada no passo 3 (tela Status, só ADMIN, ou o log do servidor). Iguais: **"É igual, confiar"**. Qualquer
    diferença: **"Não confiar"** e avise o responsável pelo servidor.
 6. **Criar o PIN do coletor:** na primeira vez o app pede um PIN de **4 a 8 números** (sem sequência como
    `1234` e sem repetir o mesmo número, como `1111`). O PIN protege o endereço do servidor, a chave e o

@@ -339,4 +339,16 @@ class RfidServiceTest {
         verify { naoRepo.buscar("%e200%", any()) }
         assertThat(pagina.captured.sort.getOrderFor("dataHora")?.isDescending).isTrue()
     }
+
+    @Test
+    fun `pendencia do lote recusada pelo indice unico conta como ja pendente, outro erro de integridade sobe`() {
+        every { naoRepo.saveAndFlush(any<TagNaoCadastradaEntity>()) } throws
+            org.springframework.dao.DataIntegrityViolationException("dup", java.sql.SQLException("duplicate key", "23505"))
+        service.registrarPendenteDoLote("E-SIMULTANEA") // não lança: outro envio gravou antes
+
+        every { naoRepo.saveAndFlush(any<TagNaoCadastradaEntity>()) } throws
+            org.springframework.dao.DataIntegrityViolationException("grande", java.sql.SQLException("value too long", "22001"))
+        assertThatThrownBy { service.registrarPendenteDoLote("E-OUTRO-ERRO") }
+            .isInstanceOf(org.springframework.dao.DataIntegrityViolationException::class.java)
+    }
 }

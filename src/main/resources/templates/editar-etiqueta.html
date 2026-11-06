@@ -23,7 +23,19 @@
   <form class="card" th:action="@{/admin/etiquetas/{id}/editar(id=${etiquetaId})}" th:object="${cadastro}" method="post">
       <!-- Versão da etiqueta quando a tela abriu: se outra pessoa salvar antes, o servidor avisa em vez de gravar por cima -->
       <input type="hidden" name="versao" th:value="${cadastro.versao}">
+      <!-- Busca e página da lista de onde veio: salvar volta para o mesmo lugar -->
+      <input type="hidden" name="busca" th:if="${voltarBusca != null}" th:value="${voltarBusca}">
+      <input type="hidden" name="pagina" th:if="${voltarPagina != null}" th:value="${voltarPagina}">
+      <!-- O que vai para o servidor: começa com a marca e o modelo atuais e só muda quando a pessoa escolhe outro
+           (layout/catalogo-selects). Os selects não têm name: desabilitados enquanto carregam, não seriam enviados -->
+      <input type="hidden" id="marcaValor" name="marcaId" th:value="${cadastro.marcaId}">
+      <input type="hidden" id="modeloValor" name="modeloId" th:value="${cadastro.modeloId}">
     <div class="card-body">
+      <div class="alert alert-erro" id="catalogoErro" role="alert" hidden>
+        <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+        <span>Não foi possível carregar as marcas e os modelos do catálogo. Ao salvar, a marca e o modelo atuais
+          continuam os mesmos; para trocá-los, recarregue a página.</span>
+      </div>
       <div class="form-grid">
 
         <div class="field span-2">
@@ -42,7 +54,7 @@
           <input type="text" id="patrimonio" th:field="*{patrimonio}" maxlength="255">
         </div>
 
-        <!-- Valores atuais (data-inicial): o script carrega marcas e modelos e já seleciona -->
+        <!-- Valores atuais (marcaValor e modeloValor): o script carrega marcas e modelos e já seleciona -->
         <div class="field">
           <label for="tipoSelect">Tipo de equipamento</label>
           <select id="tipoSelect" name="tipoEquipamentoId">
@@ -54,14 +66,14 @@
 
         <div class="field">
           <label for="marcaSelect">Marca</label>
-          <select id="marcaSelect" name="marcaId" disabled th:attr="data-inicial=${cadastro.marcaId}">
+          <select id="marcaSelect" disabled>
             <option value="">Escolha o tipo primeiro</option>
           </select>
         </div>
 
         <div class="field">
           <label for="modeloSelect">Modelo</label>
-          <select id="modeloSelect" name="modeloId" disabled th:attr="data-inicial=${cadastro.modeloId}">
+          <select id="modeloSelect" disabled>
             <option value="">Escolha a marca primeiro</option>
           </select>
         </div>
@@ -75,7 +87,7 @@
     </div>
 
     <div class="card-footer">
-      <a th:href="@{/admin/tags-cadastradas}" class="btn btn-ghost">Cancelar</a>
+      <a th:href="@{${linkVoltar}}" class="btn btn-ghost">Cancelar</a>
       <button type="submit" class="btn btn-primary">Salvar alterações</button>
     </div>
   </form>

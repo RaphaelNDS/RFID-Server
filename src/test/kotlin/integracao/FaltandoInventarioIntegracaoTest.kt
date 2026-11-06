@@ -8,6 +8,7 @@ import org.example.suporte.IntegracaoBase
 import org.example.suporte.OperadorTeste
 import org.example.suporte.Perfis
 import org.example.suporte.comoOperador
+import org.hamcrest.Matchers.containsInAnyOrder
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.not
 import org.junit.jupiter.api.BeforeEach
@@ -17,6 +18,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.util.UUID
 
@@ -81,6 +83,26 @@ class FaltandoInventarioIntegracaoTest : IntegracaoBase() {
         assertThat(deC.faltando).isEmpty()
         mvc.perform(get("/admin/inventarios/$c").with(Perfis.admin()))
             .andExpect(content().string(containsString("Nada faltou")))
+    }
+
+    @Test
+    fun `cadastrada depois do inventario entra no esperado e no faltando`() {
+        val a = inventario("2026-09-01T09:00:00-03:00", "2026-09-01T10:00:00-03:00", "E-F1", "E-TARDIA", "E-SEM-CADASTRO")
+        // Cadastrada só depois do inventário de referência (no item de A ela ficou como não cadastrada)
+        rfidService.cadastrarTag(CadastroRequest(tag = "E-TARDIA", codigoInterno = "TI-9", patrimonio = "PAT-9"))
+
+        // No coletor, o esperado do local (referência = A) a traz
+        mvc.perform(get("/api/android/inventarios/esperado").param("local", local).comoOperador(token))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.inventarioReferencia").value(a))
+            .andExpect(jsonPath("$.itens[*].tag").value(containsInAnyOrder("E-F1", "E-TARDIA")))
+
+        val b = inventario("2026-09-05T09:00:00-03:00", "2026-09-05T10:00:00-03:00", "E-F1")
+
+        val deB = comparacao(b)
+        assertThat(deB.referencia.inventarioReferencia).isEqualTo(a)
+        assertThat(deB.esperadas).isEqualTo(2)   // E-F1 e E-TARDIA; a que segue sem cadastro não conta
+        assertThat(deB.faltando.map { it.tag }).containsExactly("E-TARDIA")
     }
 
     @Test

@@ -105,14 +105,20 @@ class SessaoOperadorService(
 
         val usuario = conferirCredenciais(email, senha, dispositivo, ip, "Login")
 
+        val principal = detalhes.loadUserByUsername(usuario.email) as UserPrincipal
+
         // Senha temporária gerada pelo ADMIN ("Esqueceu a senha?"): como na web, só serve para criar a senha nova.
-        // O coletor não tem tela de troca de senha, então a pessoa troca na web e depois entra aqui.
+        // O coletor não tem tela de troca de senha, então a pessoa troca na web e depois entra aqui. Vencida, a web
+        // também recusa: mandar "entrar pela web" deixava a pessoa sem saída; o caminho é pedir outra ao ADMIN
         if (usuario.trocarSenha) {
+            if (principal.senhaTemporariaVencida) {
+                log.warn("Login no coletor {} recusado: a senha temporária de '{}' venceu sem ter sido trocada (IP {})", dispositivo, usuario.email, ip)
+                throw LoginRecusadoException(403, MENSAGEM_SENHA_TEMPORARIA_VENCIDA)
+            }
             log.warn("Login no coletor {} recusado: '{}' entrou com senha temporária e ainda não criou a senha nova (IP {})", dispositivo, usuario.email, ip)
             throw LoginRecusadoException(403, MENSAGEM_SENHA_TEMPORARIA)
         }
 
-        val principal = detalhes.loadUserByUsername(usuario.email) as UserPrincipal
         val podeLer = temPermissao(principal, "LEITURA_READ")
 
         if (!podeLer) {
@@ -229,31 +235,43 @@ class SessaoOperadorService(
         val agora = LocalDateTime.now(relogio)
         // Mesma ordem de sempre: fora da sessão, depois token morto, depois ação antiga demais, depois o usuário
         val recusa = recusaDoMomento(sessao, momento, agora)
-        if (recusa != null && recusa.motivo != MotivoSessaoInvalida.ANTIGA_DEMAIS) throw recusa
+        if (recusa != null && recusa.motivo != MotivoSessaoInvalida.ANTIGA_DEMAIS) {
+            throw if (recusa.motivo == MotivoSessaoInvalida.ENCERRADA && usuarioDesativado(sessao)) recusaDesativado(sessao, dispositivo) else recusa
+        }
         exigirTokenVivo(sessao, dispositivo, agora)
         if (recusa != null) {
             log.warn("Ação de {} no coletor {} chegou {} h depois de feita, além do prazo de sincronização: recusada",
                 momento, dispositivo, Duration.between(momento, agora).toHours())
             throw recusa
         }
-        return operadorDa(sessao, dispositivo)
+        return operadorDa(sessao, dispositivo, agora)
     }
 
     /**
      * Lote: confere a hora de cada leitura contra a sessão com UMA consulta da sessão e do usuário (antes o lote
      * chamava [validar] por item quando alguma leitura caía fora da sessão: até 1.500 consultas num lote de 500).
      * Devolve índice -> recusa só dos momentos fora da sessão. O que não depende do momento (sessão desconhecida,
-     * de outro coletor, token morto, usuário inexistente ou desativado) lança [SessaoInvalidaException] para o lote todo.
+     * de outro coletor, token morto, usuário inexistente) lança [SessaoInvalidaException] para o lote todo. Usuário
+     * desativado: as leituras de antes da desativação valem e as de depois voltam recusadas com DESATIVADO.
      */
     @Transactional(readOnly = true)
     fun conferirMomentos(token: String, dispositivo: String, momentos: List<LocalDateTime>): Map<Int, SessaoInvalidaException> {
         val sessao = sessaoDoColetor(token, dispositivo)
         val agora = LocalDateTime.now(relogio)
         exigirTokenVivo(sessao, dispositivo, agora)
-        operadorDa(sessao, dispositivo)
-        return momentos.withIndex()
+        val principal = operadorDa(sessao, dispositivo, agora)
+        val recusas = momentos.withIndex()
             .mapNotNull { (indice, momento) -> recusaDoMomento(sessao, momento, agora)?.let { indice to it } }
             .toMap()
+        if (principal.isEnabled) return recusas
+        // Desativado: o que foi feito antes da desativação vale; o que veio depois é recusado como "desativado"
+        val depois = recusas.count { it.value.motivo == MotivoSessaoInvalida.ENCERRADA }
+        if (depois > 0) {
+            log.warn("Coletor {}: {} ação(ões) de {} feitas depois da desativação recusadas; {} de antes aceitas",
+                dispositivo, depois, principal.email, momentos.size - recusas.size)
+        }
+        val desativado by lazy { SessaoInvalidaException(MENSAGEM_DESATIVADO, MotivoSessaoInvalida.DESATIVADO) }
+        return recusas.mapValues { (_, recusa) -> if (recusa.motivo == MotivoSessaoInvalida.ENCERRADA) desativado else recusa }
     }
 
     /**
@@ -327,7 +345,14 @@ class SessaoOperadorService(
         }
     }
 
-    private fun operadorDa(sessao: SessaoOperadorEntity, dispositivo: String): UserPrincipal {
+    /**
+     * Usuário da sessão com as permissões ATUAIS. Desativado: vale a mesma regra da troca de senha, vale o que foi
+     * feito enquanto a sessão valia. A desativação encerra a sessão (encerradaEm = hora da desativação), então as
+     * ações de ANTES (feitas offline e enviadas depois) passam e as de depois já são recusadas pela hora (e trocadas
+     * por DESATIVADO em [validar] e [conferirMomentos]). Sessão ainda aberta de usuário desativado (desativação que
+     * não passou pelo ADMIN, ex.: direto no banco) não diz quando ele foi desativado: recusa tudo, como antes.
+     */
+    private fun operadorDa(sessao: SessaoOperadorEntity, dispositivo: String, agora: LocalDateTime): UserPrincipal {
         val usuario = usuarios.findById(sessao.usuarioId).orElse(null)
             ?: throw SessaoInvalidaException("O usuário desta sessão não existe mais", MotivoSessaoInvalida.USUARIO_INEXISTENTE)
 
@@ -337,12 +362,22 @@ class SessaoOperadorService(
             throw SessaoInvalidaException("O usuário desta sessão não existe mais", MotivoSessaoInvalida.USUARIO_INEXISTENTE)
         }
 
-        // Desativado depois do login: o token deixa de valer já na próxima ação (o ADMIN também encerra as sessões)
         if (!principal.isEnabled) {
-            log.warn("Ação no coletor {} recusada: o usuário {} foi desativado", dispositivo, principal.email)
-            throw SessaoInvalidaException(MENSAGEM_DESATIVADO, MotivoSessaoInvalida.DESATIVADO)
+            if (sessao.encerradaEm == null && sessao.expiraEm.isAfter(agora)) throw recusaDesativado(sessao, dispositivo, principal.email)
+            log.info("Coletor {}: envio de {} (desativado; sessão encerrada em {}): valem só as ações feitas antes disso",
+                dispositivo, principal.email, sessao.encerradaEm ?: sessao.expiraEm)
         }
         return principal
+    }
+
+    /** O usuário da sessão existe e está desativado (para a ação depois do fim da sessão dizer o motivo certo). */
+    private fun usuarioDesativado(sessao: SessaoOperadorEntity): Boolean =
+        usuarios.findById(sessao.usuarioId).map { !it.ativo }.orElse(false)
+
+    private fun recusaDesativado(sessao: SessaoOperadorEntity, dispositivo: String, email: String? = null): SessaoInvalidaException {
+        log.warn("Ação no coletor {} recusada: o usuário {} foi desativado (ação depois da desativação)", dispositivo,
+            email ?: usuarios.findById(sessao.usuarioId).map { it.email }.orElse("?"))
+        return SessaoInvalidaException(MENSAGEM_DESATIVADO, MotivoSessaoInvalida.DESATIVADO)
     }
     /**
      * Limpeza: apaga as sessões que já não autorizam nada há mais de [GUARDAR_SESSOES_MORTAS]. Uma sessão morre de
@@ -376,6 +411,8 @@ class SessaoOperadorService(
         const val MENSAGEM_CREDENCIAIS = "Email ou senha incorretos"
         const val MENSAGEM_SENHA_TEMPORARIA =
             "Você está com uma senha temporária: entre pela web, crie sua senha nova e depois entre no coletor com ela."
+        const val MENSAGEM_SENHA_TEMPORARIA_VENCIDA =
+            "Sua senha temporária venceu sem ter sido trocada. Peça uma senha nova ao administrador."
         const val MENSAGEM_DESATIVADO = "Seu usuário foi desativado. Fale com o administrador."
         const val MENSAGEM_SO_ADMIN_PIN = "Só um administrador pode liberar o PIN das Configurações do coletor."
 

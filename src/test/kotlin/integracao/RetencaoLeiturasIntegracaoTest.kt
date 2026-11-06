@@ -24,16 +24,17 @@ class RetencaoLeiturasIntegracaoTest : IntegracaoBase() {
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     fun `tarefa agendada apaga as leituras antigas de verdade`() {
-        val antiga = leituras.save(LeituraAndroidEntity(tag = "E200RETENCAO-ANTIGA", dataHora = LocalDateTime.now().minusDays(400)))
+        // 5 antigas com lote de 2: precisa de 3 voltas (2 + 2 + 1), cada uma na sua transação
+        val antigas = (1..5).map { leituras.save(LeituraAndroidEntity(tag = "E200RETENCAO-ANTIGA-$it", dataHora = LocalDateTime.now().minusDays(400 + it.toLong()))) }
         val recente = leituras.save(LeituraAndroidEntity(tag = "E200RETENCAO-RECENTE", dataHora = LocalDateTime.now().minusDays(10)))
         try {
-            RetencaoLeiturasService(leituras, Clock.systemDefaultZone(), 365).executarAgendada()
+            RetencaoLeiturasService(leituras, Clock.systemDefaultZone(), 365, 2).executarAgendada()
 
-            assertThat(leituras.findById(antiga.id)).isEmpty
+            assertThat(antigas.map { it.id }).allMatch { leituras.findById(it).isEmpty }
             assertThat(leituras.findById(recente.id)).isPresent
         } finally {
             // Gravado fora de transação: limpa para não sobrar nos outros testes
-            leituras.deleteAllById(listOf(antiga.id, recente.id).filter { leituras.existsById(it) })
+            leituras.deleteAllById((antigas + recente).map { it.id }.filter { leituras.existsById(it) })
         }
     }
 }

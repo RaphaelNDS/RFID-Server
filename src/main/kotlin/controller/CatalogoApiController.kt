@@ -16,6 +16,16 @@ class CatalogoApiController(
     private val service: CatalogoService
 ) {
 
+    companion object {
+        /**
+         * Listas de tipos, marcas e modelos: também para quem cadastra ou edita etiquetas (RFID Criar/Editar), que
+         * escolhe marca e modelo pelos selects da tela sem ter o módulo Catálogo. Antes a API recusava (403) e a
+         * edição da etiqueta salvava marca e modelo vazios.
+         */
+        const val LER_PARA_ETIQUETAS = "@authService.temPermissao('CATALOGO','READ') or " +
+            "@authService.temPermissao('RFID','CREATE') or @authService.temPermissao('RFID','UPDATE')"
+    }
+
     /* ================= CREATE ================= */
 
     @PreAuthorize("@authService.temPermissao('CATALOGO','CREATE')")
@@ -35,18 +45,18 @@ class CatalogoApiController(
 
     /* ================= READ ================= */
 
-    @PreAuthorize("@authService.temPermissao('CATALOGO','READ')")
+    @PreAuthorize(LER_PARA_ETIQUETAS)
     @GetMapping("/tipos")
     fun listarTipos() = service.listarTipos().map { TipoDTO(it.id, it.nome) }
 
-    @PreAuthorize("@authService.temPermissao('CATALOGO','READ')")
+    @PreAuthorize(LER_PARA_ETIQUETAS)
     @GetMapping("/marcas")
     fun marcas(@RequestParam tipoId: Long) =
         service.listarMarcasPorTipo(tipoId).map {
             MarcaDTO(it.id, it.nome)
         }
 
-    @PreAuthorize("@authService.temPermissao('CATALOGO','READ')")
+    @PreAuthorize(LER_PARA_ETIQUETAS)
     @GetMapping("/modelos")
     fun modelos(@RequestParam marcaId: Long) =
         service.listarModelosPorMarca(marcaId).map {
