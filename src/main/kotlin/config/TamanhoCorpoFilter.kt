@@ -19,16 +19,28 @@ import java.io.IOException
  * conferido DEPOIS de o Jackson desserializar o corpo inteiro: um app em loop (ou quem tirou a chave de um aparelho)
  * mandando dezenas de MB podia esgotar a memória do servidor (-Xmx1g). Corpo com Content-Length acima do limite é
  * recusado com 413 sem ler nada; sem Content-Length (envio em partes), a leitura para ao passar do limite.
+ *
+ * Também vale nas telas ([origem] "das telas", [ignorarMultipart]): a API do catálogo (/api/catalogo) desserializa o
+ * JSON antes de o @PreAuthorize conferir a permissão. Envio de arquivo (multipart) fica de fora: só o APK em
+ * /admin/app aceita, com limite próprio (spring.servlet.multipart e EnvioArquivoFilter).
  */
-class TamanhoCorpoFilter(private val maximoBytes: Long) : OncePerRequestFilter() {
+class TamanhoCorpoFilter(
+    private val maximoBytes: Long,
+    /** Para o log: de onde veio o envio recusado. */
+    private val origem: String = "do coletor",
+    private val ignorarMultipart: Boolean = false
+) : OncePerRequestFilter() {
 
     private val log = LoggerFactory.getLogger(javaClass)
+
+    override fun shouldNotFilter(request: HttpServletRequest) =
+        ignorarMultipart && request.contentType?.lowercase()?.startsWith("multipart/") == true
 
     override fun doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, chain: FilterChain) {
         val informado = request.contentLengthLong
         if (informado > maximoBytes) {
-            log.warn("Envio do coletor recusado antes de ler o corpo: {} {} com {} bytes (máximo {}; IP {})",
-                request.method, request.requestURI, informado, maximoBytes, request.remoteAddr)
+            log.warn("Envio {} recusado antes de ler o corpo: {} {} com {} bytes (máximo {}; IP {})",
+                origem, request.method, request.requestURI, informado, maximoBytes, request.remoteAddr)
             response.setHeader("Connection", "close")
             response.status = HttpStatus.PAYLOAD_TOO_LARGE.value()
             response.contentType = MediaType.APPLICATION_JSON_VALUE

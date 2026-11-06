@@ -7,6 +7,11 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.attribute.AclEntryType
+import java.nio.file.attribute.AclFileAttributeView
+import java.nio.file.attribute.PosixFileAttributeView
+import java.nio.file.attribute.PosixFilePermissions
 import java.time.Duration
 import java.time.Instant
 
@@ -34,6 +39,41 @@ class CertificadoHttpsTest {
 
         val alternativos = c.certificado!!.subjectAlternativeNames.map { it[1].toString() }
         assertThat(alternativos).contains("localhost", "127.0.0.1", "rfid-servidor", "192.168.50.10")
+    }
+
+    @Test
+    fun `arquivo da senha fica legivel so pelo dono (600 no Linux, ACL no Windows)`() {
+        certificado().garantir()
+        val senha = File(pasta, "rfid-https.p12.senha").toPath()
+
+        val posix = Files.getFileAttributeView(senha, PosixFileAttributeView::class.java)
+        if (posix != null) {
+            assertThat(PosixFilePermissions.toString(posix.readAttributes().permissions())).isEqualTo("rw-------")
+        } else {
+            val acl = Files.getFileAttributeView(senha, AclFileAttributeView::class.java)!!
+            val nomes = acl.acl.map { it.principal().name.substringAfter('\\').lowercase() }
+            // Só o dono, o SYSTEM e os Administradores (nos dois idiomas): nada de Usuários, Todos ou herdados da pasta
+            val permitidos = setOf(acl.owner.name.substringAfter('\\').lowercase(), "system", "sistema", "administrators", "administradores")
+            assertThat(nomes).isNotEmpty().allMatch { it in permitidos }
+            assertThat(acl.acl).allMatch { it.type() == AclEntryType.ALLOW }
+        }
+        // E o servidor continua conseguindo ler a senha (reiniciar carrega o mesmo certificado)
+        assertThat(certificado().also { it.garantir() }.impressaoDigital).isNotBlank()
+    }
+
+    @Test
+    fun `senha de instalacao anterior tambem e protegida ao subir`() {
+        certificado().garantir()
+        val senha = File(pasta, "rfid-https.p12.senha")
+        // Simula o arquivo gravado pela versão anterior, com permissões abertas
+        Files.getFileAttributeView(senha.toPath(), PosixFileAttributeView::class.java)
+            ?.setPermissions(PosixFilePermissions.fromString("rw-r--r--"))
+
+        certificado().garantir()
+
+        Files.getFileAttributeView(senha.toPath(), PosixFileAttributeView::class.java)?.let {
+            assertThat(PosixFilePermissions.toString(it.readAttributes().permissions())).isEqualTo("rw-------")
+        }
     }
 
     @Test

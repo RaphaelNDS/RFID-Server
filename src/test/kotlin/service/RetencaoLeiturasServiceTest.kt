@@ -26,7 +26,7 @@ class RetencaoLeiturasServiceTest {
         assertThat(s.apagarAntigas()).isZero()
         s.executarAgendada()
 
-        verify(exactly = 0) { repo.apagarAnterioresA(any()) }
+        verify(exactly = 0) { repo.apagarLoteAnterioresA(any(), any()) }
     }
 
     @Test
@@ -36,28 +36,40 @@ class RetencaoLeiturasServiceTest {
 
     @Test
     fun `apaga o que for anterior ao inicio do dia limite`() {
-        every { repo.apagarAnterioresA(any()) } returns 42
+        every { repo.apagarLoteAnterioresA(any(), any()) } returns 42
 
         val apagadas = service(90).apagarAntigas()
 
         assertThat(apagadas).isEqualTo(42)
-        verify { repo.apagarAnterioresA(LocalDate.of(2026, 7, 15).atStartOfDay()) } // 13/10 - 90 dias
+        verify { repo.apagarLoteAnterioresA(LocalDate.of(2026, 7, 15).atStartOfDay(), RetencaoLeiturasService.LOTE) } // 13/10 - 90 dias
+    }
+
+    @Test
+    fun `muitas leituras sao apagadas em partes ate acabar`() {
+        // Cada parte é um DELETE curto: o banco cancela comandos com mais de 60 s
+        every { repo.apagarLoteAnterioresA(any(), any()) } returnsMany
+            listOf(RetencaoLeiturasService.LOTE, RetencaoLeiturasService.LOTE, 7)
+
+        val apagadas = service(90).apagarAntigas()
+
+        assertThat(apagadas).isEqualTo(2 * RetencaoLeiturasService.LOTE + 7)
+        verify(exactly = 3) { repo.apagarLoteAnterioresA(any(), any()) }
     }
 
     @Test
     fun `prazo menor que 30 dias vira 30 (leituras offline chegam atrasadas)`() {
-        every { repo.apagarAnterioresA(any()) } returns 0
+        every { repo.apagarLoteAnterioresA(any(), any()) } returns 0
 
         val s = service(3)
 
         assertThat(s.reterDias).isEqualTo(RetencaoLeiturasService.MINIMO_DIAS)
         s.apagarAntigas()
-        verify { repo.apagarAnterioresA(LocalDate.of(2026, 9, 13).atStartOfDay()) }
+        verify { repo.apagarLoteAnterioresA(LocalDate.of(2026, 9, 13).atStartOfDay(), any()) }
     }
 
     @Test
     fun `falha na execucao agendada nao propaga`() {
-        every { repo.apagarAnterioresA(any()) } throws RuntimeException("banco fora")
+        every { repo.apagarLoteAnterioresA(any(), any()) } throws RuntimeException("banco fora")
 
         service(90).executarAgendada() // não pode lançar
     }

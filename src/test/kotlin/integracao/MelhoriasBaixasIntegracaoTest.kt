@@ -75,12 +75,16 @@ class MelhoriasBaixasIntegracaoTest : IntegracaoBase() {
     }
 
     @Test
-    fun `SSE do dashboard e das leituras exigem a permissao da tela`() {
+    fun `SSE do dashboard exige a permissao da tela`() {
         mvc.perform(get("/admin/sse").with(Perfis.somenteCatalogo())).andExpect(status().isForbidden)
-        mvc.perform(get("/admin/stream/leituras").with(Perfis.somenteCatalogo())).andExpect(status().isForbidden)
         // Sem login: vai para a tela de login
         mvc.perform(get("/admin/sse")).andExpect(status().is3xxRedirection)
-        mvc.perform(get("/admin/stream/leituras")).andExpect(status().is3xxRedirection)
+    }
+
+    @Test
+    fun `stream de leituras sem uso foi removido`() {
+        // Nenhuma tela usava /admin/stream/leituras, e ele mandava a entidade inteira de cada leitura
+        mvc.perform(get("/admin/stream/leituras").with(Perfis.admin())).andExpect(status().isNotFound)
     }
 
     // ---------------- email ----------------

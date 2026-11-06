@@ -1,6 +1,12 @@
 server:
   # Com o HTTPS ligado (rfid.https), esta porta só redireciona para o HTTPS (ver HttpsConfig)
   port: 8082
+  servlet:
+    session:
+      # Sessão das telas: sem nenhuma requisição por este tempo, o login acaba. Explícito (era o padrão implícito do
+      # Tomcat). A conexão em tempo real do dashboard (SSE) NÃO conta como uso: com a aba aberta e ninguém mexendo,
+      # ela é encerrada e a sessão também, depois deste mesmo tempo (LeituraEventosService)
+      timeout: ${RFID_SESSAO_WEB_TIMEOUT:30m}
 
 spring:
   datasource:
@@ -11,12 +17,41 @@ spring:
     url: ${RFID_DB_URL:jdbc:postgresql://localhost:5433/rfid}
     username: ${RFID_DB_USER:rfid}
     password: ${RFID_DB_PASSWORD:}
+    # Prazos do banco: sem eles, um PostgreSQL travado ou uma rede que some no meio de uma consulta prendiam as
+    # threads para sempre (o pool esgotava e o servidor parava de responder sem nenhum log). Ficam nas propriedades
+    # do driver, e não na URL, para valerem também com uma RFID_DB_URL própria.
+    hikari:
+      # Espera por uma conexão livre do pool (o padrão era 30 s)
+      connection-timeout: 5000
+      # Conexão parada no pool é testada a cada 2 min: descobre antes de usar a que o banco ou a rede derrubou
+      keepalive-time: 120000
+      data-source-properties:
+        # Abrir a conexão: até 5 s (em segundos)
+        connectTimeout: 5
+        # Resposta do banco: até 60 s sem nenhum byte e a conexão é dada como perdida (em segundos)
+        socketTimeout: 60
+        tcpKeepAlive: true
+        # Cada comando SQL pode levar até 60 s; acima disso o PostgreSQL o cancela e o erro aparece no log.
+        # As migrações usam conexão própria, sem esse limite (abaixo); a retenção de leituras apaga em partes
+        options: "-c statement_timeout=60000"
 
   # O schema é criado e evoluído pelo Flyway (src/main/resources/db/migration).
   # O Hibernate só confere se as entidades batem com as tabelas.
   flyway:
     enabled: true
     locations: classpath:db/migration
+    # Conexão própria, fora do pool: as migrações não têm o limite de 60 s por comando nem o socketTimeout acima
+    # (criar um índice numa tabela grande pode levar minutos). Mesmo banco, usuário e senha da aplicação
+    url: ${spring.datasource.url}
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+
+  # Tarefas agendadas (retenção de leituras, backup do certificado, aviso do backup do banco, limpezas): com uma
+  # thread só (o padrão), uma tarefa demorada atrasava todas as outras
+  task:
+    scheduling:
+      pool:
+        size: 3
 
   # Envio do APK na tela "App dos coletores" (o padrão do Spring é 1 MB). Envio de arquivo só passa no POST de
   # /admin/app por um ADMIN logado (EnvioArquivoFilter, antes do CsrfFilter): nas outras rotas, ou sem login, é
@@ -64,6 +99,11 @@ rfid:
     cadastro: ${RFID_COLETORES_CADASTRO:}
     # Tamanho máximo do corpo de cada envio dos coletores (JSON), em bytes: acima disso, 413 antes de ler
     max-corpo-bytes: ${RFID_COLETORES_MAX_CORPO_BYTES:8388608}
+
+  web:
+    # Tamanho máximo do corpo das requisições das telas (formulários e JSON da API do catálogo), em bytes: acima
+    # disso, 413 antes de ler. Envio de arquivo (APK) não entra aqui: tem limite próprio (spring.servlet.multipart)
+    max-corpo-bytes: ${RFID_WEB_MAX_CORPO_BYTES:1048576}
 
   coletores:
     # Tela Coletores: sem contato há esta quantidade de dias, o coletor aparece destacado

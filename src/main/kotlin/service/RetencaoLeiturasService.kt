@@ -71,7 +71,12 @@ class RetencaoLeiturasService(
 
         val limite = LocalDate.now(relogio).minusDays(reterDias).atStartOfDay()
         val inicio = System.currentTimeMillis()
-        val apagadas = repo.apagarAnterioresA(limite)
+        // Em partes de LOTE: cada DELETE fica bem abaixo do limite de 60 s por comando do banco (application.yml)
+        var apagadas = 0
+        do {
+            val parte = repo.apagarLoteAnterioresA(limite, LOTE)
+            apagadas += parte
+        } while (parte >= LOTE)
 
         if (apagadas > 0) {
             log.info(
@@ -86,5 +91,7 @@ class RetencaoLeiturasService(
 
     companion object {
         const val MINIMO_DIAS = 30L
+        /** Leituras apagadas por comando na retenção. */
+        const val LOTE = 10_000
     }
 }

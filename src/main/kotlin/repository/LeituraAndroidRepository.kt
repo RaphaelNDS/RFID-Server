@@ -67,4 +67,18 @@ interface LeituraAndroidRepository :
     @Modifying
     @Query("delete from LeituraAndroidEntity l where l.dataHora < :limite")
     fun apagarAnterioresA(@Param("limite") limite: LocalDateTime): Int
+
+    /**
+     * Retenção em partes: apaga até [lote] leituras anteriores a [limite] (pelo índice de data_hora), cada parte na
+     * sua transação. Com o limite de 60 s por comando do banco (application.yml), um DELETE único de milhões de
+     * leituras na primeira execução seria cancelado todo dia e nunca terminaria.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    @Modifying
+    @Query(
+        value = "delete from leituras_android where id in " +
+            "(select id from leituras_android where data_hora < :limite limit :lote)",
+        nativeQuery = true
+    )
+    fun apagarLoteAnterioresA(@Param("limite") limite: LocalDateTime, @Param("lote") lote: Int): Int
 }
