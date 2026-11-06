@@ -37,7 +37,9 @@
     <div class="card-header"><h2>Publicar versão nova</h2></div>
 
     <!-- "empilhar": no celular cada campo ocupa a linha inteira e o botão fica embaixo, largo -->
-    <form method="post" th:action="@{/admin/app}" enctype="multipart/form-data" class="toolbar empilhar">
+    <!-- Trava o botão no primeiro envio (data-enviar-uma-vez, app.js): o APK demora a subir e o segundo clique
+         mandava outro envio. Com erro, as notas voltam preenchidas (notas, do flash) -->
+    <form method="post" th:action="@{/admin/app}" enctype="multipart/form-data" class="toolbar empilhar" data-enviar-uma-vez>
       <div class="field">
         <label for="f-apk">APK de produção (RFID-Android-x.y.z-release.apk)</label>
         <input id="f-apk" type="file" name="apk" accept=".apk,application/vnd.android.package-archive" required
@@ -45,9 +47,9 @@
       </div>
       <div class="field" style="flex-grow:2">
         <label for="f-notas">O que mudou (aparece no coletor)</label>
-        <input id="f-notas" name="notas" maxlength="1000" placeholder="Ex.: correção no envio das leituras" th:disabled="${!publicacaoLigada}">
+        <input id="f-notas" name="notas" maxlength="1000" th:value="${notas}" placeholder="Ex.: correção no envio das leituras" th:disabled="${!publicacaoLigada}">
       </div>
-      <button type="submit" class="btn btn-primary" th:disabled="${!publicacaoLigada}">
+      <button type="submit" class="btn btn-primary" th:disabled="${!publicacaoLigada}" data-enviando="Enviando…">
         <svg class="ic"><use href="/img/icones.svg#download"/></svg>Publicar
       </button>
     </form>

@@ -48,11 +48,25 @@ class InventarioWebController(
 
     @PreAuthorize("@authService.temPermissao('LEITURA','READ')")
     @GetMapping("/{id}")
-    fun detalhe(@PathVariable id: String, model: Model): String {
+    fun detalhe(
+        @PathVariable id: String,
+        @RequestParam(required = false) local: String?,
+        @RequestParam(required = false) pagina: String?,
+        model: Model
+    ): String {
         val detalhe = service.detalhar(id)
         model.addAttribute("inventario", detalhe.resumo)
         model.addAttribute("itens", detalhe.itens)
         model.addAttribute("comparacao", esperados.faltandoNoInventario(id))
+        // "Voltar" leva ao mesmo filtro de local e página da lista (antes voltava para a lista limpa). Só esses dois
+        // parâmetros, validados como números; texto inválido é ignorado e o destino é sempre a lista de inventários
+        val localValido = local?.trim()?.toLongOrNull()?.takeIf { it > 0 }
+        val paginaValida = RetornoLista.paginaValida(pagina)
+        model.addAttribute("linkVoltar", org.springframework.web.util.UriComponentsBuilder.fromPath("/admin/inventarios")
+            .apply {
+                localValido?.let { queryParam("local", it) }
+                paginaValida?.let { queryParam("pagina", it) }
+            }.encode().toUriString())
         return "inventario-detalhe"
     }
 

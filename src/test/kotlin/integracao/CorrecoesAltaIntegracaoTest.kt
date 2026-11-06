@@ -40,10 +40,10 @@ class CorrecoesAltaIntegracaoTest : IntegracaoBase() {
         ).andExpect(status().isOk)
             .andExpect(content().string(containsString("já está em outra etiqueta")))
             .andExpect(content().string(matchesPattern("(?s).*<option value=\"$tipo\" selected=\"selected\">Notebook</option>.*")))
-            .andExpect(content().string(containsString("data-inicial=\"$marca\"")))
-            .andExpect(content().string(containsString("data-inicial=\"$modelo\"")))
+            .andExpect(content().string(containsString("name=\"marcaId\" value=\"$marca\"")))
+            .andExpect(content().string(containsString("name=\"modeloId\" value=\"$modelo\"")))
             // O script comum que recarrega marca e modelo ao abrir
-            .andExpect(content().string(containsString("marcaSelect.dataset.inicial")))
+            .andExpect(content().string(containsString("carregarMarcas(marcaValor.value)")))
     }
 
     @Test

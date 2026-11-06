@@ -7,11 +7,25 @@ rem  - Pasta de trabalho = pasta deste .bat (RFID_Servidor): usa .\data (banco, 
 rem    logs, backups) e .\config\application.properties (chaves dos coletores e opcoes).
 rem  - Roda em primeiro plano: a janela fica aberta enquanto o servidor estiver no ar.
 rem    Para parar: Ctrl+C nesta janela (o servidor fecha o banco antes de sair).
-rem  - Servico do Windows (inicia sozinho ao ligar o computador): pasta servico\ com o
-rem    instalar-servico.bat (WinSW). Com o servico instalado, nao use este .bat. Ver README.
-rem    O parametro /servico (nao espera tecla ao terminar) fica para outras ferramentas de servico.
+rem  - Depois de reiniciar o Windows: abra este .bat (ou um atalho dele na pasta Inicializar, shell:startup,
+rem    com o parametro /aguardar). O Docker Desktop precisa iniciar com o Windows. Ver README.
+rem  - Parametros (podem ir juntos, em qualquer ordem):
+rem      /aguardar  se o banco ainda nao estiver no ar (Docker Desktop subindo), tenta de novo a cada 10 s
+rem                 por ate 5 min antes de desistir. Sem ele, desiste na hora.
+rem      /servico   nao espera tecla ao terminar (para ferramentas de servico; o servico do Windows da pasta
+rem                 servico\ e opcional e nao e usado nesta instalacao).
 rem  - Versao nova do servidor: pare o servidor, troque servidor\rfid-server.jar e inicie de novo.
+rem  - Nao clique dentro desta janela com o "Modo de Edicao Rapida" do console ligado: o clique seleciona texto
+rem    e PAUSA o servidor (coletores ficam sem resposta) ate apertar Esc. Prefira o Windows Terminal ou desligue
+rem    a Edicao Rapida em Propriedades da janela.
 rem ============================================================================================
+
+set "MODO_SERVICO="
+set "AGUARDAR="
+for %%A in (%*) do (
+    if /i "%%~A"=="/servico" set "MODO_SERVICO=1"
+    if /i "%%~A"=="/aguardar" set "AGUARDAR=1"
+)
 
 rem Java usado: primeiro o JDK proprio do servidor, na pasta java\ ao lado deste .bat (copie um JDK 17 inteiro
 rem para la: vai junto numa migracao e nao muda quando o IntelliJ atualiza os JDKs dele). Sem essa pasta, usa
@@ -26,6 +40,9 @@ rem Porta HTTPS conferida antes de iniciar (a mesma de rfid.https.porta no confi
 set "PORTA=8443"
 rem Porta do banco PostgreSQL no Docker (a mesma do RFID_DB_PORTA no docker.env, padrao 5433)
 set "PORTA_BANCO=5433"
+rem Com /aguardar: quantas vezes conferir o banco e quantos segundos entre elas (30 x 10 s = 5 min)
+set "BANCO_TENTATIVAS=30"
+set "BANCO_INTERVALO=10"
 
 cd /d "%~dp0"
 chcp 65001 >nul
@@ -47,18 +64,33 @@ if not exist "config\application.properties" (
 rem Ja tem servidor nesta porta (ex.: o do IntelliJ)? Dois ao mesmo tempo disputariam a porta e o banco
 netstat -ano | findstr /r /c:":%PORTA% .*LISTENING" >nul
 if not errorlevel 1 (
-    echo [ERRO] A porta %PORTA% ja esta em uso: outro servidor RFID ^(o servico "Servidor RFID" ou o IntelliJ^) esta rodando.
-    echo        Com o servico instalado, use services.msc em vez deste .bat. Senao, pare o outro antes.
+    echo [ERRO] A porta %PORTA% ja esta em uso: outro servidor RFID ^(outra janela deste .bat, o IntelliJ ou o servico opcional "Servidor RFID"^) esta rodando.
+    echo        Pare o outro antes ^(Ctrl+C na janela dele^). Se o servico opcional estiver instalado, pare-o em services.msc.
     goto :fim_erro
 )
 
-rem O banco roda no Docker (docker\docker-compose.yml): sem ele o servidor nao sobe
+rem O banco roda no Docker (docker\docker-compose.yml): sem ele o servidor nao sobe.
+rem Com /aguardar (logo depois de ligar o computador o Docker Desktop ainda esta subindo) tenta de novo.
+rem A espera usa ping e nao timeout: o timeout falha na hora quando a entrada do .bat vem redirecionada.
+set /a TENTATIVA=0
+:conferir_banco
 netstat -ano | findstr /r /c:":%PORTA_BANCO% .*LISTENING" >nul
-if errorlevel 1 (
-    echo [ERRO] O banco de dados ^(PostgreSQL na porta %PORTA_BANCO%^) nao esta no ar.
-    echo        Abra o Docker Desktop e, na pasta do docker-compose.yml, rode: docker compose up -d
-    goto :fim_erro
-)
+if not errorlevel 1 goto :banco_ok
+if not defined AGUARDAR goto :banco_fora
+if %TENTATIVA% GEQ %BANCO_TENTATIVAS% goto :banco_fora
+set /a TENTATIVA+=1
+set /a PINGS=BANCO_INTERVALO+1
+echo [AGUARDANDO] O banco de dados ^(porta %PORTA_BANCO%^) ainda nao esta no ar. Nova tentativa em %BANCO_INTERVALO% s ^(%TENTATIVA% de %BANCO_TENTATIVAS%^)...
+ping -n %PINGS% 127.0.0.1 >nul
+goto :conferir_banco
+
+:banco_fora
+echo [ERRO] O banco de dados ^(PostgreSQL na porta %PORTA_BANCO%^) nao esta no ar.
+if defined AGUARDAR echo        Esperou %TENTATIVA% vez^(es^) de %BANCO_INTERVALO% s e o banco nao subiu.
+echo        Abra o Docker Desktop e, na pasta do docker-compose.yml, rode: docker compose up -d
+goto :fim_erro
+
+:banco_ok
 
 rem Regra do firewall para este java.exe (so avisa: o servidor sobe igual, mas os coletores nao conectam).
 rem Pelo PowerShell: o findstr trata a barra invertida do caminho como caractere especial e nunca acha.
@@ -90,9 +122,9 @@ set "SAIDA=%ERRORLEVEL%"
 
 echo.
 echo Servidor encerrado (codigo %SAIDA%).
-if /i not "%~1"=="/servico" pause
+if not defined MODO_SERVICO pause
 exit /b %SAIDA%
 
 :fim_erro
-if /i not "%~1"=="/servico" pause
+if not defined MODO_SERVICO pause
 exit /b 1

@@ -54,7 +54,7 @@
 
         <div class="alert alert-aviso" th:if="${param.encerrada}" role="alert">
           <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
-          <span>Sua sessão foi encerrada: o usuário foi desativado ou a senha foi trocada. Entre de novo ou fale com o administrador.</span>
+          <span>Sua sessão foi encerrada pelo administrador (permissões alteradas, senha trocada ou usuário desativado). Entre de novo.</span>
         </div>
 
         <div class="alert alert-ok" th:if="${param.pedidoSenha}" role="status">
@@ -81,6 +81,32 @@
 
   </div>
 </main>
+
+<script th:attr="nonce=${cspNonce}">
+  // Depois de errar a senha a página volta vazia (o login redireciona para /login?error): guarda SÓ o email desta
+  // aba (sessionStorage) no envio e preenche de volta. A senha nunca é guardada
+  (function () {
+    const CHAVE = "rfid.login.email";
+    const form = document.querySelector("form[action$='/login']");
+    const email = document.getElementById("username");
+    const senha = document.getElementById("password");
+    if (!form || !email) return;
+    const parametros = new URLSearchParams(location.search);
+    const tentativaFalhou = parametros.has("error") || parametros.has("bloqueado") || parametros.has("senhaVencida");
+    try {
+      const guardado = sessionStorage.getItem(CHAVE);
+      if (tentativaFalhou && guardado && !email.value) {
+        email.value = guardado;
+        if (senha) senha.focus();
+      } else if (!tentativaFalhou) {
+        sessionStorage.removeItem(CHAVE);
+      }
+    } catch (e) { /* navegador sem sessionStorage (modo privado restrito): só não preenche */ }
+    form.addEventListener("submit", function () {
+      try { sessionStorage.setItem(CHAVE, email.value.trim()); } catch (e) { }
+    });
+  })();
+</script>
 
 </body>
 </html>

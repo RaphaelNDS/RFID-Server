@@ -63,7 +63,7 @@
           <td data-rotulo="Lidas" th:text="${i.totalLidas}"></td>
           <td data-rotulo="Cadastradas" th:text="${i.cadastradas}"></td>
           <td data-rotulo="Não cadastradas" th:text="${i.naoCadastradas}"></td>
-          <td><a th:href="@{/admin/inventarios/{id}(id=${i.id})}" class="btn btn-ghost">Ver</a></td>
+          <td><a th:href="@{/admin/inventarios/{id}(id=${i.id},local=${localSelecionado},pagina=${paginaAtual > 1 ? paginaAtual : null})}" class="btn btn-ghost">Ver</a></td>
         </tr>
         </tbody>
       </table>

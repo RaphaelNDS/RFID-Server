@@ -10,8 +10,12 @@ veja o [Manual de conexão](manual-conexao.md).
   ```powershell
   Get-Content .\data\logs\rfid-server.log -Tail 30
   ```
-- **Web:** a tela **Coletores** (último contato, IP, versão do app e erros enviados por cada coletor) e a tela
-  **Status** (versão do servidor e impressão digital do certificado).
+- **Web (só ADMIN):** a tela **Coletores** (último contato, IP, versão do app e erros enviados por cada coletor) e
+  a tela **Status** (versão do servidor e impressão digital do certificado). Quem não é ADMIN pega a impressão
+  digital no log, na pasta do servidor:
+  ```powershell
+  Select-String "SHA-256 do certificado HTTPS" .\data\logs\rfid-server.log | Select-Object -Last 1
+  ```
 
 ## Sumário
 
@@ -46,9 +50,9 @@ veja o [Manual de conexão](manual-conexao.md).
 
 | No coletor aparece | Causa provável | O que fazer |
 |---|---|---|
-| **"Confirmar o servidor"** com a impressão digital | Primeira conexão deste coletor com este servidor (esperado) | Compare **todos os pares** com a impressão digital da tela **Status** do servidor e toque em "É igual, confiar" só se forem iguais. |
+| **"Confirmar o servidor"** com a impressão digital | Primeira conexão deste coletor com este servidor (esperado) | Compare **todos os pares** com a impressão digital do servidor (tela **Status**, só ADMIN, ou o log: `Select-String "SHA-256 do certificado HTTPS" .\data\logs\rfid-server.log`) e toque em "É igual, confiar" só se forem iguais. |
 | **Servidor: certificado do servidor ainda não confirmado ❌** / "Certificado do servidor ainda não confirmado: abra as Configurações do coletor" | Alguém tocou em "Não confiar" ou fechou a confirmação | Abra Configurações, toque em Salvar (ou Testar conexão) e confirme como acima. |
-| **"Certificado do servidor mudou"** / **Servidor: certificado do servidor DIFERENTE do confirmado ❌** | O certificado do servidor foi trocado: servidor novo, pasta `data` perdida ou movida, backup de outro servidor restaurado. **Ou alguém se passando pelo servidor na rede** | Se o certificado **não** foi trocado de propósito, **não confie** e avise o responsável. Se foi, compare a digital **nova** com a da tela Status e confirme. Confirmar exige o PIN do coletor. |
+| **"Certificado do servidor mudou"** / **Servidor: certificado do servidor DIFERENTE do confirmado ❌** | O certificado do servidor foi trocado: servidor novo, pasta `data` perdida ou movida, backup de outro servidor restaurado. **Ou alguém se passando pelo servidor na rede** | Se o certificado **não** foi trocado de propósito, **não confie** e avise o responsável. Se foi, compare a digital **nova** com a do servidor (tela Status, só ADMIN, ou o log) e confirme. Confirmar exige o PIN do coletor. |
 | Certificado mudou depois de mover o servidor de pasta | O certificado fica em `data\rfid-https.p12` e `data\rfid-https.p12.senha`, na pasta de onde o servidor roda | Volte o servidor para a pasta original, ou copie a pasta `data` inteira (com o servidor parado). Assim os coletores não precisam confirmar de novo. |
 
 ---
@@ -120,7 +124,8 @@ veja o [Manual de conexão](manual-conexao.md).
 
 | Onde aparece | Causa provável | O que fazer |
 |---|---|---|
-| O servidor sai do ar sozinho | A janela do `iniciar-servidor.bat` foi fechada, o computador reiniciou ou dormiu | Inicie o `.bat` de novo. Para não depender da janela, registre como serviço do Windows (README, "Serviço do Windows") e desligue a suspensão do computador. |
+| O servidor sai do ar sozinho | A janela do `iniciar-servidor.bat` foi fechada, o computador reiniciou ou dormiu | Abra o `iniciar-servidor.bat /aguardar` de novo (ele espera o banco subir por até 5 min). Para não acontecer de novo: Docker Desktop iniciando com o Windows, suspensão **desligada** quando conectado na tomada e, opcional, um atalho do `.bat` com `/aguardar` na pasta Inicializar (`shell:startup`). Ver README, "Depois de reiniciar o Windows (sem serviço)". |
+| Telas e coletores sem resposta, **sem erro no log**, e o título da janela do `.bat` começa com "Selecionar" | Alguém clicou na janela com o "Modo de Edição Rápida" do console ligado: isso pausa o servidor | Aperte **Esc** na janela do `.bat`. Para não repetir: abra o `.bat` pelo Windows Terminal ou desligue a Edição Rápida (botão direito na barra de título, Propriedades). |
 | `.bat` diz que a porta 8443 já está em uso | Já tem um servidor rodando (outra janela ou o IntelliJ) | Pare o outro antes. Os dois não podem rodar juntos. |
 | Servidor não sobe: `Connection to localhost:5433 refused` | O banco não está no ar | Abra o Docker Desktop e, na pasta `docker`, `docker compose up -d`. |
 | Servidor não sobe: `password authentication failed` | A senha do `config\application.properties` é diferente da do `docker\.env` | Deixe as duas iguais. |

@@ -1,6 +1,7 @@
 package org.example.controller
 
 import org.example.model.Role
+import org.example.model.UsuarioEntity
 import org.example.request.CadastroUsuarioRequest
 import org.example.security.UserPrincipal
 import org.example.service.RecuperacaoSenhaService
@@ -67,10 +68,18 @@ class UsuarioAdminController(
     @GetMapping("/{id}/editar")
     fun editar(@PathVariable id: Long, model: Model): String {
         val usuario = service.porId(id)
-        model.addAttribute("usuario", usuario)
         // Pré-marca as caixas com o que o usuário tem hoje (no perfil Personalizado é o que aparece)
-        model.addAttribute("telas", usuario.permissoes.map { it.modulo.name }.distinct())
-        model.addAttribute("acoes", usuario.permissoes.map { it.acao.name }.distinct())
+        return formularioEdicao(usuario, usuario.nome, usuario.role,
+            usuario.permissoes.map { it.modulo.name }.distinct(), usuario.permissoes.map { it.acao.name }.distinct(), model)
+    }
+
+    /** Tela de edição com o nome, o perfil e as caixas a mostrar (do banco ao abrir; do que foi enviado, no erro). */
+    private fun formularioEdicao(usuario: UsuarioEntity, nome: String, role: Role, telas: List<String>, acoes: List<String>, model: Model): String {
+        model.addAttribute("usuario", usuario)
+        model.addAttribute("nomeForm", nome)
+        model.addAttribute("perfilForm", role.name)
+        model.addAttribute("telas", telas)
+        model.addAttribute("acoes", acoes)
         return "admin-usuarios-editar"
     }
 
@@ -82,18 +91,23 @@ class UsuarioAdminController(
         @RequestParam(required = false) telas: List<String>?,
         @RequestParam(required = false) permissoes: List<String>?,
         @AuthenticationPrincipal quem: UserPrincipal,
+        model: Model,
         redirect: RedirectAttributes
     ): String {
+        // No erro a tela volta direto (sem redirect) com o nome, o perfil e as caixas que o administrador escolheu:
+        // antes o redirect recarregava do banco e ele perdia o que tinha marcado
+        fun voltarComErro(mensagem: String?): String {
+            model.addAttribute("erro", mensagem)
+            return formularioEdicao(service.porId(id), nome, role, telas.orEmpty(), permissoes.orEmpty(), model)
+        }
         return try {
             service.editar(id, nome, role, telas, permissoes, quem.id)
             redirect.addFlashAttribute("msg", "Usuário alterado. Se o perfil ou as permissões mudaram, a sessão dele na web foi encerrada: ao entrar de novo já valem as novas. No coletor valem na próxima ação.")
             "redirect:/admin/usuarios"
         } catch (e: IllegalArgumentException) {
-            redirect.addFlashAttribute("erro", e.message)
-            "redirect:/admin/usuarios/{id}/editar"
+            voltarComErro(e.message)
         } catch (e: IllegalStateException) {
-            redirect.addFlashAttribute("erro", e.message)
-            "redirect:/admin/usuarios/{id}/editar"
+            voltarComErro(e.message)
         }
     }
 

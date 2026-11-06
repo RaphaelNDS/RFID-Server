@@ -57,7 +57,7 @@ Copie da pasta `RFID_Servidor` da máquina antiga:
 | `docker\backups\` | Backup do banco (é ele que leva os dados) | **Perde os dados.** |
 | `data\app\` | APKs da tela "App dos coletores" | Basta enviar o APK de novo pela tela. |
 | `servidor\rfid-server.jar` e `iniciar-servidor.bat` | O servidor | Gere de novo (`./gradlew bootJar`). |
-| `servico\` | Serviço do Windows (opcional, passo 9) | Copie de `scripts\windows\servico`. |
+| `servico\` | Serviço do Windows (opcional, **não usado**: o servidor roda pelo `.bat`) | Só se existir; copie de `scripts\windows\servico`. |
 
 Não precisa levar: `data\rfid-db.mv.db` / `rfid-db.trace.db` (banco H2 antigo, sem uso), `data\logs\`, os
 `servidor\*-anterior.jar` e a pasta `rfid-server` (o código fica no GitHub).
@@ -71,8 +71,8 @@ Não precisa levar: `data\rfid-db.mv.db` / `rfid-db.trace.db` (banco H2 antigo, 
 
 1. Avise os operadores. Nos coletores, espere sumir o aviso "leitura(s) guardada(s) no coletor, aguardando envio"
    (tudo enviado). Não é obrigatório (o que ficar guardado é enviado depois), mas deixa a conferência mais fácil.
-2. Pare o servidor: **Ctrl+C** na janela do `iniciar-servidor.bat` (ou `services.msc` → "Servidor RFID" → Parar,
-   se estiver como serviço). A partir daqui os coletores ficam sem servidor.
+2. Pare o servidor: **Ctrl+C** na janela do `iniciar-servidor.bat` (só se o serviço opcional tiver sido
+   instalado: `services.msc` → "Servidor RFID" → Parar). A partir daqui os coletores ficam sem servidor.
 3. Faça o backup final do banco **com o servidor parado** (nada mais muda depois dele). Na pasta `docker`:
 
    ```powershell
@@ -185,9 +185,14 @@ Só funciona sem perder nada se nenhuma leitura nova tiver sido gravada na máqu
 
 ## 9. Depois da migração
 
-1. **Serviço do Windows** (sobe sozinho ao ligar o computador e não cai ao fechar a janela): veja
-   "Serviço do Windows" no [README](../README.md#serviço-do-windows). O serviço usa o mesmo Java da pasta
-   `RFID_Servidor\java\` (o `instalar-servico.bat` confere).
+1. **Voltar ao ar depois de reiniciar** (sem serviço do Windows, que não é usado): na máquina nova, deixe o
+   **Docker Desktop iniciando com o Windows**, **desligue a suspensão** quando conectado na tomada e, depois de
+   reiniciar, abra o `iniciar-servidor.bat /aguardar` (espera o banco subir por até 5 min). Opcional: atalho do
+   `.bat` com `/aguardar` na pasta **Inicializar** (`Win+R` > `shell:startup`). Não clique dentro da janela do
+   `.bat` com o "Modo de Edição Rápida" ligado (pausa o servidor até apertar Esc): prefira o Windows Terminal. Veja
+   "Depois de reiniciar o Windows (sem serviço)" no [README](../README.md#depois-de-reiniciar-o-windows-sem-serviço).
+   Confira também que `rfid.backup.senha` foi junto no `config\application.properties` e que a senha está guardada
+   fora da máquina.
 2. **Backup fora da máquina:** copie periodicamente `docker\backups`, `data\backups`, o `.p12` + `.senha`,
    `config\application.properties` e `docker\.env` para outro lugar (outro disco, rede ou nuvem da empresa).
 3. Confira no dia seguinte se o backup automático rodou: tem de haver um arquivo novo em `docker\backups\daily`.
@@ -209,4 +214,4 @@ Só funciona sem perder nada se nenhuma leitura nova tiver sido gravada na máqu
 - [ ] Log com **"Certificado HTTPS carregado"** e a mesma impressão digital
 - [ ] Login web, Status, etiquetas e App dos coletores conferidos
 - [ ] Coletores: Testar conexão (e IP trocado, se for IP novo) e uma leitura de teste
-- [ ] Serviço do Windows instalado e backup fora da máquina
+- [ ] Docker Desktop iniciando com o Windows, suspensão desligada na tomada e `iniciar-servidor.bat /aguardar` (ou atalho em `shell:startup`); backup fora da máquina e senha do backup guardada fora dela
