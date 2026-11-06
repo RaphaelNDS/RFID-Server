@@ -1,5 +1,6 @@
 package org.example.service
 
+import org.example.util.EmailLogin
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.event.EventListener
@@ -46,7 +47,12 @@ class TentativasLoginService(
     private class Registro {
         val falhas = ArrayDeque<Instant>()
         var bloqueadoAte: Instant? = null
+        /** Fim do bloqueio cuja recusa já foi logada: o log sai uma vez por bloqueio, e não a cada tentativa. */
+        var recusaLogadaAte: Instant? = null
     }
+
+    /** Login bloqueado: quanto falta e se esta é a primeira recusa do bloqueio (a única que vale um log). */
+    data class Bloqueio(val restante: Duration, val primeiraRecusa: Boolean)
 
     private val porEmail = ConcurrentHashMap<String, Registro>()
     private val porIp = ConcurrentHashMap<String, Registro>()
@@ -56,14 +62,38 @@ class TentativasLoginService(
     /** Quanto falta de bloqueio para esse email nessa origem, ou para a origem; null se o login está liberado. */
     fun tempoRestanteDeBloqueio(email: String?, origem: String?): Duration? {
         val agora = relogio.instant()
-        return listOfNotNull(
-            email?.let { porEmail[chaveEmail(it, origem)] },
-            email?.let { porEmailTotal[normalizar(it)] },
-            origem?.let { porIp[it] }
-        ).mapNotNull { registro ->
+        return registros(email, origem).mapNotNull { registro ->
             synchronized(registro) { registro.bloqueadoAte?.takeIf { it.isAfter(agora) } }
         }.maxOrNull()?.let { Duration.between(agora, it) }
     }
+
+    /**
+     * Como [tempoRestanteDeBloqueio], mas diz também se é a primeira recusa deste bloqueio: quem insiste durante o
+     * bloqueio (um script, por exemplo) gerava uma linha de log a cada tentativa. Agora sai uma por bloqueio de cada
+     * contador (email nessa origem, email em todas as origens, origem).
+     */
+    fun consultarBloqueio(email: String?, origem: String?): Bloqueio? {
+        val agora = relogio.instant()
+        var fim: Instant? = null
+        var primeira = false
+        registros(email, origem).forEach { registro ->
+            synchronized(registro) {
+                val ate = registro.bloqueadoAte?.takeIf { it.isAfter(agora) } ?: return@synchronized
+                if (registro.recusaLogadaAte != ate) {
+                    registro.recusaLogadaAte = ate
+                    primeira = true
+                }
+                if (fim?.isBefore(ate) != false) fim = ate
+            }
+        }
+        return fim?.let { Bloqueio(Duration.between(agora, it), primeira) }
+    }
+
+    private fun registros(email: String?, origem: String?) = listOfNotNull(
+        email?.let { porEmail[chaveEmail(it, origem)] },
+        email?.let { porEmailTotal[normalizar(it)] },
+        origem?.let { porIp[it] }
+    )
 
     fun registrarFalha(email: String, origem: String?) {
         val chave = normalizar(email)
@@ -158,7 +188,9 @@ class TentativasLoginService(
         while (registro.falhas.firstOrNull()?.isBefore(limite) == true) registro.falhas.removeFirst()
     }
 
-    private fun normalizar(email: String) = email.trim().lowercase()
+    // Cortado em 255 caracteres e sem caracteres de controle: o email vem de quem nem fez login e vira chave de mapa
+    // e texto de log (EmailLogin)
+    private fun normalizar(email: String) = EmailLogin.normalizar(email)
 
     private fun ip(details: Any?) = (details as? WebAuthenticationDetails)?.remoteAddress
 }

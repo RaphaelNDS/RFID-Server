@@ -10,6 +10,7 @@ import org.bouncycastle.asn1.x509.KeyUsage
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
+import org.example.util.ArquivoPrivado
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -128,7 +129,11 @@ class CertificadoHttps(
 
     private fun obterSenha(arquivoExiste: Boolean): String {
         if (senhaConfigurada.isNotBlank()) return senhaConfigurada
-        if (arquivoSenha.exists()) return arquivoSenha.readText().trim()
+        if (arquivoSenha.exists()) {
+            // Instalações anteriores gravaram o .senha legível por todos no Windows: corrige a cada subida
+            protegerSenha()
+            return arquivoSenha.readText().trim()
+        }
 
         if (arquivoExiste) {
             throw IllegalStateException(
@@ -141,10 +146,20 @@ class CertificadoHttps(
         // Certificado gerado aqui: senha aleatória guardada ao lado, só para o servidor reabrir o arquivo
         val gerada = Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(24).also { SecureRandom().nextBytes(it) })
         arquivoSenha.parentFile?.mkdirs()
+        // Cria vazio e restringe ANTES de gravar a senha: ela nunca fica no disco com as permissões da pasta
+        arquivoSenha.createNewFile()
+        protegerSenha()
         arquivoSenha.writeText(gerada)
-        arquivoSenha.setReadable(false, false)
-        arquivoSenha.setReadable(true, true)
         return gerada
+    }
+
+    /** Só o dono (e, no Windows, SYSTEM e Administradores) lê o .senha. Se não der, avisa e segue: o HTTPS sobe igual. */
+    private fun protegerSenha() {
+        runCatching { ArquivoPrivado.restringirAoDono(arquivoSenha.toPath()) }.onFailure {
+            log.warn("Não foi possível restringir o acesso ao arquivo da senha do certificado HTTPS {} ({}): outros " +
+                "usuários desta máquina podem conseguir lê-lo. Restrinja as permissões do arquivo manualmente",
+                arquivoSenha.absolutePath, it.message)
+        }
     }
 
     private fun carregar(): X509Certificate {

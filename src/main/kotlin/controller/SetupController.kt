@@ -3,6 +3,7 @@ package org.example.controller
 import jakarta.servlet.http.HttpServletRequest
 import org.example.request.SetupAdminRequest
 import org.example.service.UsuarioService
+import org.example.util.EmailLogin
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -28,9 +29,10 @@ class SetupController(
     fun criarAdmin(req: SetupAdminRequest, request: HttpServletRequest, model: Model): String {
 
         if (usuarioService.existeUsuario()) {
+            // O email vem de quem nem fez login: vai cortado e sem caracteres de controle (EmailLogin)
             log.warn(
-                "Tentativa bloqueada de criar administrador via /setup com o sistema já configurado (IP: {}, email informado: {})",
-                request.remoteAddr, req.email
+                "Tentativa bloqueada de criar administrador via /setup com o sistema já configurado (IP: {}, email informado: '{}')",
+                request.remoteAddr, EmailLogin.normalizar(req.email)
             )
             return "redirect:/login"
         }

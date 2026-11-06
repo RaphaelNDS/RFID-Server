@@ -144,7 +144,8 @@ class SecurityConfig {
         http: HttpSecurity,
         tentativasLogin: TentativasLoginService,
         politicaSenha: PoliticaSenha,
-        sessoesWeb: SessionRegistry
+        sessoesWeb: SessionRegistry,
+        @Value("\${rfid.web.max-corpo-bytes:1048576}") maximoCorpoWeb: Long
     ): SecurityFilterChain {
 
         http
@@ -187,6 +188,10 @@ class SecurityConfig {
             // Antes do CsrfFilter, que faria o Tomcat ler o multipart inteiro (até 101 MB) antes de conferir permissão:
             // arquivo só no POST de /admin/app por ADMIN
             .addFilterBefore(EnvioArquivoFilter(), CsrfFilter::class.java)
+
+            // Corpo das telas (formulários e o JSON da API do catálogo) limitado a 1 MB antes de qualquer leitura: o
+            // JSON era desserializado antes de o @PreAuthorize conferir a permissão. Multipart tem limite próprio
+            .addFilterBefore(TamanhoCorpoFilter(maximoCorpoWeb, origem = "das telas", ignorarMultipart = true), CsrfFilter::class.java)
 
             // Quem entrou com senha temporária só acessa a troca de senha até criar a nova
             .addFilterAfter(TrocaSenhaObrigatoriaFilter(), UsernamePasswordAuthenticationFilter::class.java)

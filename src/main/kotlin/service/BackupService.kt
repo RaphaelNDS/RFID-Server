@@ -13,8 +13,10 @@ import java.nio.file.StandardCopyOption
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.util.zip.ZipEntry
-import java.util.zip.ZipFile
+import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 /**
@@ -58,6 +60,10 @@ class BackupService(
 
     @EventListener(ApplicationReadyEvent::class)
     fun verificarNaInicializacao() {
+        // Sobra de backup interrompido sai mesmo com o backup desligado: pode ser um .zip aberto com a chave privada
+        runCatching { limparParciais() }
+            .onFailure { log.error("Falha ao procurar sobras de backup do certificado em {}: {}", pasta.toAbsolutePath(), it.message, it) }
+
         if (!ativo) {
             log.info("Backup automático do certificado HTTPS: inativo ({})", motivoInativo())
             return
@@ -95,21 +101,27 @@ class BackupService(
 
         try {
             Files.createDirectories(pasta)
-            Files.deleteIfExists(parcial)
+            limparParciais()
 
+            // O .zip é montado na memória (são poucos KB): antes ia ABERTO para <nome>.parcial na pasta de backup e
+            // só depois era cifrado; se o servidor caísse no meio, a chave privada ficava aberta ali para sempre.
             // Na raiz do .zip: com o caminho padrão (./data), extrair na pasta data já põe tudo no lugar
-            ZipOutputStream(Files.newOutputStream(parcial)).use { zip ->
+            val memoria = ByteArrayOutputStream()
+            ZipOutputStream(memoria).use { zip ->
                 arquivos.forEach { arquivo ->
                     zip.putNextEntry(ZipEntry(arquivo.name))
                     Files.copy(arquivo.toPath(), zip)
                     zip.closeEntry()
                 }
             }
-            validar(parcial, arquivos.map { it.name })
-            if (cifrado) {
-                // A chave privada não sai aberta da máquina: só quem tem a senha (fora do backup) restaura
-                Files.write(parcial, CifraBackup.cifrar(Files.readAllBytes(parcial), senhaBackup))
-            }
+            val zip = memoria.toByteArray()
+            validar(zip, arquivos.map { it.name })
+            // A chave privada não sai aberta da máquina: só quem tem a senha (fora do backup) restaura
+            val conteudo = if (cifrado) CifraBackup.cifrar(zip, senhaBackup) else zip
+
+            // Na pasta de backup só entra o conteúdo final (já cifrado, se for o caso): o .parcial existe só para a
+            // troca atômica de nome, e um que sobrar de uma queda é apagado no próximo backup ou ao subir.
+            Files.write(parcial, conteudo)
 
             // Só vira um backup "de verdade" depois de pronto e validado.
             // Dois backups no mesmo segundo (ex.: duplo clique) têm o mesmo nome: o novo substitui o anterior.
@@ -155,12 +167,35 @@ class BackupService(
         )
     }
 
+    /**
+     * Apaga os .parcial que sobraram de um backup interrompido (servidor derrubado no meio). Nas versões até a 1.4.2
+     * o .parcial era o .zip ABERTO, com a chave privada do HTTPS, mesmo com RFID_BACKUP_SENHA.
+     */
+    private fun limparParciais() {
+        if (!Files.isDirectory(pasta)) return
+        val sobras = Files.list(pasta).use { arquivos ->
+            arquivos.filter { PADRAO_PARCIAL.matches(it.fileName.toString()) }.toList()
+        }
+        sobras.forEach { sobra ->
+            runCatching { Files.deleteIfExists(sobra) }
+                .onSuccess {
+                    log.warn("Backup do certificado interrompido encontrado e apagado: {} (sobra de um backup que não " +
+                        "terminou, por exemplo com o servidor desligado no meio)", sobra.fileName)
+                }
+                .onFailure { log.error("Não foi possível apagar a sobra de backup {}: {}", sobra.toAbsolutePath(), it.message, it) }
+        }
+    }
+
     // Um backup que não abre como zip ou perdeu algum arquivo no caminho não serve para restaurar
-    private fun validar(arquivo: Path, nomes: List<String>) {
-        ZipFile(arquivo.toFile()).use { zip ->
-            nomes.forEach { nome ->
-                check(zip.getEntry(nome)?.let { it.size > 0 } == true) { "o arquivo gerado não contém $nome" }
+    private fun validar(zip: ByteArray, nomes: List<String>) {
+        val tamanhos = mutableMapOf<String, Long>()
+        ZipInputStream(ByteArrayInputStream(zip)).use { entrada ->
+            generateSequence { entrada.nextEntry }.forEach { item ->
+                tamanhos[item.name] = entrada.readAllBytes().size.toLong()
             }
+        }
+        nomes.forEach { nome ->
+            check((tamanhos[nome] ?: 0) > 0) { "o arquivo gerado não contém $nome" }
         }
     }
 
@@ -180,6 +215,7 @@ class BackupService(
         private val FORMATO_NOME = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss")
         private val FORMATO_TELA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
         private val PADRAO_NOME = Regex("""^rfid-certificado-(\d{4}-\d{2}-\d{2}_\d{6})\.zip(\.cifrado)?$""")
+        private val PADRAO_PARCIAL = Regex("""^rfid-certificado-.*\.parcial$""")
         const val EXTENSAO_CIFRADO = ".cifrado"
     }
 }
