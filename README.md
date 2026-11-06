@@ -308,6 +308,10 @@ sessão trazem o mesmo `motivo`.
 | **Sessões do coletor** | Token aleatório de 32 bytes; o banco guarda só o hash SHA-256. |
 | **Integridade** | Chaves estrangeiras impedem excluir tipo/marca/modelo usado por etiquetas. |
 | **Banco** | O PostgreSQL só aceita conexão da própria máquina (`127.0.0.1:5433`); a senha fica no `docker/.env` e no `config\application.properties`, fora do git. |
+| **Prazos do banco** | O servidor espera no máximo 5 s por uma conexão do banco, 60 s pela resposta e 60 s por comando SQL (`statement_timeout`: o PostgreSQL cancela o que passar disso e o erro aparece no log). Conexões paradas são testadas a cada 2 min. As migrações usam conexão própria, sem esse limite, e a retenção de leituras apaga em lotes de 10.000. |
+| **Sessão das telas** | Acaba após 30 min sem uso (`RFID_SESSAO_WEB_TIMEOUT`). A atualização em tempo real do dashboard não conta como uso: uma aba esquecida aberta volta ao login depois desse tempo. |
+| **Tamanho das requisições** | Requisições das telas acima de 1 MB recebem 413 (`RFID_WEB_MAX_CORPO_BYTES`); a API dos coletores tem limite de 8 MB e o envio de APK, 100 MB. Emails acima de 255 caracteres no login são recusados como login errado. |
+| **Arquivos do certificado** | O `.senha` do certificado fica legível só pelo dono, SYSTEM e Administradores (Windows) ou com permissão 600 (Linux). O backup é montado na memória e só vai para a pasta no formato final; sobras `rfid-certificado-*.parcial` de um backup interrompido são apagadas sozinhas, com aviso no log. |
 
 ---
 
@@ -339,6 +343,7 @@ sessão trazem o mesmo `motivo`.
   | V17 | `db/migration/V17__versao_etiqueta_e_nomes_unicos.sql` | Versão de cada etiqueta (edição ao mesmo tempo é avisada) e nomes de local e catálogo únicos sem diferenciar maiúsculas |
   | V18 | `db/migration/V18__epc_maiusculo.sql` | Etiqueta (EPC) sempre em maiúsculas e sem espaços nas pontas (a mesma etiqueta gravada nas duas formas fica como está e é avisada no log ao subir) |
   | V19 | `db/migration/V19__senha_temporaria_prazo_e_leitura_unica.sql` | Prazo da senha temporária (48 h, `RFID_SENHA_PRAZO_TEMPORARIA`) e índice único (etiqueta, hora) só para leituras sem a hora do coletor |
+  | V20 | `db/migration/V20__indice_leituras_tag_data_hora.sql` | Índice comum (não único) (etiqueta, hora) das leituras, usado pela última leitura de cada etiqueta (relatório "não vistas" e exportação do cadastro) |
 
   > **Atualizar uma instalação com muitas leituras (centenas de milhares ou mais):** a V16 reescreve a tabela de
   > leituras inteira ao subir, numa transação só: o servidor fica alguns minutos sem responder e a tabela cresce no
@@ -604,6 +609,8 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_CERT_BACKUP_PASTA` | `./data/backups` | Pasta dos backups do certificado (`RFID_BACKUP_PASTA` é a dos dumps do banco, no `docker\.env`) |
 | `RFID_BACKUP_SENHA` | (vazio) | Senha que **cifra** o backup do certificado (`.zip.cifrado`); no `config\application.properties`, `rfid.backup.senha`. Guarde-a fora desta máquina: sem ela o backup não restaura. Vazio: o `.zip` sai aberto, com a chave privada |
 | `RFID_BACKUP_CRON` | `0 0 2 * * *` | Horário (todo dia às 02:00) |
+| `RFID_SESSAO_WEB_TIMEOUT` | `30m` | Tempo sem uso até a sessão das telas acabar (ex.: `45m`) |
+| `RFID_WEB_MAX_CORPO_BYTES` | `1048576` | Tamanho máximo do corpo das requisições das telas que não são upload (1 MB) |
 | `RFID_BACKUP_MANTER` | `14` | Quantos backups do certificado guardar |
 | `RFID_LOG_ARQUIVO` | `./data/logs/rfid-server.log` | Arquivo de log (vazio = só console); um por dia, guarda 30 dias |
 | `RFID_MOSTRAR_SQL` | `false` | Mostra no log cada SQL executado (só para investigar problema) |
