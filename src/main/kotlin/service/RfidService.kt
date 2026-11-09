@@ -448,14 +448,19 @@ class RfidService(
         return encontradas.associateBy { it.tagReal } to nomes
     }
 
-    /** Os dados da etiqueta para o coletor, com os nomes do catálogo já carregados. */
+    /**
+     * Os dados da etiqueta para o coletor, com os nomes do catálogo já carregados. Desde a 1.6.2 leva a situação (o
+     * app avisa no cartão da leitura quando o bem lido está baixado ou extraviado), com os mesmos nomes da ficha.
+     */
     fun resposta(tag: TagEntity, nomes: NomesCatalogo) = TagResponse(
         codigoInterno = tag.codigoInterno,
         tipo = tag.tipoEquipamentoId?.let { nomes.tipos[it] },
         marca = tag.marcaId?.let { nomes.marcas[it] },
         modelo = tag.modeloId?.let { nomes.modelos[it] },
         patrimonio = tag.patrimonio,
-        numeroSerie = tag.numeroSerie
+        numeroSerie = tag.numeroSerie,
+        situacao = tag.situacao.name,
+        situacaoRotulo = tag.situacao.rotulo
     )
 
     /** Lote: quais destas tags já estão em "Não cadastradas" (uma consulta). */
