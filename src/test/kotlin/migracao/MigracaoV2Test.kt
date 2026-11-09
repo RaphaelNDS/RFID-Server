@@ -75,7 +75,7 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("23") // V23 = gestão de patrimônio (unidades, responsáveis, local e situação do bem)
+        assertThat(resultado.targetSchemaVersion).isEqualTo("24") // V24 = transferências de bens (guia e itens com a origem)
     }
 
     @Test

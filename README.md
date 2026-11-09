@@ -89,6 +89,9 @@ administrador; depois disso essa tela não aparece mais.
 | Locais (unidades e locais; desativar sem apagar) | `/admin/locais` | Catálogo · Ver (criar/alterar exigem Criar/Editar) |
 | Responsáveis (pessoas com setor, matrícula e email) | `/admin/responsaveis` | Catálogo · Ver (criar/alterar exigem Criar/Editar) |
 | Termo de responsabilidade (para imprimir ou salvar em PDF) | `/admin/responsaveis/{id}/termo` | Catálogo · Ver **e** RFID · Ver |
+| Transferências (guias numeradas; busca por etiqueta ou patrimônio) e a guia para imprimir | `/admin/transferencias` · `/admin/transferencias/{id}` | RFID · Ver |
+| Nova transferência | `/admin/transferencias/nova` | RFID · Editar |
+| Ação sobre os bens que faltaram (no detalhe do inventário finalizado) | `/admin/inventarios/{id}/divergencias` | RFID · Editar |
 | Relatórios (gráficos; avisa quando chegam leituras novas; período de até 366 dias) | `/admin/dashboard` | Relatórios · Ver |
 | Usuários (+ pedidos de nova senha e senha temporária; editar perfil e permissões; desativar e reativar) | `/admin/usuarios` | somente ADMIN |
 | Coletores (último contato, IP, versão do app, operador, fila de envio e estado do aparelho de cada coletor) | `/admin/coletores` | somente ADMIN |
@@ -226,6 +229,30 @@ chave, sem operador): `GET /api/android/atualizacao` e `GET /api/android/atualiz
   confirmar. Com "criar o que faltar", os tipos, marcas, modelos, unidades, locais e responsáveis que ainda não
   existem são criados. EPC em notação científica (ex.: `1,23E+23`, de uma planilha que virou número) é recusado.
 
+### Transferência de bens (1.6.1)
+
+Muda o local e/ou o responsável de um ou mais bens (até 1.000) e grava uma **guia numerada**, com a data, o
+solicitante, o motivo e a origem de cada bem (local e responsável anteriores). A guia sai pronta para imprimir ou
+salvar em PDF, com as assinaturas de quem entrega e de quem recebe. No histórico de cada bem, a mudança aparece com a
+origem "Transferência nº X".
+
+- Os bens são informados pela etiqueta (EPC) ou pelo patrimônio, um por linha (dá para colar uma coluna do Excel).
+  "Conferir bens" mostra onde cada um está antes de transferir.
+- Atalhos: botão **Transferir** na edição da etiqueta, **Transferir estes** na lista de etiquetas filtrada por local
+  ou responsável (ex.: todos os bens de quem saiu da empresa) e **Transferir** nas divergências do inventário.
+- Recusa a transferência inteira (nada muda) quando um código não existe, quando o bem está baixado, quando o bem já
+  está no destino, quando o local ou o responsável está desativado ou quando a data está no futuro.
+- Bem **extraviado** que muda de local volta para "Em uso": foi achado.
+
+### Divergências do inventário (1.6.1)
+
+No detalhe de um inventário **finalizado**, quem pode editar etiquetas marca os bens que faltaram e escolhe o que
+fazer: **transferir** (achados em outro lugar; a guia fica ligada ao inventário), **marcar como extraviados** ou
+**dar baixa** (com o motivo). Cada bem mostra a situação atual no cadastro, ao lado da justificativa do coletor. A
+ação vale só para os bens que faltaram naquele inventário, e no histórico de cada bem a origem diz de qual inventário
+ela saiu. Os baixados e os transferidos para outro local saem da lista do que faltou; os extraviados continuam nela.
+Etiqueta lida sem cadastro ganha o botão **Cadastrar**, que abre o cadastro já com o local do inventário.
+
 ### Inventário: o que faltou
 
 O detalhe do inventário mostra o que **faltou** em relação ao **inventário finalizado anterior do mesmo local**
@@ -317,7 +344,7 @@ O app funciona sem rede durante a sessão e envia depois o que ficou na fila. Ca
 | `POST /api/android/inventarios/{id}/itens` | Envia etiquetas lidas | operador · Leituras |
 | `POST /api/android/inventarios/{id}/finalizar` | Finaliza o inventário | operador · Leituras |
 | `POST /api/android/inventarios/{id}/justificativas` | Justificativa dos bens que faltaram (1.5.0): `[{"tag","motivo","observacao"}]`. Motivos: `EMPRESTADO`, `MANUTENCAO`, `BAIXADO`, `NAO_ENCONTRADO`, `OUTRO` (ou o nome, como "Em manutenção"). Aceita depois de finalizado e é idempotente. Responde `{"recebidas","gravadas","invalidas"}` | operador · Leituras |
-| `GET /api/android/inventarios/esperado?local=...` | O que é esperado no local, para o coletor mostrar o que falta (ver abaixo) | operador · Leituras |
+| `GET /api/android/inventarios/esperado?local=...` | O que é esperado no local, para o coletor mostrar o que falta (ver abaixo). Desde a 1.6.1, cada item traz também `situacao` e `situacaoRotulo` (situação do bem no cadastro, opcionais) | operador · Leituras |
 
 **O que é esperado num local:** desde a 1.6.0, as etiquetas cujo **local no cadastro** é esse, somadas às
 **cadastradas** encontradas no **último inventário finalizado** daquele local que o cadastro não pôs em outro
@@ -415,6 +442,7 @@ servidor (desativação, senha temporária ou senha trocada) não tem margem.
   | V22 | `db/migration/V22__justificativas_inventario.sql` | Justificativas dos bens que faltaram no inventário (`inventario_justificativas`) e índice por etiqueta nos itens de inventário (ficha do bem e esperado sem os bens achados em outro local) |
   | V21 | `db/migration/V21__diagnostico_coletor_e_motivo_fim_sessao.sql` | Diagnóstico do coletor (fila, última sincronização, espaço, Android, modelo, desvio do relógio) e por que a sessão do operador acabou (`encerrada_por`: margem de relógio só para "Sair" e outro login) |
   | V23 | `db/migration/V23__gestao_patrimonio.sql` | Gestão de patrimônio: unidades, locais com unidade e ativo, responsáveis, e local, responsável, situação e baixa no cadastro da etiqueta |
+  | V24 | `db/migration/V24__transferencias.sql` | Transferências de bens: a guia (`transferencias`, com o destino pelo id e pelo nome) e os bens dela com a origem (`transferencia_itens`) |
 
   > **Atualizar uma instalação com muitas leituras (centenas de milhares ou mais):** a V16 reescreve a tabela de
   > leituras inteira ao subir, numa transação só: o servidor fica alguns minutos sem responder e a tabela cresce no

@@ -21,6 +21,13 @@
     </a>
   </div>
 
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
   <div class="grid grid-stats">
     <div class="stat">
       <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#atividade"/></svg>Situação</div>
@@ -64,11 +71,15 @@
         <span th:text="${inventario.status.name() == 'ABERTO'} ? 'Faltando até agora' : 'Faltaram'">Faltaram</span>
         <span class="contagem" th:if="${comparacao.referencia.temReferencia}" th:text="'(' + ${#lists.size(comparacao.faltando)} + ')'"></span>
       </h2>
-      <span class="muted" th:if="${comparacao.referencia.temReferencia}">
-        Comparado com o
+      <span class="muted" th:if="${comparacao.referencia.temReferencia and comparacao.referencia.inventarioReferencia != null}">
+        Comparado com os bens cadastrados neste local e o
         <a th:href="@{/admin/inventarios/{id}(id=${comparacao.referencia.inventarioReferencia})}"
            th:text="'inventário de ' + ${#temporals.format(comparacao.referencia.finalizadoEm, 'dd/MM/yyyy HH:mm')}">inventário anterior</a><span
           th:if="${comparacao.referencia.operador != null}" th:text="' (' + ${comparacao.referencia.operador} + ')'"></span>
+      </span>
+      <!-- Sem inventário anterior, a referência são os bens que o cadastro põe neste local (1.6.0) -->
+      <span class="muted" th:if="${comparacao.referencia.temReferencia and comparacao.referencia.inventarioReferencia == null}">
+        Comparado com os bens cadastrados neste local (não há inventário finalizado anterior)
       </span>
     </div>
 
@@ -82,45 +93,102 @@
       <div class="vazio" th:if="${comparacao.referencia.temReferencia and #lists.isEmpty(comparacao.faltando)}">
         <svg class="ic"><use href="/img/icones.svg#ok"/></svg>
         <strong th:text="${inventario.status.name() == 'ABERTO'} ? 'Nada faltando até agora' : 'Nada faltou'">Nada faltou</strong>
-        <span th:text="'Todas as ' + ${comparacao.esperadas} + ' etiquetas encontradas no inventário anterior foram lidas.'"></span>
+        <span th:text="'Todos os ' + ${comparacao.esperadas} + ' bens esperados neste local foram lidos.'"></span>
       </div>
 
       <p class="muted" style="margin:12px 20px 0" th:if="${inventario.status.name() == 'ABERTO' and comparacao.referencia.temReferencia and !#lists.isEmpty(comparacao.faltando)}">
         Inventário em andamento: a lista é provisória e diminui conforme o coletor lê e envia as etiquetas.
       </p>
 
-      <table class="table table-cartoes" th:if="${comparacao.referencia.temReferencia and !#lists.isEmpty(comparacao.faltando)}">
-        <thead>
-        <tr>
-          <th>Patrimônio</th>
-          <th>Código</th>
-          <th>Tipo</th>
-          <th>Marca</th>
-          <th>Modelo</th>
-          <th>Etiqueta (EPC)</th>
-          <th>Justificativa</th>
-        </tr>
-        </thead>
-        <tbody>
-        <!-- Justificativa marcada no coletor na finalização (texto do coletor: só th:text) -->
-        <tr th:each="f : ${comparacao.faltando}" th:with="j=${justificativas[f.tag]}">
-          <td class="principal cartao-titulo" th:text="${f.patrimonio != null} ? ${f.patrimonio} : '—'"></td>
-          <td data-rotulo="Código" th:text="${f.codigoInterno}"></td>
-          <td data-rotulo="Tipo" th:text="${f.tipo}"></td>
-          <td data-rotulo="Marca" th:text="${f.marca}"></td>
-          <td data-rotulo="Modelo" th:text="${f.modelo}"></td>
-          <td data-rotulo="Etiqueta (EPC)" class="mono" th:text="${f.tag}"></td>
-          <td data-rotulo="Justificativa">
-            <th:block th:if="${j != null}">
-              <span class="badge" th:classappend="${j.motivo.name() == 'NAO_ENCONTRADO'} ? 'badge-CUSTOM'" th:text="${j.motivo.rotulo}"></span>
-              <div class="muted" th:if="${j.observacao != null}" th:text="${j.observacao}"></div>
-              <div class="muted" th:if="${j.operador != null}" style="font-size:12px" th:text="'por ' + ${j.operador}"></div>
-            </th:block>
-            <span class="muted" th:if="${j == null}">—</span>
-          </td>
-        </tr>
-        </tbody>
-      </table>
+      <!-- Divergências (1.6.1): com o inventário finalizado, marque os bens e escolha o que fazer. Em andamento, só a lista -->
+      <form th:if="${comparacao.referencia.temReferencia and !#lists.isEmpty(comparacao.faltando)}"
+            th:with="tratar=${inventario.status.name() == 'FINALIZADO' and @authService.temPermissao('RFID','UPDATE')}"
+            th:action="@{/admin/inventarios/{id}/divergencias(id=${inventario.id})}" method="post" id="formDivergencias">
+        <input type="hidden" name="inventario" th:value="${inventario.id}">
+
+        <div class="barra-divergencias" th:if="${tratar}">
+          <span class="muted">Com os marcados:</span>
+          <button type="submit" class="btn btn-secondary btn-sm" th:formaction="@{/admin/transferencias/nova}"
+                  title="Achou os bens em outro lugar? Transfira para o local onde estão">
+            <svg class="ic"><use href="/img/icones.svg#transferir"/></svg>Transferir
+          </button>
+          <button type="submit" class="btn btn-secondary btn-sm" name="acao" value="extraviado"
+                  data-confirmar="Marcar os bens marcados como extraviados? A situação muda no cadastro e fica no histórico de cada um."
+                  data-confirmar-titulo="Marcar como extraviados" data-confirmar-botao="Marcar como extraviados">
+            <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>Marcar como extraviados
+          </button>
+          <span class="barra-separador" aria-hidden="true"></span>
+          <label for="motivoBaixaDiv" class="sr-only">Motivo da baixa</label>
+          <select id="motivoBaixaDiv" name="motivoBaixa" class="select-sm">
+            <option value="">Motivo da baixa</option>
+            <option th:each="m : ${motivosBaixa}" th:value="${m.name()}" th:text="${m.rotulo}"></option>
+          </select>
+          <label for="obsBaixaDiv" class="sr-only">Observação da baixa</label>
+          <input type="text" id="obsBaixaDiv" name="observacaoBaixa" maxlength="500" class="input-sm" placeholder="Observação (opcional)">
+          <button type="submit" class="btn btn-danger btn-sm" name="acao" value="baixa"
+                  data-confirmar="Dar baixa nos bens marcados? Eles saem das listas e do esperado dos inventários (dá para desfazer em cada um)."
+                  data-confirmar-titulo="Dar baixa" data-confirmar-botao="Dar baixa" data-confirmar-perigo>Dar baixa</button>
+        </div>
+
+        <table class="table table-cartoes">
+          <thead>
+          <tr>
+            <th th:if="${tratar}" class="col-marcar">
+              <input type="checkbox" data-acao="marcar-todos" data-alvo="tags" aria-label="Marcar todos">
+            </th>
+            <th>Patrimônio</th>
+            <th>Código</th>
+            <th>Equipamento</th>
+            <th>Etiqueta (EPC)</th>
+            <th>Justificativa</th>
+            <th>Situação atual</th>
+          </tr>
+          </thead>
+          <tbody>
+          <!-- Justificativa marcada no coletor na finalização (texto do coletor: só th:text) -->
+          <tr th:each="f : ${comparacao.faltando}" th:with="j=${justificativas[f.tag]}, a=${atuais[f.tag]}">
+            <td th:if="${tratar}" class="col-marcar">
+              <input type="checkbox" name="tags" th:value="${f.tag}" th:id="'f-' + ${f.tag}" th:attr="aria-label='Marcar ' + ${f.patrimonio ?: f.tag}">
+            </td>
+            <td class="principal cartao-titulo" th:text="${f.patrimonio != null} ? ${f.patrimonio} : '—'"></td>
+            <td data-rotulo="Código" th:text="${f.codigoInterno}"></td>
+            <td data-rotulo="Equipamento" th:with="d=${#strings.trim((f.tipo ?: '') + ' ' + (f.marca ?: '') + ' ' + (f.modelo ?: ''))}" th:text="${d != ''} ? ${d} : '—'"></td>
+            <td data-rotulo="Etiqueta (EPC)" class="mono" th:text="${f.tag}"></td>
+            <td data-rotulo="Justificativa">
+              <th:block th:if="${j != null}">
+                <span class="badge" th:classappend="${j.motivo.name() == 'NAO_ENCONTRADO'} ? 'badge-CUSTOM'" th:text="${j.motivo.rotulo}"></span>
+                <div class="muted" th:if="${j.observacao != null}" th:text="${j.observacao}"></div>
+                <div class="muted" th:if="${j.operador != null}" style="font-size:12px" th:text="'por ' + ${j.operador}"></div>
+              </th:block>
+              <span class="muted" th:if="${j == null}">—</span>
+            </td>
+            <td data-rotulo="Situação atual">
+              <th:block th:if="${a != null}">
+                <span class="badge" th:classappend="${a.situacao.name() == 'EXTRAVIADO'} ? 'badge-inativo' : (${a.situacao.name() == 'EM_USO'} ? '' : 'badge-CUSTOM')"
+                      th:text="${a.situacao.rotulo}"></span>
+                <div class="muted" style="font-size:12px" th:if="${a.responsavel != null}" th:text="${a.responsavel}"></div>
+              </th:block>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </form>
+    </div>
+  </div>
+
+  <!-- Guias de transferência que saíram das divergências deste inventário (1.6.1) -->
+  <div class="card" style="margin-bottom:16px" th:unless="${#lists.isEmpty(transferenciasDoInventario)}">
+    <div class="card-header empilhar">
+      <h2>Transferências feitas a partir deste inventário <span class="contagem" th:text="'(' + ${#lists.size(transferenciasDoInventario)} + ')'"></span></h2>
+      <span class="muted">Os bens transferidos para outro local saem da lista do que faltou</span>
+    </div>
+    <div class="card-body">
+      <ul class="lista-simples">
+        <li th:each="t : ${transferenciasDoInventario}">
+          <a th:href="@{/admin/transferencias/{id}(id=${t.id})}" th:text="'Guia nº ' + ${t.id}"></a>
+          <span class="muted" th:text="' · ' + ${#temporals.format(t.data, 'dd/MM/yyyy')} + ' · para ' + ${t.localDestino ?: t.responsavelDestino} + ' · por ' + ${t.registradaPor}"></span>
+        </li>
+      </ul>
     </div>
   </div>
 
@@ -189,6 +257,9 @@
           <td data-rotulo="Situação">
             <span class="badge" th:if="${item.cadastrada}">Cadastrada</span>
             <span class="badge badge-CUSTOM" th:unless="${item.cadastrada}">Não cadastrada</span>
+            <!-- 1.6.1: cadastrar já com o local deste inventário -->
+            <a th:if="${!item.cadastrada and @authService.temPermissao('RFID','CREATE')}" class="btn btn-ghost btn-sm"
+               th:href="@{/admin/cadastro(tag=${item.tag},local=${idLocal})}" title="Cadastrar esta etiqueta já neste local">Cadastrar</a>
           </td>
           <td data-rotulo="Patrimônio" class="principal" th:text="${item.patrimonio}"></td>
           <td data-rotulo="Código" th:text="${item.codigoInterno}"></td>

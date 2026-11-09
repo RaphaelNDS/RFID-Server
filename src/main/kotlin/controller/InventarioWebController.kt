@@ -25,7 +25,10 @@ import org.springframework.web.bind.annotation.RequestParam
 class InventarioWebController(
     private val service: InventarioService,
     private val esperados: EsperadoInventarioService,
-    private val auditoria: AuditoriaService
+    private val auditoria: AuditoriaService,
+    // 1.6.1: ação sobre as divergências (bens que faltaram) e as transferências que saíram delas
+    private val divergencias: org.example.service.DivergenciaInventarioService,
+    private val transferencias: org.example.service.TransferenciaService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -57,8 +60,14 @@ class InventarioWebController(
         val detalhe = service.detalhar(id)
         model.addAttribute("inventario", detalhe.resumo)
         model.addAttribute("itens", detalhe.itens)
-        model.addAttribute("comparacao", esperados.faltandoNoInventario(id))
+        val comparacao = esperados.faltandoNoInventario(id)
+        model.addAttribute("comparacao", comparacao)
         model.addAttribute("justificativas", service.justificativasDo(id))
+        // Divergências (1.6.1): como cada bem que faltou está AGORA no cadastro e o que já foi feito a partir daqui
+        model.addAttribute("atuais", divergencias.situacaoAtual(comparacao.faltando.map { it.tag }))
+        model.addAttribute("transferenciasDoInventario", transferencias.doInventario(id))
+        model.addAttribute("motivosBaixa", org.example.model.MotivoBaixa.entries)
+        model.addAttribute("idLocal", detalhe.resumo.localId)
         // "Voltar" leva ao mesmo filtro de local e página da lista (antes voltava para a lista limpa). Só esses dois
         // parâmetros, validados como números; texto inválido é ignorado e o destino é sempre a lista de inventários
         val localValido = local?.trim()?.toLongOrNull()?.takeIf { it > 0 }
@@ -69,6 +78,39 @@ class InventarioWebController(
                 paginaValida?.let { queryParam("pagina", it) }
             }.encode().toUriString())
         return "inventario-detalhe"
+    }
+
+    /**
+     * Ação sobre os bens que faltaram (1.6.1): marcar como extraviados ou dar baixa nos marcados. A transferência vai
+     * pelo botão "Transferir", que manda os marcados para o formulário de transferência (/admin/transferencias/nova).
+     */
+    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @org.springframework.web.bind.annotation.PostMapping("/{id}/divergencias")
+    fun tratarDivergencias(
+        @PathVariable id: String,
+        @RequestParam(required = false) tags: List<String>?,
+        @RequestParam(required = false) acao: String?,
+        @RequestParam(required = false) motivoBaixa: String?,
+        @RequestParam(required = false) observacaoBaixa: String?,
+        redirect: org.springframework.web.servlet.mvc.support.RedirectAttributes
+    ): String {
+        try {
+            val escolhida = when (acao) {
+                "extraviado" -> org.example.service.AcaoDivergencia.EXTRAVIADO
+                "baixa" -> org.example.service.AcaoDivergencia.BAIXA
+                else -> throw IllegalArgumentException("Ação inválida")
+            }
+            val motivoEscolhido = if (escolhida == org.example.service.AcaoDivergencia.BAIXA)
+                org.example.model.MotivoBaixa.de(motivoBaixa) ?: throw IllegalArgumentException("Escolha o motivo da baixa") else null
+            val r = divergencias.tratar(id, tags.orEmpty(), escolhida, motivoEscolhido, null, observacaoBaixa)
+            val feito = if (escolhida == org.example.service.AcaoDivergencia.EXTRAVIADO) "marcado(s) como extraviado(s)"
+                else "baixado(s): saíram da lista do que faltou e continuam no cadastro como baixados"
+            redirect.addFlashAttribute("msg", "${r.tratados} bem(ns) $feito." +
+                if (r.ignorados.isNotEmpty()) " ${r.ignorados.size} já estava(m) assim: ${r.ignorados.take(5).joinToString(", ")}." else "")
+        } catch (e: IllegalArgumentException) {
+            redirect.addFlashAttribute("erro", e.message)
+        }
+        return "redirect:/admin/inventarios/" + org.springframework.web.util.UriUtils.encodePathSegment(id, Charsets.UTF_8)
     }
 
     /**

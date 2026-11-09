@@ -33,6 +33,8 @@ class CadastroController(
         @RequestParam(required = false) origem: String?,
         @RequestParam(required = false) busca: String?,
         @RequestParam(required = false) pagina: String?,
+        // 1.6.1: etiqueta lida num inventário e ainda sem cadastro já vem com o local do inventário
+        @RequestParam(required = false) local: String?,
         model: Model
     ): String {
 
@@ -41,6 +43,7 @@ class CadastroController(
         if (tag != null) {
             cadastro.tag = tag
         }
+        cadastro.localId = local?.trim()?.toLongOrNull()?.takeIf { it > 0 }
 
         model.addAttribute("cadastro", cadastro)
         carregarCombos(model)

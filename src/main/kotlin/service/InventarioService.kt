@@ -34,7 +34,9 @@ data class InventarioResumo(
     val finalizadoEm: LocalDateTime?,
     val totalLidas: Long,
     val operador: String? = null,
-    val cadastradas: Long
+    val cadastradas: Long,
+    /** Id do local (1.6.1: cadastrar a etiqueta lida já neste local). */
+    val localId: Long? = null
 ) {
     val naoCadastradas: Long get() = totalLidas - cadastradas
 }
@@ -307,7 +309,8 @@ class InventarioService(
         finalizadoEm = i.finalizadoEm,
         totalLidas = contagem?.first ?: 0,
         cadastradas = contagem?.second ?: 0,
-        operador = i.operador
+        operador = i.operador,
+        localId = i.localId
     )
 
     private fun buscar(id: String): InventarioEntity =
