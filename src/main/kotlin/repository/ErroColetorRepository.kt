@@ -15,6 +15,15 @@ interface ErroColetorRepository : JpaRepository<ErroColetorEntity, String> {
     /** Os mais recentes do coletor numa versão do app: filtrado no banco (antes só entre os 200 mais recentes). */
     fun findTop200ByColetorAndVersaoAppOrderByMomentoDesc(coletor: String, versaoApp: String): List<ErroColetorEntity>
 
+    /** Os mais recentes do coletor de um tipo (filtro por tipo da tela de erros). */
+    fun findTop200ByColetorAndTipoOrderByMomentoDesc(coletor: String, tipo: String): List<ErroColetorEntity>
+
+    fun findTop200ByColetorAndVersaoAppAndTipoOrderByMomentoDesc(coletor: String, versaoApp: String, tipo: String): List<ErroColetorEntity>
+
+    /** Os tipos de erro guardados deste coletor (filtro da tela), do mais recente para o mais antigo. */
+    @Query("select e.tipo from ErroColetorEntity e where e.coletor = :coletor group by e.tipo order by max(e.momento) desc")
+    fun tiposComErro(@Param("coletor") coletor: String): List<String>
+
     /** Todas as versões do app com erro guardado deste coletor (filtro da tela), da mais nova para a mais antiga. */
     @Query("select e.versaoApp from ErroColetorEntity e where e.coletor = :coletor and e.versaoApp is not null group by e.versaoApp order by max(e.momento) desc")
     fun versoesComErro(@Param("coletor") coletor: String): List<String>

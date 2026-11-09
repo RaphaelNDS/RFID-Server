@@ -67,7 +67,9 @@ class OperadorFilter(
         }
 
         val dispositivo = atual.name
-        val momento = momentoDaAcao(request, dispositivo)
+        // null = sem hora do coletor (ausente, inválida ou no futuro): vale a de agora, sem a margem do fim da sessão
+        val horaDoColetor = momentoDaAcao(request, dispositivo)
+        val momento = horaDoColetor ?: LocalDateTime.now(relogio)
         val token = request.getHeader(HEADER_SESSAO)?.trim().orEmpty()
 
         if (token.isEmpty()) {
@@ -86,7 +88,7 @@ class OperadorFilter(
         }
 
         val operador = try {
-            sessoes.validar(token, dispositivo, momento)
+            sessoes.validar(token, dispositivo, horaDoColetor)
         } catch (e: SessaoInvalidaException) {
             log.warn("Sessão de operador recusada no coletor {} ({} {}, ação em {}): {} [{}]",
                 dispositivo, request.method, request.requestURI, momento, e.message, e.motivo)
@@ -128,21 +130,22 @@ class OperadorFilter(
             !LocalDateTime.now(relogio).isAfter(corte.momento.plus(sessoes.janelaSincronizacao))
     }
 
-    private fun momentoDaAcao(request: HttpServletRequest, dispositivo: String): LocalDateTime {
+    /** A hora da ação pelo X-Momento, ou null para usar a hora de agora (sem o header, inválido ou no futuro). */
+    private fun momentoDaAcao(request: HttpServletRequest, dispositivo: String): LocalDateTime? {
         val agora = LocalDateTime.now(relogio)
-        val texto = request.getHeader(HEADER_MOMENTO)?.trim()?.takeIf { it.isNotEmpty() } ?: return agora
+        val texto = request.getHeader(HEADER_MOMENTO)?.trim()?.takeIf { it.isNotEmpty() } ?: return null
 
         val momento = try {
             OffsetDateTime.parse(texto).atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()
         } catch (e: DateTimeParseException) {
             log.warn("Header {} inválido vindo do coletor {}: '{}'. Usando a hora de agora", HEADER_MOMENTO, dispositivo, texto)
-            return agora
+            return null
         }
 
         // Relógio do coletor adiantado: não deixa uma ação "do futuro" usar a sessão além do horário real
         if (momento.isAfter(agora.plus(SessaoOperadorService.TOLERANCIA))) {
             log.warn("Header {} no futuro vindo do coletor {} ({}): usando a hora de agora", HEADER_MOMENTO, dispositivo, texto)
-            return agora
+            return null
         }
         return momento
     }

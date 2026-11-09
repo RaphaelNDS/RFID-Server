@@ -87,7 +87,7 @@ administrador; depois disso essa tela não aparece mais.
 | Catálogo | `/admin/catalogo` | Catálogo · Ver (criar/excluir exigem Criar/Excluir) |
 | Relatórios (gráficos; avisa quando chegam leituras novas; período de até 366 dias) | `/admin/dashboard` | Relatórios · Ver |
 | Usuários (+ pedidos de nova senha e senha temporária; editar perfil e permissões; desativar e reativar) | `/admin/usuarios` | somente ADMIN |
-| Coletores (último contato, IP, versão do app e operador de cada coletor) | `/admin/coletores` | somente ADMIN |
+| Coletores (último contato, IP, versão do app, operador, fila de envio e estado do aparelho de cada coletor) | `/admin/coletores` | somente ADMIN |
 | App dos coletores (publicar versão nova do app; retirar a publicada com problema) | `/admin/app` | somente ADMIN |
 | Auditoria (quem fez o quê em usuários, senhas, catálogo, app, exportações e backup) | `/admin/auditoria` | somente ADMIN |
 | Monitoramento (`{"status":"UP"}`, sem login e sem detalhes) | `/actuator/health` | público |
@@ -134,6 +134,16 @@ versão vem dos headers `X-Versao-App` e `X-Versao-Codigo`, enviados pelo app a 
 quer dizer que a chave existe no servidor, mas o coletor ainda não fez nenhuma chamada aceita: confira a chave e o
 endereço nas Configurações do app.
 
+A partir do app 1.7, a tela mostra também o estado do aparelho, pelo último envio dele:
+- **Fila de envio:** quantos registros esperam envio e quando foi a última sincronização completa;
+- **Aparelho:** modelo e versão do Android, a diferença do relógio do coletor para o do servidor e o espaço livre.
+
+O quadro **Precisam de atenção** conta os coletores com leitura na fila há mais de 1 h, relógio com mais de 2 min de
+diferença (o mesmo limite do aviso no app) ou menos de 200 MB livres. Esses coletores também aparecem destacados.
+Os dados vêm dos headers `X-Fila-Pendentes`, `X-Fila-Mais-Antiga`, `X-Ultima-Sinc-Ok`, `X-Espaco-Livre` (em MB),
+`X-Android`, `X-Modelo` e `X-Relogio-Coletor`. Valor inválido é ignorado, e um header ausente mantém o último valor
+guardado. A mudança do relógio (de certo para errado e de volta) aparece no log.
+
 ### Exportar para Excel
 
 As telas de **Leituras**, **detalhe do inventário**, **Etiquetas** e **Não vistas** têm os botões **Excel** e
@@ -152,8 +162,9 @@ exportação fica na auditoria. Em Leituras, exporta **todas** as leituras do fi
 O app guarda os travamentos e as falhas relevantes (envio recusado pelo servidor, erro do servidor na
 sincronização, leitor RFID que não conecta, atualização que não baixou) e envia ao servidor quando há rede
 (`POST /api/android/erros`, só a chave do coletor). Na tela **Coletores**, a coluna **Erros (24 h)** leva à lista de
-erros do coletor, com a hora no coletor e a de chegada, o detalhe (stack trace), o número de vezes e filtro por
-versão do app (para ver se o erro sumiu depois de uma atualização).
+erros do coletor, com a hora no coletor e a de chegada, o detalhe (stack trace) e o número de vezes. Dá para filtrar
+por versão do app, para ver se o erro sumiu depois de uma atualização, e por tipo. O tipo `RELOGIO` (app 1.7.3+)
+aparece como **Relógio do coletor**, e não como travamento. Até a 1.7.2, esse aviso vinha como `FALHA_GERAL`.
 
 - Sem dados sensíveis: token da sessão, chave do coletor e senhas são mascarados no app e de novo no servidor.
 - Contra app em loop de falha: o app agrupa os repetidos (número de vezes), o servidor aceita no máximo 50 por
@@ -275,6 +286,10 @@ maiúsculas e espaços extras). Etiquetas excluídas do cadastro depois ficam de
 marca, modelo) são os do cadastro atual. Local sem inventário finalizado responde `"temReferencia": false` e a
 lista vazia (primeiro inventário dele). A resposta traz também a data e o operador do inventário de referência.
 
+A resposta tem `ETag`, o hash do próprio JSON. Na próxima vez, o coletor manda a lista que guardou com
+`If-None-Match: <ETag>`. Se nada mudou, a resposta é **304 sem corpo**, e as etiquetas não passam de novo pelo Wi-Fi.
+O hash muda com qualquer mudança no cadastro ou com um inventário novo finalizado.
+
 Erros sempre em JSON: `{"status": 400, "mensagem": "...", "codigo": null, "caminho": "..."}`.
 401 = chave ou sessão inválida · 403 = sem permissão (ou inventário aberto por outro coletor) · 409 = conflito (ex.: item em uso) ·
 410 = rota antiga removida (atualize o app) · 426 = chamada por HTTP (use HTTPS) · 429 = login bloqueado por tentativas (header `Retry-After`).
@@ -284,6 +299,11 @@ servidor não conhece, ex.: banco restaurado), `OUTRO_COLETOR`, `ENCERRADA` (dep
 `ANTIGA_DEMAIS` (chegou depois do prazo de sincronização), `USUARIO_INEXISTENTE`, `DESATIVADO` ou `SEM_OPERADOR`.
 Os dois primeiros apontam problema do servidor ou do coletor, não do operador. No lote, os itens `RECUSADA` por
 sessão trazem o mesmo `motivo`.
+
+Fim da sessão pelo "Sair" ou por outro login no mesmo coletor: a hora informada pelo coletor (`X-Momento` ou
+`lidoEm`) tem uma margem de **2 min** depois do fim. Assim, com o relógio do coletor adiantado, as leituras do último
+minuto não são recusadas como `ENCERRADA`. Sem hora do coletor, vale a hora do servidor, sem margem. A sessão
+encerrada pelo servidor (desativação, senha temporária ou senha trocada) não tem margem.
 
 > As rotas antigas dos coletores (`/api/tags/...` e `/api/rfid/...`) foram **removidas**: respondem
 > **410** explicando que o app precisa ser atualizado, e o servidor registra no log (uma vez por hora por
@@ -344,6 +364,7 @@ sessão trazem o mesmo `motivo`.
   | V18 | `db/migration/V18__epc_maiusculo.sql` | Etiqueta (EPC) sempre em maiúsculas e sem espaços nas pontas (a mesma etiqueta gravada nas duas formas fica como está e é avisada no log ao subir) |
   | V19 | `db/migration/V19__senha_temporaria_prazo_e_leitura_unica.sql` | Prazo da senha temporária (48 h, `RFID_SENHA_PRAZO_TEMPORARIA`) e índice único (etiqueta, hora) só para leituras sem a hora do coletor |
   | V20 | `db/migration/V20__indice_leituras_tag_data_hora.sql` | Índice comum (não único) (etiqueta, hora) das leituras, usado pela última leitura de cada etiqueta (relatório "não vistas" e exportação do cadastro) |
+  | V21 | `db/migration/V21__diagnostico_coletor_e_motivo_fim_sessao.sql` | Diagnóstico do coletor (fila, última sincronização, espaço, Android, modelo, desvio do relógio) e por que a sessão do operador acabou (`encerrada_por`: margem de relógio só para "Sair" e outro login) |
 
   > **Atualizar uma instalação com muitas leituras (centenas de milhares ou mais):** a V16 reescreve a tabela de
   > leituras inteira ao subir, numa transação só: o servidor fica alguns minutos sem responder e a tabela cresce no

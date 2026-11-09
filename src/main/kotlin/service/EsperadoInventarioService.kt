@@ -140,7 +140,9 @@ class EsperadoInventarioService(
                     modelo = it.modeloId?.let(nomesModelo::get)
                 )
             }
-            .sortedWith(compareBy(nullsLast()) { it.patrimonio })
+            // Desempate pela etiqueta: a ordem tem que ser sempre a mesma para o ETag do esperado (InventarioAndroidController)
+            // só mudar quando o conteúdo muda. Sem ele, patrimônio repetido ou vazio saía na ordem que o banco devolvesse
+            .sortedWith(compareBy<ItemEsperado, String?>(nullsLast()) { it.patrimonio }.thenBy { it.tag })
 
         val esperado = EsperadoLocal(
             local = nomeLocal,

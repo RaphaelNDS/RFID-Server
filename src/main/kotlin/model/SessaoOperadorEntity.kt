@@ -28,8 +28,25 @@ class SessaoOperadorEntity(
     @Column(nullable = false)
     val expiraEm: LocalDateTime,
 
-    var encerradaEm: LocalDateTime? = null
+    var encerradaEm: LocalDateTime? = null,
+
+    /**
+     * Por que a sessão acabou antes do prazo ([FimSessao]). Nulo nas sessões abertas e nas encerradas antes da 1.4.4.
+     * Fica como texto: um valor desconhecido (ex.: banco de uma versão mais nova) não pode impedir a leitura da sessão.
+     */
+    @Column(name = "encerrada_por", length = 20)
+    var encerradaPor: String? = null
 ) {
     /** Fim real da sessão: logout ou expiração, o que veio primeiro. */
     val fim: LocalDateTime get() = encerradaEm?.takeIf { it.isBefore(expiraEm) } ?: expiraEm
+}
+
+/** Por que a sessão do operador acabou antes do prazo (coluna encerrada_por). */
+enum class FimSessao {
+    /** "Sair" no app. */
+    SAIR,
+    /** Outro login no mesmo coletor (renovação ou troca de operador). */
+    NOVO_LOGIN,
+    /** Pelo servidor: usuário desativado, senha temporária gerada ou senha trocada. */
+    ADMIN
 }

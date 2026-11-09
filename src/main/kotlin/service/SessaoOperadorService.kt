@@ -1,6 +1,7 @@
 package org.example.service
 
 import org.example.model.AreaAuditoria
+import org.example.model.FimSessao
 import org.example.model.Role
 import org.example.model.SessaoOperadorEntity
 import org.example.model.UsuarioEntity
@@ -129,7 +130,7 @@ class SessaoOperadorService(
         tentativas.registrarSucesso(email)
 
         val agora = LocalDateTime.now(relogio)
-        val anteriores = sessoes.encerrarAbertas(dispositivo, agora)
+        val anteriores = sessoes.encerrarAbertas(dispositivo, agora, FimSessao.NOVO_LOGIN.name)
         if (anteriores > 0) log.info("Login no coletor {}: {} sessão(ões) anterior(es) do coletor encerrada(s)", dispositivo, anteriores)
 
         val token = gerarToken()
@@ -219,6 +220,7 @@ class SessaoOperadorService(
         }
         if (sessao.encerradaEm == null) {
             sessao.encerradaEm = LocalDateTime.now(relogio)
+            sessao.encerradaPor = FimSessao.SAIR.name
             sessoes.save(sessao)
         }
         val email = usuarios.findById(sessao.usuarioId).map { it.email }.orElse("?")
@@ -227,10 +229,11 @@ class SessaoOperadorService(
 
     /**
      * Confere se a sessão do [token] autoriza uma ação feita no [momento] (hora do coletor, no fuso do
-     * servidor) neste [dispositivo]. Devolve o usuário com as permissões ATUAIS.
+     * servidor) neste [dispositivo]. Devolve o usuário com as permissões ATUAIS. [momento] null: o coletor não
+     * informou a hora (ou informou uma no futuro), e vale a hora do servidor, sem a margem de relógio do fim da sessão.
      */
     @Transactional(readOnly = true)
-    fun validar(token: String, dispositivo: String, momento: LocalDateTime): UserPrincipal {
+    fun validar(token: String, dispositivo: String, momento: LocalDateTime?): UserPrincipal {
         val sessao = sessaoDoColetor(token, dispositivo)
         val agora = LocalDateTime.now(relogio)
         // Mesma ordem de sempre: fora da sessão, depois token morto, depois ação antiga demais, depois o usuário
@@ -241,7 +244,7 @@ class SessaoOperadorService(
         exigirTokenVivo(sessao, dispositivo, agora)
         if (recusa != null) {
             log.warn("Ação de {} no coletor {} chegou {} h depois de feita, além do prazo de sincronização: recusada",
-                momento, dispositivo, Duration.between(momento, agora).toHours())
+                momento, dispositivo, Duration.between(momento ?: agora, agora).toHours())
             throw recusa
         }
         return operadorDa(sessao, dispositivo, agora)
@@ -255,7 +258,7 @@ class SessaoOperadorService(
      * desativado: as leituras de antes da desativação valem e as de depois voltam recusadas com DESATIVADO.
      */
     @Transactional(readOnly = true)
-    fun conferirMomentos(token: String, dispositivo: String, momentos: List<LocalDateTime>): Map<Int, SessaoInvalidaException> {
+    fun conferirMomentos(token: String, dispositivo: String, momentos: List<LocalDateTime?>): Map<Int, SessaoInvalidaException> {
         val sessao = sessaoDoColetor(token, dispositivo)
         val agora = LocalDateTime.now(relogio)
         exigirTokenVivo(sessao, dispositivo, agora)
@@ -282,9 +285,9 @@ class SessaoOperadorService(
     fun conferirHorasDoColetor(token: String, dispositivo: String, horas: List<java.time.OffsetDateTime?>): Map<Int, SessaoInvalidaException> {
         if (horas.isEmpty() || token.isBlank()) return emptyMap()
         val agora = LocalDateTime.now(relogio)
+        // null = sem hora do coletor (ausente ou no futuro): vale agora, sem a margem de relógio
         val momentos = horas.map { hora ->
-            val local = hora?.atZoneSameInstant(java.time.ZoneId.systemDefault())?.toLocalDateTime() ?: agora
-            if (local.isAfter(agora.plus(TOLERANCIA))) agora else local
+            hora?.atZoneSameInstant(java.time.ZoneId.systemDefault())?.toLocalDateTime()?.takeUnless { it.isAfter(agora.plus(TOLERANCIA)) }
         }
         return try {
             conferirMomentos(token, dispositivo, momentos)
@@ -312,14 +315,38 @@ class SessaoOperadorService(
         return (encerrada ?: sessao.expiraEm.plus(TOLERANCIA)) to (encerrada != null)
     }
 
-    /** A recusa para uma ação feita em [momento] (hora do coletor), ou null se a sessão valia nesse momento. */
-    private fun recusaDoMomento(sessao: SessaoOperadorEntity, momento: LocalDateTime, agora: LocalDateTime): SessaoInvalidaException? {
+    /**
+     * Até quando (hora do coletor) uma ação ainda cabe numa sessão encerrada em [encerradaEm] (hora do servidor).
+     *
+     * "Sair" ou outro login no mesmo coletor: o próprio coletor encerrou, então as ações dele são todas de antes. Mas
+     * elas vêm com a hora do coletor: com o relógio dele adiantado, as do último minuto chegavam com hora depois do fim
+     * e eram recusadas como ENCERRADA. A margem [MARGEM_FIM_PELO_COLETOR] cobre isso. Não abre brecha nova: o X-Momento
+     * vem do coletor, e quem tivesse o token já podia mandar uma hora de antes do "Sair". O que segura um token vazado
+     * é o prazo pelo relógio do servidor ([exigirTokenVivo]), que não muda.
+     *
+     * Encerrada pelo servidor (desativação, senha) ou antes da 1.4.4 (sem motivo guardado): sem margem, como antes.
+     */
+    private fun limiteDoEncerramento(sessao: SessaoOperadorEntity, encerradaEm: LocalDateTime): LocalDateTime =
+        when (sessao.encerradaPor) {
+            FimSessao.SAIR.name, FimSessao.NOVO_LOGIN.name -> encerradaEm.plus(MARGEM_FIM_PELO_COLETOR)
+            else -> encerradaEm
+        }
+
+    /**
+     * A recusa para uma ação feita em [horaDoColetor] (hora do coletor), ou null se a sessão valia nesse momento.
+     * [horaDoColetor] null: sem hora do coletor, vale [agora] (relógio do servidor, sem margem).
+     */
+    private fun recusaDoMomento(sessao: SessaoOperadorEntity, horaDoColetor: LocalDateTime?, agora: LocalDateTime): SessaoInvalidaException? {
         val (limite, encerrada) = fimDa(sessao)
         val motivo = if (encerrada) "encerrada" else "expirada"
+        val momento = horaDoColetor ?: agora
 
         // Depois do "Sair" vale só o que aconteceu ANTES: uma ação no mesmo instante do logout é recusada (no
-        // Windows o relógio anda em passos de até ~15 ms, e a ação logo após o "Sair" pode ganhar a mesma hora)
-        val depoisDoFim = if (encerrada) !momento.isBefore(limite) else momento.isAfter(limite)
+        // Windows o relógio anda em passos de até ~15 ms, e a ação logo após o "Sair" pode ganhar a mesma hora).
+        // Com a hora do coletor, "antes" tem a margem do relógio dele (limiteDoEncerramento). Com a hora do servidor
+        // não há relógio a corrigir: o token não serve para nada novo depois do "Sair", nem por alguns minutos
+        val limiteDoFim = if (encerrada && horaDoColetor != null) limiteDoEncerramento(sessao, limite) else limite
+        val depoisDoFim = if (encerrada) !momento.isBefore(limiteDoFim) else momento.isAfter(limite)
         if (momento.isBefore(sessao.criadaEm.minus(TOLERANCIA)) || depoisDoFim) {
             return SessaoInvalidaException("Sessão do operador $motivo: faça login de novo",
                 if (encerrada) MotivoSessaoInvalida.ENCERRADA else MotivoSessaoInvalida.EXPIRADA)
@@ -418,6 +445,13 @@ class SessaoOperadorService(
 
         /** Diferença aceita entre o relógio do coletor e o do servidor. */
         val TOLERANCIA: Duration = Duration.ofMinutes(5)
+
+        /**
+         * Margem depois do "Sair" ou de outro login no mesmo coletor para as ações com a hora do coletor adiantada
+         * (as do último minuto antes do fim). Menor que a [TOLERANCIA] da expiração: o "Sair" é uma ação de
+         * segurança do operador, e o app avisa (erro RELOGIO) quando o relógio passa de 2 min de diferença.
+         */
+        val MARGEM_FIM_PELO_COLETOR: Duration = Duration.ofMinutes(2)
 
         /** Quanto tempo a sessão morta continua no banco antes da limpeza (para conferir algum problema recente). */
         val GUARDAR_SESSOES_MORTAS: Duration = Duration.ofDays(30)
