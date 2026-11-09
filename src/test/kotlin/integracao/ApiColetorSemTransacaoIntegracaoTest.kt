@@ -44,23 +44,27 @@ class ApiColetorSemTransacaoIntegracaoTest : IntegracaoBase() {
 
     @AfterEach
     fun apagar() {
-        jdbc.update("delete from inventario_justificativas where inventario_id = ?", inventario)
-        jdbc.update("delete from inventario_itens where inventario_id = ?", inventario)
-        jdbc.update("delete from inventarios where id = ?", inventario)
-        jdbc.update("delete from locais where nome = ?", local)
-        jdbc.update("delete from leituras_android where tag like ?", "$tag%")
-        jdbc.update("delete from tags_nao_cadastradas where tag like ?", "$tag%")
-        jdbc.update("delete from historico_etiquetas where tag_real like ?", "$tag%")
-        jdbc.update("delete from tags where tag_real like ?", "$tag%")
-        ids["modelo"]?.let { jdbc.update("delete from modelo where id = ?", it) }
-        ids["marca"]?.let { jdbc.update("delete from marca where id = ?", it) }
-        ids["tipo"]?.let { jdbc.update("delete from tipo_equipamento where id = ?", it) }
-        jdbc.update("delete from erros_coletor where mensagem like ?", "%$sufixo%")
+        // Fora da transação: o que sobrar fica para os outros testes. Cada exclusão vale sozinha (uma que falhar não
+        // impede as outras) e na ordem das chaves estrangeiras: etiquetas antes dos locais (V23: tags.local_id)
+        fun apagar(sql: String, vararg args: Any) = runCatching { jdbc.update(sql, *args) }
+            .onFailure { System.err.println("Limpeza do teste falhou: $sql (${it.message})") }
+        apagar("delete from inventario_justificativas where inventario_id = ?", inventario)
+        apagar("delete from inventario_itens where inventario_id = ?", inventario)
+        apagar("delete from inventarios where id = ?", inventario)
+        apagar("delete from leituras_android where tag like ?", "$tag%")
+        apagar("delete from tags_nao_cadastradas where tag like ?", "$tag%")
+        apagar("delete from historico_etiquetas where tag_real like ?", "$tag%")
+        apagar("delete from tags where tag_real like ?", "$tag%")
+        apagar("delete from locais where nome = ?", local)
+        ids["modelo"]?.let { apagar("delete from modelo where id = ?", it) }
+        ids["marca"]?.let { apagar("delete from marca where id = ?", it) }
+        ids["tipo"]?.let { apagar("delete from tipo_equipamento where id = ?", it) }
+        apagar("delete from erros_coletor where mensagem like ?", "%$sufixo%")
         // O cadastro do catálogo fica na auditoria: fora da transação, sem isto ficaria para os outros testes
-        jdbc.update("delete from auditoria where alvo like ? or detalhe like ?", "%$sufixo%", "%$sufixo%")
-        jdbc.update("delete from permissoes where usuario_id in (select id from usuarios where email = ?)", email)
-        jdbc.update("delete from usuarios where email = ?", email)
-        jdbc.update("delete from coletores where nome = ?", "coletor-teste")
+        apagar("delete from auditoria where alvo like ? or detalhe like ?", "%$sufixo%", "%$sufixo%")
+        apagar("delete from permissoes where usuario_id in (select id from usuarios where email = ?)", email)
+        apagar("delete from usuarios where email = ?", email)
+        apagar("delete from coletores where nome = ?", "coletor-teste")
     }
 
     private fun json(url: String, corpo: String, token: String) =

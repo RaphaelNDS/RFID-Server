@@ -955,6 +955,34 @@ tr.inativo td { opacity: .6; }
   .qr-dados { width: 100%; }
 }
 
+/* Termo de responsabilidade (1.6.0): folha para imprimir */
+.termo-folha { max-width: 900px; }
+.termo-cabecalho { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding-bottom: 14px; border-bottom: 2px solid var(--text); }
+.termo-cabecalho strong { display: block; font-size: 16px; }
+.termo-cabecalho span { font-size: 13px; }
+.termo-titulo { margin: 22px 0 16px; font-size: 18px; text-align: center; }
+.termo-dados { margin-bottom: 16px; }
+.termo-texto { margin: 14px 0 18px; line-height: 1.65; text-align: justify; color: var(--text); }
+.termo-tabela { margin-bottom: 8px; border: 1px solid var(--border); }
+.termo-assinaturas { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 64px; }
+.termo-assinaturas > div { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; font-size: 13px; }
+.termo-linha { width: 100%; border-top: 1px solid var(--text); margin-bottom: 6px; }
+.termo-local-data { margin-top: 28px; font-size: 13px; }
+
+@media print {
+  @page { margin: 16mm 14mm; }
+  body, body:has(.sidebar) { display: block; background: #fff; color: #000; }
+  .sidebar, .sidebar-fundo, .topbar, .footer, .nao-imprimir, .avisos { display: none !important; }
+  .page { max-width: none; padding: 0; }
+  .card { border: 0; box-shadow: none; }
+  .card-body { padding: 0; }
+  .termo-folha { max-width: none; }
+  .table th { background: #f2f2f2 !important; color: #000; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .table td, .table th { border-color: #999; color: #000; }
+  .table tbody tr:hover td { background: none; }
+  .muted { color: #444 !important; }
+}
+
 /* Status do servidor */
 .status-linha { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 

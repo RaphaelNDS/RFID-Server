@@ -14,6 +14,15 @@ val ultimoLocal: String? = null,
 val ultimoInventarioEm: java.time.OffsetDateTime? = null,
 /** Última leitura da etiqueta (avulsa ou em lote) e o operador dela. */
 val ultimaLeituraEm: java.time.OffsetDateTime? = null,
-val ultimaLeituraPor: String? = null
+val ultimaLeituraPor: String? = null,
+
+// Gestão de patrimônio (1.6.0). Opcionais: o app antigo ignora
+/** Código da situação (EM_USO, EM_ESTOQUE, EM_MANUTENCAO, EMPRESTADO, EXTRAVIADO, BAIXADO) e o nome dela. */
+val situacao: String? = null,
+val situacaoRotulo: String? = null,
+/** Onde o bem está pelo cadastro (o ultimoLocal é o do último inventário que o encontrou). */
+val unidade: String? = null,
+val local: String? = null,
+val responsavel: String? = null
 )
 

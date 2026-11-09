@@ -319,8 +319,9 @@ class Versao144IntegracaoTest : IntegracaoBase() {
         // Inventário novo finalizado: o ETag muda e a lista volta inteira
         rfidService.cadastrarTag(CadastroRequest(tag = "E-ET-C-$sufixo", codigoInterno = "TI-C-$sufixo", patrimonio = "PAT-C-$sufixo"))
         inventario("E-ET-C-$sufixo")
-        val depois = esperado(etag).andExpect(status().isOk).andExpect(jsonPath("$.itens.length()").value(1)).andReturn().response
+        // Desde a 1.6.0 o esperado inclui o cadastro: A e B continuam no local (postos lá pelo primeiro inventário)
+        val depois = esperado(etag).andExpect(status().isOk).andExpect(jsonPath("$.itens.length()").value(3)).andReturn().response
         assertThat(depois.getHeader("ETag")).isNotEqualTo(etag)
-        assertThat(JsonPath.read<String>(depois.contentAsString, "$.itens[0].tag")).isEqualTo("E-ET-C-$sufixo")
+        assertThat(JsonPath.read<List<String>>(depois.contentAsString, "$.itens[*].tag")).contains("E-ET-C-$sufixo")
     }
 }

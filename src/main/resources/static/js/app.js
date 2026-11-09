@@ -14,6 +14,7 @@ document.addEventListener("click", function (e) {
   if (alvo.dataset.acao === "alternar-tema") alternarTema();
   else if (alvo.dataset.acao === "recarregar") location.reload();
   else if (alvo.dataset.acao === "voltar") history.back();
+  else if (alvo.dataset.acao === "imprimir") window.print();
 });
 
 document.addEventListener("DOMContentLoaded", function () {

@@ -86,10 +86,13 @@ class EsperadoInventarioIntegracaoTest : IntegracaoBase() {
         inventarioFinalizado(local, "2026-10-01T10:00:00-03:00", "E-VELHA")
         val recente = inventarioFinalizado(local, "2026-10-12T10:00:00-03:00", "E-RECENTE")
 
+        // A referência é o mais recente. Desde a 1.6.0 o esperado inclui o cadastro: E-VELHA foi posta no local pelo
+        // primeiro inventário e não foi achada em outro lugar, então continua esperada (e faltou no mais recente)
         esperado(local)
             .andExpect(jsonPath("$.inventarioReferencia").value(recente))
-            .andExpect(jsonPath("$.itens.length()").value(1))
-            .andExpect(jsonPath("$.itens[0].tag").value("E-RECENTE"))
+            .andExpect(jsonPath("$.itens.length()").value(2))
+            .andExpect(jsonPath("$.itens[0].tag").value("E-VELHA"))
+            .andExpect(jsonPath("$.itens[1].tag").value("E-RECENTE"))
     }
 
     @Test

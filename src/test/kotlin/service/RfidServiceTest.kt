@@ -141,10 +141,10 @@ class RfidServiceTest {
         every { tipoRepo.findAll() } returns listOf(notebook)
         every { marcaRepo.findAll() } returns listOf(dell)
         every { modeloRepo.findAll() } returns listOf(latitude)
-        every { tagRepo.buscar(any(), any(), any(), any(), any()) } answers {
+        every { tagRepo.buscar(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } answers {
             PageImpl((1..50).map {
                 TagEntity(tagHash = "h$it", tagReal = "E$it", tipoEquipamentoId = 1, marcaId = 2, modeloId = 3)
-            }, arg(4), 50)
+            }, arg(9), 50)
         }
 
         val lista = service.listarParaAdmin(null, 0)
@@ -161,11 +161,11 @@ class RfidServiceTest {
         every { marcaRepo.findAll() } returns listOf(dell, lg)
         every { modeloRepo.findAll() } returns listOf(latitude, ultrawide)
         val pagina = slot<Pageable>()
-        every { tagRepo.buscar(any(), any(), any(), any(), capture(pagina)) } answers { PageImpl(emptyList(), arg(4), 0) }
+        every { tagRepo.buscar(any(), any(), any(), any(), any(), any(), any(), any(), any(), capture(pagina)) } answers { PageImpl(emptyList(), arg(9), 0) }
 
         service.listarParaAdmin("  DeLL ", 2)
 
-        verify { tagRepo.buscar("%dell%", setOf(-1L), setOf(2L), setOf(-1L), any()) }
+        verify { tagRepo.buscar("%dell%", setOf(-1L), setOf(2L), setOf(-1L), setOf(-1L), setOf(-1L), org.example.model.SituacaoBem.EDITAVEIS, -1L, -1L, any()) }
         assertThat(pagina.captured.pageNumber).isEqualTo(2)
         assertThat(pagina.captured.pageSize).isEqualTo(RfidService.TAMANHO_PAGINA)
         assertThat(pagina.captured.sort.getOrderFor("id")?.isDescending).isTrue()

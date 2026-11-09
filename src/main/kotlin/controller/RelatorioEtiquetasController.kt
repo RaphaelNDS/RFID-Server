@@ -34,10 +34,14 @@ class RelatorioEtiquetasController(
     fun exportarCadastro(
         @RequestParam(required = false) busca: String?,
         @RequestParam(required = false) formato: String?,
+        @RequestParam(required = false) situacao: String?,
+        @RequestParam(required = false) local: Long?,
+        @RequestParam(required = false) responsavel: Long?,
+        @RequestParam(required = false) baixados: Boolean?,
         auth: Authentication
     ): ResponseEntity<ByteArray> {
         val tipoArquivo = FormatoPlanilha.de(formato)
-        val etiquetas = relatorio.etiquetasComUltimaVez(busca)
+        val etiquetas = relatorio.etiquetasComUltimaVez(busca, AdminController.filtro(situacao, local, responsavel, baixados))
 
         log.info("{} exportou o cadastro de {} etiqueta(s) em {}{}", auth.name, etiquetas.size,
             tipoArquivo.extensao.uppercase(), busca?.trim()?.takeIf { it.isNotEmpty() }?.let { " (busca: '$it')" } ?: "")
@@ -84,11 +88,15 @@ class RelatorioEtiquetasController(
     private fun planilha(nome: String, etiquetas: List<EtiquetaVista>): Planilha {
         return Planilha(
             nome = nome,
+            // As colunas até "Situação" são as mesmas da importação (ImportacaoEtiquetasService): a planilha exportada
+            // pode ser corrigida e importada de volta
             colunas = listOf("Etiqueta (EPC)", "Código", "Patrimônio", "Tipo", "Marca", "Modelo", "Nº série",
+                "Unidade", "Local", "Responsável", "Situação",
                 "Última leitura", "Último inventário", "Último local", "Dias sem ser vista"),
             linhas = etiquetas.map { v ->
                 val e = v.etiqueta
                 listOf(e.tag, e.codigoInterno, e.patrimonio, e.tipoNome, e.marcaNome, e.modeloNome, e.numeroSerie,
+                    e.unidadeNome, e.localNome, e.responsavelNome, e.situacao.rotulo,
                     v.ultimaLeitura, v.ultimoInventario, v.ultimoLocal,
                     v.diasSemSerVista)
             }

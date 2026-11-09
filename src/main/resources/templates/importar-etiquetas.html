@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Importar etiquetas · Sistema RFID</title>
+
+<!-- Tudo o que vem da planilha é texto de fora: só th:text -->
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Importar etiquetas</h1>
+      <p class="subtitulo">Cadastre ou atualize várias etiquetas de uma vez a partir de uma planilha do Excel (.xlsx) ou CSV</p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/tags-cadastradas/importar/modelo}" class="btn btn-ghost"><svg class="ic"><use href="/img/icones.svg#download"/></svg>Baixar modelo</a>
+      <a th:href="@{/admin/tags-cadastradas}" class="btn btn-ghost"><svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Etiquetas</a>
+    </div>
+  </div>
+
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <!-- 1. Envio (simula, não grava) -->
+  <form class="card" style="margin-bottom:20px" th:action="@{/admin/tags-cadastradas/importar}" method="post" enctype="multipart/form-data"
+        th:if="${resultado == null or resultado.gravado}">
+    <div class="card-header"><h2>Planilha</h2></div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="field span-2">
+          <label for="arquivo">Arquivo (.xlsx ou .csv, até 10 MB e 5.000 linhas) <span class="obrigatorio">*</span></label>
+          <input type="file" id="arquivo" name="arquivo" accept=".xlsx,.csv" required>
+          <span class="field-dica">A primeira linha é o cabeçalho. Colunas reconhecidas pelo nome: <strong>Etiqueta (EPC)</strong> (obrigatória),
+            Código, Patrimônio, Tipo, Marca, Modelo, Nº série, Unidade, Local, Responsável, Matrícula e Situação. As outras são
+            ignoradas: a planilha exportada pela tela de Etiquetas pode ser corrigida e importada de volta.</span>
+        </div>
+        <label class="chip span-2"><input type="checkbox" name="criar" value="true"><span>Cadastrar o que não existir
+          (tipo, marca, modelo, unidade, local e responsável)</span></label>
+      </div>
+      <ul class="field-dica" style="margin:14px 0 0;padding-left:18px">
+        <li>Etiqueta que já existe é <strong>atualizada</strong>; célula vazia mantém o que está no cadastro (não apaga).</li>
+        <li>Nada é gravado agora: primeiro aparece o que vai acontecer em cada linha, e só depois você confirma.</li>
+        <li>No Excel, formate a coluna do EPC como <strong>Texto</strong>: EPC só com números vira notação científica e perde dígitos.</li>
+      </ul>
+    </div>
+    <div class="card-footer"><button type="submit" class="btn btn-primary">Conferir planilha</button></div>
+  </form>
+
+  <!-- 2. Resultado da simulação ou da importação -->
+  <div class="card" th:if="${resultado != null}">
+    <div class="card-header empilhar">
+      <h2 th:text="${resultado.gravado} ? 'Importação concluída' : 'Conferência da planilha'">Conferência</h2>
+      <span class="muted" th:text="${arquivo}"></span>
+    </div>
+    <div class="card-body">
+      <div class="grid grid-stats">
+        <div class="stat"><div class="stat-rotulo">Novas</div><div class="stat-valor positivo" th:text="${resultado.novas}">0</div></div>
+        <div class="stat"><div class="stat-rotulo">Atualizadas</div><div class="stat-valor" th:text="${resultado.atualizadas}">0</div></div>
+        <div class="stat"><div class="stat-rotulo">Sem mudança</div><div class="stat-valor" th:text="${resultado.semMudanca}">0</div></div>
+        <div class="stat"><div class="stat-rotulo">Com erro</div>
+          <div class="stat-valor" th:classappend="${resultado.temErro} ? 'negativo'" th:text="${resultado.erros}">0</div>
+          <div class="stat-dica" th:if="${resultado.temErro}">Ficam de fora; as outras entram</div></div>
+      </div>
+      <div class="alert alert-aviso" th:unless="${#lists.isEmpty(resultado.criados)}" style="margin:16px 0 0">
+        <svg class="ic"><use href="/img/icones.svg#mais"/></svg>
+        <span><span th:text="${resultado.gravado} ? 'Cadastrados: ' : 'Serão cadastrados: '"></span><span th:text="${#strings.listJoin(resultado.criados, ', ')}"></span></span>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="table table-cartoes">
+        <thead><tr><th>Linha</th><th>Etiqueta (EPC)</th><th>Patrimônio</th><th>Resultado</th><th>Detalhe</th></tr></thead>
+        <tbody>
+        <tr th:each="l : ${resultado.linhas}">
+          <td class="cartao-titulo nowrap" th:text="${l.numero}"></td>
+          <td data-rotulo="Etiqueta (EPC)" class="mono" th:text="${l.epc}"></td>
+          <td data-rotulo="Patrimônio" th:text="${l.patrimonio != '' ? l.patrimonio : '—'}"></td>
+          <td data-rotulo="Resultado">
+            <span class="badge" th:classappend="${l.acao.name() == 'ERRO'} ? 'badge-inativo' : (${l.acao.name() == 'NOVA'} ? 'badge-online' : (${l.acao.name() == 'ATUALIZA'} ? 'badge-CUSTOM' : ''))"
+                  th:text="${l.acao.rotulo}"></span>
+          </td>
+          <td data-rotulo="Detalhe" class="celula-longa" th:text="${l.detalhe}"></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <form class="card-footer" th:unless="${resultado.gravado}" th:action="@{/admin/tags-cadastradas/importar/confirmar}" method="post">
+      <a th:href="@{/admin/tags-cadastradas/importar}" class="btn btn-ghost">Enviar outra planilha</a>
+      <button type="submit" class="btn btn-primary" th:disabled="${!resultado.temMudanca}"
+              th:text="${resultado.temErro} ? 'Importar as linhas sem erro' : 'Confirmar importação'">Confirmar importação</button>
+    </form>
+    <div class="card-footer" th:if="${resultado.gravado}">
+      <a th:href="@{/admin/tags-cadastradas}" class="btn btn-primary">Ver as etiquetas</a>
+    </div>
+  </div>
+
+</section>
+</html>

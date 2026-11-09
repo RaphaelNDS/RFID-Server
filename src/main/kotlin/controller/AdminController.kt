@@ -24,7 +24,8 @@ class AdminController(
     private val rfidService: RfidService,
     private val statusService: StatusService,
     private val backupService: BackupService,
-    private val auditoria: AuditoriaService
+    private val auditoria: AuditoriaService,
+    private val cadastros: org.example.service.PatrimonioCadastrosService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -49,24 +50,57 @@ class AdminController(
         return "admin-tags-pendentes"
     }
 
+    /** Etiquetas, com os filtros de gestão de patrimônio (1.6.0): situação, local, responsável e os baixados. */
     @PreAuthorize("@authService.temPermissao('RFID','READ')")
     @GetMapping("/tags-cadastradas")
     fun cadastradas(
         @RequestParam(required = false) busca: String?,
         @RequestParam(defaultValue = "1") pagina: Int,
+        @RequestParam(required = false) situacao: String?,
+        @RequestParam(required = false) local: Long?,
+        @RequestParam(required = false) responsavel: Long?,
+        @RequestParam(required = false) baixados: Boolean?,
         model: Model
     ): String {
-        val resultado = rfidService.listarParaAdmin(busca, pagina - 1)
+        val filtro = filtro(situacao, local, responsavel, baixados)
+        val resultado = rfidService.listarParaAdmin(busca, pagina - 1, filtro)
         model.addAttribute("tags", resultado.content)
-        paginacao(model, resultado, "/admin/tags-cadastradas", busca)
+        model.addAttribute("filtro", filtro)
+        model.addAttribute("situacoes", org.example.model.SituacaoBem.entries)
+        model.addAttribute("opcoesLocal", cadastros?.opcoesDeLocal(incluirInativos = true).orEmpty())
+        model.addAttribute("opcoesResponsavel", cadastros?.listarResponsaveis().orEmpty())
+        paginacao(model, resultado, "/admin/tags-cadastradas", busca, filtro.parametros())
+        // Exportação com a mesma busca e os mesmos filtros da tela
+        fun exportar(formato: String) = org.springframework.web.util.UriComponentsBuilder.fromPath("/admin/tags-cadastradas/exportar")
+            .apply {
+                busca?.trim()?.takeIf { it.isNotEmpty() }?.let { queryParam("busca", it) }
+                filtro.parametros().forEach { (k, v) -> queryParam(k, v) }
+            }.queryParam("formato", formato).encode().toUriString()
+        model.addAttribute("linkExportarXlsx", exportar("xlsx"))
+        model.addAttribute("linkExportarCsv", exportar("csv"))
         return "admin-tags"
     }
 
-    /** Paginação das telas com busca: a busca vai no modelo (campo e "Limpar") e nos links das páginas. */
-    private fun paginacao(model: Model, resultado: Page<*>, caminho: String, busca: String?) {
+    /** Paginação das telas com busca: a busca e os filtros vão no modelo (campo e "Limpar") e nos links das páginas. */
+    private fun paginacao(model: Model, resultado: Page<*>, caminho: String, busca: String?, filtros: Map<String, Any?> = emptyMap()) {
         val termo = busca?.trim().orEmpty()
         model.addAttribute("busca", termo)
-        model.adicionarPaginacao(resultado, caminho, mapOf("busca" to termo))
+        model.adicionarPaginacao(resultado, caminho, mapOf("busca" to termo) + filtros)
+    }
+
+    companion object {
+        /** Filtros da tela (e da exportação): valor inválido é ignorado, nunca erro. */
+        fun filtro(situacao: String?, local: Long?, responsavel: Long?, baixados: Boolean?) = org.example.service.FiltroEtiquetas(
+            situacao = org.example.model.SituacaoBem.de(situacao),
+            localId = local?.takeIf { it > 0 },
+            responsavelId = responsavel?.takeIf { it > 0 },
+            incluirBaixados = baixados == true
+        )
+
+        /** Os filtros como parâmetros de link (paginação e exportação); só os escolhidos. */
+        fun org.example.service.FiltroEtiquetas.parametros(): Map<String, Any?> = linkedMapOf<String, Any?>(
+            "situacao" to situacao?.name, "local" to localId, "responsavel" to responsavelId, "baixados" to if (incluirBaixados) true else null
+        ).filterValues { it != null }
     }
 
     // Backup manual (só ADMIN, pela regra da classe), ex.: antes de atualizar o sistema

@@ -77,12 +77,11 @@ class FaltandoInventarioIntegracaoTest : IntegracaoBase() {
         assertThat(deB.encontradas).isEqualTo(1)
         assertThat(deB.faltando.map { it.patrimonio }).containsExactly("PAT-2", "PAT-3")
 
-        // C compara com B, em que só E-F1 foi encontrada: nada faltou
+        // C compara com B, em que só E-F1 foi encontrada. Desde a 1.6.0 o esperado inclui o cadastro: E-F2 e E-F3
+        // estão no local desde A (nenhum inventário as achou em outro lugar) e continuam faltando
         val deC = comparacao(c)
         assertThat(deC.referencia.inventarioReferencia).isEqualTo(b)
-        assertThat(deC.faltando).isEmpty()
-        mvc.perform(get("/admin/inventarios/$c").with(Perfis.admin()))
-            .andExpect(content().string(containsString("Nada faltou")))
+        assertThat(deC.faltando.map { it.patrimonio }).containsExactly("PAT-2", "PAT-3")
     }
 
     @Test

@@ -85,6 +85,8 @@
           <input type="text" id="numeroSerie" th:field="*{numeroSerie}" maxlength="255">
         </div>
 
+        <th:block th:replace="~{layout/campos-patrimonio :: campos}"></th:block>
+
       </div>
       <p class="field-dica" style="margin-top:16px">
         Preencha tipo, marca, modelo, patrimônio e nº de série para os relatórios e as buscas ficarem completos (as leituras de uma etiqueta incompleta também são gravadas).

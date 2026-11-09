@@ -2,6 +2,8 @@ package org.example.service
 
 import org.example.util.normalizarEpc
 import org.springframework.transaction.annotation.Transactional
+import org.example.model.MotivoBaixa
+import org.example.model.SituacaoBem
 import org.example.model.TagEntity
 import org.example.model.TagNaoCadastradaEntity
 import org.example.repository.*
@@ -24,6 +26,25 @@ import org.springframework.security.core.context.SecurityContextHolder
 /** A etiqueta mudou desde que a tela de edição abriu (versão diferente). */
 class EdicaoConcorrenteException(mensagem: String) : IllegalArgumentException(mensagem)
 
+/**
+ * Filtros da tela de etiquetas (1.6.0). Por padrão, todas as situações menos BAIXADO. [situacao] escolhe uma só
+ * (inclusive BAIXADO); [incluirBaixados] junta os baixados às demais.
+ */
+data class FiltroEtiquetas(
+    val situacao: SituacaoBem? = null,
+    val localId: Long? = null,
+    val responsavelId: Long? = null,
+    val incluirBaixados: Boolean = false
+) {
+    fun situacoes(): List<SituacaoBem> = when {
+        situacao != null -> listOf(situacao)
+        incluirBaixados -> SituacaoBem.entries
+        else -> SituacaoBem.EDITAVEIS
+    }
+
+    val ativo: Boolean get() = situacao != null || localId != null || responsavelId != null || incluirBaixados
+}
+
 @Service
 class RfidService(
     private val repo: TagRepository,
@@ -32,7 +53,11 @@ class RfidService(
     private val marcaRepo: MarcaRepository,
     private val modeloRepo: ModeloRepository,
     private val historico: HistoricoEtiquetaService,
-    private val relogio: Clock = Clock.systemDefaultZone()
+    private val relogio: Clock = Clock.systemDefaultZone(),
+    // Gestão de patrimônio (1.6.0). Opcionais para os testes que montam o serviço à mão
+    private val locaisRepo: LocalRepository? = null,
+    private val unidadesRepo: UnidadeRepository? = null,
+    private val responsaveisRepo: ResponsavelRepository? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -55,6 +80,7 @@ class RfidService(
         require(req.codigoInterno.isNotBlank()) { "Informe o código interno" }
         validarCatalogo(req)
         recusarPatrimonioRepetido(req.patrimonio, idAtual = null)
+        validarLocalEResponsavel(req, localAtual = null, responsavelAtual = null)
 
         val hash = hashTag(req.tag)
 
@@ -67,7 +93,11 @@ class RfidService(
 
             tipoEquipamentoId = req.tipoEquipamentoId,
             marcaId = req.marcaId,
-            modeloId = req.modeloId
+            modeloId = req.modeloId,
+
+            localId = req.localId,
+            responsavelId = req.responsavelId,
+            situacao = situacaoEscolhida(req.situacao) ?: SituacaoBem.EM_USO
         )
 
         val salva = repo.save(entity)
@@ -99,14 +129,43 @@ class RfidService(
             ?.let { modeloRepo.findById(it).orElse(null) }
             ?.nome
 
+        val local = tag.localId?.let { id -> locaisRepo?.findById(id)?.orElse(null) }
         return TagResponse(
             codigoInterno = tag.codigoInterno,
             tipo = tipoNome,
             marca = marcaNome,
             modelo = modeloNome,
             patrimonio = tag.patrimonio,
-            numeroSerie = tag.numeroSerie
+            numeroSerie = tag.numeroSerie,
+            situacao = tag.situacao.name,
+            situacaoRotulo = tag.situacao.rotulo,
+            unidade = local?.unidadeId?.let { id -> unidadesRepo?.findById(id)?.orElse(null)?.nome },
+            local = local?.nome,
+            responsavel = tag.responsavelId?.let { id -> responsaveisRepo?.findById(id)?.orElse(null)?.nome }
         )
+    }
+
+    /**
+     * Local e responsável escolhidos existem; os desativados só valem se já eram os do bem (a edição de um bem que
+     * ficou num local desativado não obriga a trocar o local).
+     */
+    private fun validarLocalEResponsavel(req: CadastroRequest, localAtual: Long?, responsavelAtual: Long?) {
+        req.localId?.let { id ->
+            val local = locaisRepo?.findById(id)?.orElse(null) ?: throw IllegalArgumentException("Local não encontrado")
+            require(local.ativo || id == localAtual) { "O local ${local.nome} está desativado" }
+        }
+        req.responsavelId?.let { id ->
+            val r = responsaveisRepo?.findById(id)?.orElse(null) ?: throw IllegalArgumentException("Responsável não encontrado")
+            require(r.ativo || id == responsavelAtual) { "O responsável ${r.nome} está desativado" }
+        }
+    }
+
+    /** A situação escolhida no formulário; vazio = não escolheu. BAIXADO é recusado (a baixa tem tela própria). */
+    private fun situacaoEscolhida(texto: String?): SituacaoBem? {
+        if (texto.isNullOrBlank()) return null
+        val s = SituacaoBem.de(texto) ?: throw IllegalArgumentException("Situação inválida: $texto")
+        require(s != SituacaoBem.BAIXADO) { "Para baixar o bem use \"Dar baixa\", com o motivo" }
+        return s
     }
 
 
@@ -153,31 +212,39 @@ class RfidService(
      * série ou nome do tipo/marca/modelo. Antes vinham todas de uma vez e a busca era só no navegador, o que
      * fica pesado com milhares de etiquetas. [pagina] começa em 0. Carrega o catálogo uma vez só.
      */
-    fun listarParaAdmin(busca: String?, pagina: Int): Page<TagViewAdmin> =
-        buscarParaAdmin(busca) { consultar -> paginaValida(pagina) { p -> consultar(PageRequest.of(p, TAMANHO_PAGINA, ORDEM_ETIQUETAS)) } }
+    fun listarParaAdmin(busca: String?, pagina: Int, filtro: FiltroEtiquetas = FiltroEtiquetas()): Page<TagViewAdmin> =
+        buscarParaAdmin(busca, filtro) { consultar -> paginaValida(pagina) { p -> consultar(PageRequest.of(p, TAMANHO_PAGINA, ORDEM_ETIQUETAS)) } }
 
     /** Todas as etiquetas da busca (exportação e relatórios), na mesma ordem da tela. */
-    fun listarTodasParaAdmin(busca: String?): List<TagViewAdmin> =
-        buscarParaAdmin(busca) { consultar -> consultar(Pageable.unpaged(ORDEM_ETIQUETAS)) }.content
+    fun listarTodasParaAdmin(busca: String?, filtro: FiltroEtiquetas = FiltroEtiquetas()): List<TagViewAdmin> =
+        buscarParaAdmin(busca, filtro) { consultar -> consultar(Pageable.unpaged(ORDEM_ETIQUETAS)) }.content
 
     private fun buscarParaAdmin(
         busca: String?,
+        filtro: FiltroEtiquetas,
         paginar: ((Pageable) -> Page<TagEntity>) -> Page<TagEntity>
     ): Page<TagViewAdmin> {
         val tipos = tipoRepo.findAll().associate { it.id to it.nome }
         val marcas = marcaRepo.findAll().associate { it.id to it.nome }
         val modelos = modeloRepo.findAll().associate { it.id to it.nome }
+        val unidades = unidadesRepo?.findAll()?.associate { it.id to it.nome }.orEmpty()
+        val locais = locaisRepo?.findAll()?.associateBy { it.id }.orEmpty()
+        val responsaveis = responsaveisRepo?.findAll()?.associate { it.id to it.nome }.orEmpty()
 
         val padrao = padraoBusca(busca)
         val termo = busca?.trim()?.lowercase().orEmpty()
-        // Busca pelo nome do catálogo vira busca pelos ids (o catálogo é pequeno e já está carregado).
+        // Busca pelo nome do catálogo, do local ou do responsável vira busca pelos ids (cadastros pequenos, já carregados).
         // Lista vazia no IN não é aceita por todos os bancos: -1 não existe
         fun ids(nomes: Map<Long, String>) =
             nomes.filterValues { termo.isNotEmpty() && it.lowercase().contains(termo) }.keys.ifEmpty { setOf(-1L) }
 
-        val resultado = paginar { pedido -> repo.buscar(padrao, ids(tipos), ids(marcas), ids(modelos), pedido) }
+        val resultado = paginar { pedido ->
+            repo.buscar(padrao, ids(tipos), ids(marcas), ids(modelos), ids(locais.mapValues { it.value.nome }), ids(responsaveis),
+                filtro.situacoes(), filtro.localId ?: -1L, filtro.responsavelId ?: -1L, pedido)
+        }
 
         return resultado.map { tag ->
+            val local = tag.localId?.let { locais[it] }
             TagViewAdmin(
                 id = tag.id,
                 tag = tag.tagReal,
@@ -186,7 +253,11 @@ class RfidService(
                 marcaNome = tag.marcaId?.let { marcas[it] },
                 modeloNome = tag.modeloId?.let { modelos[it] },
                 patrimonio = tag.patrimonio,
-                numeroSerie = tag.numeroSerie
+                numeroSerie = tag.numeroSerie,
+                unidadeNome = local?.unidadeId?.let { unidades[it] },
+                localNome = local?.nome,
+                responsavelNome = tag.responsavelId?.let { responsaveis[it] },
+                situacao = tag.situacao
             )
         }
     }
@@ -215,6 +286,9 @@ class RfidService(
         require(req.codigoInterno.isNotBlank()) { "Informe o código interno" }
         validarCatalogo(req.copy(tag = tag.tagReal))
         recusarPatrimonioRepetido(req.patrimonio, idAtual = tag.id)
+        validarLocalEResponsavel(req, localAtual = tag.localId, responsavelAtual = tag.responsavelId)
+        // Conferida antes de mexer na etiqueta: recusar depois deixaria a entidade alterada na sessão do JPA
+        val novaSituacao = if (tag.baixado) null else situacaoEscolhida(req.situacao)
 
         val antes = historico.retrato(tag)
         tag.codigoInterno = req.codigoInterno
@@ -223,6 +297,10 @@ class RfidService(
         tag.tipoEquipamentoId = req.tipoEquipamentoId
         tag.marcaId = req.marcaId
         tag.modeloId = req.modeloId
+        tag.localId = req.localId
+        tag.responsavelId = req.responsavelId
+        // Bem baixado continua baixado (desfazer é pela tela da baixa); vazio = a situação atual
+        novaSituacao?.let { tag.situacao = it }
         repo.save(tag)
 
         val mudaram = historico.registrarAlteracao(tag, antes)
@@ -259,6 +337,49 @@ class RfidService(
 
         log.warn("Cadastro recusado: o patrimônio {} já está na etiqueta {} (tentativa de {})", patrimonio, outra.tagReal, usuarioAtual())
         throw IllegalArgumentException("O patrimônio $patrimonio já está em outra etiqueta (${outra.tagReal})")
+    }
+
+    /**
+     * Baixa patrimonial (1.6.0): o bem sai das listas, do esperado do inventário e do relatório "não vistas", mas
+     * continua no cadastro (filtro "Baixados"), no histórico e na auditoria. Diferente de excluir.
+     */
+    @Transactional
+    fun darBaixa(id: Long, motivo: MotivoBaixa, data: java.time.LocalDate?, observacao: String?): TagEntity {
+        val tag = buscarPorId(id)
+        require(!tag.baixado) { "Este bem já foi baixado em ${tag.baixaEm} (${tag.baixaMotivo?.rotulo})" }
+        val hoje = java.time.LocalDate.now(relogio)
+        val dia = data ?: hoje
+        require(!dia.isAfter(hoje)) { "A data da baixa não pode ser no futuro" }
+        val obs = observacao?.trim()?.takeIf { it.isNotEmpty() }?.also { require(it.length <= 500) { "A observação pode ter no máximo 500 caracteres" } }
+
+        val antes = historico.retrato(tag)
+        tag.situacao = SituacaoBem.BAIXADO
+        tag.baixaMotivo = motivo
+        tag.baixaEm = dia
+        tag.baixaObservacao = obs
+        tag.baixaPor = usuarioAtual()
+        repo.save(tag)
+        historico.registrarAlteracao(tag, antes)
+        log.warn("Baixa do bem {} (patrimônio {}) por {}: {} em {}{}", tag.tagReal, tag.patrimonio, usuarioAtual(), motivo.rotulo, dia,
+            obs?.let { " ($it)" } ?: "")
+        return tag
+    }
+
+    /** Desfaz a baixa (lançada por engano): o bem volta "Em uso". Fica no histórico. */
+    @Transactional
+    fun desfazerBaixa(id: Long): TagEntity {
+        val tag = buscarPorId(id)
+        require(tag.baixado) { "Este bem não está baixado" }
+        val antes = historico.retrato(tag)
+        tag.situacao = SituacaoBem.EM_USO
+        tag.baixaMotivo = null
+        tag.baixaEm = null
+        tag.baixaObservacao = null
+        tag.baixaPor = null
+        repo.save(tag)
+        historico.registrarAlteracao(tag, antes)
+        log.warn("Baixa do bem {} (patrimônio {}) desfeita por {}", tag.tagReal, tag.patrimonio, usuarioAtual())
+        return tag
     }
 
     /** Exclui a etiqueta. O histórico dela continua, com um retrato dos campos no momento da exclusão. */

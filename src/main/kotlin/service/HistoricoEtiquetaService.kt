@@ -33,7 +33,10 @@ class HistoricoEtiquetaService(
     private val tipos: TipoEquipamentoRepository,
     private val marcas: MarcaRepository,
     private val modelos: ModeloRepository,
-    private val relogio: Clock
+    private val relogio: Clock,
+    // Gestão de patrimônio (1.6.0). Opcionais para os testes que montam o serviço à mão
+    private val locais: org.example.repository.LocalRepository? = null,
+    private val responsaveis: org.example.repository.ResponsavelRepository? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -45,7 +48,15 @@ class HistoricoEtiquetaService(
             "Nº de série" to tag.numeroSerie,
             "Tipo" to tag.tipoEquipamentoId?.let { id -> tipos.findById(id).map { it.nome }.orElse("#$id") },
             "Marca" to tag.marcaId?.let { id -> marcas.findById(id).map { it.nome }.orElse("#$id") },
-            "Modelo" to tag.modeloId?.let { id -> modelos.findById(id).map { it.nome }.orElse("#$id") }
+            "Modelo" to tag.modeloId?.let { id -> modelos.findById(id).map { it.nome }.orElse("#$id") },
+            // 1.6.0: onde está, com quem e em que situação (a baixa entra com o motivo, a data e quem fez)
+            "Local" to tag.localId?.let { id -> locais?.findById(id)?.map { it.nome }?.orElse("#$id") ?: "#$id" },
+            "Responsável" to tag.responsavelId?.let { id -> responsaveis?.findById(id)?.map { it.descricao }?.orElse("#$id") ?: "#$id" },
+            "Situação" to tag.situacao.rotulo,
+            "Baixa" to tag.baixaMotivo?.let { m ->
+                listOfNotNull(m.rotulo, tag.baixaEm?.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                    tag.baixaObservacao, tag.baixaPor?.let { "por $it" }).joinToString(" · ")
+            }
         )
     )
 
