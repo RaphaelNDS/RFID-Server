@@ -58,6 +58,7 @@ class InventarioWebController(
         model.addAttribute("inventario", detalhe.resumo)
         model.addAttribute("itens", detalhe.itens)
         model.addAttribute("comparacao", esperados.faltandoNoInventario(id))
+        model.addAttribute("justificativas", service.justificativasDo(id))
         // "Voltar" leva ao mesmo filtro de local e página da lista (antes voltava para a lista limpa). Só esses dois
         // parâmetros, validados como números; texto inválido é ignorado e o destino é sempre a lista de inventários
         val localValido = local?.trim()?.toLongOrNull()?.takeIf { it > 0 }
@@ -90,14 +91,23 @@ class InventarioWebController(
         }
         // Em andamento, a lista é provisória: a situação diz isso na própria planilha
         val situacaoFaltando = if (inventario.status == StatusInventario.ABERTO) "Faltando até agora" else "Faltando"
+        // Justificativa marcada no coletor (1.5.0): na situação ("Faltando: Emprestado (com o João)") e o operador dela
+        val justificativas = service.justificativasDo(id)
         val faltando = comparacao.faltando.map {
-            listOf(null, it.tag, situacaoFaltando, it.patrimonio, it.codigoInterno, it.tipo, it.marca, it.modelo, null)
+            val j = justificativas[it.tag]
+            val situacao = if (j == null) situacaoFaltando else "$situacaoFaltando: ${j.motivo.rotulo}${j.observacao?.let { o -> " ($o)" } ?: ""}"
+            listOf(null, it.tag, situacao, it.patrimonio, it.codigoInterno, it.tipo, it.marca, it.modelo, j?.operador)
+        }
+        // Achadas depois em outro local: não contam como faltando, mas aparecem com o local em que foram achadas
+        val emOutroLocal = comparacao.emOutroLocal.map {
+            listOf(null, it.item.tag, "Encontrada em outro local: ${it.local}", it.item.patrimonio, it.item.codigoInterno,
+                it.item.tipo, it.item.marca, it.item.modelo, null)
         }
 
         val planilha = Planilha(
             nome = "Inventário ${inventario.local}",
             colunas = listOf("Lida em", "Etiqueta (EPC)", "Situação", "Patrimônio", "Código", "Tipo", "Marca", "Modelo", "Operador"),
-            linhas = lidas + faltando
+            linhas = lidas + faltando + emOutroLocal
         )
 
         log.info("{} exportou o inventário {} de '{}' em {}: {} etiqueta(s) lida(s){}",

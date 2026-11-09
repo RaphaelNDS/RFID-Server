@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>QR de configuração · Sistema RFID</title>
+
+<section class="page page-estreita">
+
+  <div class="page-header">
+    <div>
+      <h1 th:text="'Configurar ' + ${qr.coletor}">Configurar coletor</h1>
+      <p class="subtitulo">Nas Configurações do app (a partir da 2.0), leia este código com o leitor do coletor</p>
+    </div>
+    <a th:href="@{/admin/coletores}" class="btn btn-ghost">
+      <svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Voltar
+    </a>
+  </div>
+
+  <div class="alert alert-aviso" role="note">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+    <span>Este código leva a <strong>chave do coletor</strong>: quem o fotografar consegue configurar outro aparelho
+      como este coletor. Mostre só para configurar o coletor e feche a página depois. Cada vez que o código é mostrado
+      fica registrado na auditoria.</span>
+  </div>
+
+  <div class="card">
+    <div class="card-body qr-corpo">
+      <!-- SVG gerado pelo servidor (ConfiguracaoColetorService): só retângulos, sem texto de fora -->
+      <div class="qr-codigo" th:utext="${qr.svg}"></div>
+
+      <dl class="dados qr-dados">
+        <div><dt>Coletor</dt><dd class="mono" th:text="${qr.coletor}">coletor-01</dd></div>
+        <div><dt>Servidor</dt><dd class="mono" th:text="${qr.endereco}">172.16.0.10:8443</dd></div>
+        <div>
+          <dt>Certificado (SHA-256)</dt>
+          <dd class="mono quebra" th:text="${qr.impressaoDigital != null} ? ${qr.impressaoDigital} : 'HTTPS desligado'"></dd>
+        </div>
+      </dl>
+      <p class="field-dica">
+        Confira o endereço do servidor: é por ele que o coletor vai se conectar. Se estiver errado (ex.: a rede tem
+        outro IP), defina <code>RFID_ENDERECO_QR</code> no servidor. O PIN das Configurações continua sendo pedido no coletor.
+      </p>
+    </div>
+  </div>
+
+</section>
+</html>

@@ -12,7 +12,10 @@ import org.example.model.LocalEntity
 import org.example.model.StatusInventario
 import org.example.repository.InventarioItemRepository
 import org.example.repository.InventarioRepository
+import org.example.repository.JustificativaInventarioRepository
 import org.example.repository.LocalRepository
+import org.example.model.JustificativaInventarioEntity
+import org.example.model.MotivoFalta
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.Clock
@@ -49,6 +52,12 @@ data class ItemLido(val tag: String, val lidoEm: OffsetDateTime?)
 
 data class ResultadoItens(val recebidos: Int, val novos: Int)
 
+/** Uma justificativa como chega do coletor. [motivo]: o código (EMPRESTADO) ou o nome ("Emprestado"). */
+data class JustificativaRecebida(val tag: String = "", val motivo: String = "", val observacao: String? = null)
+
+/** [gravadas]: novas ou alteradas (o reenvio igual não conta). [invalidas]: etiquetas ignoradas por etiqueta ou motivo inválido. */
+data class ResultadoJustificativas(val recebidas: Int, val gravadas: Int, val invalidas: List<String>)
+
 /**
  * Inventário por local feito pelo coletor: abre (num local), recebe as etiquetas lidas e finaliza.
  * Todas as operações podem ser repetidas sem duplicar nada, porque o coletor reenvia o que não teve
@@ -60,6 +69,7 @@ class InventarioService(
     private val inventarios: InventarioRepository,
     private val itens: InventarioItemRepository,
     private val rfidService: RfidService,
+    private val justificativas: JustificativaInventarioRepository,
     private val relogio: Clock = Clock.systemDefaultZone()
 ) {
 
@@ -164,6 +174,57 @@ class InventarioService(
     }
 
     /**
+     * Justificativas dos bens que faltaram (1.5.0), marcadas no coletor na finalização. Aceitas também depois de
+     * finalizado (vêm pela fila do app). Idempotente: o reenvio da mesma etiqueta atualiza a justificativa dela.
+     * Item com etiqueta ou motivo inválido é ignorado e devolvido em [ResultadoJustificativas.invalidas], para o app
+     * não reenviar para sempre.
+     */
+    @Transactional
+    fun registrarJustificativas(id: String, recebidas: List<JustificativaRecebida>, dispositivo: String, operador: String? = null): ResultadoJustificativas {
+        require(recebidas.size <= MAXIMO_JUSTIFICATIVAS) { "No máximo $MAXIMO_JUSTIFICATIVAS justificativas por envio (recebidas ${recebidas.size})" }
+        val inventario = buscar(id)
+        exigirMesmoColetor(inventario, dispositivo, "justificativas")
+
+        val existentes = justificativas.findByInventarioId(id).associateBy { it.tag }.toMutableMap()
+        val agora = LocalDateTime.now(relogio)
+        val invalidas = mutableListOf<String>()
+        var gravadas = 0
+
+        for (r in recebidas) {
+            val tag = org.example.util.normalizarEpc(r.tag)
+            val motivo = MotivoFalta.de(r.motivo)
+            if (tag.isEmpty() || tag.length > LeituraLoteService.TAMANHO_MAXIMO_TAG || motivo == null) {
+                invalidas += r.tag.take(60)
+                continue
+            }
+            val observacao = r.observacao?.filter { !it.isISOControl() }?.trim()?.take(500)?.ifEmpty { null }
+            val atual = existentes[tag]
+            if (atual != null) {
+                if (atual.motivo == motivo && atual.observacao == observacao) continue   // reenvio igual
+                atual.motivo = motivo
+                atual.observacao = observacao
+                atual.operador = operador ?: atual.operador
+                atual.registradaEm = agora
+                justificativas.save(atual)
+            } else {
+                existentes[tag] = justificativas.save(JustificativaInventarioEntity(
+                    inventarioId = id, tag = tag, motivo = motivo, observacao = observacao, operador = operador, registradaEm = agora))
+            }
+            gravadas++
+        }
+
+        if (gravadas > 0) {
+            log.info("Inventário {}: {} justificativa(s) de bem não encontrado recebida(s) do dispositivo {} ({})", id, gravadas, dispositivo,
+                recebidas.mapNotNull { MotivoFalta.de(it.motivo) }.groupingBy { it }.eachCount().entries.joinToString { "${it.key.rotulo} ${it.value}" })
+        }
+        if (invalidas.isNotEmpty()) log.warn("Inventário {}: {} justificativa(s) com etiqueta ou motivo inválido ignorada(s) (dispositivo {})", id, invalidas.size, dispositivo)
+        return ResultadoJustificativas(recebidas.size, gravadas, invalidas)
+    }
+
+    /** Justificativas do inventário por etiqueta (tela de detalhe e exportação). */
+    fun justificativasDo(id: String): Map<String, JustificativaInventarioEntity> = justificativas.findByInventarioId(id).associateBy { it.tag }
+
+    /**
      * Tela de inventários: uma página (mais recentes primeiro), do local escolhido ou de todos. [pagina] começa
      * em 0. Antes vinham todos de uma vez, e a contagem de itens somava os de todos os inventários.
      */
@@ -264,6 +325,7 @@ class InventarioService(
 
     private companion object {
         const val MAXIMO_ITENS_POR_ENVIO = 500
+        const val MAXIMO_JUSTIFICATIVAS = 2000
         const val TAMANHO_MAXIMO_LOCAL = 120
         val TOLERANCIA_RELOGIO: Duration = Duration.ofMinutes(5)
     }

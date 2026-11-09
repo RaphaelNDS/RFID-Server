@@ -112,6 +112,19 @@ class InventarioAndroidController(
         }
     }
 
+    /**
+     * Justificativas dos bens que faltaram (1.5.0): lista de {"tag","motivo","observacao"}. Motivos: EMPRESTADO,
+     * MANUTENCAO, BAIXADO, NAO_ENCONTRADO, OUTRO (ou o nome: "Em manutenção"). Aceita também depois de finalizado e é
+     * idempotente: o reenvio da mesma etiqueta atualiza a justificativa dela.
+     */
+    @PreAuthorize(LEITURA)
+    @PostMapping("/inventarios/{id}/justificativas")
+    fun justificativas(@PathVariable id: String, @RequestBody req: List<org.example.service.JustificativaRecebida>,
+                       auth: Authentication): org.example.service.ResultadoJustificativas =
+        repetindoSeReenvioSimultaneo("Justificativas do inventário $id") {
+            service.registrarJustificativas(id, req, auth.name, auth.nomeOperador())
+        }
+
     @PreAuthorize(LEITURA)
     @PostMapping("/inventarios/{id}/finalizar")
     fun finalizar(@PathVariable id: String, @RequestBody(required = false) req: FinalizarRequest?, auth: Authentication): Map<String, String> {

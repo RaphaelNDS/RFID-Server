@@ -144,6 +144,18 @@ Os dados vêm dos headers `X-Fila-Pendentes`, `X-Fila-Mais-Antiga`, `X-Ultima-Si
 `X-Android`, `X-Modelo` e `X-Relogio-Coletor`. Valor inválido é ignorado, e um header ausente mantém o último valor
 guardado. A mudança do relógio (de certo para errado e de volta) aparece no log.
 
+**QR de configuração (1.5.0):** o botão **QR de configuração** de cada coletor mostra um QR code para o app 2.0
+configurar o servidor e a chave lendo o código, sem digitar. O texto do QR é
+`RFIDCFG1|<host:porta>|<chave do coletor>|<SHA-256 do certificado>`, e o app confia no certificado se a impressão
+digital bater. Como o QR leva a chave do coletor:
+- só um ADMIN pode mostrar;
+- o código só aparece depois do clique (POST com CSRF);
+- cada vez fica na auditoria (área Coletores).
+
+Endereço do servidor no QR: o de `RFID_ENDERECO_QR`, se estiver definido; senão o endereço pelo qual a tela foi
+aberta; aberta em `localhost`, o IP da rede local desta máquina. A tela mostra o endereço usado, para conferir antes
+de ler.
+
 ### Exportar para Excel
 
 As telas de **Leituras**, **detalhe do inventário**, **Etiquetas** e **Não vistas** têm os botões **Excel** e
@@ -267,7 +279,7 @@ O app funciona sem rede durante a sessão e envia depois o que ficou na fila. Ca
 | `GET /api/android/ping` | Testa a conexão e a chave | chave |
 | `POST /api/android/login` · `POST /api/android/logout` | Sessão do operador | chave |
 | `POST /api/android/esqueci-senha` | Pede uma senha nova ao ADMIN (**202**, mesma resposta exista ou não o email) | chave |
-| `GET /api/android/tags/{epc}` | Dados de uma etiqueta | operador · Leituras |
+| `GET /api/android/tags/{epc}` | Ficha do bem: o cadastro e, desde a 1.5.0, `ultimoLocal` e `ultimoInventarioEm` (último inventário finalizado em que foi encontrado), `ultimaLeituraEm` e `ultimaLeituraPor` (opcionais, podem vir `null`) | operador · Leituras |
 | `GET /api/android/tags/patrimonio/{patrimonio}` | EPC de um patrimônio (localizar equipamento) | operador · Leituras |
 | `POST /api/android/leitura` | Registra a leitura de uma etiqueta | operador · Leituras |
 | `POST /api/android/naocadastrada` | Envia etiqueta desconhecida para Pendentes | operador · Leituras |
@@ -278,6 +290,7 @@ O app funciona sem rede durante a sessão e envia depois o que ficou na fila. Ca
 | `POST /api/android/inventarios` | Abre inventário num local | operador · Leituras |
 | `POST /api/android/inventarios/{id}/itens` | Envia etiquetas lidas | operador · Leituras |
 | `POST /api/android/inventarios/{id}/finalizar` | Finaliza o inventário | operador · Leituras |
+| `POST /api/android/inventarios/{id}/justificativas` | Justificativa dos bens que faltaram (1.5.0): `[{"tag","motivo","observacao"}]`. Motivos: `EMPRESTADO`, `MANUTENCAO`, `BAIXADO`, `NAO_ENCONTRADO`, `OUTRO` (ou o nome, como "Em manutenção"). Aceita depois de finalizado e é idempotente. Responde `{"recebidas","gravadas","invalidas"}` | operador · Leituras |
 | `GET /api/android/inventarios/esperado?local=...` | O que é esperado no local, para o coletor mostrar o que falta (ver abaixo) | operador · Leituras |
 
 **O que é esperado num local:** as etiquetas **cadastradas** encontradas no **último inventário finalizado** daquele
@@ -285,6 +298,12 @@ local (não há campo de local no cadastro da etiqueta). O nome do local segue a
 maiúsculas e espaços extras). Etiquetas excluídas do cadastro depois ficam de fora, e os dados (patrimônio, tipo,
 marca, modelo) são os do cadastro atual. Local sem inventário finalizado responde `"temReferencia": false` e a
 lista vazia (primeiro inventário dele). A resposta traz também a data e o operador do inventário de referência.
+
+Desde a 1.5.0, um bem que estava no inventário de referência e foi encontrado **depois** num inventário finalizado de
+outro local sai do esperado. Ele foi levado para lá, e o local do bem passa a ser o do inventário finalizado mais
+recente que o encontrou. No detalhe do inventário na web, esses bens aparecem à parte, em **Encontrados em outro
+local**, e não como faltando. As justificativas marcadas no coletor aparecem ao lado de cada bem que faltou e também
+vão para a exportação.
 
 A resposta tem `ETag`, o hash do próprio JSON. Na próxima vez, o coletor manda a lista que guardou com
 `If-None-Match: <ETag>`. Se nada mudou, a resposta é **304 sem corpo**, e as etiquetas não passam de novo pelo Wi-Fi.
@@ -366,6 +385,7 @@ servidor (desativação, senha temporária ou senha trocada) não tem margem.
   | V18 | `db/migration/V18__epc_maiusculo.sql` | Etiqueta (EPC) sempre em maiúsculas e sem espaços nas pontas (a mesma etiqueta gravada nas duas formas fica como está e é avisada no log ao subir) |
   | V19 | `db/migration/V19__senha_temporaria_prazo_e_leitura_unica.sql` | Prazo da senha temporária (48 h, `RFID_SENHA_PRAZO_TEMPORARIA`) e índice único (etiqueta, hora) só para leituras sem a hora do coletor |
   | V20 | `db/migration/V20__indice_leituras_tag_data_hora.sql` | Índice comum (não único) (etiqueta, hora) das leituras, usado pela última leitura de cada etiqueta (relatório "não vistas" e exportação do cadastro) |
+  | V22 | `db/migration/V22__justificativas_inventario.sql` | Justificativas dos bens que faltaram no inventário (`inventario_justificativas`) e índice por etiqueta nos itens de inventário (ficha do bem e esperado sem os bens achados em outro local) |
   | V21 | `db/migration/V21__diagnostico_coletor_e_motivo_fim_sessao.sql` | Diagnóstico do coletor (fila, última sincronização, espaço, Android, modelo, desvio do relógio) e por que a sessão do operador acabou (`encerrada_por`: margem de relógio só para "Sair" e outro login) |
 
   > **Atualizar uma instalação com muitas leituras (centenas de milhares ou mais):** a V16 reescreve a tabela de
@@ -606,6 +626,7 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_CHAVES_DISPOSITIVOS` | *(vazio = nenhum coletor entra)* | `nome:chave` dos coletores, separados por vírgula |
 | `RFID_COLETORES_CADASTRO` | *(vazio)* | Coletores que podem cadastrar etiquetas |
 | `RFID_COLETORES_DIAS_SEM_CONTATO` | `7` | Dias sem contato até o coletor aparecer destacado na tela Coletores |
+| `RFID_ENDERECO_QR` | *(vazio)* | Endereço do servidor no QR de configuração dos coletores (ex.: `172.16.242.22` ou um nome). Vazio = o da tela ou o IP da rede local |
 | `RFID_APP_CERTIFICADO_SHA256` | *(o da chave da empresa)* | Impressão digital do certificado da chave do app: só APK assinado com ela é publicado (vazio = publicação desligada) |
 | `RFID_APP_PASTA` | `./data/app` | Pasta dos APKs publicados (fora do backup automático) |
 | `RFID_APP_PACOTE` | `br.com.bkpbr.rfidandroid` | Pacote do app dos coletores: APK de outro pacote é recusado |
