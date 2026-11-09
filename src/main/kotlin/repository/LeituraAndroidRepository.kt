@@ -53,6 +53,9 @@ interface LeituraAndroidRepository :
     /** Reenvio do coletor: a mesma tag com a mesma hora informada pelo coletor já foi gravada. */
     fun existsByTagAndLidoEmColetor(tag: String, lidoEmColetor: LocalDateTime): Boolean
 
+    /** A leitura mais recente da etiqueta (ficha do bem no coletor). Usa o índice (tag, data_hora) da V20. */
+    fun findFirstByTagOrderByDataHoraDesc(tag: String): LeituraAndroidEntity?
+
     /**
      * Lote: (tag, hora informada pelo coletor) das leituras já gravadas dessas tags desde [inicio], numa consulta só
      * (reenvio do lote).

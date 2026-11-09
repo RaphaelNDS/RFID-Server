@@ -17,6 +17,7 @@ enum class AreaAuditoria(val rotulo: String) {
     CATALOGO("Catálogo"),
     APP("App dos coletores"),
     EXPORTACAO("Exportações"),
+    COLETORES("Coletores"),
     BACKUP("Backup")
 }
 

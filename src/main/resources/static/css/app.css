@@ -945,6 +945,16 @@ tr.inativo td { opacity: .6; }
 /* Saudação na tela inicial */
 .saudacao h1 { font-size: 24px; }
 
+/* QR de configuração do coletor */
+.qr-corpo { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 24px; align-items: start; }
+.qr-codigo { width: 260px; padding: 8px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); }
+.qr-codigo svg { display: block; width: 100%; height: auto; }
+.qr-corpo .field-dica { grid-column: 1 / -1; }
+@media (max-width: 640px) {
+  .qr-corpo { grid-template-columns: 1fr; justify-items: center; }
+  .qr-dados { width: 100%; }
+}
+
 /* Status do servidor */
 .status-linha { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 

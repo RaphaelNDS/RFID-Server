@@ -12,6 +12,7 @@ import org.example.repository.TipoEquipamentoRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
@@ -60,7 +61,8 @@ class EsperadoInventarioService(
     private val tags: TagRepository,
     private val tipos: TipoEquipamentoRepository,
     private val marcas: MarcaRepository,
-    private val modelos: ModeloRepository
+    private val modelos: ModeloRepository,
+    private val relogio: java.time.Clock = java.time.Clock.systemDefaultZone()
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -79,10 +81,12 @@ class EsperadoInventarioService(
             return EsperadoLocal(local = local?.nome ?: limpo, temReferencia = false)
         }
 
-        val (esperado, excluidas) = montarEsperado(local.nome, referencia)
-        log.info("Coletor {} pediu o esperado do local '{}': {} etiqueta(s) do inventário {} finalizado em {} (operador {}){}",
+        val montado = montarEsperado(local.nome, local.id, referencia, ate = LocalDateTime.now(relogio))
+        val esperado = montado.esperado
+        log.info("Coletor {} pediu o esperado do local '{}': {} etiqueta(s) do inventário {} finalizado em {} (operador {}){}{}",
             dispositivo, local.nome, esperado.itens.size, referencia.id, referencia.finalizadoEm, referencia.operador ?: "—",
-            if (excluidas > 0) "; $excluidas excluída(s) do cadastro depois ficaram de fora" else "")
+            if (montado.excluidas > 0) "; ${montado.excluidas} excluída(s) do cadastro depois ficaram de fora" else "",
+            if (montado.emOutroLocal.isNotEmpty()) "; ${montado.emOutroLocal.size} encontrada(s) depois em outro local ficaram de fora" else "")
 
         return esperado
     }
@@ -104,45 +108,64 @@ class EsperadoInventarioService(
             return FaltandoInventario(EsperadoLocal(local = nomeLocal, temReferencia = false))
         }
 
-        val (esperado, _) = montarEsperado(nomeLocal, referencia)
+        // Bens achados em outro local entre a referência e o início deste inventário não contam como faltando aqui
+        val montado = montarEsperado(nomeLocal, inventario.localId, referencia, ate = inventario.iniciadoEm)
+        val esperado = montado.esperado
         val lidas = itens.tagsDoInventario(inventarioId).toSet()
         val faltando = esperado.itens.filter { it.tag !in lidas }
 
-        log.debug("Inventário {} ('{}') comparado com o inventário {}: {} de {} esperada(s) encontrada(s), {} faltando",
-            inventarioId, nomeLocal, referencia.id, esperado.itens.size - faltando.size, esperado.itens.size, faltando.size)
+        log.debug("Inventário {} ('{}') comparado com o inventário {}: {} de {} esperada(s) encontrada(s), {} faltando, {} em outro local",
+            inventarioId, nomeLocal, referencia.id, esperado.itens.size - faltando.size, esperado.itens.size, faltando.size, montado.emOutroLocal.size)
 
-        return FaltandoInventario(esperado, esperado.itens.size, esperado.itens.size - faltando.size, faltando)
+        return FaltandoInventario(esperado, esperado.itens.size, esperado.itens.size - faltando.size, faltando, montado.emOutroLocal)
     }
 
-    /** Lista do esperado a partir do inventário de referência. Devolve também quantas foram excluídas do cadastro depois. */
-    private fun montarEsperado(nomeLocal: String, referencia: InventarioEntity): Pair<EsperadoLocal, Int> {
+    private data class Montado(val esperado: EsperadoLocal, val excluidas: Int, val emOutroLocal: List<EncontradoEmOutroLocal>)
+
+    /**
+     * Lista do esperado a partir do inventário de referência. Devolve também quantas foram excluídas do cadastro depois
+     * e as que foram encontradas DEPOIS da referência (até [ate]) num inventário finalizado de outro local: essas
+     * ficam de fora (1.5.0). Antes, o bem levado da sala A para a sala B continuava no esperado da sala A e aparecia
+     * como "faltando" lá no inventário seguinte. Funciona como uma transferência: o local do bem é o do inventário
+     * finalizado mais recente que o encontrou.
+     */
+    private fun montarEsperado(nomeLocal: String, localId: Long, referencia: InventarioEntity, ate: LocalDateTime): Montado {
         // Todas as lidas na referência: o findAllByTagRealIn só devolve as que têm cadastro AGORA (inclusive as
         // cadastradas depois do inventário); as que seguem sem cadastro ficam de fora sozinhas
         val lidasNaReferencia = itens.findByInventarioIdOrderByLidoEmAsc(referencia.id)
         val encontradas = lidasNaReferencia.map { it.tag }.distinct()
-        val cadastro = if (encontradas.isEmpty()) emptyList() else tags.findAllByTagRealIn(encontradas)
+        val cadastroAgora = if (encontradas.isEmpty()) emptyList() else encontradas.chunked(LOTE_IN).flatMap { tags.findAllByTagRealIn(it) }
+
+        // Encontradas depois em outro local: vale o inventário mais recente de cada uma
+        val desde = referencia.finalizadoEm ?: referencia.iniciadoEm
+        val emOutro = if (cadastroAgora.isEmpty() || !ate.isAfter(desde)) emptyMap() else
+            cadastroAgora.map { it.tagReal }.chunked(LOTE_IN)
+                .flatMap { itens.encontradasEmOutroLocal(it, localId, desde, ate) }
+                .groupBy { it[0] as String }
+                .mapValues { (_, linhas) -> linhas.maxBy { it[2] as LocalDateTime }.let { (it[1] as String) to (it[2] as LocalDateTime) } }
+        val cadastro = cadastroAgora.filter { it.tagReal !in emOutro }
         val comCadastroAgora = cadastro.map { it.tagReal }.toSet()
         // Excluídas = estavam cadastradas no inventário de referência e não estão mais
-        val excluidas = lidasNaReferencia.count { it.cadastrada && it.tag !in comCadastroAgora }
+        val excluidas = lidasNaReferencia.count { it.cadastrada && it.tag !in comCadastroAgora && it.tag !in emOutro }
 
-        val nomesTipo = tipos.findAllById(cadastro.mapNotNull { it.tipoEquipamentoId }.toSet()).associate { it.id to it.nome }
-        val nomesMarca = marcas.findAllById(cadastro.mapNotNull { it.marcaId }.toSet()).associate { it.id to it.nome }
-        val nomesModelo = modelos.findAllById(cadastro.mapNotNull { it.modeloId }.toSet()).associate { it.id to it.nome }
+        val nomesTipo = tipos.findAllById(cadastroAgora.mapNotNull { it.tipoEquipamentoId }.toSet()).associate { it.id to it.nome }
+        val nomesMarca = marcas.findAllById(cadastroAgora.mapNotNull { it.marcaId }.toSet()).associate { it.id to it.nome }
+        val nomesModelo = modelos.findAllById(cadastroAgora.mapNotNull { it.modeloId }.toSet()).associate { it.id to it.nome }
+        fun item(t: org.example.model.TagEntity) = ItemEsperado(
+            tag = t.tagReal,
+            patrimonio = t.patrimonio.ifBlank { null },
+            codigoInterno = t.codigoInterno.ifBlank { null },
+            tipo = t.tipoEquipamentoId?.let(nomesTipo::get),
+            marca = t.marcaId?.let(nomesMarca::get),
+            modelo = t.modeloId?.let(nomesModelo::get)
+        )
+        // Desempate pela etiqueta: a ordem tem que ser sempre a mesma para o ETag do esperado (InventarioAndroidController)
+        // só mudar quando o conteúdo muda. Sem ele, patrimônio repetido ou vazio saía na ordem que o banco devolvesse
+        val ordem = compareBy<ItemEsperado, String?>(nullsLast()) { it.patrimonio }.thenBy { it.tag }
 
-        val esperados = cadastro
-            .map {
-                ItemEsperado(
-                    tag = it.tagReal,
-                    patrimonio = it.patrimonio.ifBlank { null },
-                    codigoInterno = it.codigoInterno.ifBlank { null },
-                    tipo = it.tipoEquipamentoId?.let(nomesTipo::get),
-                    marca = it.marcaId?.let(nomesMarca::get),
-                    modelo = it.modeloId?.let(nomesModelo::get)
-                )
-            }
-            // Desempate pela etiqueta: a ordem tem que ser sempre a mesma para o ETag do esperado (InventarioAndroidController)
-            // só mudar quando o conteúdo muda. Sem ele, patrimônio repetido ou vazio saía na ordem que o banco devolvesse
-            .sortedWith(compareBy<ItemEsperado, String?>(nullsLast()) { it.patrimonio }.thenBy { it.tag })
+        val esperados = cadastro.map(::item).sortedWith(ordem)
+        val movidas = cadastroAgora.filter { it.tagReal in emOutro }.map(::item).sortedWith(ordem)
+            .map { emOutro.getValue(it.tag).let { (local, quando) -> EncontradoEmOutroLocal(it, local, quando) } }
 
         val esperado = EsperadoLocal(
             local = nomeLocal,
@@ -152,17 +175,27 @@ class EsperadoInventarioService(
             operador = referencia.operador,
             itens = esperados
         )
-        return esperado to excluidas
+        return Montado(esperado, excluidas, movidas)
+    }
+
+    private companion object {
+        /** Etiquetas por consulta com IN: o driver do PostgreSQL aceita no máximo 32.767 parâmetros por comando. */
+        const val LOTE_IN = 5_000
     }
 }
+
+/** Bem do inventário de referência encontrado depois num inventário finalizado de outro local. */
+data class EncontradoEmOutroLocal(val item: ItemEsperado, val local: String, val encontradoEm: LocalDateTime)
 
 /**
  * Comparação de um inventário com o inventário finalizado anterior do mesmo local.
  * [referencia].temReferencia = false: primeiro inventário do local, sem comparação.
+ * [emOutroLocal]: os da referência que foram achados depois em outro local (não contam como faltando).
  */
 data class FaltandoInventario(
     val referencia: EsperadoLocal,
     val esperadas: Int = 0,
     val encontradas: Int = 0,
-    val faltando: List<ItemEsperado> = emptyList()
+    val faltando: List<ItemEsperado> = emptyList(),
+    val emOutroLocal: List<EncontradoEmOutroLocal> = emptyList()
 )

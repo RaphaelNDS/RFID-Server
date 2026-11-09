@@ -36,7 +36,31 @@ interface InventarioRepository : JpaRepository<InventarioEntity, String> {
     ): InventarioEntity?
 }
 
+interface JustificativaInventarioRepository : JpaRepository<org.example.model.JustificativaInventarioEntity, Long> {
+    fun findByInventarioId(inventarioId: String): List<org.example.model.JustificativaInventarioEntity>
+}
+
 interface InventarioItemRepository : JpaRepository<InventarioItemEntity, Long> {
+
+    /**
+     * Etiquetas de [tags] encontradas em inventários FINALIZADOS de OUTRO local, finalizados entre [desde] e [ate]:
+     * [tag, nome do local, finalizadoEm]. O esperado de um local tira essas (o bem foi achado depois em outro lugar).
+     */
+    @Query(
+        """select it.tag, l.nome, i.finalizadoEm from InventarioItemEntity it, InventarioEntity i, LocalEntity l
+           where i.id = it.inventarioId and l.id = i.localId and i.status = org.example.model.StatusInventario.FINALIZADO
+             and i.localId <> :localId and i.finalizadoEm > :desde and i.finalizadoEm < :ate and it.tag in :tags"""
+    )
+    fun encontradasEmOutroLocal(@Param("tags") tags: Collection<String>, @Param("localId") localId: Long,
+                                @Param("desde") desde: java.time.LocalDateTime, @Param("ate") ate: java.time.LocalDateTime): List<Array<Any?>>
+
+    /** Último inventário FINALIZADO em que a etiqueta foi encontrada: [nome do local, finalizadoEm] (ficha do bem). */
+    @Query(
+        """select l.nome, i.finalizadoEm from InventarioItemEntity it, InventarioEntity i, LocalEntity l
+           where i.id = it.inventarioId and l.id = i.localId and i.status = org.example.model.StatusInventario.FINALIZADO
+             and it.tag = :tag order by i.finalizadoEm desc"""
+    )
+    fun ultimoInventarioDaTag(@Param("tag") tag: String, pagina: org.springframework.data.domain.Pageable): List<Array<Any?>>
 
     fun findByInventarioIdOrderByLidoEmAsc(inventarioId: String): List<InventarioItemEntity>
 

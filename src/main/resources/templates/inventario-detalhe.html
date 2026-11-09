@@ -98,16 +98,58 @@
           <th>Marca</th>
           <th>Modelo</th>
           <th>Etiqueta (EPC)</th>
+          <th>Justificativa</th>
         </tr>
         </thead>
         <tbody>
-        <tr th:each="f : ${comparacao.faltando}">
+        <!-- Justificativa marcada no coletor na finalização (texto do coletor: só th:text) -->
+        <tr th:each="f : ${comparacao.faltando}" th:with="j=${justificativas[f.tag]}">
           <td class="principal cartao-titulo" th:text="${f.patrimonio != null} ? ${f.patrimonio} : '—'"></td>
           <td data-rotulo="Código" th:text="${f.codigoInterno}"></td>
           <td data-rotulo="Tipo" th:text="${f.tipo}"></td>
           <td data-rotulo="Marca" th:text="${f.marca}"></td>
           <td data-rotulo="Modelo" th:text="${f.modelo}"></td>
           <td data-rotulo="Etiqueta (EPC)" class="mono" th:text="${f.tag}"></td>
+          <td data-rotulo="Justificativa">
+            <th:block th:if="${j != null}">
+              <span class="badge" th:classappend="${j.motivo.name() == 'NAO_ENCONTRADO'} ? 'badge-CUSTOM'" th:text="${j.motivo.rotulo}"></span>
+              <div class="muted" th:if="${j.observacao != null}" th:text="${j.observacao}"></div>
+              <div class="muted" th:if="${j.operador != null}" style="font-size:12px" th:text="'por ' + ${j.operador}"></div>
+            </th:block>
+            <span class="muted" th:if="${j == null}">—</span>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Bens da referência achados depois num inventário finalizado de outro local (1.5.0): não contam como faltando -->
+  <div class="card" style="margin-bottom:16px" th:unless="${#lists.isEmpty(comparacao.emOutroLocal)}">
+    <div class="card-header empilhar">
+      <h2>Encontrados em outro local <span class="contagem" th:text="'(' + ${#lists.size(comparacao.emOutroLocal)} + ')'"></span></h2>
+      <span class="muted">Estavam neste local no inventário anterior e foram achados depois em outro: não contam como faltando</span>
+    </div>
+    <div class="table-wrap">
+      <table class="table table-cartoes">
+        <thead>
+        <tr>
+          <th>Patrimônio</th>
+          <th>Código</th>
+          <th>Tipo</th>
+          <th>Etiqueta (EPC)</th>
+          <th>Encontrado em</th>
+          <th>Quando</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="m : ${comparacao.emOutroLocal}">
+          <td class="principal cartao-titulo" th:text="${m.item.patrimonio != null} ? ${m.item.patrimonio} : '—'"></td>
+          <td data-rotulo="Código" th:text="${m.item.codigoInterno}"></td>
+          <td data-rotulo="Tipo" th:text="${m.item.tipo}"></td>
+          <td data-rotulo="Etiqueta (EPC)" class="mono" th:text="${m.item.tag}"></td>
+          <td data-rotulo="Encontrado em" th:text="${m.local}"></td>
+          <td data-rotulo="Quando" class="nowrap" th:text="${#temporals.format(m.encontradoEm, 'dd/MM/yyyy HH:mm')}"></td>
         </tr>
         </tbody>
       </table>

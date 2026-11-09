@@ -18,7 +18,8 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/android")
 class AndroidApiController(
     private val service: RfidService,
-    private val tagRepository: TagRepository
+    private val tagRepository: TagRepository,
+    private val fichas: org.example.service.FichaBemService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -32,10 +33,11 @@ class AndroidApiController(
         return mapOf("status" to "ok", "dispositivo" to auth.name)
     }
 
+    /** Ficha do bem: o cadastro e, desde a 1.5.0, o último local (inventário) e a última leitura (campos opcionais). */
     @PreAuthorize("@authService.temPermissao('LEITURA','READ')")
     @GetMapping("/tags/{epc}")
     fun buscarTag(@PathVariable epc: String, auth: Authentication): ResponseEntity<TagResponse> {
-        val tag = service.buscarPorTag(epc)
+        val tag = fichas.ficha(epc)
 
         if (tag == null) {
             log.debug("Consulta da tag {} pelo dispositivo {}: não cadastrada", epc, auth.name)
