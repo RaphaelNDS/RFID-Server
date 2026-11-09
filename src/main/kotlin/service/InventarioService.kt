@@ -22,7 +22,6 @@ import java.time.Clock
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
-import java.time.ZoneId
 import java.util.UUID
 
 /** Linha da lista de inventários (tela web). */
@@ -313,9 +312,9 @@ class InventarioService(
         val agora = LocalDateTime.now(relogio)
         if (hora == null) return agora
 
-        val local = hora.atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()
+        val local = org.example.util.HoraColetor.noFusoDoServidor(hora)
 
-        if (local.isAfter(agora.plus(TOLERANCIA_RELOGIO))) {
+        if (org.example.util.HoraColetor.noFuturo(local, agora)) {
             log.warn("Data no futuro na {} ({}): relógio do coletor adiantado? Usando a hora do recebimento", descricao, hora)
             return agora
         }
@@ -327,6 +326,5 @@ class InventarioService(
         const val MAXIMO_ITENS_POR_ENVIO = 500
         const val MAXIMO_JUSTIFICATIVAS = 2000
         const val TAMANHO_MAXIMO_LOCAL = 120
-        val TOLERANCIA_RELOGIO: Duration = Duration.ofMinutes(5)
     }
 }

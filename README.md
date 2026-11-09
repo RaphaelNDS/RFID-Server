@@ -350,6 +350,7 @@ servidor (desativação, senha temporária ou senha trocada) não tem margem.
 | **Integridade** | Chaves estrangeiras impedem excluir tipo/marca/modelo usado por etiquetas. |
 | **Banco** | O PostgreSQL só aceita conexão da própria máquina (`127.0.0.1:5433`); a senha fica no `docker/.env` e no `config\application.properties`, fora do git. |
 | **Prazos do banco** | O servidor espera no máximo 5 s por uma conexão do banco, 60 s pela resposta e 60 s por comando SQL (`statement_timeout`: o PostgreSQL cancela o que passar disso e o erro aparece no log). Conexões paradas são testadas a cada 2 min. As migrações usam conexão própria, sem esse limite, e a retenção de leituras apaga em lotes de 10.000. |
+| **Conexões com o banco (1.5.2)** | Até 30 conexões ao mesmo tempo (`RFID_DB_POOL`; eram 10), para 20 ou 30 coletores sincronizando juntos no fim do turno. A API dos coletores (`/api/android`) e o fluxo ao vivo do painel (`/admin/sse`) não usam o "open in view": a conexão fica presa só enquanto o serviço trabalha, e não durante a requisição inteira (um lote de 500 leituras, ou enquanto a aba do painel fica aberta). As telas continuam com ele, porque leem dados lazy ao montar o HTML (`SessaoJpaTelasConfig`). |
 | **Sessão das telas** | Acaba após 30 min sem uso (`RFID_SESSAO_WEB_TIMEOUT`). A atualização em tempo real do dashboard não conta como uso: uma aba esquecida aberta volta ao login depois desse tempo. |
 | **Tamanho das requisições** | Requisições das telas acima de 1 MB recebem 413 (`RFID_WEB_MAX_CORPO_BYTES`); a API dos coletores tem limite de 8 MB e o envio de APK, 100 MB. Emails acima de 255 caracteres no login são recusados como login errado. |
 | **Arquivos do certificado** | O `.senha` do certificado fica legível só pelo dono, SYSTEM e Administradores (Windows) ou com permissão 600 (Linux). O backup é montado na memória e só vai para a pasta no formato final; sobras `rfid-certificado-*.parcial` de um backup interrompido são apagadas sozinhas, com aviso no log. |
@@ -655,6 +656,7 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_COLETORES_ERROS_POR_DIA` | `500` | Erros do app aceitos por coletor por dia (acima disso são descartados) |
 | `RFID_COLETORES_DIAS_ERROS` | `90` | Por quantos dias os erros dos coletores ficam guardados |
 | `RFID_DB_URL` | `jdbc:postgresql://localhost:5433/rfid` | Endereço do banco |
+| `RFID_DB_POOL` | `30` | Conexões com o banco ao mesmo tempo (o PostgreSQL aceita 100) |
 | `RFID_DB_USER` / `RFID_DB_PASSWORD` | `rfid` / *(vazio)* | Usuário e senha do banco (a mesma do `docker/.env`) |
 | `RFID_HTTPS_HABILITADO` | `true` | Liga o HTTPS |
 | `RFID_HTTPS_PORTA` | `8443` | Porta HTTPS (a HTTP é 8082) |

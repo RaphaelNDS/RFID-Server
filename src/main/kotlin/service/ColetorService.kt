@@ -162,9 +162,12 @@ class ColetorService(
             operador = operador ?: anterior?.first?.operador
         )
 
-        // O diagnóstico muda a cada requisição (fila, relógio): vai junto na gravação de no máximo uma por minuto,
-        // nunca provoca uma gravação sozinho
-        if (anterior != null && anterior.first == novo && Duration.between(anterior.second, agora) < INTERVALO_GRAVACAO) return
+        // O diagnóstico muda a cada requisição (fila, relógio): vai junto na gravação de no máximo uma por minuto.
+        // Exceção (1.5.2): grava na hora quando a fila zera ou o relógio muda de certo para errado (ou volta). Sem isso,
+        // o coletor que voltava de horas offline gravava "fila parada" no primeiro lote, zerava a fila nos seguintes do
+        // mesmo minuto (descartados) e era desligado: a tela mostrava "fila parada" até o próximo contato
+        val mudouEstado = mudouEstadoDoDiagnostico(nome, diagnostico, agora)
+        if (!mudouEstado && anterior != null && anterior.first == novo && Duration.between(anterior.second, agora) < INTERVALO_GRAVACAO) return
 
         val entidade = repo.findById(nome).orElse(null)
         if (entidade == null) {
@@ -183,6 +186,26 @@ class ColetorService(
         }
 
         gravados[nome] = novo to agora
+        estadosGravados[nome] = estadoDo(diagnostico, agora, estadosGravados[nome])
+    }
+
+    /** O que a tela destaca, como foi gravado por último: fila com pendentes e relógio errado. */
+    private data class EstadoDiagnostico(val filaComPendentes: Boolean, val relogioErrado: Boolean)
+
+    // Último estado gravado de cada coletor (em memória, como os contatos gravados)
+    private val estadosGravados = ConcurrentHashMap<String, EstadoDiagnostico>()
+
+    /** Header ausente mantém o estado guardado (como a gravação, em aplicarDiagnostico). */
+    private fun estadoDo(d: DiagnosticoColetor, agora: LocalDateTime, antes: EstadoDiagnostico?): EstadoDiagnostico = EstadoDiagnostico(
+        filaComPendentes = if (d.filaInformada) (d.filaPendentes ?: 0) > 0 else antes?.filaComPendentes ?: false,
+        relogioErrado = d.relogioColetor?.let {
+            kotlin.math.abs(Duration.between(agora.atZone(relogio.zone).toInstant(), it.toInstant()).seconds) > LIMITE_DESVIO_RELOGIO.seconds
+        } ?: antes?.relogioErrado ?: false
+    )
+
+    private fun mudouEstadoDoDiagnostico(nome: String, d: DiagnosticoColetor, agora: LocalDateTime): Boolean {
+        val antes = estadosGravados[nome] ?: return false   // primeiro contato desde que o servidor subiu: segue a regra normal
+        return estadoDo(d, agora, antes) != antes
     }
 
     /**
@@ -245,7 +268,10 @@ class ColetorService(
     fun versaoPublicada(): VersaoAppEntity? = versoesApp?.findFirstByArquivoRemovidoFalseAndRetiradaEmIsNullOrderByCodigoDesc()
 
     /** Para os testes de integração: o banco volta ao estado inicial a cada teste, a memória não. */
-    internal fun esquecerContatosGravados() = gravados.clear()
+    internal fun esquecerContatosGravados() {
+        gravados.clear()
+        estadosGravados.clear()
+    }
 
     /** Todos os coletores: os configurados (inclusive os que nunca conectaram) e os que só existem no banco. */
     fun listar(): List<SituacaoColetor> {

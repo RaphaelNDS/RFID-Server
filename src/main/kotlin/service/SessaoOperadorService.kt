@@ -286,9 +286,7 @@ class SessaoOperadorService(
         if (horas.isEmpty() || token.isBlank()) return emptyMap()
         val agora = LocalDateTime.now(relogio)
         // null = sem hora do coletor (ausente ou no futuro): vale agora, sem a margem de relógio
-        val momentos = horas.map { hora ->
-            hora?.atZoneSameInstant(java.time.ZoneId.systemDefault())?.toLocalDateTime()?.takeUnless { it.isAfter(agora.plus(TOLERANCIA)) }
-        }
+        val momentos = horas.map { org.example.util.HoraColetor.aceita(it, agora) }
         return try {
             conferirMomentos(token, dispositivo, momentos)
         } catch (e: SessaoInvalidaException) {
@@ -444,7 +442,7 @@ class SessaoOperadorService(
         const val MENSAGEM_SO_ADMIN_PIN = "Só um administrador pode liberar o PIN das Configurações do coletor."
 
         /** Diferença aceita entre o relógio do coletor e o do servidor. */
-        val TOLERANCIA: Duration = Duration.ofMinutes(5)
+        val TOLERANCIA: Duration = org.example.util.HoraColetor.TOLERANCIA
 
         /**
          * Margem depois do "Sair" ou de outro login no mesmo coletor para as ações com a hora do coletor adiantada
