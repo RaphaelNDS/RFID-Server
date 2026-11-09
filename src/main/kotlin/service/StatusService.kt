@@ -24,7 +24,9 @@ class StatusService(
     // Opcionais (valor padrão) para os testes que montam o service à mão continuarem iguais
     private val certificado: CertificadoHttps? = null,
     @Value("\${rfid.https.habilitado:true}") private val httpsHabilitado: Boolean = true,
-    private val backupBanco: BackupBancoService? = null
+    private val backupBanco: BackupBancoService? = null,
+    private val copiaExterna: CopiaExternaBancoService? = null,
+    private val alertas: AlertaService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -40,6 +42,7 @@ class StatusService(
 
     fun getStatus(): ServerStatusResponse {
         val banco = backupBanco?.situacao()
+        val copia = copiaExterna?.situacao()
         return ServerStatusResponse(
             status = "ONLINE",
             horaServidor = "Desde ${iniciadoEm.format(FORMATO_DATA)}",
@@ -52,7 +55,12 @@ class StatusService(
                 else -> certificado?.impressaoDigital ?: "—"
             },
             backupBanco = banco?.resumo ?: "—",
-            backupBancoComProblema = banco != null && (banco.atrasado || banco.ultimaTentativaFalhou)
+            backupBancoComProblema = banco != null && (banco.atrasado || banco.ultimaTentativaFalhou),
+            copiaExterna = copia?.resumo ?: "—",
+            copiaExternaComProblema = copia?.comProblema == true,
+            avisosEmail = alertas?.situacao() ?: "—",
+            avisosEmailLigados = alertas?.ligado == true,
+            avisosEmailComProblema = alertas?.comProblema == true
         )
     }
 

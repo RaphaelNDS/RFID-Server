@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "org.example"
-version = "1.5.0"
+version = "1.5.1"
 
 java {
     toolchain {
@@ -50,6 +50,9 @@ dependencies {
     // Atualização do app pelo servidor: lê a versão de dentro do APK e confere a assinatura
     // (a mesma biblioteca que o Android usa para verificar APKs)
     implementation("com.android.tools.build:apksig:8.12.3")
+
+    // Avisos por email (backup com problema, servidor fora do ar): só liga com o SMTP configurado (RFID_SMTP_HOST)
+    implementation("org.springframework.boot:spring-boot-starter-mail")
 
     // QR code de configuração do coletor (tela Coletores): só o núcleo, o SVG é montado pelo servidor
     implementation("com.google.zxing:core:3.5.3")

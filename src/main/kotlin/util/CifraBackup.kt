@@ -50,6 +50,54 @@ object CifraBackup {
         }
     }
 
+    /**
+     * O mesmo formato de [cifrar], arquivo para arquivo, lendo e gravando aos poucos (1.5.1): o dump do banco cresce
+     * com as leituras e não pode ser carregado inteiro na memória como o .zip do certificado (poucos KB).
+     */
+    fun cifrarArquivo(origem: java.nio.file.Path, destino: java.nio.file.Path, senha: String) {
+        val aleatorio = SecureRandom()
+        val sal = ByteArray(TAMANHO_SAL).also(aleatorio::nextBytes)
+        val iv = ByteArray(TAMANHO_IV).also(aleatorio::nextBytes)
+        val cifra = Cipher.getInstance("AES/GCM/NoPadding")
+        cifra.init(Cipher.ENCRYPT_MODE, chave(senha, sal), GCMParameterSpec(128, iv))
+        java.nio.file.Files.newOutputStream(destino).buffered().use { saida ->
+            saida.write(CABECALHO + sal + iv)
+            javax.crypto.CipherOutputStream(saida, cifra).use { cifrado ->
+                java.nio.file.Files.newInputStream(origem).use { it.copyTo(cifrado, 64 * 1024) }
+            }
+        }
+    }
+
+    /**
+     * Decifra [origem] em [destino] (para o --decifrar-backup). Lança IllegalArgumentException como [decifrar]; com
+     * erro, o [destino] incompleto é apagado. Observação: o AES-GCM do Java só libera o conteúdo depois de conferir a
+     * etiqueta do fim, então guarda o arquivo cifrado na memória durante a decifração.
+     */
+    fun decifrarArquivo(origem: java.nio.file.Path, destino: java.nio.file.Path, senha: String) {
+        java.nio.file.Files.newInputStream(origem).buffered().use { entrada ->
+            val cabecalho = entrada.readNBytes(CABECALHO.size)
+            val sal = entrada.readNBytes(TAMANHO_SAL)
+            val iv = entrada.readNBytes(TAMANHO_IV)
+            require(cabecalho.contentEquals(CABECALHO) && sal.size == TAMANHO_SAL && iv.size == TAMANHO_IV) {
+                "Este arquivo não é um backup cifrado do servidor RFID"
+            }
+            val cifra = Cipher.getInstance("AES/GCM/NoPadding")
+            cifra.init(Cipher.DECRYPT_MODE, chave(senha, sal), GCMParameterSpec(128, iv))
+            try {
+                java.nio.file.Files.newOutputStream(destino).use { saida ->
+                    javax.crypto.CipherInputStream(entrada, cifra).use { it.copyTo(saida, 64 * 1024) }
+                }
+            } catch (e: java.io.IOException) {
+                java.nio.file.Files.deleteIfExists(destino)
+                // O CipherInputStream embrulha a etiqueta GCM errada (senha errada ou arquivo alterado) numa IOException
+                if (generateSequence(e as Throwable) { it.cause }.any { it is javax.crypto.AEADBadTagException }) {
+                    throw IllegalArgumentException("Senha do backup errada (ou o arquivo foi alterado)")
+                }
+                throw e
+            }
+        }
+    }
+
     private fun chave(senha: String, sal: ByteArray): SecretKeySpec {
         val derivada = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
             .generateSecret(PBEKeySpec(senha.toCharArray(), sal, ITERACOES, 256)).encoded

@@ -407,6 +407,27 @@ servidor (desativação, senha temporária ou senha trocada) não tem margem.
   `RFID_BANCO_CONFERIR_DUMP`, vazio = só o tamanho). Um dump cortado, por exemplo com o computador desligado no meio
   do backup, aparece como incompleto, e passa a valer o anterior inteiro. Sem o Docker, a tela diz "integridade não
   conferida". O `pg_restore --list` não serve para isso: ele aceita um dump que perdeu só o final.
+- **Cópia do banco fora do computador (1.5.1):** de hora em hora, o último dump inteiro é cifrado com a senha do
+  backup (`RFID_BACKUP_SENHA`, a mesma do certificado) e gravado na pasta de `RFID_BANCO_COPIA_EXTERNA`, por exemplo
+  `${OneDriveCommercial}/Backups RFID/banco`, que sobe sozinha para a nuvem. O servidor guarda as 14 cópias mais
+  recentes (`RFID_BANCO_COPIA_MANTER`).
+  - **Sem a senha, não copia:** o dump leva todos os dados e os hashes das senhas e não pode ir aberto para a nuvem.
+  - **Tela Status:** mostra a cópia mais recente e avisa se ela falhar ou ficar mais de 24 h sem cópia nova.
+  - **Restaurar a partir da cópia:** decifre com `java -jar servidor\rfid-server.jar --decifrar-backup rfid-AAAAMMDD-HHMMSS.dump.cifrado`
+    (pede a senha). Depois copie o `.dump` decifrado para `docker\backups\last` e restaure como abaixo, trocando o
+    nome do arquivo.
+- **Avisos por email (1.5.1):** mandam email quando:
+  - o backup do banco atrasa ou sai incompleto;
+  - a cópia fora do computador falha ou atrasa;
+  - o servidor fica fora do ar ou parado (computador suspenso).
+
+  O servidor grava a hora a cada 5 min (`data\servidor-no-ar.txt`). Ao voltar, se passou de 30 min (`RFID_MINUTOS_FORA`),
+  ele avisa de quando a quando ficou fora. Com o servidor fora do ar nada roda, então o aviso sai quando ele volta.
+  - **Repetição:** cada problema avisa quando aparece, repete no máximo a cada 24 h e avisa quando é resolvido.
+  - **Para ligar:** defina o servidor de email (`RFID_SMTP_HOST`, `RFID_SMTP_PORTA`, `RFID_SMTP_USUARIO`,
+    `RFID_SMTP_SENHA`) e os destinatários (`RFID_ALERTAS_EMAIL`). A tela **Status** mostra se os avisos estão
+    ligados e tem o botão **Enviar email de teste**.
+  - **Sem SMTP:** os avisos ficam no log, como antes. O `/actuator/health` não confere o email.
 - **Backup antes de migrar:** quando uma versão nova do servidor traz migração, o servidor roda
   `docker exec rfid-backup /backup.sh` antes de aplicá-la (`RFID_BACKUP_ANTES_MIGRACAO`). Se esse backup falhar,
   a migração não é aplicada e o servidor não sobe: o log diz o motivo (normalmente o Docker Desktop fechado).
@@ -655,7 +676,13 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_LOGIN_BLOQUEIO_MINUTOS` | `15` | Tempo de bloqueio |
 | `RFID_BACKUP_HABILITADO` | `true` | Backup automático do certificado HTTPS (o do banco é no `docker/.env`) |
 | `RFID_CERT_BACKUP_PASTA` | `./data/backups` | Pasta dos backups do certificado (`RFID_BACKUP_PASTA` é a dos dumps do banco, no `docker\.env`) |
-| `RFID_BACKUP_SENHA` | (vazio) | Senha que **cifra** o backup do certificado (`.zip.cifrado`); no `config\application.properties`, `rfid.backup.senha`. Guarde-a fora desta máquina: sem ela o backup não restaura. Vazio: o `.zip` sai aberto, com a chave privada |
+| `RFID_BACKUP_SENHA` | (vazio) | Senha que **cifra** o backup do certificado (`.zip.cifrado`) e a cópia do banco fora do computador (`.dump.cifrado`); no `config\application.properties`, `rfid.backup.senha`. Guarde-a fora desta máquina: sem ela o backup não restaura. Vazio: o `.zip` sai aberto, com a chave privada, e a cópia do banco não é feita |
+| `RFID_BANCO_COPIA_EXTERNA` | (vazio) | Pasta da cópia cifrada do banco fora do computador (ex.: `${OneDriveCommercial}/Backups RFID/banco`). Vazio = desligada |
+| `RFID_BANCO_COPIA_MANTER` | `14` | Quantas cópias do banco guardar na pasta externa |
+| `RFID_SMTP_HOST`, `RFID_SMTP_PORTA`, `RFID_SMTP_USUARIO`, `RFID_SMTP_SENHA` | (vazio), `587` | Servidor de email dos avisos (ex.: `smtp.office365.com`). Vazio = avisos só no log |
+| `RFID_ALERTAS_EMAIL` | (vazio) | Quem recebe os avisos por email (separados por vírgula) |
+| `RFID_ALERTAS_DE` | (o usuário do SMTP) | Remetente dos avisos |
+| `RFID_MINUTOS_FORA` | `30` | Minutos fora do ar (ou parado) a partir dos quais o servidor avisa quando volta |
 | `RFID_BACKUP_CRON` | `0 0 2 * * *` | Horário (todo dia às 02:00) |
 | `RFID_SESSAO_WEB_TIMEOUT` | `30m` | Tempo sem uso até a sessão das telas acabar (ex.: `45m`) |
 | `RFID_WEB_MAX_CORPO_BYTES` | `1048576` | Tamanho máximo do corpo das requisições das telas que não são upload (1 MB) |
