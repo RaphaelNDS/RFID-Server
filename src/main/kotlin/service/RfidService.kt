@@ -344,7 +344,7 @@ class RfidService(
      * continua no cadastro (filtro "Baixados"), no histórico e na auditoria. Diferente de excluir.
      */
     @Transactional
-    fun darBaixa(id: Long, motivo: MotivoBaixa, data: java.time.LocalDate?, observacao: String?): TagEntity {
+    fun darBaixa(id: Long, motivo: MotivoBaixa, data: java.time.LocalDate?, observacao: String?, origem: String? = null): TagEntity {
         val tag = buscarPorId(id)
         require(!tag.baixado) { "Este bem já foi baixado em ${tag.baixaEm} (${tag.baixaMotivo?.rotulo})" }
         val hoje = java.time.LocalDate.now(relogio)
@@ -359,7 +359,7 @@ class RfidService(
         tag.baixaObservacao = obs
         tag.baixaPor = usuarioAtual()
         repo.save(tag)
-        historico.registrarAlteracao(tag, antes)
+        historico.registrarAlteracao(tag, antes, origem)
         log.warn("Baixa do bem {} (patrimônio {}) por {}: {} em {}{}", tag.tagReal, tag.patrimonio, usuarioAtual(), motivo.rotulo, dia,
             obs?.let { " ($it)" } ?: "")
         return tag

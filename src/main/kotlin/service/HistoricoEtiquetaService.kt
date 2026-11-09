@@ -66,11 +66,15 @@ class HistoricoEtiquetaService(
         salvar(tag.id, tag.tagReal, AcaoHistorico.CADASTRO, null, null, retrato(tag).resumo(), usuario, origem)
     }
 
-    /** Uma linha por campo que realmente mudou. Devolve os campos alterados (vazio = nada mudou). */
+    /**
+     * Uma linha por campo que realmente mudou. Devolve os campos alterados (vazio = nada mudou). [motivo] vai junto da
+     * origem (1.6.1), para o histórico dizer por que mudou: "Web · Transferência nº 12".
+     */
     @Transactional(propagation = Propagation.MANDATORY)
-    fun registrarAlteracao(tag: TagEntity, antes: RetratoEtiqueta): List<String> {
+    fun registrarAlteracao(tag: TagEntity, antes: RetratoEtiqueta, motivo: String? = null): List<String> {
         val depois = retrato(tag)
-        val (usuario, origem) = autor()
+        val (usuario, origemAutor) = autor()
+        val origem = motivo?.let { "$origemAutor · $it" } ?: origemAutor
         val mudaram = antes.campos.keys.filter { normalizar(antes.campos[it]) != normalizar(depois.campos[it]) }
 
         mudaram.forEach { campo ->

@@ -77,6 +77,12 @@
       </a>
       <a th:if="${total > 0}" th:href="${linkExportarCsv}"
          class="btn btn-ghost btn-sm" title="Para importar em outros sistemas. No Excel, use o botão Excel: o CSV perde zeros à esquerda do patrimônio">CSV</a>
+      <!-- 1.6.1: filtrado por local ou responsável, transfere todos os bens do filtro (ex.: pessoa que saiu da empresa) -->
+      <a th:if="${total > 0 and (filtro.localId != null or filtro.responsavelId != null) and @authService.temPermissao('RFID','UPDATE')}"
+         th:href="@{/admin/transferencias/nova(deLocal=${filtro.localId},deResponsavel=${filtro.responsavelId})}"
+         class="btn btn-ghost btn-sm" title="Transferir todos os bens deste local ou responsável (menos os baixados)">
+        <svg class="ic"><use href="/img/icones.svg#transferir"/></svg>Transferir estes
+      </a>
     </form>
 
     <div class="table-wrap">

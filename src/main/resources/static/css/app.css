@@ -983,6 +983,15 @@ tr.inativo td { opacity: .6; }
   .muted { color: #444 !important; }
 }
 
+/* Divergências do inventário (1.6.1): barra de ações sobre os bens marcados */
+.barra-divergencias { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--surface-2, transparent); }
+.barra-separador { width: 1px; align-self: stretch; background: var(--border); margin: 0 4px; }
+.select-sm, .input-sm { height: 30px; padding: 0 8px; font-size: 13px; width: auto; min-width: 0; }
+.input-sm { flex: 1 1 180px; max-width: 280px; }
+.table .col-marcar { width: 36px; padding-right: 0; }
+.table .col-marcar input { width: 16px; height: 16px; }
+.lista-simples { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+
 /* Status do servidor */
 .status-linha { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 

@@ -18,7 +18,8 @@ enum class AreaAuditoria(val rotulo: String) {
     APP("App dos coletores"),
     EXPORTACAO("Exportações"),
     COLETORES("Coletores"),
-    BACKUP("Backup")
+    BACKUP("Backup"),
+    PATRIMONIO("Patrimônio")
 }
 
 /** Uma ação de usuário ou de configuração (tabela auditoria, V13). Somente leitura depois de gravada. */

@@ -11,9 +11,15 @@
       <h1>Editar etiqueta</h1>
       <p class="subtitulo">A mudança fica registrada no histórico da etiqueta (quem, quando, valor antigo e novo)</p>
     </div>
-    <a th:href="@{/admin/etiquetas/historico(tag=${cadastro.tag})}" class="btn btn-ghost">
-      <svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Histórico
-    </a>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/transferencias/nova(tags=${cadastro.tag})}" class="btn btn-ghost" th:unless="${baixado}"
+         title="Mudar o local e/ou o responsável com guia de transferência">
+        <svg class="ic"><use href="/img/icones.svg#transferir"/></svg>Transferir
+      </a>
+      <a th:href="@{/admin/etiquetas/historico(tag=${cadastro.tag})}" class="btn btn-ghost">
+        <svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Histórico
+      </a>
+    </div>
   </div>
 
   <div class="alert alert-erro" th:if="${erro}" role="alert">

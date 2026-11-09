@@ -15,6 +15,10 @@ document.addEventListener("click", function (e) {
   else if (alvo.dataset.acao === "recarregar") location.reload();
   else if (alvo.dataset.acao === "voltar") history.back();
   else if (alvo.dataset.acao === "imprimir") window.print();
+  // Caixa "marcar todos" (1.6.1): marca ou desmarca as caixas name=data-alvo do mesmo formulário
+  else if (alvo.dataset.acao === "marcar-todos" && alvo.form) {
+    alvo.form.querySelectorAll('input[type="checkbox"][name="' + alvo.dataset.alvo + '"]').forEach(function (c) { c.checked = alvo.checked; });
+  }
 });
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -217,6 +221,24 @@ document.addEventListener("submit", function (e) {
   if (!(form instanceof HTMLFormElement)) return;
   const umaVez = form.dataset.enviarUmaVez !== undefined;
   if (umaVez && form.dataset.enviado) { e.preventDefault(); return; }
+  // Botão com data-confirmar (1.6.1): a confirmação é do botão, não do formulário (um formulário com várias ações,
+  // como as divergências do inventário). Confirmado, envia de novo pelo mesmo botão, para ir junto o name/value dele
+  const botao = e.submitter;
+  if (botao && botao.dataset.confirmar && !form.dataset.botaoConfirmado) {
+    e.preventDefault();
+    confirmar({
+      titulo: botao.dataset.confirmarTitulo,
+      mensagem: botao.dataset.confirmar,
+      botao: botao.dataset.confirmarBotao,
+      perigo: botao.dataset.confirmarPerigo !== undefined
+    }).then(function (resposta) {
+      if (resposta === null) return;
+      form.dataset.botaoConfirmado = "1";
+      form.requestSubmit(botao);
+      delete form.dataset.botaoConfirmado;
+    });
+    return;
+  }
   if (!form.dataset.confirmar) {
     if (umaVez && !e.defaultPrevented) travarEnvio(form);
     return;

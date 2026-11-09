@@ -23,7 +23,10 @@ data class ItemEsperado(
     val codigoInterno: String?,
     val tipo: String?,
     val marca: String?,
-    val modelo: String?
+    val modelo: String?,
+    // 1.6.1 (pedido do app): situação do bem no cadastro, para o coletor mostrar "no cadastro: Emprestado" nos faltantes
+    val situacao: String? = null,
+    val situacaoRotulo: String? = null
 )
 
 /**
@@ -181,7 +184,9 @@ class EsperadoInventarioService(
             codigoInterno = t.codigoInterno.ifBlank { null },
             tipo = t.tipoEquipamentoId?.let(nomesTipo::get),
             marca = t.marcaId?.let(nomesMarca::get),
-            modelo = t.modeloId?.let(nomesModelo::get)
+            modelo = t.modeloId?.let(nomesModelo::get),
+            situacao = t.situacao.name,
+            situacaoRotulo = t.situacao.rotulo
         )
         // Desempate pela etiqueta: a ordem tem que ser sempre a mesma para o ETag do esperado (InventarioAndroidController)
         // só mudar quando o conteúdo muda. Sem ele, patrimônio repetido ou vazio saía na ordem que o banco devolvesse
