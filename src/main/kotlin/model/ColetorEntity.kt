@@ -31,5 +31,23 @@ class ColetorEntity(
     var codigoVersao: Int? = null,
 
     /** Último operador logado que usou o coletor (continua aparecendo depois do "Sair"). */
-    var ultimoOperador: String? = null
+    var ultimoOperador: String? = null,
+
+    // Diagnóstico mandado pelo app 1.7.x em toda requisição (ver DiagnosticoColetor). Último valor recebido;
+    // nulo = o app não mandou (anterior à 1.7)
+
+    /** Registros esperando envio na fila do coletor (leituras, etiquetas de inventário, cadastros). */
+    var filaPendentes: Int? = null,
+    /** Hora (do coletor) da leitura pendente mais antiga; nula sem leitura pendente. */
+    var filaMaisAntiga: LocalDateTime? = null,
+    /** Última sincronização completa (hora do coletor). */
+    var ultimaSincOk: LocalDateTime? = null,
+    @Column(name = "espaco_livre_mb")
+    var espacoLivreMb: Long? = null,
+    @Column(length = 20)
+    var versaoAndroid: String? = null,
+    @Column(length = 100)
+    var modelo: String? = null,
+    /** Hora do coletor menos a do servidor, em segundos (positivo = coletor adiantado). */
+    var desvioRelogioSegundos: Long? = null
 )

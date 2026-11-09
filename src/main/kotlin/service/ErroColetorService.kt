@@ -95,6 +95,9 @@ class ErroColetorService(
 
             if (tipo == TIPO_TRAVAMENTO) {
                 log.warn("App do coletor {} travou em {} (versão {}): {}", coletor, erro.momento, erro.versaoApp ?: "?", erro.mensagem.lineSequence().first())
+            } else if (tipo == TIPO_RELOGIO) {
+                // Até a 1.7.2 o app mandava este aviso como FALHA_GERAL e ele aparecia como travamento
+                log.warn("Relógio do coletor {} diferente do servidor (aviso do app em {}): {}", coletor, erro.momento, erro.mensagem.lineSequence().first())
             }
         }
 
@@ -154,12 +157,22 @@ class ErroColetorService(
      * Os 200 mais recentes do coletor, opcionalmente só de uma versão do app. O filtro é no banco: antes filtrava
      * entre os 200 mais recentes, e um app novo em loop escondia os erros da versão anterior ("Nenhum erro").
      */
-    fun recentes(coletor: String, versaoApp: String? = null): List<ErroColetorEntity> =
-        if (versaoApp.isNullOrBlank()) repo.findTop200ByColetorOrderByMomentoDesc(coletor)
-        else repo.findTop200ByColetorAndVersaoAppOrderByMomentoDesc(coletor, versaoApp)
+    fun recentes(coletor: String, versaoApp: String? = null, tipo: String? = null): List<ErroColetorEntity> {
+        val versao = versaoApp?.takeIf { it.isNotBlank() }
+        val doTipo = tipo?.takeIf { it.isNotBlank() }
+        return when {
+            versao == null && doTipo == null -> repo.findTop200ByColetorOrderByMomentoDesc(coletor)
+            doTipo == null -> repo.findTop200ByColetorAndVersaoAppOrderByMomentoDesc(coletor, versao!!)
+            versao == null -> repo.findTop200ByColetorAndTipoOrderByMomentoDesc(coletor, doTipo)
+            else -> repo.findTop200ByColetorAndVersaoAppAndTipoOrderByMomentoDesc(coletor, versao, doTipo)
+        }
+    }
 
     /** Todas as versões do app com erro guardado do coletor (filtro da tela), não só as dos 200 mais recentes. */
     fun versoesComErro(coletor: String): List<String> = repo.versoesComErro(coletor)
+
+    /** Os tipos de erro guardados do coletor (filtro da tela). */
+    fun tiposComErro(coletor: String): List<String> = repo.tiposComErro(coletor)
 
     // Retenção: 10 min depois de o servidor subir e depois a cada 24 h. Era às 04:15, mas com o computador
     // desligado de madrugada nunca rodava
@@ -175,5 +188,20 @@ class ErroColetorService(
     companion object {
         const val MAXIMO_POR_ENVIO = 50
         const val TIPO_TRAVAMENTO = "FALHA_GERAL"
+        /** App 1.7.3+: relógio do coletor muito diferente do servidor (não é travamento). */
+        const val TIPO_RELOGIO = "RELOGIO"
+
+        /** Nome amigável dos tipos conhecidos (tela de erros); tipo novo do app aparece como veio. */
+        val ROTULOS_TIPO = linkedMapOf(
+            TIPO_TRAVAMENTO to "Travamento",
+            TIPO_RELOGIO to "Relógio do coletor",
+            "ENVIO_RECUSADO" to "Envio recusado",
+            "ERRO_SERVIDOR" to "Erro no servidor",
+            "LEITOR_RFID" to "Leitor RFID",
+            "ATUALIZACAO" to "Atualização",
+            "SINCRONIZACAO" to "Sincronização"
+        )
+
+        fun rotuloTipo(tipo: String): String = ROTULOS_TIPO[tipo] ?: tipo
     }
 }

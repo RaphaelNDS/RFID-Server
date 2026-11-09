@@ -118,6 +118,34 @@ class ColetorServiceTest {
     }
 
     @Test
+    fun `diagnostico vai junto na gravacao de uma por minuto e nunca grava sozinho`() {
+        val hora = java.time.OffsetDateTime.ofInstant(agora, zona)
+        service.registrarContato("coletor-01", "10.0.0.5", "1.7.3", 116, "Ana", DiagnosticoColetor(filaInformada = true, filaPendentes = 3, relogioColetor = hora))
+        repeat(10) { service.registrarContato("coletor-01", "10.0.0.5", "1.7.3", 116, "Ana", DiagnosticoColetor(filaInformada = true, filaPendentes = it)) }
+        verify(exactly = 1) { repo.save(any()) }
+        assertThat(banco.getValue("coletor-01").filaPendentes).isEqualTo(3)
+        assertThat(banco.getValue("coletor-01").desvioRelogioSegundos).isZero()
+
+        minutos(1)
+        service.registrarContato("coletor-01", "10.0.0.5", "1.7.3", 116, "Ana",
+            DiagnosticoColetor(filaInformada = true, filaPendentes = 0, relogioColetor = java.time.OffsetDateTime.ofInstant(agora.minusSeconds(150), zona)))
+        assertThat(banco.getValue("coletor-01").filaPendentes).isZero()
+        assertThat(banco.getValue("coletor-01").desvioRelogioSegundos).isEqualTo(-150)
+        assertThat(service.listar().first { it.nome == "coletor-01" }.desvioLegivel).isEqualTo("atrasado 2 min")
+    }
+
+    @Test
+    fun `desvio do relogio e espaco livre em texto para a tela`() {
+        assertThat(ColetorService.descreverDesvio(2)).isEqualTo("certo")
+        assertThat(ColetorService.descreverDesvio(-40)).isEqualTo("atrasado 40 s")
+        assertThat(ColetorService.descreverDesvio(4 * 60 + 10)).isEqualTo("adiantado 4 min")
+        assertThat(ColetorService.descreverDesvio(3 * 3600)).isEqualTo("adiantado 3 h")
+        assertThat(ColetorService.descreverDesvio(-2 * 86_400)).isEqualTo("atrasado 2 dias")
+        assertThat(ColetorService.descreverEspaco(350)).isEqualTo("350 MB")
+        assertThat(ColetorService.descreverEspaco(1229)).isEqualTo("1,2 GB")
+    }
+
+    @Test
     fun `versao vinda do header e conferida`() {
         assertThat(org.example.config.ColetorContatoInterceptor.versaoApp(" 1.4.0 ")).isEqualTo("1.4.0")
         assertThat(org.example.config.ColetorContatoInterceptor.versaoApp("1.4.0\nFALSO")).isNull()

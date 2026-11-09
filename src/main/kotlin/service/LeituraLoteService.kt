@@ -135,11 +135,12 @@ class LeituraLoteService(
         itens.mapNotNull { it.lidoEm?.atZoneSameInstant(ZoneId.systemDefault())?.toLocalDateTime() }.minOrNull()
 
 
-    // Mesma regra do X-Momento (OperadorFilter): sem hora, ou com relógio do coletor adiantado, vale agora
-    private fun momentoDaLeitura(lidoEm: OffsetDateTime?): LocalDateTime {
+    // Mesma regra do X-Momento (OperadorFilter): sem hora, ou com relógio do coletor adiantado, vale agora. null = sem
+    // hora do coletor (a sessão confere com a hora do servidor, sem a margem de relógio do fim da sessão)
+    private fun momentoDaLeitura(lidoEm: OffsetDateTime?): LocalDateTime? {
         val agora = LocalDateTime.now(relogio)
-        val lida = lidoEm?.atZoneSameInstant(ZoneId.systemDefault())?.toLocalDateTime() ?: return agora
-        return if (lida.isAfter(agora.plus(SessaoOperadorService.TOLERANCIA))) agora else lida
+        val lida = lidoEm?.atZoneSameInstant(ZoneId.systemDefault())?.toLocalDateTime() ?: return null
+        return if (lida.isAfter(agora.plus(SessaoOperadorService.TOLERANCIA))) null else lida
     }
 
     // Uma linha por lote (e não por tag): com o gatilho apertado, o coletor manda centenas de leituras

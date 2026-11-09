@@ -39,7 +39,8 @@ class SessoesUsuarioService(
             .onEach { it.expireNow() }
             .size
 
-        val coletores = sessoesColetor.encerrarAbertasDoUsuario(usuarioId, LocalDateTime.now(relogio))
+        // Encerrada pelo servidor (desativação, senha): sem a margem de relógio do "Sair" (SessaoOperadorService)
+        val coletores = sessoesColetor.encerrarAbertasDoUsuario(usuarioId, LocalDateTime.now(relogio), org.example.model.FimSessao.ADMIN.name)
 
         if (web + coletores > 0) {
             log.info("Sessões do usuário {} encerradas ({}): {} na web, {} em coletores", usuarioId, motivo, web, coletores)

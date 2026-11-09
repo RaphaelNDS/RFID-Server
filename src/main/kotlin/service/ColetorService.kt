@@ -22,6 +22,28 @@ enum class SituacaoContato(val rotulo: String) {
     CHAVE_REMOVIDA("Chave removida do servidor")
 }
 
+/**
+ * Estado do coletor mandado pelo app 1.7.x em toda requisição (cabeçalhos X-Fila-Pendentes, X-Fila-Mais-Antiga,
+ * X-Ultima-Sinc-Ok, X-Espaco-Livre, X-Android, X-Modelo e X-Relogio-Coletor). Já conferido no
+ * ColetorContatoInterceptor: valor inválido vira null. [filaInformada]: o app mandou a fila nesta requisição. Sem ela
+ * (falha ao ler a fila no aparelho), a fila guardada continua; com ela e sem [filaMaisAntiga], não há leitura pendente.
+ */
+data class DiagnosticoColetor(
+    val filaInformada: Boolean = false,
+    val filaPendentes: Int? = null,
+    val filaMaisAntiga: LocalDateTime? = null,
+    val ultimaSincOk: LocalDateTime? = null,
+    val espacoLivreMb: Long? = null,
+    val versaoAndroid: String? = null,
+    val modelo: String? = null,
+    /** Hora do aparelho no momento da requisição (X-Relogio-Coletor). */
+    val relogioColetor: java.time.OffsetDateTime? = null
+) {
+    val vazio: Boolean
+        get() = !filaInformada && ultimaSincOk == null && espacoLivreMb == null && versaoAndroid == null &&
+            modelo == null && relogioColetor == null
+}
+
 /** Uma linha da tela Coletores. */
 data class SituacaoColetor(
     val nome: String,
@@ -35,8 +57,44 @@ data class SituacaoColetor(
     val codigoVersao: Int? = null,
     val ultimoOperador: String? = null,
     /** Versão mais antiga que a mais nova vista nos coletores (ou app sem versão, anterior à 1.4.0). */
-    val desatualizado: Boolean = false
-)
+    val desatualizado: Boolean = false,
+
+    // Diagnóstico (app 1.7.x); null = o coletor não mandou
+    val filaPendentes: Int? = null,
+    val filaMaisAntiga: LocalDateTime? = null,
+    val ultimaSincOk: LocalDateTime? = null,
+    val espacoLivreMb: Long? = null,
+    val versaoAndroid: String? = null,
+    val modelo: String? = null,
+    /** Hora do coletor menos a do servidor, em segundos (positivo = adiantado). */
+    val desvioRelogioSegundos: Long? = null
+) {
+    /** Tem leitura na fila há mais de [ColetorService.FILA_PARADA]: o coletor não está conseguindo enviar. */
+    val filaParada: Boolean
+        get() = (filaPendentes ?: 0) > 0 && filaMaisAntiga != null &&
+            Duration.between(filaMaisAntiga, ultimoContato ?: filaMaisAntiga) > ColetorService.FILA_PARADA
+
+    /** O relógio do coletor passa da diferença aceita (o mesmo limite do aviso no app). */
+    val relogioErrado: Boolean
+        get() = desvioRelogioSegundos != null && kotlin.math.abs(desvioRelogioSegundos) > ColetorService.LIMITE_DESVIO_RELOGIO.seconds
+
+    /** Pouco espaço livre no aparelho para a fila e as atualizações do app. */
+    val poucoEspaco: Boolean
+        get() = espacoLivreMb != null && espacoLivreMb < ColetorService.ESPACO_MINIMO_MB
+
+    /** "adiantado 3 min", "atrasado 40 s", "certo". */
+    val desvioLegivel: String?
+        get() = desvioRelogioSegundos?.let { ColetorService.descreverDesvio(it) }
+
+    /** "1,2 GB", "350 MB". */
+    val espacoLegivel: String?
+        get() = espacoLivreMb?.let { ColetorService.descreverEspaco(it) }
+
+    /** Algum dado de diagnóstico para mostrar (app 1.7.x). */
+    val temDiagnostico: Boolean
+        get() = filaPendentes != null || ultimaSincOk != null || espacoLivreMb != null || versaoAndroid != null ||
+            modelo != null || desvioRelogioSegundos != null
+}
 
 /**
  * Registra os contatos dos coletores em /api/android (ColetorContatoInterceptor) e monta a tela Coletores.
@@ -77,17 +135,18 @@ class ColetorService(
      * Registra um contato aceito do coletor [nome]. Nunca lança erro: um problema aqui não pode derrubar a
      * requisição do coletor. [operador] null (login, ping) não apaga o último operador conhecido.
      */
-    fun registrarContato(nome: String, ip: String?, versaoApp: String?, codigoVersao: Int?, operador: String?) {
+    fun registrarContato(nome: String, ip: String?, versaoApp: String?, codigoVersao: Int?, operador: String?,
+                         diagnostico: DiagnosticoColetor = DiagnosticoColetor()) {
         try {
             // Uma trava por coletor (antes uma só para todos, com o acesso ao banco dentro: com o banco lento, todos os
             // coletores faziam fila atrás de um). Por coletor ainda evita gravar o primeiro contato duas vezes
-            synchronized(travas.computeIfAbsent(nome) { Any() }) { registrar(nome, ip?.take(64), versaoApp, codigoVersao, operador) }
+            synchronized(travas.computeIfAbsent(nome) { Any() }) { registrar(nome, ip?.take(64), versaoApp, codigoVersao, operador, diagnostico) }
         } catch (e: Exception) {
             log.warn("Não foi possível registrar o contato do coletor {}: {}", nome, e.message)
         }
     }
 
-    private fun registrar(nome: String, ip: String?, versaoApp: String?, codigoVersao: Int?, operador: String?) {
+    private fun registrar(nome: String, ip: String?, versaoApp: String?, codigoVersao: Int?, operador: String?, diagnostico: DiagnosticoColetor) {
         val agora = LocalDateTime.now(relogio)
 
         val anterior = gravados[nome] ?: repo.findById(nome).orElse(null)?.let {
@@ -103,11 +162,14 @@ class ColetorService(
             operador = operador ?: anterior?.first?.operador
         )
 
+        // O diagnóstico muda a cada requisição (fila, relógio): vai junto na gravação de no máximo uma por minuto,
+        // nunca provoca uma gravação sozinho
         if (anterior != null && anterior.first == novo && Duration.between(anterior.second, agora) < INTERVALO_GRAVACAO) return
 
         val entidade = repo.findById(nome).orElse(null)
         if (entidade == null) {
-            repo.save(ColetorEntity(nome, agora, agora, novo.ip, novo.versaoApp, novo.codigoVersao, novo.operador))
+            repo.save(ColetorEntity(nome, agora, agora, novo.ip, novo.versaoApp, novo.codigoVersao, novo.operador)
+                .also { aplicarDiagnostico(nome, it, diagnostico, agora) })
             log.info("Coletor {} conectou pela primeira vez (app {}, IP {})", nome, descreverVersao(novo.versaoApp, novo.codigoVersao), novo.ip ?: "desconhecido")
         } else {
             registrarMudancas(nome, entidade, novo)
@@ -116,10 +178,40 @@ class ColetorService(
             entidade.versaoApp = novo.versaoApp
             entidade.codigoVersao = novo.codigoVersao
             entidade.ultimoOperador = novo.operador
+            aplicarDiagnostico(nome, entidade, diagnostico, agora)
             repo.save(entidade)
         }
 
         gravados[nome] = novo to agora
+    }
+
+    /**
+     * Guarda o diagnóstico recebido. Cabeçalho ausente mantém o valor guardado (o app deixa de mandar a fila quando
+     * não consegue lê-la, e a última sincronização completa só volta depois da próxima, quando o app reabre). Exceção:
+     * com a fila informada e sem X-Fila-Mais-Antiga, não há leitura pendente.
+     */
+    private fun aplicarDiagnostico(nome: String, c: ColetorEntity, d: DiagnosticoColetor, agora: LocalDateTime) {
+        if (d.filaInformada) {
+            c.filaPendentes = d.filaPendentes
+            c.filaMaisAntiga = d.filaMaisAntiga
+        }
+        d.ultimaSincOk?.let { c.ultimaSincOk = it }
+        d.espacoLivreMb?.let { c.espacoLivreMb = it }
+        d.versaoAndroid?.let { c.versaoAndroid = it }
+        d.modelo?.let { c.modelo = it }
+        d.relogioColetor?.let { hora ->
+            val desvio = Duration.between(agora.atZone(relogio.zone).toInstant(), hora.toInstant()).seconds
+            val antes = c.desvioRelogioSegundos
+            c.desvioRelogioSegundos = desvio
+            // Log só na mudança de estado (certo → errado e de volta), nunca por requisição
+            val erradoAgora = kotlin.math.abs(desvio) > LIMITE_DESVIO_RELOGIO.seconds
+            val erradoAntes = antes != null && kotlin.math.abs(antes) > LIMITE_DESVIO_RELOGIO.seconds
+            if (erradoAgora && !erradoAntes) {
+                log.warn("Relógio do coletor {} está {} em relação ao servidor: confira a data e a hora do aparelho", nome, descreverDesvio(desvio))
+            } else if (!erradoAgora && erradoAntes) {
+                log.info("Relógio do coletor {} voltou a ficar certo (diferença de {} s)", nome, desvio)
+            }
+        }
     }
 
     private fun registrarMudancas(nome: String, antes: ColetorEntity, novo: Contato) {
@@ -196,7 +288,14 @@ class ColetorService(
         versaoApp = c.versaoApp,
         codigoVersao = c.codigoVersao,
         ultimoOperador = c.ultimoOperador,
-        desatualizado = desatualizado
+        desatualizado = desatualizado,
+        filaPendentes = c.filaPendentes,
+        filaMaisAntiga = c.filaMaisAntiga,
+        ultimaSincOk = c.ultimaSincOk,
+        espacoLivreMb = c.espacoLivreMb,
+        versaoAndroid = c.versaoAndroid,
+        modelo = c.modelo,
+        desvioRelogioSegundos = c.desvioRelogioSegundos
     )
 
     companion object {
@@ -205,6 +304,30 @@ class ColetorService(
 
         /** Contato há menos que isto = coletor em uso. */
         val EM_USO: Duration = Duration.ofMinutes(10)
+
+        /** Leitura pendente há mais que isto = fila parada (destaque na tela). */
+        val FILA_PARADA: Duration = Duration.ofHours(1)
+
+        /** Diferença de relógio acima disto = relógio errado. O mesmo limite do aviso do app (RelogioServidor). */
+        val LIMITE_DESVIO_RELOGIO: Duration = Duration.ofMinutes(2)
+
+        /** Espaço livre abaixo disto = pouco espaço (destaque na tela). */
+        const val ESPACO_MINIMO_MB = 200L
+
+        fun descreverDesvio(segundos: Long): String {
+            val absoluto = kotlin.math.abs(segundos)
+            if (absoluto < 5) return "certo"
+            val quanto = when {
+                absoluto < 60 -> "$absoluto s"
+                absoluto < 3600 -> "${absoluto / 60} min"
+                absoluto < 86_400 -> "${absoluto / 3600} h"
+                else -> (absoluto / 86_400).let { if (it == 1L) "1 dia" else "$it dias" }
+            }
+            return if (segundos > 0) "adiantado $quanto" else "atrasado $quanto"
+        }
+
+        fun descreverEspaco(mb: Long): String =
+            if (mb < 1024) "$mb MB" else String.format(java.util.Locale.forLanguageTag("pt-BR"), "%.1f GB", mb / 1024.0)
 
         fun descreverVersao(versaoApp: String?, codigoVersao: Int?): String = when {
             versaoApp == null && codigoVersao == null -> "sem versão (anterior à 1.4.0)"

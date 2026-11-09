@@ -35,6 +35,11 @@
       <div class="stat-valor" th:classappend="${semContato > 0} ? 'negativo'" th:text="${semContato}">0</div>
       <div class="stat-dica">Nunca conectaram ou estão parados há muito tempo</div>
     </div>
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#alerta"/></svg>Precisam de atenção</div>
+      <div class="stat-valor" th:classappend="${atencao > 0} ? 'negativo'" th:text="${atencao}">0</div>
+      <div class="stat-dica">Fila parada há mais de 1 h, relógio errado ou pouco espaço</div>
+    </div>
   </div>
 
   <div class="card">
@@ -51,6 +56,8 @@
           <th>Último contato</th>
           <th>IP</th>
           <th>Versão do app</th>
+          <th>Fila de envio</th>
+          <th>Aparelho</th>
           <th>Erros (24 h)</th>
           <th>Último operador</th>
           <th>Primeiro contato</th>
@@ -77,6 +84,36 @@
             <span class="muted" th:if="${c.ultimoContato == null}">—</span>
             <span class="badge badge-CUSTOM" th:if="${c.desatualizado}">desatualizado</span>
           </td>
+          <!-- Diagnóstico mandado pelo app 1.7.x (o último recebido); apps anteriores não mandam -->
+          <td data-rotulo="Fila de envio" class="nowrap">
+            <th:block th:if="${c.filaPendentes != null}">
+              <span th:if="${c.filaPendentes == 0}" class="muted">vazia</span>
+              <span th:if="${c.filaPendentes > 0}" th:classappend="${c.filaParada} ? 'badge badge-CUSTOM'"
+                    th:text="${c.filaPendentes} + ' pendente(s)'"
+                    th:title="${c.filaMaisAntiga != null} ? 'Leitura pendente mais antiga: ' + ${#temporals.format(c.filaMaisAntiga, 'dd/MM/yyyy HH:mm')} : null"></span>
+              <span th:if="${c.filaParada}" class="muted"
+                    th:text="'desde ' + ${#temporals.format(c.filaMaisAntiga, 'dd/MM HH:mm')}"></span>
+            </th:block>
+            <span class="muted" th:if="${c.filaPendentes == null}">—</span>
+            <div class="muted" th:if="${c.ultimaSincOk != null}"
+                 th:text="'sincronizou ' + ${#temporals.format(c.ultimaSincOk, 'dd/MM HH:mm')}"
+                 title="Última sincronização completa (hora do coletor)"></div>
+          </td>
+          <td data-rotulo="Aparelho">
+            <th:block th:if="${c.temDiagnostico}">
+              <div th:if="${c.modelo != null or c.versaoAndroid != null}"
+                   th:text="${c.modelo != null ? c.modelo : 'Modelo ?'} + (${c.versaoAndroid != null} ? ' · Android ' + ${c.versaoAndroid} : '')"></div>
+              <span th:if="${c.desvioLegivel != null}" class="nowrap"
+                    th:classappend="${c.relogioErrado} ? 'badge badge-CUSTOM' : 'muted'"
+                    th:text="'relógio ' + ${c.desvioLegivel}"
+                    title="Diferença entre o relógio do coletor e o do servidor"></span>
+              <span th:if="${c.espacoLegivel != null}" class="nowrap"
+                    th:classappend="${c.poucoEspaco} ? 'badge badge-CUSTOM' : 'muted'"
+                    th:text="${c.espacoLegivel} + ' livres'"></span>
+            </th:block>
+            <span class="muted" th:unless="${c.temDiagnostico}"
+                  th:title="${c.ultimoContato != null} ? 'O app anterior à 1.7 não manda estes dados' : null">—</span>
+          </td>
           <td data-rotulo="Erros (24 h)" class="nowrap">
             <a th:href="@{/admin/coletores/{nome}/erros(nome=${c.nome})}"
                th:with="qtd=${erros24h[c.nome] != null ? erros24h[c.nome] : 0}"
@@ -101,6 +138,8 @@
       "Nunca conectou": a chave existe no servidor, mas o coletor ainda não fez nenhuma chamada aceita — confira a
       chave e o endereço nas Configurações do app. O contato é atualizado a cada uso do coletor (leituras, inventário,
       login), não por um sinal contínuo: coletor ligado e parado aparece como "Sem uso no momento".
+      "Fila de envio" e "Aparelho" mostram o último estado mandado pelo app (a partir da 1.7): o que ainda espera envio
+      no coletor, a última sincronização completa, a diferença do relógio do coletor para o do servidor e o espaço livre.
     </p>
   </div>
 

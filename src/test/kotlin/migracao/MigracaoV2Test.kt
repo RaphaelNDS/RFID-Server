@@ -75,7 +75,7 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("20") // V20 = índice (tag, data_hora) para a última leitura de cada etiqueta
+        assertThat(resultado.targetSchemaVersion).isEqualTo("21") // V21 = diagnóstico do coletor e motivo do fim da sessão
     }
 
     @Test

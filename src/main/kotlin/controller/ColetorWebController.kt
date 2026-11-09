@@ -28,6 +28,7 @@ class ColetorWebController(
         model.addAttribute("emUso", lista.count { it.situacao == SituacaoContato.EM_USO })
         model.addAttribute("desatualizados", lista.count { it.desatualizado })
         model.addAttribute("semContato", lista.count { it.situacao == SituacaoContato.SEM_CONTATO || it.situacao == SituacaoContato.NUNCA })
+        model.addAttribute("atencao", lista.count { it.filaParada || it.relogioErrado || it.poucoEspaco })
         model.addAttribute("versaoMaisNova", lista.filter { it.codigoVersao != null }.maxByOrNull { it.codigoVersao!! }
             ?.let { ColetorService.descreverVersao(it.versaoApp, it.codigoVersao) })
         model.addAttribute("versaoPublicada", coletores.versaoPublicada()?.let { ColetorService.descreverVersao(it.versaoNome, it.codigo) })
@@ -35,14 +36,18 @@ class ColetorWebController(
         return "coletores"
     }
 
-    /** Erros do app enviados pelo coletor, do mais recente para o mais antigo, com filtro por versão do app. */
+    /** Erros do app enviados pelo coletor, do mais recente para o mais antigo, com filtro por versão do app e por tipo. */
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{nome}/erros")
-    fun erros(@PathVariable nome: String, @RequestParam(required = false) versao: String?, model: Model): String {
+    fun erros(@PathVariable nome: String, @RequestParam(required = false) versao: String?,
+              @RequestParam(required = false) tipo: String?, model: Model): String {
         model.addAttribute("coletor", nome)
-        model.addAttribute("erros", erros.recentes(nome, versao))
+        model.addAttribute("erros", erros.recentes(nome, versao, tipo))
         model.addAttribute("versoes", erros.versoesComErro(nome))
         model.addAttribute("versaoSelecionada", versao)
+        model.addAttribute("tipos", erros.tiposComErro(nome).associateWith { ErroColetorService.rotuloTipo(it) })
+        model.addAttribute("tipoSelecionado", tipo)
+        model.addAttribute("rotulosTipo", ErroColetorService.ROTULOS_TIPO)
         return "coletor-erros"
     }
 }

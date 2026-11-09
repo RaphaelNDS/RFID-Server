@@ -18,12 +18,19 @@
   </div>
 
   <div class="card">
-    <form method="get" class="toolbar" th:unless="${#lists.isEmpty(versoes)}">
-      <div class="field">
+    <form method="get" class="toolbar" th:unless="${#lists.isEmpty(versoes) and #maps.isEmpty(tipos)}">
+      <div class="field" th:unless="${#lists.isEmpty(versoes)}">
         <label for="f-versao">Versão do app</label>
         <select id="f-versao" name="versao">
           <option value="">Todas as versões</option>
           <option th:each="v : ${versoes}" th:value="${v}" th:text="${v}" th:selected="${v == versaoSelecionada}"></option>
+        </select>
+      </div>
+      <div class="field" th:unless="${#maps.isEmpty(tipos)}">
+        <label for="f-tipo">Tipo</label>
+        <select id="f-tipo" name="tipo">
+          <option value="">Todos os tipos</option>
+          <option th:each="t : ${tipos}" th:value="${t.key}" th:text="${t.value}" th:selected="${t.key == tipoSelecionado}"></option>
         </select>
       </div>
       <button type="submit" class="btn btn-primary">
@@ -56,11 +63,10 @@
               title="Quando chegou ao servidor"></td>
           <td data-rotulo="Tipo">
             <span class="badge badge-CUSTOM" th:if="${e.tipo == 'FALHA_GERAL'}">Travamento</span>
-            <!-- Nome amigável dos tipos conhecidos; tipo novo do app aparece como veio (title guarda o código) -->
+            <!-- Nome amigável dos tipos conhecidos (ErroColetorService.ROTULOS_TIPO); tipo novo do app aparece como
+                 veio (title guarda o código). RELOGIO (app 1.7.3+) não é travamento: até a 1.7.2 vinha como FALHA_GERAL -->
             <span class="badge" th:unless="${e.tipo == 'FALHA_GERAL'}" th:title="${e.tipo}"
-                  th:text="${e.tipo == 'ENVIO_RECUSADO'} ? 'Envio recusado' : (${e.tipo == 'ERRO_SERVIDOR'} ? 'Erro no servidor' :
-                           (${e.tipo == 'LEITOR_RFID'} ? 'Leitor RFID' : (${e.tipo == 'ATUALIZACAO'} ? 'Atualização' :
-                           (${e.tipo == 'SINCRONIZACAO'} ? 'Sincronização' : ${e.tipo}))))"></span>
+                  th:text="${rotulosTipo[e.tipo] != null} ? ${rotulosTipo[e.tipo]} : ${e.tipo}"></span>
           </td>
           <td data-rotulo="Mensagem">
             <span th:text="${e.mensagem}"></span>
