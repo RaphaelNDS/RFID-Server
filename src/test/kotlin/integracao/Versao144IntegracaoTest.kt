@@ -72,7 +72,7 @@ class Versao144IntegracaoTest : IntegracaoBase() {
     // ---------- 1) Margem de relógio no fim da sessão (Sair / outro login) ----------
 
     @Test
-    fun `depois do Sair a acao com o relogio do coletor ate 2 min adiantado ainda vale e depois disso nao`() {
+    fun `depois do Sair a acao com o relogio do coletor ate 5 min adiantado ainda vale e depois disso nao`() {
         val email = "margem-sair-$sufixo@x.com"
         operadores.criarUsuario(email = email)
         val token = operadores.entrar(mvc, email)
@@ -82,8 +82,10 @@ class Versao144IntegracaoTest : IntegracaoBase() {
 
         // Feita antes do "Sair" pelo relógio de verdade, mas com o relógio do coletor 1 min adiantado
         naoCadastrada(token, fim.plusMinutes(1)).andExpect(status().isOk)
-        // Além da margem: continua recusada como antes
-        naoCadastrada(token, fim.plusMinutes(3))
+        // 1.4.6: relógio entre 2 e 5 min adiantado (na 1.4.4 a margem era de 2 min e esta era recusada e perdida)
+        naoCadastrada(token, fim.plusMinutes(4)).andExpect(status().isOk)
+        // Mais de 5 min no futuro a hora do coletor não vale (vira "agora", depois do "Sair"): recusada como antes
+        naoCadastrada(token, fim.plusMinutes(6))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.motivo").value("ENCERRADA"))
         // Sem X-Momento vale a hora do servidor, que não precisa de margem: recusada na hora, como antes
@@ -115,11 +117,15 @@ class Versao144IntegracaoTest : IntegracaoBase() {
 
         mvc.perform(post("/api/android/leituras/lote").comoOperador(token).header("X-Momento", iso(fim.minusSeconds(5)))
             .contentType(MediaType.APPLICATION_JSON)
-            .content("""{"itens":[{"tag":"E-LT1-$sufixo","lidoEm":"${iso(fim.plusMinutes(1))}"},{"tag":"E-LT2-$sufixo","lidoEm":"${iso(fim.plusMinutes(4))}"}]}"""))
+            .content("""{"itens":[{"tag":"E-LT1-$sufixo","lidoEm":"${iso(fim.plusMinutes(1))}"},
+                {"tag":"E-LT2-$sufixo","lidoEm":"${iso(fim.plusMinutes(4))}"},
+                {"tag":"E-LT3-$sufixo","lidoEm":"${iso(fim.plusMinutes(7))}"}]}"""))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.resultados[0].status").value("NAO_CADASTRADA"))
-            .andExpect(jsonPath("$.resultados[1].status").value("RECUSADA"))
-            .andExpect(jsonPath("$.resultados[1].motivo").value("ENCERRADA"))
+            // Relógio entre 2 e 5 min adiantado: aceita desde a 1.4.6
+            .andExpect(jsonPath("$.resultados[1].status").value("NAO_CADASTRADA"))
+            .andExpect(jsonPath("$.resultados[2].status").value("RECUSADA"))
+            .andExpect(jsonPath("$.resultados[2].motivo").value("ENCERRADA"))
     }
 
     @Test
