@@ -45,9 +45,12 @@ class RelatorioEtiquetasService(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    /** Todas as etiquetas da [busca] (a mesma da tela), com a última vez vista. */
-    fun etiquetasComUltimaVez(busca: String?): List<EtiquetaVista> {
-        val etiquetas = rfidService.listarTodasParaAdmin(busca)
+    /**
+     * Todas as etiquetas da [busca] e do [filtro] (os mesmos da tela), com a última vez vista. Sem filtro, os bens
+     * baixados ficam de fora (1.6.0): também do relatório "não vistas", em que um bem baixado não está sumido.
+     */
+    fun etiquetasComUltimaVez(busca: String?, filtro: FiltroEtiquetas = FiltroEtiquetas()): List<EtiquetaVista> {
+        val etiquetas = rfidService.listarTodasParaAdmin(busca, filtro)
         if (etiquetas.isEmpty()) return emptyList()
 
         // [tag, última leitura, último inventário, último local] por etiqueta, numa consulta só (ver TagRepository)
@@ -73,7 +76,7 @@ class RelatorioEtiquetasService(
         }
     }
 
-    /** Todas as não vistas há mais de [dias] dias, na ordem da tela (exportação). */
+    /** Todas as não vistas há mais de [dias] dias, na ordem da tela (exportação). Sem os bens baixados. */
     fun naoVistasTodas(dias: Int): List<EtiquetaVista> {
         val diasValidos = diasValidos(dias)
         val limite = LocalDateTime.now(relogio).minusDays(diasValidos.toLong())

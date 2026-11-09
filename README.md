@@ -75,16 +75,20 @@ administrador; depois disso essa tela não aparece mais.
 | Tela | Endereço | Permissão |
 |---|---|---|
 | Início (atalhos conforme as permissões) | `/dashboard` | logado |
-| Etiquetas cadastradas (50 por página, busca no servidor; exportar Excel/CSV) | `/admin/tags-cadastradas` | RFID · Ver |
+| Etiquetas cadastradas (50 por página, busca no servidor; filtros de situação, local e responsável; exportar Excel/CSV) | `/admin/tags-cadastradas` | RFID · Ver |
+| Importar planilha de etiquetas (xlsx ou csv; simula antes de gravar) | `/admin/tags-cadastradas/importar` | RFID · Criar (atualizar as existentes exige também Editar) |
 | Etiquetas não vistas há N dias (sem leitura nem inventário; exportar) | `/admin/etiquetas/nao-vistas` | RFID · Ver |
 | Pendentes (50 por página, busca pelo EPC) | `/admin/tags-pendentes` | RFID · Ver |
 | Cadastrar etiqueta | `/admin/cadastro` | RFID · Criar |
-| Editar etiqueta (o EPC não muda) | `/admin/etiquetas/{id}/editar` | RFID · Editar |
+| Editar etiqueta (o EPC não muda; dar baixa e desfazer a baixa) | `/admin/etiquetas/{id}/editar` | RFID · Editar |
 | Excluir etiqueta (botão em Etiquetas cadastradas) | `/admin/etiquetas/{id}/excluir` | RFID · Excluir |
 | Histórico das etiquetas (busca por EPC; acha também as excluídas) | `/admin/etiquetas/historico` | RFID · Ver |
 | Leituras (paginada; filtros por dia, etiqueta, tipo, operador…; conta até 10.000 e acima disso mostra "mais de") | `/admin/leituras-android` | Leituras · Ver |
 | Inventários (50 por página) | `/admin/inventarios` | Leituras · Ver |
 | Catálogo | `/admin/catalogo` | Catálogo · Ver (criar/excluir exigem Criar/Excluir) |
+| Locais (unidades e locais; desativar sem apagar) | `/admin/locais` | Catálogo · Ver (criar/alterar exigem Criar/Editar) |
+| Responsáveis (pessoas com setor, matrícula e email) | `/admin/responsaveis` | Catálogo · Ver (criar/alterar exigem Criar/Editar) |
+| Termo de responsabilidade (para imprimir ou salvar em PDF) | `/admin/responsaveis/{id}/termo` | Catálogo · Ver **e** RFID · Ver |
 | Relatórios (gráficos; avisa quando chegam leituras novas; período de até 366 dias) | `/admin/dashboard` | Relatórios · Ver |
 | Usuários (+ pedidos de nova senha e senha temporária; editar perfil e permissões; desativar e reativar) | `/admin/usuarios` | somente ADMIN |
 | Coletores (último contato, IP, versão do app, operador, fila de envio e estado do aparelho de cada coletor) | `/admin/coletores` | somente ADMIN |
@@ -202,6 +206,26 @@ mantêm o arquivo. A pasta dos APKs **não entra no backup automático**: se o s
 APK de novo. A tela Coletores usa a versão publicada para marcar quem está desatualizado. Rotas do coletor (só a
 chave, sem operador): `GET /api/android/atualizacao` e `GET /api/android/atualizacao/apk`.
 
+### Gestão de patrimônio (1.6.0)
+
+- **Unidades e locais:** cada local pode pertencer a uma unidade (ex.: Matriz › Sala 101). O nome do local
+  continua único no sistema inteiro, porque o coletor abre o inventário pelo nome. Local desativado sai das listas
+  de escolha, mas os bens e os inventários dele continuam como estão.
+- **Responsável e situação:** o cadastro da etiqueta ganha o local, o responsável (pessoa cadastrada em
+  Responsáveis) e a situação (`Em uso`, `Em estoque`, `Em manutenção`, `Emprestado`, `Extraviado`). Ao finalizar
+  um inventário, os bens encontrados passam a ter o local do inventário, e um bem `Extraviado` encontrado volta
+  para `Em uso`. As duas mudanças ficam no histórico da etiqueta.
+- **Baixa:** na tela de edição, com motivo (venda, doação, sucata, furto/roubo, perda, outro), data e observação.
+  O bem baixado sai do esperado e do termo, mas continua no banco e a baixa pode ser desfeita. A lista de
+  etiquetas só mostra os baixados com "Incluir baixados" ou com a situação `Baixado` no filtro.
+- **Termo de responsabilidade:** página com os bens de um responsável (sem os baixados), pronta para imprimir ou
+  salvar em PDF pelo navegador.
+- **Importar planilha:** xlsx ou csv (`;` ou `,`, UTF-8 ou Windows-1252), até 5.000 linhas e 10 MB. As colunas são
+  reconhecidas pelo cabeçalho (o modelo para baixar tem todas), e célula vazia mantém o valor atual. O envio só
+  simula e mostra o que cada linha vai fazer (nova, atualizada, sem mudança ou erro). Nada é gravado até
+  confirmar. Com "criar o que faltar", os tipos, marcas, modelos, unidades, locais e responsáveis que ainda não
+  existem são criados. EPC em notação científica (ex.: `1,23E+23`, de uma planilha que virou número) é recusado.
+
 ### Inventário: o que faltou
 
 O detalhe do inventário mostra o que **faltou** em relação ao **inventário finalizado anterior do mesmo local**
@@ -209,7 +233,9 @@ O detalhe do inventário mostra o que **faltou** em relação ao **inventário f
 o operador da referência. Entram as etiquetas cadastradas encontradas na referência, com os dados do cadastro atual
 (etiquetas excluídas depois ficam de fora). Inventário em andamento mostra "Faltando até agora" (lista
 provisória); o primeiro inventário de um local diz que não há comparação. A exportação traz as lidas e, depois,
-as que faltaram, com a situação `Faltando` (ou `Faltando até agora`).
+as que faltaram, com a situação `Faltando` (ou `Faltando até agora`). Desde a 1.6.0, também entram como esperados
+os bens cujo local no cadastro é o do inventário, mesmo que a referência não os tenha (a mesma regra do esperado
+do coletor, abaixo), e os baixados ficam de fora.
 
 ### Perfis de usuário
 
@@ -279,25 +305,25 @@ O app funciona sem rede durante a sessão e envia depois o que ficou na fila. Ca
 | `GET /api/android/ping` | Testa a conexão e a chave | chave |
 | `POST /api/android/login` · `POST /api/android/logout` | Sessão do operador | chave |
 | `POST /api/android/esqueci-senha` | Pede uma senha nova ao ADMIN (**202**, mesma resposta exista ou não o email) | chave |
-| `GET /api/android/tags/{epc}` | Ficha do bem: o cadastro e, desde a 1.5.0, `ultimoLocal` e `ultimoInventarioEm` (último inventário finalizado em que foi encontrado), `ultimaLeituraEm` e `ultimaLeituraPor` (opcionais, podem vir `null`) | operador · Leituras |
+| `GET /api/android/tags/{epc}` | Ficha do bem: o cadastro e, desde a 1.5.0, `ultimoLocal` e `ultimoInventarioEm` (último inventário finalizado em que foi encontrado), `ultimaLeituraEm` e `ultimaLeituraPor` (opcionais, podem vir `null`); desde a 1.6.0, também `situacao` (código), `situacaoRotulo`, `unidade`, `local` e `responsavel` (opcionais) | operador · Leituras |
 | `GET /api/android/tags/patrimonio/{patrimonio}` | EPC de um patrimônio (localizar equipamento) | operador · Leituras |
 | `POST /api/android/leitura` | Registra a leitura de uma etiqueta | operador · Leituras |
 | `POST /api/android/naocadastrada` | Envia etiqueta desconhecida para Pendentes | operador · Leituras |
 | `POST /api/android/leituras/lote` | Até 500 leituras de um operador numa requisição: classifica e registra cada uma e devolve o resultado por item (`CADASTRADA` com os dados, `NAO_CADASTRADA`, `RECUSADA` ou `ERRO`). A hora de cada leitura é conferida contra a sessão; reenvio da mesma tag com a mesma hora não duplica | operador · Leituras |
 | `GET /api/android/catalogo` | Catálogo para o formulário de cadastro | operador |
 | `POST /api/android/tags` | Cadastra etiqueta pelo coletor | operador · RFID Criar **e** coletor em `RFID_COLETORES_CADASTRO` |
-| `GET /api/android/locais` | Locais já usados em inventários | operador · Leituras |
+| `GET /api/android/locais` | Locais já usados em inventários (desde a 1.6.0, só os ativos) | operador · Leituras |
 | `POST /api/android/inventarios` | Abre inventário num local | operador · Leituras |
 | `POST /api/android/inventarios/{id}/itens` | Envia etiquetas lidas | operador · Leituras |
 | `POST /api/android/inventarios/{id}/finalizar` | Finaliza o inventário | operador · Leituras |
 | `POST /api/android/inventarios/{id}/justificativas` | Justificativa dos bens que faltaram (1.5.0): `[{"tag","motivo","observacao"}]`. Motivos: `EMPRESTADO`, `MANUTENCAO`, `BAIXADO`, `NAO_ENCONTRADO`, `OUTRO` (ou o nome, como "Em manutenção"). Aceita depois de finalizado e é idempotente. Responde `{"recebidas","gravadas","invalidas"}` | operador · Leituras |
 | `GET /api/android/inventarios/esperado?local=...` | O que é esperado no local, para o coletor mostrar o que falta (ver abaixo) | operador · Leituras |
 
-**O que é esperado num local:** as etiquetas **cadastradas** encontradas no **último inventário finalizado** daquele
-local (não há campo de local no cadastro da etiqueta). O nome do local segue a regra do inventário (ignora
-maiúsculas e espaços extras). Etiquetas excluídas do cadastro depois ficam de fora, e os dados (patrimônio, tipo,
-marca, modelo) são os do cadastro atual. Local sem inventário finalizado responde `"temReferencia": false` e a
-lista vazia (primeiro inventário dele). A resposta traz também a data e o operador do inventário de referência.
+**O que é esperado num local:** desde a 1.6.0, as etiquetas cujo **local no cadastro** é esse, somadas às
+**cadastradas** encontradas no **último inventário finalizado** daquele local que o cadastro não pôs em outro
+local. Bens baixados ficam de fora. O nome do local segue a regra do inventário (ignora maiúsculas e espaços extras). Etiquetas excluídas do cadastro depois ficam de fora, e os dados (patrimônio, tipo,
+marca, modelo) são os do cadastro atual. Local sem inventário finalizado e sem bens no cadastro responde
+`"temReferencia": false` e a lista vazia (primeiro inventário dele). A resposta traz também a data e o operador do inventário de referência.
 
 Desde a 1.5.0, um bem que estava no inventário de referência e foi encontrado **depois** num inventário finalizado de
 outro local sai do esperado. Ele foi levado para lá, e o local do bem passa a ser o do inventário finalizado mais
@@ -388,6 +414,7 @@ servidor (desativação, senha temporária ou senha trocada) não tem margem.
   | V20 | `db/migration/V20__indice_leituras_tag_data_hora.sql` | Índice comum (não único) (etiqueta, hora) das leituras, usado pela última leitura de cada etiqueta (relatório "não vistas" e exportação do cadastro) |
   | V22 | `db/migration/V22__justificativas_inventario.sql` | Justificativas dos bens que faltaram no inventário (`inventario_justificativas`) e índice por etiqueta nos itens de inventário (ficha do bem e esperado sem os bens achados em outro local) |
   | V21 | `db/migration/V21__diagnostico_coletor_e_motivo_fim_sessao.sql` | Diagnóstico do coletor (fila, última sincronização, espaço, Android, modelo, desvio do relógio) e por que a sessão do operador acabou (`encerrada_por`: margem de relógio só para "Sair" e outro login) |
+  | V23 | `db/migration/V23__gestao_patrimonio.sql` | Gestão de patrimônio: unidades, locais com unidade e ativo, responsáveis, e local, responsável, situação e baixa no cadastro da etiqueta |
 
   > **Atualizar uma instalação com muitas leituras (centenas de milhares ou mais):** a V16 reescreve a tabela de
   > leituras inteira ao subir, numa transação só: o servidor fica alguns minutos sem responder e a tabela cresce no

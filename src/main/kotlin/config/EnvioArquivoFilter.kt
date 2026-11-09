@@ -10,7 +10,8 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.filter.OncePerRequestFilter
 
 /**
- * Envio de arquivo (multipart) só onde existe: o APK do app, no POST de /admin/app, por um ADMIN logado.
+ * Envio de arquivo (multipart) só onde existe: o APK do app, no POST de /admin/app, por um ADMIN logado, e a planilha
+ * de etiquetas (1.6.0), no POST de /admin/tags-cadastradas/importar, por quem pode cadastrar etiquetas.
  *
  * Sem este filtro, o CsrfFilter do Spring Security procura o campo _csrf do formulário com getParameter(), e o
  * Tomcat lê o multipart inteiro (até 101 MB, gravando em disco) ANTES de qualquer conferência de permissão: qualquer
@@ -45,9 +46,20 @@ class EnvioArquivoFilter(private val permitido: String? = "/admin/app") : OncePe
         request.contentType?.lowercase()?.startsWith("multipart/") == true
 
     private fun liberado(request: HttpServletRequest): Boolean {
-        val caminho = permitido ?: return false
-        if (request.method != "POST" || request.requestURI.removePrefix(request.contextPath) != caminho) return false
-        val auth = SecurityContextHolder.getContext().authentication ?: return false
-        return auth.isAuthenticated && auth.authorities.any { it.authority == "ROLE_ADMIN" }
+        if (permitido == null || request.method != "POST") return false
+        val caminho = request.requestURI.removePrefix(request.contextPath)
+        val auth = SecurityContextHolder.getContext().authentication?.takeIf { it.isAuthenticated } ?: return false
+        val autoridades = auth.authorities.map { it.authority }.toSet()
+        return when (caminho) {
+            // APK do app: só ADMIN
+            permitido -> "ROLE_ADMIN" in autoridades
+            // Importação de planilha de etiquetas (1.6.0): quem pode cadastrar etiquetas
+            IMPORTACAO_ETIQUETAS -> "ROLE_ADMIN" in autoridades || "RFID_CREATE" in autoridades
+            else -> false
+        }
+    }
+
+    companion object {
+        const val IMPORTACAO_ETIQUETAS = "/admin/tags-cadastradas/importar"
     }
 }

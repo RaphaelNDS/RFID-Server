@@ -60,7 +60,10 @@ class AlertaServiceTest {
 
         alertas().informar("Servidor ficou fora do ar por 2h 0min", "texto")
 
-        verify(timeout = 3000) { enviador.send(any<SimpleMailMessage>()) }
+        // Espera a mensagem na lista, e não só a chamada: o verify(timeout) do MockK libera assim que a chamada é
+        // registrada, antes de o answers guardar a mensagem (no runner Windows do CI a lista ainda vinha vazia)
+        val limite = System.nanoTime() + 3_000_000_000L
+        while (enviadas.isEmpty() && System.nanoTime() < limite) Thread.sleep(10)
         val mensagem = enviadas.single()
         assertThat(mensagem.to).containsExactly("ti@empresa.com", "chefe@empresa.com")
         assertThat(mensagem.from).isEqualTo("rfid@empresa.com")

@@ -69,12 +69,16 @@ class InventarioService(
     private val itens: InventarioItemRepository,
     private val rfidService: RfidService,
     private val justificativas: JustificativaInventarioRepository,
-    private val relogio: Clock = Clock.systemDefaultZone()
+    private val relogio: Clock = Clock.systemDefaultZone(),
+    // 1.6.0: o local do bem acompanha o inventário finalizado (opcionais para os testes que montam o serviço à mão)
+    private val tags: org.example.repository.TagRepository? = null,
+    private val historico: HistoricoEtiquetaService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    fun listarLocais(): List<String> = locais.findAllByOrderByNomeAsc().map { it.nome }
+    /** Sugestões do coletor: só os locais ativos (o desativado na tela Locais some da lista do app). */
+    fun listarLocais(): List<String> = locais.findAllByAtivoTrueOrderByNomeAsc().map { it.nome }
 
     @Transactional
     fun abrir(id: String, nomeLocal: String, iniciadoEm: OffsetDateTime?, dispositivo: String, operador: String? = null): InventarioEntity {
@@ -168,8 +172,34 @@ class InventarioService(
         inventario.finalizadoEm = horaDoColetor(finalizadoEm, "finalização do inventário $id")
 
         val total = itens.countByInventarioId(id)
-        log.info("Inventário {} finalizado pelo dispositivo {}: {} etiqueta(s) lida(s)", id, dispositivo, total)
+        val atualizados = atualizarLocalDosBens(inventario)
+        log.info("Inventário {} finalizado pelo dispositivo {}: {} etiqueta(s) lida(s){}", id, dispositivo, total,
+            if (atualizados > 0) "; $atualizados bem(ns) com o local atualizado para o do inventário" else "")
         return inventarios.save(inventario)
+    }
+
+    /**
+     * Gestão de patrimônio (1.6.0): o bem cadastrado encontrado no inventário finalizado passa a estar no local do
+     * inventário (transferência pelo inventário), com a mudança no histórico. Extraviado que foi encontrado volta "Em
+     * uso". O baixado não muda: aparece no inventário, mas continua baixado (para desfazer, é pela tela da baixa).
+     */
+    private fun atualizarLocalDosBens(inventario: InventarioEntity): Int {
+        val repo = tags ?: return 0
+        val lidas = itens.tagsDoInventario(inventario.id)
+        if (lidas.isEmpty()) return 0
+        var atualizados = 0
+        lidas.chunked(5_000).flatMap { repo.findAllByTagRealIn(it) }.filter { !it.baixado }.forEach { tag ->
+            val mudarLocal = tag.localId != inventario.localId
+            val achado = tag.situacao == org.example.model.SituacaoBem.EXTRAVIADO
+            if (!mudarLocal && !achado) return@forEach
+            val antes = historico?.retrato(tag)
+            tag.localId = inventario.localId
+            if (achado) tag.situacao = org.example.model.SituacaoBem.EM_USO
+            repo.save(tag)
+            if (antes != null) historico.registrarAlteracao(tag, antes)
+            atualizados++
+        }
+        return atualizados
     }
 
     /**

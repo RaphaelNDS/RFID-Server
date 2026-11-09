@@ -25,7 +25,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 class EtiquetaWebController(
     private val rfidService: RfidService,
     private val catalogoService: CatalogoService,
-    private val historico: HistoricoEtiquetaService
+    private val historico: HistoricoEtiquetaService,
+    private val cadastros: org.example.service.PatrimonioCadastrosService? = null,
+    private val auditoria: org.example.service.AuditoriaService? = null
 ) {
 
     @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
@@ -39,7 +41,8 @@ class EtiquetaWebController(
         val tag = rfidService.buscarPorId(id)
         model.addAttribute("cadastro", CadastroRequest(
             tag = tag.tagReal, codigoInterno = tag.codigoInterno, patrimonio = tag.patrimonio, numeroSerie = tag.numeroSerie,
-            tipoEquipamentoId = tag.tipoEquipamentoId, marcaId = tag.marcaId, modeloId = tag.modeloId, versao = tag.versao
+            tipoEquipamentoId = tag.tipoEquipamentoId, marcaId = tag.marcaId, modeloId = tag.modeloId, versao = tag.versao,
+            localId = tag.localId, responsavelId = tag.responsavelId, situacao = tag.situacao.name
         ))
         return formulario(id, RetornoLista.de(busca, pagina), model)
     }
@@ -102,11 +105,56 @@ class EtiquetaWebController(
         return "historico-etiquetas"
     }
 
+    /** Baixa patrimonial (1.6.0): motivo obrigatório; data vazia = hoje. */
+    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PostMapping("/{id}/baixa")
+    fun darBaixa(
+        @PathVariable id: Long,
+        @RequestParam(required = false) motivo: String?,
+        @RequestParam(required = false) data: String?,
+        @RequestParam(required = false) observacao: String?,
+        redirect: RedirectAttributes
+    ): String = try {
+        val m = org.example.model.MotivoBaixa.de(motivo) ?: throw IllegalArgumentException("Escolha o motivo da baixa")
+        val dia = data?.trim()?.takeIf { it.isNotEmpty() }?.let {
+            runCatching { java.time.LocalDate.parse(it) }.getOrElse { throw IllegalArgumentException("Data da baixa inválida") }
+        }
+        val tag = rfidService.darBaixa(id, m, dia, observacao)
+        auditoria?.registrar(org.example.model.AreaAuditoria.CATALOGO, "Baixa de bem", "${tag.tagReal} (patrimônio ${tag.patrimonio.ifBlank { "—" }})",
+            "${m.rotulo} em ${tag.baixaEm}${tag.baixaObservacao?.let { " · $it" } ?: ""}")
+        redirect.addFlashAttribute("msg", "Baixa do bem ${tag.patrimonio.ifBlank { tag.tagReal }} registrada (${m.rotulo}). Ele continua no filtro \"Baixados\" e no histórico.")
+        "redirect:/admin/tags-cadastradas"
+    } catch (e: IllegalArgumentException) {
+        redirect.addFlashAttribute("erro", e.message)
+        "redirect:/admin/etiquetas/$id/editar"
+    }
+
+    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PostMapping("/{id}/baixa/desfazer")
+    fun desfazerBaixa(@PathVariable id: Long, redirect: RedirectAttributes): String = try {
+        val tag = rfidService.desfazerBaixa(id)
+        auditoria?.registrar(org.example.model.AreaAuditoria.CATALOGO, "Baixa de bem desfeita", "${tag.tagReal} (patrimônio ${tag.patrimonio.ifBlank { "—" }})")
+        redirect.addFlashAttribute("msg", "Baixa desfeita: o bem ${tag.patrimonio.ifBlank { tag.tagReal }} voltou a ficar Em uso.")
+        "redirect:/admin/etiquetas/$id/editar"
+    } catch (e: IllegalArgumentException) {
+        redirect.addFlashAttribute("erro", e.message)
+        "redirect:/admin/etiquetas/$id/editar"
+    }
+
     private fun formulario(id: Long, retorno: RetornoLista, model: Model): String {
+        val etiqueta = rfidService.buscarPorId(id)
         model.addAttribute("etiquetaId", id)
+        model.addAttribute("etiqueta", etiqueta)
+        model.addAttribute("baixado", etiqueta.baixado)
         retorno.noModelo(model)
         model.addAttribute("linkVoltar", retorno.link("/admin/tags-cadastradas"))
         model.addAttribute("tipos", catalogoService.listarTipos())
+        // Gestão de patrimônio (1.6.0): inclui os desativados (o bem pode já estar num deles)
+        model.addAttribute("opcoesLocal", cadastros?.opcoesDeLocal(incluirInativos = true).orEmpty())
+        model.addAttribute("opcoesResponsavel", cadastros?.listarResponsaveis().orEmpty())
+        model.addAttribute("situacoesEditaveis", org.example.model.SituacaoBem.EDITAVEIS)
+        model.addAttribute("motivosBaixa", org.example.model.MotivoBaixa.entries)
+        model.addAttribute("hoje", java.time.LocalDate.now())
         return "editar-etiqueta"
     }
 }

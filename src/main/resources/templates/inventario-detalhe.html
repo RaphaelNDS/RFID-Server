@@ -149,7 +149,7 @@
           <td data-rotulo="Tipo" th:text="${m.item.tipo}"></td>
           <td data-rotulo="Etiqueta (EPC)" class="mono" th:text="${m.item.tag}"></td>
           <td data-rotulo="Encontrado em" th:text="${m.local}"></td>
-          <td data-rotulo="Quando" class="nowrap" th:text="${#temporals.format(m.encontradoEm, 'dd/MM/yyyy HH:mm')}"></td>
+          <td data-rotulo="Quando" class="nowrap" th:text="${m.encontradoEm != null} ? ${#temporals.format(m.encontradoEm, 'dd/MM/yyyy HH:mm')} : 'mudado no cadastro'"></td>
         </tr>
         </tbody>
       </table>

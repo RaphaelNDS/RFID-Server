@@ -1,0 +1,38 @@
+<!--
+  Local, responsável e situação do bem (1.6.0), no cadastro e na edição da etiqueta. O modelo precisa de "cadastro"
+  (CadastroRequest), "opcoesLocal" (OpcaoLocal), "opcoesResponsavel" (ResponsavelEntity) e "situacoesEditaveis".
+  Desativados só aparecem se já forem os do bem (a edição não obriga a trocar).
+-->
+<th:block th:fragment="campos" xmlns:th="http://www.thymeleaf.org">
+  <div class="field">
+    <label for="localId">Local</label>
+    <select id="localId" name="localId">
+      <option value="">Sem local</option>
+      <option th:each="l : ${opcoesLocal}" th:if="${l.ativo or l.id == cadastro.localId}"
+              th:value="${l.id}" th:text="${l.descricao} + (${l.ativo} ? '' : ' (desativado)')"
+              th:selected="${cadastro.localId != null and l.id == cadastro.localId}"></option>
+    </select>
+    <span class="field-dica">Atualizado sozinho quando um inventário finalizado encontra o bem em outro local.
+      <a th:href="@{/admin/locais}" th:if="${@authService.temPermissao('CATALOGO','READ')}">Locais</a></span>
+  </div>
+
+  <div class="field">
+    <label for="responsavelId">Responsável</label>
+    <select id="responsavelId" name="responsavelId">
+      <option value="">Sem responsável</option>
+      <option th:each="r : ${opcoesResponsavel}" th:if="${r.ativo or r.id == cadastro.responsavelId}"
+              th:value="${r.id}" th:text="${r.descricao} + (${r.ativo} ? '' : ' (desativado)')"
+              th:selected="${cadastro.responsavelId != null and r.id == cadastro.responsavelId}"></option>
+    </select>
+    <span class="field-dica"><a th:href="@{/admin/responsaveis}" th:if="${@authService.temPermissao('CATALOGO','READ')}">Responsáveis</a></span>
+  </div>
+
+  <div class="field" th:if="${!(baixado ?: false)}">
+    <label for="situacao">Situação</label>
+    <select id="situacao" name="situacao">
+      <option th:each="s : ${situacoesEditaveis}" th:value="${s.name()}" th:text="${s.rotulo}"
+              th:selected="${(cadastro.situacao == null and s.name() == 'EM_USO') or s.name() == cadastro.situacao}"></option>
+    </select>
+    <span class="field-dica">Para tirar o bem do patrimônio (venda, doação, descarte, furto), use "Dar baixa".</span>
+  </div>
+</th:block>

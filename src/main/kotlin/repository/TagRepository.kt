@@ -28,20 +28,46 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
      * escapados) no EPC, código, patrimônio e série, ou pelos ids de tipo/marca/modelo cujo nome bate com a busca.
      */
     @Query(
-        """select t from TagEntity t where :padrao = ''
+        """select t from TagEntity t where (:padrao = ''
            or lower(t.tagReal) like :padrao escape '\'
            or lower(t.codigoInterno) like :padrao escape '\'
            or lower(t.patrimonio) like :padrao escape '\'
            or lower(t.numeroSerie) like :padrao escape '\'
-           or t.tipoEquipamentoId in :tipos or t.marcaId in :marcas or t.modeloId in :modelos"""
+           or t.tipoEquipamentoId in :tipos or t.marcaId in :marcas or t.modeloId in :modelos
+           or t.localId in :locais or t.responsavelId in :responsaveis)
+           and t.situacao in :situacoes
+           and (:localId = -1 or t.localId = :localId)
+           and (:responsavelId = -1 or t.responsavelId = :responsavelId)"""
     )
     fun buscar(
         @Param("padrao") padrao: String,
         @Param("tipos") tipos: Collection<Long>,
         @Param("marcas") marcas: Collection<Long>,
         @Param("modelos") modelos: Collection<Long>,
+        @Param("locais") locais: Collection<Long>,
+        @Param("responsaveis") responsaveis: Collection<Long>,
+        @Param("situacoes") situacoes: Collection<org.example.model.SituacaoBem>,
+        @Param("localId") localId: Long,
+        @Param("responsavelId") responsavelId: Long,
         pagina: Pageable
     ): Page<TagEntity>
+
+    // Gestão de patrimônio (1.6.0)
+    fun countByLocalId(localId: Long): Long
+
+    fun countByResponsavelId(responsavelId: Long): Long
+
+    /** Os bens do responsável que não foram baixados (termo de responsabilidade), pelo patrimônio. */
+    fun findAllByResponsavelIdAndSituacaoNotOrderByPatrimonioAscIdAsc(responsavelId: Long, situacao: org.example.model.SituacaoBem): List<TagEntity>
+
+    /** Os bens cadastrados no local que não foram baixados (esperado do inventário). */
+    fun findAllByLocalIdAndSituacaoNot(localId: Long, situacao: org.example.model.SituacaoBem): List<TagEntity>
+
+    @Query("select t.localId, count(t) from TagEntity t where t.localId is not null and t.situacao <> org.example.model.SituacaoBem.BAIXADO group by t.localId")
+    fun contarPorLocal(): List<Array<Any>>
+
+    @Query("select t.responsavelId, count(t) from TagEntity t where t.responsavelId is not null and t.situacao <> org.example.model.SituacaoBem.BAIXADO group by t.responsavelId")
+    fun contarPorResponsavel(): List<Array<Any>>
 
     /**
      * Relatório "não vistas" e exportação do cadastro: [tag_real, última leitura, hora e local do último inventário]

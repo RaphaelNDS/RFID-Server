@@ -44,7 +44,9 @@ class TelasLayoutTest : IntegracaoBase() {
             "/admin/etiquetas/historico", "/admin/etiquetas/nao-vistas", "/admin/leituras-android",
             "/admin/inventarios", "/admin/catalogo", "/admin/dashboard", "/admin/usuarios", "/admin/usuarios/novo",
             "/admin/usuarios/${olga.id}/editar", "/admin/coletores", "/admin/app", "/admin/auditoria", "/status",
-            "/perfil", "/perfil/senha", "/perfil/email"
+            "/perfil", "/perfil/senha", "/perfil/email",
+            // 1.6.0: gestão de patrimônio
+            "/admin/locais", "/admin/responsaveis", "/admin/tags-cadastradas/importar"
         ).forEach { url ->
             val resposta = mvc.perform(get(url).with(admin)).andReturn().response
             conferir(url, resposta)

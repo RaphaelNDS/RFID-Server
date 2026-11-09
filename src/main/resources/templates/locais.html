@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Locais · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Locais</h1>
+      <p class="subtitulo">Unidades da empresa e os locais de cada uma, onde ficam os bens e se fazem os inventários</p>
+    </div>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <!-- Cadastro rápido: unidade e local -->
+  <div class="grid grid-2" style="margin-bottom:20px" th:if="${@authService.temPermissao('CATALOGO','CREATE')}">
+    <form class="card" th:action="@{/admin/locais/unidades}" method="post">
+      <div class="card-header"><h2>Nova unidade</h2></div>
+      <div class="card-body">
+        <div class="field">
+          <label for="u-nome">Nome <span class="obrigatorio">*</span></label>
+          <input id="u-nome" name="nome" maxlength="120" required placeholder="Ex.: Matriz, Filial São Paulo">
+        </div>
+      </div>
+      <div class="card-footer"><button type="submit" class="btn btn-primary">Cadastrar unidade</button></div>
+    </form>
+    <form class="card" th:action="@{/admin/locais}" method="post">
+      <div class="card-header"><h2>Novo local</h2></div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label for="l-nome">Nome <span class="obrigatorio">*</span></label>
+            <input id="l-nome" name="nome" maxlength="120" required placeholder="Ex.: Sala 101, Almoxarifado">
+          </div>
+          <div class="field">
+            <label for="l-unidade">Unidade</label>
+            <select id="l-unidade" name="unidade">
+              <option value="">Sem unidade</option>
+              <option th:each="u : ${unidades}" th:if="${u.ativa}" th:value="${u.id}" th:text="${u.nome}"></option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer"><button type="submit" class="btn btn-primary">Cadastrar local</button></div>
+    </form>
+  </div>
+
+  <div class="vazio card" th:if="${#lists.isEmpty(grupos)}">
+    <svg class="ic"><use href="/img/icones.svg#pacote"/></svg>
+    <strong>Nenhum local ainda</strong>
+    Cadastre as unidades e os locais acima. Os locais usados nos inventários dos coletores também aparecem aqui.
+  </div>
+
+  <div class="card" style="margin-bottom:16px" th:each="g : ${grupos}">
+    <div class="card-header">
+      <h2>
+        <span th:text="${g.unidade != null} ? ${g.unidade.nome} : 'Sem unidade'">Unidade</span>
+        <span class="contagem" th:text="'(' + ${#lists.size(g.locais)} + ' local(is))'"></span>
+        <span class="badge badge-inativo" th:if="${g.unidade != null and !g.unidade.ativa}">desativada</span>
+      </h2>
+      <details th:if="${g.unidade != null and @authService.temPermissao('CATALOGO','UPDATE')}">
+        <summary class="btn btn-ghost btn-sm">Editar unidade</summary>
+        <form class="toolbar" style="border:0;padding:10px 0 0" th:action="@{/admin/locais/unidades/{id}(id=${g.unidade.id})}" method="post">
+          <div class="field"><label th:for="'un-' + ${g.unidade.id}">Nome</label>
+            <input th:id="'un-' + ${g.unidade.id}" name="nome" maxlength="120" required th:value="${g.unidade.nome}"></div>
+          <label class="chip" style="align-self:center"><input type="checkbox" name="ativa" value="true" th:checked="${g.unidade.ativa}"><span>Ativa</span></label>
+          <button type="submit" class="btn btn-secondary btn-sm">Salvar</button>
+        </form>
+      </details>
+    </div>
+    <div class="table-wrap">
+      <table class="table table-cartoes" th:unless="${#lists.isEmpty(g.locais)}">
+        <thead><tr><th>Local</th><th>Bens</th><th>Situação</th><th class="acoes"><span class="sr-only">Ações</span></th></tr></thead>
+        <tbody>
+        <tr th:each="l : ${g.locais}" th:classappend="${!l.local.ativo} ? 'inativo'">
+          <td class="principal cartao-titulo" th:text="${l.local.nome}"></td>
+          <td data-rotulo="Bens">
+            <a th:href="@{/admin/tags-cadastradas(local=${l.local.id})}" th:text="${l.bens} + ' bem(ns)'"
+               th:if="${@authService.temPermissao('RFID','READ')}"></a>
+            <span th:unless="${@authService.temPermissao('RFID','READ')}" th:text="${l.bens}"></span>
+          </td>
+          <td data-rotulo="Situação">
+            <span class="badge badge-online" th:if="${l.local.ativo}">Ativo</span>
+            <span class="badge badge-inativo" th:unless="${l.local.ativo}">Desativado</span>
+          </td>
+          <td class="acoes">
+            <details th:if="${@authService.temPermissao('CATALOGO','UPDATE')}">
+              <summary class="btn btn-ghost btn-sm">Editar</summary>
+              <form class="toolbar" style="border:0;padding:10px 0 0;justify-content:flex-end" th:action="@{/admin/locais/{id}(id=${l.local.id})}" method="post">
+                <div class="field"><label th:for="'ln-' + ${l.local.id}">Nome</label>
+                  <input th:id="'ln-' + ${l.local.id}" name="nome" maxlength="120" required th:value="${l.local.nome}"></div>
+                <div class="field"><label th:for="'lu-' + ${l.local.id}">Unidade</label>
+                  <select th:id="'lu-' + ${l.local.id}" name="unidade">
+                    <option value="">Sem unidade</option>
+                    <option th:each="u : ${unidades}" th:value="${u.id}" th:text="${u.nome}" th:selected="${u.id == l.local.unidadeId}"></option>
+                  </select></div>
+                <label class="chip" style="align-self:center"><input type="checkbox" name="ativo" value="true" th:checked="${l.local.ativo}"><span>Ativo</span></label>
+                <button type="submit" class="btn btn-secondary btn-sm">Salvar</button>
+              </form>
+            </details>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+      <div class="vazio" th:if="${#lists.isEmpty(g.locais)}" style="padding:24px">Nenhum local nesta unidade.</div>
+    </div>
+  </div>
+
+  <p class="muted" style="font-size:13px">
+    O nome do local é único no sistema todo: o coletor escolhe o local pelo nome. Desativado, o local some das escolhas e
+    das sugestões do coletor, mas continua nos bens e nos inventários antigos. Um local novo digitado no coletor entra
+    em "Sem unidade".
+  </p>
+
+</section>
+</html>

@@ -15,7 +15,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 @RequestMapping("/admin/cadastro")
 class CadastroController(
     private val rfidService: RfidService,
-    private val catalogoService: CatalogoService
+    private val catalogoService: CatalogoService,
+    private val cadastros: org.example.service.PatrimonioCadastrosService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -98,5 +99,9 @@ class CadastroController(
         model.addAttribute("tipos", catalogoService.listarTipos())
         model.addAttribute("marcas", catalogoService.listarMarcas())
         model.addAttribute("modelos", catalogoService.listarModelos())
+        // Gestão de patrimônio (1.6.0): local, responsável e situação
+        model.addAttribute("opcoesLocal", cadastros?.opcoesDeLocal().orEmpty())
+        model.addAttribute("opcoesResponsavel", cadastros?.responsaveisAtivos().orEmpty())
+        model.addAttribute("situacoesEditaveis", org.example.model.SituacaoBem.EDITAVEIS)
     }
 }

@@ -18,6 +18,10 @@
       <a th:href="@{/admin/etiquetas/historico}" class="btn btn-ghost">
         <svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Histórico
       </a>
+      <a th:href="@{/admin/tags-cadastradas/importar}" class="btn btn-ghost" th:if="${@authService.temPermissao('RFID','CREATE')}"
+         title="Cadastrar ou atualizar várias etiquetas de uma planilha">
+        <svg class="ic"><use href="/img/icones.svg#download"/></svg>Importar planilha
+      </a>
       <a th:href="@{/admin/cadastro}" class="btn btn-primary" th:if="${@authService.temPermissao('RFID','CREATE')}">
         <svg class="ic"><use href="/img/icones.svg#mais"/></svg>Cadastrar etiqueta
       </a>
@@ -31,21 +35,47 @@
   <div class="card">
     <!-- Busca feita no servidor (em todas as etiquetas, não só nesta página) -->
     <form method="get" class="toolbar" role="search">
-      <div class="field busca">
+      <div class="field busca" style="flex:1 1 100%">
         <label for="busca" class="sr-only">Buscar</label>
         <svg class="ic"><use href="/img/icones.svg#busca"/></svg>
         <input id="busca" name="busca" type="search" th:value="${busca}"
                placeholder="Buscar por etiqueta, código, patrimônio, série, tipo, marca ou modelo">
       </div>
+      <!-- Filtros de gestão de patrimônio (1.6.0). Sem situação escolhida, os baixados ficam de fora -->
+      <div class="field" style="flex:0 1 200px">
+        <label for="f-situacao">Situação</label>
+        <select id="f-situacao" name="situacao">
+          <option value="">Todas (sem baixados)</option>
+          <option th:each="s : ${situacoes}" th:value="${s.name()}" th:text="${s.rotulo}" th:selected="${filtro.situacao == s}"></option>
+        </select>
+      </div>
+      <div class="field" style="flex:0 1 200px" th:unless="${#lists.isEmpty(opcoesLocal)}">
+        <label for="f-local">Local</label>
+        <select id="f-local" name="local">
+          <option value="">Todos os locais</option>
+          <option th:each="l : ${opcoesLocal}" th:value="${l.id}" th:text="${l.descricao} + (${l.ativo} ? '' : ' (desativado)')"
+                  th:selected="${filtro.localId == l.id}"></option>
+        </select>
+      </div>
+      <div class="field" style="flex:0 1 190px" th:unless="${#lists.isEmpty(opcoesResponsavel)}">
+        <label for="f-responsavel">Responsável</label>
+        <select id="f-responsavel" name="responsavel">
+          <option value="">Todos</option>
+          <option th:each="r : ${opcoesResponsavel}" th:value="${r.id}" th:text="${r.nome}" th:selected="${filtro.responsavelId == r.id}"></option>
+        </select>
+      </div>
+      <label class="chip" style="align-self:center" th:if="${filtro.situacao == null}">
+        <input type="checkbox" name="baixados" value="true" th:checked="${filtro.incluirBaixados}"><span>Incluir baixados</span>
+      </label>
       <button type="submit" class="btn btn-primary">Buscar</button>
-      <a th:if="${busca != ''}" th:href="@{/admin/tags-cadastradas}" class="btn btn-ghost">Limpar</a>
+      <a th:if="${busca != '' or filtro.ativo}" th:href="@{/admin/tags-cadastradas}" class="btn btn-ghost">Limpar</a>
       <span class="muted nowrap" style="align-self:center" th:text="${#numbers.formatInteger(total, 1, 'POINT')} + ' etiqueta(s)'"></span>
-      <!-- Exporta todas as etiquetas da busca (não só esta página), com a última vez vista e o último local -->
-      <a th:if="${total > 0}" th:href="@{/admin/tags-cadastradas/exportar(busca=${busca != '' ? busca : null},formato='xlsx')}"
+      <!-- Exporta todas as etiquetas da busca e dos filtros (não só esta página), com a última vez vista e o último local -->
+      <a th:if="${total > 0}" th:href="${linkExportarXlsx}"
          class="btn btn-secondary btn-sm" title="Exportar todas as etiquetas da busca">
         <svg class="ic"><use href="/img/icones.svg#download"/></svg>Excel
       </a>
-      <a th:if="${total > 0}" th:href="@{/admin/tags-cadastradas/exportar(busca=${busca != '' ? busca : null},formato='csv')}"
+      <a th:if="${total > 0}" th:href="${linkExportarCsv}"
          class="btn btn-ghost btn-sm" title="Para importar em outros sistemas. No Excel, use o botão Excel: o CSV perde zeros à esquerda do patrimônio">CSV</a>
     </form>
 
@@ -56,22 +86,27 @@
           <th>Etiqueta (EPC)</th>
           <th>Código</th>
           <th>Patrimônio</th>
-          <th>Tipo</th>
-          <th>Marca</th>
-          <th>Modelo</th>
+          <th>Equipamento</th>
           <th>Nº série</th>
+          <th>Local</th>
+          <th>Responsável</th>
+          <th>Situação</th>
           <th></th>
         </tr>
         </thead>
         <tbody>
-        <tr th:each="t : ${tags}">
+        <tr th:each="t : ${tags}" th:classappend="${t.situacao.name() == 'BAIXADO'} ? 'inativo'">
           <td class="mono cartao-titulo" th:text="${t.tag}"></td>
           <td data-rotulo="Código" class="principal" th:text="${t.codigoInterno}"></td>
           <td data-rotulo="Patrimônio" th:text="${t.patrimonio}"></td>
-          <td data-rotulo="Tipo" th:text="${t.tipoNome} ?: '—'"></td>
-          <td data-rotulo="Marca" th:text="${t.marcaNome} ?: '—'"></td>
-          <td data-rotulo="Modelo" th:text="${t.modeloNome} ?: '—'"></td>
+          <td data-rotulo="Equipamento" th:text="${t.descricao} ?: '—'"></td>
           <td class="nowrap" data-rotulo="Nº série" th:text="${t.numeroSerie}"></td>
+          <td data-rotulo="Local" th:text="${t.localDescricao} ?: '—'"></td>
+          <td data-rotulo="Responsável" th:text="${t.responsavelNome} ?: '—'"></td>
+          <td data-rotulo="Situação" class="nowrap">
+            <span class="badge" th:classappend="${t.situacao.name() == 'EM_USO'} ? 'badge-online' : (${t.situacao.name() == 'BAIXADO' or t.situacao.name() == 'EXTRAVIADO'} ? 'badge-inativo' : 'badge-CUSTOM')"
+                  th:text="${t.situacao.rotulo}"></span>
+          </td>
           <td class="acoes">
             <a th:href="@{/admin/etiquetas/{id}/editar(id=${t.id},busca=${busca != '' ? busca : null},pagina=${paginaAtual > 1 ? paginaAtual : null})}" class="btn btn-ghost btn-sm"
                th:if="${@authService.temPermissao('RFID','UPDATE')}" title="Editar">

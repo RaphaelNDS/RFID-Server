@@ -17,6 +17,11 @@ interface LocalRepository : JpaRepository<LocalEntity, Long> {
     fun findFirstByNomeIgnoreCaseOrderByIdAsc(nome: String): Optional<LocalEntity>
 
     fun findAllByOrderByNomeAsc(): List<LocalEntity>
+
+    /** Só os ativos (sugestões do coletor e escolhas da web). */
+    fun findAllByAtivoTrueOrderByNomeAsc(): List<LocalEntity>
+
+    fun countByUnidadeId(unidadeId: Long): Long
 }
 
 interface InventarioRepository : JpaRepository<InventarioEntity, String> {
