@@ -36,6 +36,10 @@ spring:
     # threads para sempre (o pool esgotava e o servidor parava de responder sem nenhum log). Ficam nas propriedades
     # do driver, e não na URL, para valerem também com uma RFID_DB_URL própria.
     hikari:
+      # Conexões no pool (1.5.2; o padrão era 10). Com 20 ou 30 coletores sincronizando juntos no fim do turno, 10
+      # não davam: as requisições esperavam os 5 s abaixo e caíam com erro, e os coletores reenviavam tudo. O
+      # PostgreSQL aceita 100 conexões; sobra folga para o backup e para o psql
+      maximum-pool-size: ${RFID_DB_POOL:30}
       # Espera por uma conexão livre do pool (o padrão era 30 s)
       connection-timeout: 5000
       # Conexão parada no pool é testada a cada 2 min: descobre antes de usar a que o banco ou a rede derrubou
@@ -83,11 +87,11 @@ spring:
     # Mostra no log cada SQL executado. Desligado: em produção lota o log (cada leitura gera vários SQLs).
     # Ligue só para investigar um problema (RFID_MOSTRAR_SQL=true).
     show-sql: ${RFID_MOSTRAR_SQL:false}
-    # Ligado de propósito (era o padrão implícito, agora explícito para não gerar aviso na inicialização):
-    # a tela de usuários lê as permissões (coleção lazy) ao montar o HTML, e a API do catálogo devolve as
-    # entidades direto em JSON (tipo -> marcas -> modelos). Para desligar, essas consultas precisam
-    # carregar tudo antes (JOIN FETCH ou DTO).
-    open-in-view: true
+    # Desligado aqui e ligado à mão para as telas (SessaoJpaTelasConfig, 1.5.2): as telas leem coleções lazy ao montar
+    # o HTML (permissões dos usuários) e precisam dele. A API dos coletores (/api/android) e o fluxo ao vivo do painel
+    # (/admin/sse) ficam sem: com ele, cada requisição segurava uma conexão do banco do começo ao fim (um lote de 500
+    # leituras inteiro; o fluxo ao vivo, enquanto a aba ficasse aberta), e o pool esgotava com muitos coletores.
+    open-in-view: false
 
 
 rfid:

@@ -10,7 +10,6 @@ import java.time.Clock
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
-import java.time.ZoneId
 
 /** Nomes do catálogo por id, já carregados (o lote carrega uma vez para todas as leituras). */
 data class NomesCatalogo(
@@ -150,8 +149,7 @@ class LeituraAndroidService(
      * para o fuso do servidor. Sem ela, ou se estiver no futuro (relógio do coletor adiantado),
      * vale a hora do recebimento.
      */
-    private fun paraHoraDoServidor(lidoEm: OffsetDateTime): LocalDateTime =
-        lidoEm.atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()
+    private fun paraHoraDoServidor(lidoEm: OffsetDateTime): LocalDateTime = org.example.util.HoraColetor.noFusoDoServidor(lidoEm)
 
     private fun dataHoraDaLeitura(tagReal: String, lidoEm: OffsetDateTime?): LocalDateTime {
         val agora = LocalDateTime.now(relogio)
@@ -159,7 +157,7 @@ class LeituraAndroidService(
 
         val lida = paraHoraDoServidor(lidoEm)
 
-        if (lida.isAfter(agora.plus(TOLERANCIA_RELOGIO))) {
+        if (org.example.util.HoraColetor.noFuturo(lida, agora)) {
             log.warn(
                 "Leitura da tag {} com data no futuro ({}): relógio do coletor adiantado? Usando a hora do recebimento",
                 tagReal, lidoEm
@@ -176,7 +174,6 @@ class LeituraAndroidService(
     }
 
     private companion object {
-        val TOLERANCIA_RELOGIO: Duration = Duration.ofMinutes(5)
         val ATRASO_LEITURA_OFFLINE: Duration = Duration.ofMinutes(1)
     }
 }

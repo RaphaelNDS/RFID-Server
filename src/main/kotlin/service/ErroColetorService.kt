@@ -13,7 +13,6 @@ import java.time.Duration
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
-import java.time.ZoneId
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -143,10 +142,8 @@ class ErroColetorService(
     }
 
     // Hora do relógio do coletor; sem ela, ou no futuro (relógio adiantado), vale a de chegada
-    private fun momentoDoColetor(momento: OffsetDateTime?, agora: LocalDateTime): LocalDateTime {
-        val local = momento?.atZoneSameInstant(ZoneId.systemDefault())?.toLocalDateTime() ?: return agora
-        return if (local.isAfter(agora.plusMinutes(5))) agora else local
-    }
+    private fun momentoDoColetor(momento: OffsetDateTime?, agora: LocalDateTime): LocalDateTime =
+        org.example.util.HoraColetor.aceita(momento, agora) ?: agora
 
     /** Erros por coletor nas últimas 24 h: conta registros (um erro agrupado com várias ocorrências conta 1). */
     fun contarUltimas24h(): Map<String, Long> =

@@ -18,7 +18,6 @@ import org.springframework.web.filter.OncePerRequestFilter
 import java.time.Clock
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
-import java.time.ZoneId
 import java.time.format.DateTimeParseException
 
 /**
@@ -136,14 +135,14 @@ class OperadorFilter(
         val texto = request.getHeader(HEADER_MOMENTO)?.trim()?.takeIf { it.isNotEmpty() } ?: return null
 
         val momento = try {
-            OffsetDateTime.parse(texto).atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()
+            org.example.util.HoraColetor.noFusoDoServidor(OffsetDateTime.parse(texto))
         } catch (e: DateTimeParseException) {
             log.warn("Header {} inválido vindo do coletor {}: '{}'. Usando a hora de agora", HEADER_MOMENTO, dispositivo, texto)
             return null
         }
 
         // Relógio do coletor adiantado: não deixa uma ação "do futuro" usar a sessão além do horário real
-        if (momento.isAfter(agora.plus(SessaoOperadorService.TOLERANCIA))) {
+        if (org.example.util.HoraColetor.noFuturo(momento, agora)) {
             log.warn("Header {} no futuro vindo do coletor {} ({}): usando a hora de agora", HEADER_MOMENTO, dispositivo, texto)
             return null
         }

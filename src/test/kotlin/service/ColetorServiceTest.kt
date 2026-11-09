@@ -121,7 +121,8 @@ class ColetorServiceTest {
     fun `diagnostico vai junto na gravacao de uma por minuto e nunca grava sozinho`() {
         val hora = java.time.OffsetDateTime.ofInstant(agora, zona)
         service.registrarContato("coletor-01", "10.0.0.5", "1.7.3", 116, "Ana", DiagnosticoColetor(filaInformada = true, filaPendentes = 3, relogioColetor = hora))
-        repeat(10) { service.registrarContato("coletor-01", "10.0.0.5", "1.7.3", 116, "Ana", DiagnosticoColetor(filaInformada = true, filaPendentes = it)) }
+        // A fila muda, mas continua com pendentes: não grava (só zerar ou o relógio mudar de estado grava na hora)
+        repeat(10) { service.registrarContato("coletor-01", "10.0.0.5", "1.7.3", 116, "Ana", DiagnosticoColetor(filaInformada = true, filaPendentes = it + 1)) }
         verify(exactly = 1) { repo.save(any()) }
         assertThat(banco.getValue("coletor-01").filaPendentes).isEqualTo(3)
         assertThat(banco.getValue("coletor-01").desvioRelogioSegundos).isZero()
@@ -132,6 +133,32 @@ class ColetorServiceTest {
         assertThat(banco.getValue("coletor-01").filaPendentes).isZero()
         assertThat(banco.getValue("coletor-01").desvioRelogioSegundos).isEqualTo(-150)
         assertThat(service.listar().first { it.nome == "coletor-01" }.desvioLegivel).isEqualTo("atrasado 2 min")
+    }
+
+    @Test
+    fun `fila que zera ou relogio que fica errado gravam na hora mesmo dentro do minuto`() {
+        val hora = { segundos: Long -> java.time.OffsetDateTime.ofInstant(agora.plusSeconds(segundos), zona) }
+        // Volta de horas offline: o primeiro lote grava a fila com pendentes
+        service.registrarContato("coletor-01", "10.0.0.5", "2.0.2", 123, "Ana",
+            DiagnosticoColetor(filaInformada = true, filaPendentes = 3000, relogioColetor = hora(0)))
+        // Lotes do mesmo minuto com a fila diminuindo: não gravam
+        service.registrarContato("coletor-01", "10.0.0.5", "2.0.2", 123, "Ana",
+            DiagnosticoColetor(filaInformada = true, filaPendentes = 1500, relogioColetor = hora(0)))
+        verify(exactly = 1) { repo.save(any()) }
+
+        // A fila zera: grava na hora (antes ficava "fila parada" até o próximo contato)
+        service.registrarContato("coletor-01", "10.0.0.5", "2.0.2", 123, "Ana",
+            DiagnosticoColetor(filaInformada = true, filaPendentes = 0, relogioColetor = hora(0)))
+        verify(exactly = 2) { repo.save(any()) }
+        assertThat(banco.getValue("coletor-01").filaPendentes).isZero()
+
+        // O relógio passa a ficar errado (4 min adiantado): grava na hora; continuar errado não grava de novo
+        service.registrarContato("coletor-01", "10.0.0.5", "2.0.2", 123, "Ana",
+            DiagnosticoColetor(filaInformada = true, filaPendentes = 0, relogioColetor = hora(240)))
+        service.registrarContato("coletor-01", "10.0.0.5", "2.0.2", 123, "Ana",
+            DiagnosticoColetor(filaInformada = true, filaPendentes = 0, relogioColetor = hora(250)))
+        verify(exactly = 3) { repo.save(any()) }
+        assertThat(service.listar().first { it.nome == "coletor-01" }.relogioErrado).isTrue()
     }
 
     @Test
