@@ -23,9 +23,10 @@ fun main(args: Array<String>) {
 }
 
 /**
- * Restauração do backup cifrado do certificado, sem subir o servidor:
+ * Restauração de um backup cifrado, sem subir o servidor:
  *   java -jar rfid-server.jar --decifrar-backup rfid-certificado-AAAA-MM-DD_HHMMSS.zip.cifrado
- * A senha vem de RFID_BACKUP_SENHA ou é pedida no terminal. Grava o .zip ao lado (extraia-o na pasta data).
+ *   java -jar rfid-server.jar --decifrar-backup rfid-AAAAMMDD-HHMMSS.dump.cifrado   (cópia do banco fora do computador)
+ * A senha vem de RFID_BACKUP_SENHA ou é pedida no terminal. Grava ao lado o .zip (extraia-o na pasta data) ou o .dump.
  */
 private fun decifrarBackup(argumentos: List<String>): Int {
     val origem = argumentos.firstOrNull()?.let { java.nio.file.Path.of(it) }
@@ -39,10 +40,16 @@ private fun decifrarBackup(argumentos: List<String>): Int {
         System.err.println("Informe a senha do backup em RFID_BACKUP_SENHA ou rode num terminal para digitá-la")
         return 2
     }
-    val destino = origem.resolveSibling(origem.fileName.toString().removeSuffix(".cifrado").let { if (it.endsWith(".zip")) it else "$it.zip" })
+    // .zip.cifrado (certificado) vira .zip; .dump.cifrado (cópia do banco fora do computador, 1.5.1) vira .dump
+    val nome = origem.fileName.toString().removeSuffix(".cifrado")
+    val destino = origem.resolveSibling(if (nome.endsWith(".zip") || nome.endsWith(".dump")) nome else "$nome.zip")
     return try {
-        java.nio.file.Files.write(destino, org.example.util.CifraBackup.decifrar(java.nio.file.Files.readAllBytes(origem), senha))
-        println("Backup decifrado em $destino. Pare o servidor, extraia o .zip na pasta data e suba de novo.")
+        org.example.util.CifraBackup.decifrarArquivo(origem, destino, senha)
+        if (nome.endsWith(".dump")) {
+            println("Backup do banco decifrado em $destino. Para restaurar, copie o arquivo para docker\\backups\\last e siga o README (Restaurar o banco).")
+        } else {
+            println("Backup decifrado em $destino. Pare o servidor, extraia o .zip na pasta data e suba de novo.")
+        }
         0
     } catch (e: IllegalArgumentException) {
         System.err.println("Não foi possível decifrar: ${e.message}")

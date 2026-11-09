@@ -9,6 +9,21 @@ server:
       timeout: ${RFID_SESSAO_WEB_TIMEOUT:30m}
 
 spring:
+  # Servidor de email dos avisos (1.5.1, rfid.alertas): vazio = avisos só no log e na tela Status. Ex. Microsoft 365:
+  # host smtp.office365.com, porta 587, usuário = o email que envia (com SMTP autenticado liberado para ele)
+  mail:
+    host: ${RFID_SMTP_HOST:}
+    port: ${RFID_SMTP_PORTA:587}
+    username: ${RFID_SMTP_USUARIO:}
+    password: ${RFID_SMTP_SENHA:}
+    properties:
+      mail.smtp.auth: ${RFID_SMTP_AUTENTICAR:true}
+      mail.smtp.starttls.enable: ${RFID_SMTP_STARTTLS:true}
+      mail.smtp.starttls.required: ${RFID_SMTP_STARTTLS:true}
+      # Prazos: o SMTP fora do ar não pode prender a linha de envio dos avisos
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 15000
+      mail.smtp.writetimeout: 15000
   datasource:
     # PostgreSQL no Docker (docker/docker-compose.yml). Porta 5433, e não a padrão 5432, para não disputar com
     # outro PostgreSQL da máquina; o contêiner só aceita conexão da própria máquina.
@@ -90,6 +105,27 @@ rfid:
     # (computador desligado no meio do backup) passa a aparecer como incompleto, e não "em dia". {arquivo} = nome do
     # dump na pasta last. Cada dump é conferido uma vez. Vazio = confere só o tamanho, como antes.
     conferir-dump: ${RFID_BANCO_CONFERIR_DUMP:docker exec rfid-backup pg_restore -f /dev/null /backups/last/{arquivo}}
+    # Cópia do banco fora do computador (1.5.1): de hora em hora, o último dump inteiro vai CIFRADO (com rfid.backup.senha)
+    # para esta pasta, por exemplo a do OneDrive da empresa: ${OneDriveCommercial}/Backups RFID/banco. Sem a senha não
+    # copia (o banco não vai aberto para a nuvem). Guarda as "copia-externa-manter" mais recentes e avisa quando passar
+    # de "copia-externa-atrasada-horas" sem cópia nova. Vazio = desligada.
+    copia-externa: ${RFID_BANCO_COPIA_EXTERNA:}
+    copia-externa-manter: ${RFID_BANCO_COPIA_MANTER:14}
+    copia-externa-atrasada-horas: ${RFID_BANCO_COPIA_ATRASADA_HORAS:24}
+
+  # Avisos por email (1.5.1): backup do banco atrasado ou incompleto, cópia fora do computador falhando e servidor que
+  # ficou fora do ar (avisado quando volta). Precisa do spring.mail acima. Destinatários separados por vírgula.
+  alertas:
+    email-para: ${RFID_ALERTAS_EMAIL:}
+    # Remetente: vazio = o usuário do SMTP
+    email-de: ${RFID_ALERTAS_DE:}
+    # O mesmo problema volta a avisar no máximo a cada tantas horas enquanto continuar
+    repetir-horas: ${RFID_ALERTAS_REPETIR_HORAS:24}
+
+  # Fora do ar: a hora é gravada neste arquivo a cada 5 min; ao subir, um buraco maior que "minutos-fora" vira aviso
+  monitor:
+    arquivo-no-ar: ${RFID_ARQUIVO_NO_AR:./data/servidor-no-ar.txt}
+    minutos-fora: ${RFID_MINUTOS_FORA:30}
 
   dispositivos:
     # Chaves dos coletores Android que podem usar /api/android/**, no formato nome:chave
@@ -239,3 +275,8 @@ management:
     health:
       show-details: never
       show-components: never
+  # O health não confere o servidor de email (1.5.1): sem SMTP configurado, ou com ele fora do ar, o servidor RFID ficaria
+  # DOWN sem estar com problema. A falha de envio dos avisos aparece na tela Status
+  health:
+    mail:
+      enabled: false

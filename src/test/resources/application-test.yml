@@ -21,6 +21,9 @@ rfid:
     backup-antes-migracao: ""
     # Sem o contêiner de backup: a conferência do dump tem testes próprios (BackupBancoServiceTest)
     conferir-dump: ""
+  # Sem gravar o arquivo de "no ar" na pasta do projeto (o MonitorServidorServiceTest usa uma pasta temporária)
+  monitor:
+    arquivo-no-ar: ""
   dispositivos:
     # coletor-leitura existe para testar um coletor válido SEM permissão de cadastro
     chaves: coletor-teste:chave-de-teste-0123456789,coletor-leitura:chave-de-leitura-0123456789

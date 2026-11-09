@@ -28,6 +28,14 @@
     <span>Backup do banco com problema: <span th:text="${info.backupBanco}"></span>. Confira se o Docker Desktop está
       aberto e o contêiner <span class="mono">rfid-backup</span> no ar. Backup na hora: <span class="mono">docker exec rfid-backup /backup.sh</span></span>
   </div>
+  <div class="alert alert-erro" th:if="${info.copiaExternaComProblema}" sec:authorize="hasRole('ADMIN')" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+    <span>Cópia do banco fora do computador com problema: <span th:text="${info.copiaExterna}"></span>.</span>
+  </div>
+  <div class="alert alert-aviso" th:if="${info.avisosEmailComProblema}" sec:authorize="hasRole('ADMIN')" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+    <span>Avisos por email: <span th:text="${info.avisosEmail}"></span>. Use "Enviar email de teste" para conferir.</span>
+  </div>
 
   <div class="card">
     <div class="card-header">
@@ -43,15 +51,24 @@
         <div><dt>Versão</dt><dd th:text="${info.versao}"></dd></div>
         <div><dt>Banco de dados</dt><dd th:text="${info.banco}"></dd></div>
         <div><dt>Último backup do banco</dt><dd th:text="${info.backupBanco}"></dd></div>
+        <div><dt>Cópia do banco fora do computador</dt><dd th:text="${info.copiaExterna}"></dd></div>
+        <div><dt>Avisos por email</dt><dd th:text="${info.avisosEmail}"></dd></div>
         <div><dt>Último backup do certificado</dt><dd th:text="${info.ultimoBackup}"></dd></div>
         <div><dt>Certificado HTTPS (SHA-256)</dt><dd class="mono" style="word-break:break-all" th:text="${info.certificadoHttps}"></dd></div>
       </dl>
     </div>
-    <form class="card-footer" th:action="@{/admin/backup}" method="post" sec:authorize="hasRole('ADMIN')">
-      <button type="submit" class="btn btn-secondary">
-        <svg class="ic"><use href="/img/icones.svg#servidor"/></svg>Fazer backup do certificado agora
-      </button>
-    </form>
+    <div class="card-footer" sec:authorize="hasRole('ADMIN')">
+      <form th:action="@{/status/email-teste}" method="post" th:if="${info.avisosEmailLigados}">
+        <button type="submit" class="btn btn-secondary">
+          <svg class="ic"><use href="/img/icones.svg#email"/></svg>Enviar email de teste
+        </button>
+      </form>
+      <form th:action="@{/admin/backup}" method="post">
+        <button type="submit" class="btn btn-secondary">
+          <svg class="ic"><use href="/img/icones.svg#servidor"/></svg>Fazer backup do certificado agora
+        </button>
+      </form>
+    </div>
   </div>
 
 </section>

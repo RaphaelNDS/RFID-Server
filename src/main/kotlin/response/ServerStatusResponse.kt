@@ -15,5 +15,12 @@ data class ServerStatusResponse(
     /** Último backup do banco (contêiner rfid-backup), ex.: "04/11/2026 14:39 (há 2h)" */
     val backupBanco: String = "",
     /** Backup do banco atrasado ou última tentativa vazia: a tela de status mostra um alerta */
-    val backupBancoComProblema: Boolean = false
+    val backupBancoComProblema: Boolean = false,
+    /** Cópia cifrada do banco fora do computador (1.5.1), ex.: "09/11/2026 12:00 (há 1h), em C:\...\OneDrive\..." */
+    val copiaExterna: String = "",
+    val copiaExternaComProblema: Boolean = false,
+    /** Avisos por email (1.5.1): ligados para quem, ou por que estão desligados */
+    val avisosEmail: String = "",
+    val avisosEmailLigados: Boolean = false,
+    val avisosEmailComProblema: Boolean = false
 )
