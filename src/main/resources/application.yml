@@ -86,6 +86,10 @@ rfid:
     # de "backup-atrasado-horas" sem backup bom ou quando a última tentativa gerar um arquivo vazio.
     pasta-backups: ${RFID_BANCO_PASTA_BACKUPS:./docker/backups}
     backup-atrasado-horas: ${RFID_BANCO_BACKUP_ATRASADO_HORAS:12}
+    # Conferência do dump (1.4.6): o contêiner lê o arquivo inteiro com o pg_restore, sem gravar nada. Um dump cortado
+    # (computador desligado no meio do backup) passa a aparecer como incompleto, e não "em dia". {arquivo} = nome do
+    # dump na pasta last. Cada dump é conferido uma vez. Vazio = confere só o tamanho, como antes.
+    conferir-dump: ${RFID_BANCO_CONFERIR_DUMP:docker exec rfid-backup pg_restore -f /dev/null /backups/last/{arquivo}}
 
   dispositivos:
     # Chaves dos coletores Android que podem usar /api/android/**, no formato nome:chave

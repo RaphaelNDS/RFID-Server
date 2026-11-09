@@ -301,9 +301,11 @@ Os dois primeiros apontam problema do servidor ou do coletor, não do operador. 
 sessão trazem o mesmo `motivo`.
 
 Fim da sessão pelo "Sair" ou por outro login no mesmo coletor: a hora informada pelo coletor (`X-Momento` ou
-`lidoEm`) tem uma margem de **2 min** depois do fim. Assim, com o relógio do coletor adiantado, as leituras do último
-minuto não são recusadas como `ENCERRADA`. Sem hora do coletor, vale a hora do servidor, sem margem. A sessão
-encerrada pelo servidor (desativação, senha temporária ou senha trocada) não tem margem.
+`lidoEm`) tem uma margem de **5 min** depois do fim. É a mesma diferença de relógio que o servidor aceita: acima de
+5 min no futuro, a hora do coletor vira "agora". Assim, com o relógio do coletor adiantado, as leituras do último
+minuto não são recusadas como `ENCERRADA`. Na 1.4.4 a margem era de 2 min, e com o relógio adiantado entre 2 e 5 min
+essas leituras eram perdidas. Sem hora do coletor, vale a hora do servidor, sem margem. A sessão encerrada pelo
+servidor (desativação, senha temporária ou senha trocada) não tem margem.
 
 > As rotas antigas dos coletores (`/api/tags/...` e `/api/rfid/...`) foram **removidas**: respondem
 > **410** explicando que o app precisa ser atualizado, e o servidor registra no log (uma vez por hora por
@@ -380,7 +382,11 @@ encerrada pelo servidor (desativação, senha temporária ou senha trocada) não
   14 diários, 4 semanais e 6 mensais. Backup na hora: `docker exec rfid-backup /backup.sh`. Ao religar o
   computador, ele espera o banco aceitar conexões (até 5 min) antes do backup ao subir. A tela **Status** mostra o
   último backup do banco (lido de `docker\backups\last`) e um alerta quando passa de 12 h sem backup ou quando a
-  última tentativa gerou um arquivo vazio; o mesmo aviso vai para o log a cada 6 h.
+  última tentativa gerou um arquivo vazio ou incompleto; o mesmo aviso vai para o log a cada 6 h.
+  Desde a 1.4.6, cada dump é lido inteiro uma vez (`pg_restore -f /dev/null` no contêiner, sem gravar nada;
+  `RFID_BANCO_CONFERIR_DUMP`, vazio = só o tamanho). Um dump cortado, por exemplo com o computador desligado no meio
+  do backup, aparece como incompleto, e passa a valer o anterior inteiro. Sem o Docker, a tela diz "integridade não
+  conferida". O `pg_restore --list` não serve para isso: ele aceita um dump que perdeu só o final.
 - **Backup antes de migrar:** quando uma versão nova do servidor traz migração, o servidor roda
   `docker exec rfid-backup /backup.sh` antes de aplicá-la (`RFID_BACKUP_ANTES_MIGRACAO`). Se esse backup falhar,
   a migração não é aplicada e o servidor não sobe: o log diz o motivo (normalmente o Docker Desktop fechado).

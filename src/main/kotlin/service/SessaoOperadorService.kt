@@ -448,10 +448,12 @@ class SessaoOperadorService(
 
         /**
          * Margem depois do "Sair" ou de outro login no mesmo coletor para as ações com a hora do coletor adiantada
-         * (as do último minuto antes do fim). Menor que a [TOLERANCIA] da expiração: o "Sair" é uma ação de
-         * segurança do operador, e o app avisa (erro RELOGIO) quando o relógio passa de 2 min de diferença.
+         * (as do último minuto antes do fim). Igual à [TOLERANCIA]: a hora do coletor só é aceita até 5 min no
+         * futuro (acima disso vira "agora"), e na 1.4.4 a margem era de 2 min. Com o relógio adiantado entre 2 e 5 min,
+         * as leituras do último minuto voltavam RECUSADA/ENCERRADA, e o app não reenvia o que foi recusado: eram
+         * perdidas. Não abre brecha: ver [limiteDoEncerramento].
          */
-        val MARGEM_FIM_PELO_COLETOR: Duration = Duration.ofMinutes(2)
+        val MARGEM_FIM_PELO_COLETOR: Duration = TOLERANCIA
 
         /** Quanto tempo a sessão morta continua no banco antes da limpeza (para conferir algum problema recente). */
         val GUARDAR_SESSOES_MORTAS: Duration = Duration.ofDays(30)
