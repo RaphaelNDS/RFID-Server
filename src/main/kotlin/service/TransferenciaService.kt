@@ -51,6 +51,18 @@ data class BemTransferivel(
 /** Os códigos digitados que viraram bens, e os que não acharam (ou acharam mais de um bem). */
 data class BensLocalizados(val bens: List<BemTransferivel>, val naoEncontrados: List<String>, val ambiguos: List<String>)
 
+/**
+ * Resposta da transferência pelo coletor: o local e a situação atualizados, o número da guia (null quando o bem já
+ * estava no local: nada mudou) e [jaEstava].
+ */
+data class ResultadoTransferenciaColetor(
+    val local: String,
+    val situacao: String,
+    val situacaoRotulo: String,
+    val transferencia: Long?,
+    val jaEstava: Boolean
+)
+
 data class TransferenciaResumo(val transferencia: TransferenciaEntity, val quantidade: Long)
 
 data class TransferenciaDetalhe(val transferencia: TransferenciaEntity, val itens: List<TransferenciaItemEntity>)
@@ -176,6 +188,36 @@ class TransferenciaService(
         auditoria.registrar(AreaAuditoria.PATRIMONIO, "Transferência de bens", "Guia nº ${guia.id}",
             "${bens.size} bem(ns) para $destino" + (inventario?.let { " (divergências do inventário)" } ?: ""))
         return guia
+    }
+
+    /**
+     * Transferência pelo coletor (1.7.0): o operador, no inventário, leva o bem lido para o local do inventário. Só o
+     * local muda (o responsável fica). Mesma guia, histórico e auditoria da web; quem registra é o operador.
+     *
+     * Idempotente: o app reenvia quando a rede cai, e o bem que já está no local responde com [ResultadoTransferenciaColetor.jaEstava]
+     * (sem guia nova), em vez de erro. Etiqueta sem cadastro: [NoSuchElementException] (404). Bem baixado:
+     * [IllegalStateException] (409). Local desconhecido ou desativado: [IllegalArgumentException] (400).
+     */
+    @Transactional
+    fun transferirPeloColetor(epc: String, nomeLocal: String?, observacao: String?, dispositivo: String): ResultadoTransferenciaColetor {
+        val etiqueta = normalizarEpc(epc)
+        val tag = tags.findByTagReal(etiqueta).orElseThrow { NoSuchElementException("Etiqueta $etiqueta não cadastrada") }
+        val limpo = limparNomeLocal(nomeLocal.orEmpty())
+        require(limpo.isNotEmpty()) { "Informe o local" }
+        val local = locais.findFirstByNomeIgnoreCaseOrderByIdAsc(limpo).orElse(null)
+            ?: throw IllegalArgumentException("Local $limpo não encontrado. Ele passa a existir quando um inventário é aberto nele ou quando é cadastrado na web")
+        require(local.ativo) { "O local ${local.nome} está desativado" }
+        if (tag.baixado) throw IllegalStateException("Bem baixado não pode ser transferido (patrimônio ${tag.patrimonio.ifBlank { tag.tagReal }})")
+
+        if (tag.localId == local.id) {
+            log.info("Transferência pelo coletor {}: o bem {} já estava em '{}' (reenvio ou nada a mudar)", dispositivo, tag.tagReal, local.nome)
+            return ResultadoTransferenciaColetor(local.nome, tag.situacao.name, tag.situacao.rotulo, null, jaEstava = true)
+        }
+        val obs = observacao?.trim()?.takeIf { it.isNotEmpty() }
+        val guia = transferir(PedidoTransferencia(listOf(tag.tagReal), local.id, null,
+            motivo = listOfNotNull("Pelo coletor $dispositivo", obs).joinToString(": ")))
+        val atual = tags.findById(tag.id).orElseThrow()
+        return ResultadoTransferenciaColetor(local.nome, atual.situacao.name, atual.situacao.rotulo, guia.id, jaEstava = false)
     }
 
     @Transactional(readOnly = true)
