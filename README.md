@@ -243,6 +243,9 @@ origem "Transferência nº X".
 - Recusa a transferência inteira (nada muda) quando um código não existe, quando o bem está baixado, quando o bem já
   está no destino, quando o local ou o responsável está desativado ou quando a data está no futuro.
 - Bem **extraviado** que muda de local volta para "Em uso": foi achado.
+- **Pelo coletor (1.7.0):** no inventário, o operador com RFID · Editar toca num bem lido que é de outro local e
+  escolhe "Transferir para este local". Gera a mesma guia (registrada pelo operador, com o motivo "Pelo coletor
+  ..."), o mesmo histórico e a mesma auditoria. Só o local muda; o responsável fica.
 
 ### Divergências do inventário (1.6.1)
 
@@ -311,7 +314,8 @@ Usada pelo app Android. Tudo em `/api/android/**`, sempre em HTTPS, JSON, sem se
 2. **Operador** — `POST /api/android/login` com email e senha de um usuário do sistema devolve um token de
    sessão (12 h). As demais chamadas enviam `X-Sessao-Operador: <token>`. A sessão vale só no coletor em
    que foi criada, e o operador usa as **permissões do próprio usuário** (Leituras para ler e inventariar,
-   RFID · Criar para cadastrar).
+   RFID · Criar para cadastrar, RFID · Editar para transferir). A resposta do login diz o que o operador pode
+   fazer: `podeLer`, `podeCadastrar` e, desde a 1.7.0, `podeTransferir`.
 
 ### Trabalho offline
 
@@ -334,6 +338,7 @@ O app funciona sem rede durante a sessão e envia depois o que ficou na fila. Ca
 | `POST /api/android/esqueci-senha` | Pede uma senha nova ao ADMIN (**202**, mesma resposta exista ou não o email) | chave |
 | `GET /api/android/tags/{epc}` | Ficha do bem: o cadastro e, desde a 1.5.0, `ultimoLocal` e `ultimoInventarioEm` (último inventário finalizado em que foi encontrado), `ultimaLeituraEm` e `ultimaLeituraPor` (opcionais, podem vir `null`); desde a 1.6.0, também `situacao` (código), `situacaoRotulo`, `unidade`, `local` e `responsavel` (opcionais) | operador · Leituras |
 | `GET /api/android/tags/patrimonio/{patrimonio}` | EPC de um patrimônio (localizar equipamento) | operador · Leituras |
+| `POST /api/android/tags/{epc}/transferencia` | Transfere o bem para um local (1.7.0): `{"local","observacao"}`. Só o local muda. Responde `{"local","situacao","situacaoRotulo","transferencia","jaEstava"}`; o bem que já estava no local responde 200 com `jaEstava: true` e sem guia (reenvio). 404 etiqueta sem cadastro, 409 bem baixado, 400 local desconhecido ou desativado | operador · RFID Editar |
 | `POST /api/android/leitura` | Registra a leitura de uma etiqueta | operador · Leituras |
 | `POST /api/android/naocadastrada` | Envia etiqueta desconhecida para Pendentes | operador · Leituras |
 | `POST /api/android/leituras/lote` | Até 500 leituras de um operador numa requisição: classifica e registra cada uma e devolve o resultado por item (`CADASTRADA` com os dados, `NAO_CADASTRADA`, `RECUSADA` ou `ERRO`). Desde a 1.6.2, os dados trazem também `situacao` e `situacaoRotulo`, com os mesmos nomes da ficha (o app avisa quando o bem lido está baixado ou extraviado). A hora de cada leitura é conferida contra a sessão; reenvio da mesma tag com a mesma hora não duplica | operador · Leituras |
