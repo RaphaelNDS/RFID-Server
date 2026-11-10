@@ -14,6 +14,7 @@ import org.example.request.TipoEquipamentoRequest
 import org.example.util.LeitorPlanilha
 import org.example.util.Planilha
 import org.example.util.normalizarEpc
+import org.example.util.FormatoBr
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
@@ -70,7 +71,11 @@ class ImportacaoEtiquetasService(
         LOCAL("LOCAL"),
         RESPONSAVEL("RESPONSAVEL"),
         MATRICULA("MATRICULA", "MATRICULA_DO_RESPONSAVEL"),
-        SITUACAO("SITUACAO")
+        SITUACAO("SITUACAO"),
+        // 1.8.0: valor e aquisição
+        VALOR("VALOR_DE_AQUISICAO", "VALOR_AQUISICAO", "VALOR", "VALOR_R"),
+        DATA_AQUISICAO("DATA_DE_AQUISICAO", "DATA_AQUISICAO", "AQUISICAO", "DATA_DA_COMPRA"),
+        NOTA_FISCAL("NOTA_FISCAL", "NF", "N_DA_NOTA_FISCAL", "NUMERO_DA_NOTA_FISCAL")
     }
 
     fun processar(nomeArquivo: String, conteudo: ByteArray, criarFaltantes: Boolean, podeAlterar: Boolean, gravar: Boolean): ResultadoImportacao {
@@ -186,6 +191,19 @@ class ImportacaoEtiquetasService(
             }
         }
 
+        // Valor e aquisição (1.8.0): conferidos já na simulação; gravados no formato do cadastro, para a comparação
+        // com o que já existe não acusar mudança só porque a planilha escreveu "1234,5" e o cadastro tem "1.234,50"
+        valor(Coluna.VALOR).takeIf { it.isNotEmpty() }?.let { texto ->
+            val v = runCatching { FormatoBr.lerValor(texto) }.getOrElse { throw IllegalArgumentException("valor de aquisição inválido: $texto") }
+            pedido.valorAquisicao = FormatoBr.numero(v)
+        }
+        valor(Coluna.DATA_AQUISICAO).takeIf { it.isNotEmpty() }?.let { texto ->
+            val d = runCatching { FormatoBr.lerData(texto) }.getOrElse { throw IllegalArgumentException("data de aquisição inválida: $texto (use dd/mm/aaaa)") }
+            if (d != null && d.isAfter(java.time.LocalDate.now())) throw IllegalArgumentException("a data de aquisição ${FormatoBr.data(d)} está no futuro")
+            pedido.dataAquisicao = d?.toString()
+        }
+        valor(Coluna.NOTA_FISCAL).takeIf { it.isNotEmpty() }?.let { pedido.notaFiscal = it }
+
         val patrimonio = pedido.patrimonio
         val acao = when {
             existente == null -> AcaoLinha.NOVA
@@ -216,7 +234,9 @@ class ImportacaoEtiquetasService(
     private fun pedidoDe(t: TagEntity) = CadastroRequest(
         tag = t.tagReal, codigoInterno = t.codigoInterno, patrimonio = t.patrimonio, numeroSerie = t.numeroSerie,
         tipoEquipamentoId = t.tipoEquipamentoId, marcaId = t.marcaId, modeloId = t.modeloId,
-        localId = t.localId, responsavelId = t.responsavelId, situacao = if (t.baixado) null else t.situacao.name
+        localId = t.localId, responsavelId = t.responsavelId, situacao = if (t.baixado) null else t.situacao.name,
+        valorAquisicao = t.valorAquisicao?.let { FormatoBr.numero(it) }, dataAquisicao = t.dataAquisicao?.toString(),
+        notaFiscal = t.notaFiscal
     )
 
     private fun diferencas(antes: CadastroRequest, depois: CadastroRequest): List<String> = listOfNotNull(
@@ -228,7 +248,10 @@ class ImportacaoEtiquetasService(
         "modelo".takeIf { antes.modeloId != depois.modeloId },
         "local".takeIf { antes.localId != depois.localId },
         "responsável".takeIf { antes.responsavelId != depois.responsavelId },
-        "situação".takeIf { antes.situacao != depois.situacao }
+        "situação".takeIf { antes.situacao != depois.situacao },
+        "valor".takeIf { antes.valorAquisicao != depois.valorAquisicao },
+        "data de aquisição".takeIf { antes.dataAquisicao != depois.dataAquisicao },
+        "nota fiscal".takeIf { antes.notaFiscal != depois.notaFiscal }
     )
 
     // Catálogo pelo nome. Na simulação, o que seria criado volta -1 (não existe ainda) e entra em [criados]
@@ -266,9 +289,9 @@ class ImportacaoEtiquetasService(
     fun modelo(): Planilha = Planilha(
         nome = "Etiquetas",
         colunas = listOf("Etiqueta (EPC)", "Código", "Patrimônio", "Tipo", "Marca", "Modelo", "Nº série",
-            "Unidade", "Local", "Responsável", "Matrícula", "Situação"),
+            "Unidade", "Local", "Responsável", "Matrícula", "Situação", "Valor de aquisição", "Data de aquisição", "Nota fiscal"),
         linhas = listOf(listOf("E2801170000002001234ABCD", "TI-0001", "000123", "Notebook", "Dell", "Latitude 5440", "ABC123",
-            "Matriz", "Sala 101", "Maria Souza", "1234", "Em uso"))
+            "Matriz", "Sala 101", "Maria Souza", "1234", "Em uso", "4.599,90", "15/01/2026", "NF 12345"))
     )
 
     companion object {

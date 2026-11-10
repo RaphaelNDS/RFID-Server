@@ -57,7 +57,18 @@ class TagEntity(
     @Column(length = 500)
     var baixaObservacao: String? = null,
 
-    var baixaPor: String? = null
+    var baixaPor: String? = null,
+
+    // Valor e depreciação (1.8.0, V25). A vida útil e o residual vêm do tipo de equipamento
+
+    @Column(name = "valor_aquisicao", precision = 14, scale = 2)
+    var valorAquisicao: java.math.BigDecimal? = null,
+
+    @Column(name = "data_aquisicao")
+    var dataAquisicao: java.time.LocalDate? = null,
+
+    @Column(name = "nota_fiscal", length = 60)
+    var notaFiscal: String? = null
 ) {
     val baixado: Boolean get() = situacao == SituacaoBem.BAIXADO
 }

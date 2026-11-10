@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Valor patrimonial · Sistema RFID</title>
+
+<!-- 1.8.0: totais de valor e depreciação, o PDF dos bens com valor contábil e a regra de depreciação de cada tipo -->
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Valor patrimonial</h1>
+      <p class="subtitulo" th:text="'Posição em ' + ${fmt.data(relatorio.referencia)} + ' · ' + ${descricaoFiltro}">Posição</p>
+    </div>
+    <div class="page-header-acoes">
+      <a class="btn btn-primary" target="_blank" rel="noopener"
+         th:href="@{/admin/valores/pdf(unidade=${filtro.unidadeId}, local=${filtro.localId}, tipo=${filtro.tipoId}, baixados=${filtro.incluirBaixados ? true : null})}">
+        <svg class="ic"><use href="/img/icones.svg#download"/></svg>Bens com valor contábil (PDF)</a>
+    </div>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <form method="get" class="toolbar card" style="margin-bottom:16px">
+    <div class="field" style="flex:0 1 200px">
+      <label for="f-unidade">Unidade</label>
+      <select id="f-unidade" name="unidade">
+        <option value="">Todas</option>
+        <option th:each="u : ${unidades}" th:value="${u.id}" th:text="${u.nome}" th:selected="${filtro.unidadeId == u.id}"></option>
+      </select>
+    </div>
+    <div class="field" style="flex:0 1 240px">
+      <label for="f-local">Local</label>
+      <select id="f-local" name="local">
+        <option value="">Todos</option>
+        <option th:each="l : ${opcoesLocal}" th:value="${l.id}" th:text="${l.descricao}" th:selected="${filtro.localId == l.id}"></option>
+      </select>
+    </div>
+    <div class="field" style="flex:0 1 200px">
+      <label for="f-tipo">Tipo</label>
+      <select id="f-tipo" name="tipo">
+        <option value="">Todos</option>
+        <option th:each="t : ${tipos}" th:value="${t.id}" th:text="${t.nome}" th:selected="${filtro.tipoId == t.id}"></option>
+      </select>
+    </div>
+    <label class="chip" style="align-self:flex-end"><input type="checkbox" name="baixados" value="true" th:checked="${filtro.incluirBaixados}"><span>Com os baixados</span></label>
+    <button type="submit" class="btn btn-secondary" style="align-self:flex-end">Filtrar</button>
+  </form>
+
+  <div class="grid grid-stats">
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#etiqueta"/></svg>Bens</div>
+      <div class="stat-valor" th:text="${relatorio.total.bens}">0</div>
+      <div class="stat-dica" th:text="${relatorio.total.semValor} + ' sem valor de aquisição'"></div>
+    </div>
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#pacote"/></svg>Valor de aquisição</div>
+      <div class="stat-valor" th:text="${fmt.reais(relatorio.total.valorAquisicao)}">0</div>
+      <div class="stat-dica">Soma dos bens com valor</div>
+    </div>
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#grafico"/></svg>Depreciação acumulada</div>
+      <div class="stat-valor" th:text="${fmt.reais(relatorio.total.depreciacaoAcumulada)}">0</div>
+      <div class="stat-dica">Linear, pela regra de cada tipo</div>
+    </div>
+    <div class="stat">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#ok"/></svg>Valor contábil</div>
+      <div class="stat-valor positivo" th:text="${fmt.reais(relatorio.total.valorContabil)}">0</div>
+      <div class="stat-dica">Aquisição menos depreciação</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin:16px 0">
+    <div class="card-header"><h2>Por tipo de equipamento</h2></div>
+    <div class="table-wrap">
+      <table class="table table-cartoes" th:unless="${#lists.isEmpty(relatorio.porTipo)}">
+        <thead><tr><th>Tipo</th><th>Bens</th><th>Sem valor</th><th>Aquisição</th><th>Depreciação</th><th>Valor contábil</th></tr></thead>
+        <tbody>
+        <tr th:each="t : ${relatorio.porTipo}">
+          <td class="principal cartao-titulo" th:text="${t.nome}"></td>
+          <td data-rotulo="Bens" th:text="${t.bens}"></td>
+          <td data-rotulo="Sem valor" th:text="${t.semValor}"></td>
+          <td data-rotulo="Aquisição" class="nowrap" th:text="${fmt.reais(t.valorAquisicao)}"></td>
+          <td data-rotulo="Depreciação" class="nowrap" th:text="${fmt.reais(t.depreciacaoAcumulada)}"></td>
+          <td data-rotulo="Valor contábil" class="nowrap" th:text="${fmt.reais(t.valorContabil)}"></td>
+        </tr>
+        </tbody>
+      </table>
+      <div class="vazio" th:if="${#lists.isEmpty(relatorio.porTipo)}" style="padding:24px">Nenhum bem neste filtro.</div>
+    </div>
+  </div>
+
+  <!-- A regra de cada tipo: vida útil (meses) e residual (%). Sem vida útil, os bens do tipo não depreciam -->
+  <div class="card" id="regras">
+    <div class="card-header empilhar">
+      <h2>Regra de depreciação por tipo</h2>
+      <span class="muted">Depreciação linear (CPC 27): o valor menos o residual, dividido pela vida útil, a cada mês completo
+        desde a data de aquisição. Sem vida útil, o bem fica pelo valor de aquisição.</span>
+    </div>
+    <div class="table-wrap">
+      <table class="table table-cartoes" th:unless="${#lists.isEmpty(tiposRegra)}">
+        <thead><tr><th>Tipo</th><th>Bens</th><th>Vida útil</th><th>Residual</th><th>Valor contábil hoje</th><th class="acoes"><span class="sr-only">Ações</span></th></tr></thead>
+        <tbody>
+        <tr th:each="r : ${tiposRegra}">
+          <td class="principal cartao-titulo" th:text="${r.tipo.nome}"></td>
+          <td data-rotulo="Bens" th:text="${r.bens} + (${r.bens > r.comValor} ? ' (' + (${r.bens} - ${r.comValor}) + ' sem valor)' : '')"></td>
+          <td data-rotulo="Vida útil" th:text="${r.tipo.vidaUtilMeses != null} ? ${r.tipo.vidaUtilMeses} + ' meses' : 'não deprecia'"></td>
+          <td data-rotulo="Residual" th:text="${r.tipo.vidaUtilMeses != null} ? ${r.tipo.valorResidualPct != null ? #numbers.formatDecimal(r.tipo.valorResidualPct, 1, 'POINT', 2, 'COMMA') : '0,00'} + '%' : '-'"></td>
+          <td data-rotulo="Valor contábil hoje" class="nowrap" th:text="${fmt.reais(r.valorContabil)}"></td>
+          <td class="acoes">
+            <details th:if="${@authService.temPermissao('CATALOGO','UPDATE')}">
+              <summary class="btn btn-ghost btn-sm">Editar</summary>
+              <form class="toolbar" style="border:0;padding:10px 0 0;justify-content:flex-end" th:action="@{/admin/valores/tipos/{id}(id=${r.tipo.id})}" method="post">
+                <div class="field"><label th:for="'vu-' + ${r.tipo.id}">Vida útil (meses)</label>
+                  <input th:id="'vu-' + ${r.tipo.id}" name="vidaUtil" type="number" min="1" max="1200" step="1" style="width:110px"
+                         th:value="${r.tipo.vidaUtilMeses}" placeholder="Ex.: 60"></div>
+                <div class="field"><label th:for="'vr-' + ${r.tipo.id}">Residual (%)</label>
+                  <input th:id="'vr-' + ${r.tipo.id}" name="residual" inputmode="decimal" style="width:90px"
+                         th:value="${r.tipo.valorResidualPct != null ? #numbers.formatDecimal(r.tipo.valorResidualPct, 1, 'NONE', 2, 'COMMA') : ''}" placeholder="0"></div>
+                <button type="submit" class="btn btn-secondary btn-sm">Salvar</button>
+              </form>
+            </details>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+      <div class="vazio" th:if="${#lists.isEmpty(tiposRegra)}" style="padding:24px">
+        Nenhum tipo de equipamento. Cadastre os tipos no <a th:href="@{/admin/catalogo}">Catálogo</a>.
+      </div>
+    </div>
+  </div>
+
+  <p class="muted" style="font-size:13px;margin-top:12px">
+    Vida útil de referência (Receita Federal, IN 1.700/2017): computadores e periféricos 60 meses (5 anos), móveis e
+    utensílios 120 meses, máquinas e equipamentos 120 meses, veículos 60 meses. O valor e a data de aquisição de cada
+    bem ficam na edição da etiqueta ou na importação da planilha.
+  </p>
+
+</section>
+</html>

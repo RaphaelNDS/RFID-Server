@@ -48,7 +48,9 @@ class TelasLayoutTest : IntegracaoBase() {
             // 1.6.0: gestão de patrimônio
             "/admin/locais", "/admin/responsaveis", "/admin/tags-cadastradas/importar",
             // 1.6.1: transferências
-            "/admin/transferencias", "/admin/transferencias/nova"
+            "/admin/transferencias", "/admin/transferencias/nova",
+            // 1.8.0: valor patrimonial
+            "/admin/valores"
         ).forEach { url ->
             val resposta = mvc.perform(get(url).with(admin)).andReturn().response
             conferir(url, resposta)

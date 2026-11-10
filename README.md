@@ -92,6 +92,8 @@ administrador; depois disso essa tela não aparece mais.
 | Transferências (guias numeradas; busca por etiqueta ou patrimônio) e a guia para imprimir | `/admin/transferencias` · `/admin/transferencias/{id}` | RFID · Ver |
 | Nova transferência | `/admin/transferencias/nova` | RFID · Editar |
 | Ação sobre os bens que faltaram (no detalhe do inventário finalizado) | `/admin/inventarios/{id}/divergencias` | RFID · Editar |
+| Valor patrimonial (totais de aquisição, depreciação e valor contábil; filtros de unidade, local e tipo) | `/admin/valores` | RFID · Ver (mudar a regra de depreciação de um tipo exige Catálogo · Editar) |
+| PDFs (1.8.0): laudo do inventário · guia · termo · bens com valor contábil | `/admin/inventarios/{id}/laudo.pdf` · `/admin/transferencias/{id}/guia.pdf` · `/admin/responsaveis/{id}/termo.pdf` · `/admin/valores/pdf` | as mesmas da tela de onde saem (Leituras · Ver; RFID · Ver; Catálogo · Ver e RFID · Ver; RFID · Ver) |
 | Relatórios (gráficos; avisa quando chegam leituras novas; período de até 366 dias) | `/admin/dashboard` | Relatórios · Ver |
 | Usuários (+ pedidos de nova senha e senha temporária; editar perfil e permissões; desativar e reativar) | `/admin/usuarios` | somente ADMIN |
 | Coletores (último contato, IP, versão do app, operador, fila de envio e estado do aparelho de cada coletor) | `/admin/coletores` | somente ADMIN |
@@ -255,6 +257,34 @@ fazer: **transferir** (achados em outro lugar; a guia fica ligada ao inventário
 ação vale só para os bens que faltaram naquele inventário, e no histórico de cada bem a origem diz de qual inventário
 ela saiu. Os baixados e os transferidos para outro local saem da lista do que faltou; os extraviados continuam nela.
 Etiqueta lida sem cadastro ganha o botão **Cadastrar**, que abre o cadastro já com o local do inventário.
+
+### Valor e depreciação (1.8.0)
+
+O bem ganha **valor de aquisição**, **data de aquisição** e **nota fiscal** (opcionais), no cadastro, na edição
+e na importação da planilha (colunas `Valor de aquisição`, `Data de aquisição` e `Nota fiscal`; o valor aceita
+`4.599,90`, `4599,90` ou a célula numérica do Excel, e a data aceita `dd/mm/aaaa` ou a célula de data). A **regra de
+depreciação fica no tipo de equipamento** (tela Valor patrimonial): vida útil em meses e valor residual em %.
+
+- Depreciação **linear** (CPC 27): (valor − residual) ÷ vida útil por **mês completo** desde a data de aquisição,
+  até no máximo o residual. Bem baixado para de depreciar na data da baixa.
+- Sem vida útil no tipo, ou sem data de aquisição, o bem não deprecia (fica pelo valor de aquisição). Sem valor de
+  aquisição, ele entra na contagem, mas não nos totais.
+- A edição da etiqueta mostra o valor contábil de hoje. Valor, data e nota vão para o histórico; a mudança da regra
+  do tipo vai para a auditoria (Catálogo).
+- A tela **Valor patrimonial** soma por tipo e por local, com filtro de unidade, local, tipo e "com os baixados".
+
+### PDFs (1.8.0)
+
+Gerados pelo servidor (openhtmltopdf), abrem no navegador e trazem no rodapé quem gerou, quando e a versão:
+
+- **Laudo do inventário** (botão no detalhe do inventário): o resumo, os bens que faltaram com a justificativa do
+  coletor e o valor contábil (com o total), os achados em outro local, as assinaturas e, em anexo, as etiquetas lidas.
+  Inventário em andamento sai marcado como provisório.
+- **Bens com valor contábil** (tela Valor patrimonial, em paisagem): totais por tipo e por local e a lista dos bens,
+  com o mesmo filtro da tela.
+- **Guia de transferência** e **termo de responsabilidade**: as mesmas páginas de imprimir, em PDF.
+
+O laudo e o relatório de valores vão para a auditoria (Exportações), como as planilhas.
 
 ### Inventário: o que faltou
 
@@ -448,6 +478,7 @@ servidor (desativação, senha temporária ou senha trocada) não tem margem.
   | V21 | `db/migration/V21__diagnostico_coletor_e_motivo_fim_sessao.sql` | Diagnóstico do coletor (fila, última sincronização, espaço, Android, modelo, desvio do relógio) e por que a sessão do operador acabou (`encerrada_por`: margem de relógio só para "Sair" e outro login) |
   | V23 | `db/migration/V23__gestao_patrimonio.sql` | Gestão de patrimônio: unidades, locais com unidade e ativo, responsáveis, e local, responsável, situação e baixa no cadastro da etiqueta |
   | V24 | `db/migration/V24__transferencias.sql` | Transferências de bens: a guia (`transferencias`, com o destino pelo id e pelo nome) e os bens dela com a origem (`transferencia_itens`) |
+  | V25 | `db/migration/V25__valor_depreciacao.sql` | Valor e depreciação: vida útil (meses) e residual (%) no tipo de equipamento; valor, data de aquisição e nota fiscal no bem |
 
   > **Atualizar uma instalação com muitas leituras (centenas de milhares ou mais):** a V16 reescreve a tabela de
   > leituras inteira ao subir, numa transação só: o servidor fica alguns minutos sem responder e a tabela cresce no

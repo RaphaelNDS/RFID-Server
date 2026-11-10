@@ -1,0 +1,71 @@
+<!--
+  Partes comuns dos PDFs (1.8.0), gerados pelo PdfService (openhtmltopdf): o estilo, o cabeçalho e as assinaturas.
+  CSS 2.1 com o que o openhtmltopdf entende (@page com margens e numeração). Sem @{...} e sem beans: o template é
+  processado fora da requisição. Valores e datas pelo "fmt" (FormatoBr).
+-->
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<style th:fragment="estilo">
+  @page {
+    size: A4;
+    margin: 18mm 14mm 18mm 14mm;
+    @bottom-left { content: element(rodape); }
+    @bottom-right { content: "Página " counter(page) " de " counter(pages); font-family: Helvetica, sans-serif; font-size: 8pt; color: #666; }
+  }
+  body { font-family: Helvetica, sans-serif; font-size: 9pt; color: #1a1a1a; }
+  .rodape { position: running(rodape); font-size: 8pt; color: #666; }
+  .cabecalho { border-bottom: 1.5pt solid #1a1a1a; padding-bottom: 6pt; margin-bottom: 10pt; }
+  .cabecalho table { width: 100%; border-collapse: collapse; }
+  .cabecalho td { padding: 0; vertical-align: bottom; }
+  .empresa { font-size: 11pt; font-weight: bold; }
+  .muted { color: #666; }
+  .direita { text-align: right; }
+  h1 { font-size: 15pt; margin: 0 0 2pt 0; }
+  h2 { font-size: 11pt; margin: 14pt 0 5pt 0; }
+  .subtitulo { color: #444; margin: 0; }
+  table.dados { border-collapse: collapse; margin: 6pt 0 10pt 0; }
+  table.dados th { text-align: left; font-weight: normal; color: #666; padding: 1.5pt 10pt 1.5pt 0; vertical-align: top; }
+  table.dados td { padding: 1.5pt 0; font-weight: bold; }
+  table.lista { width: 100%; border-collapse: collapse; -fs-table-paginate: paginate; }
+  table.lista thead { display: table-header-group; }
+  table.lista tr { page-break-inside: avoid; }
+  table.lista th { text-align: left; font-size: 8pt; color: #444; border-bottom: 1pt solid #1a1a1a; padding: 3pt 4pt; }
+  table.lista td { border-bottom: 0.5pt solid #ccc; padding: 3pt 4pt; vertical-align: top; }
+  table.lista th.num, table.lista td.num { text-align: right; white-space: nowrap; }
+  table.lista tr.total td { font-weight: bold; border-top: 1pt solid #1a1a1a; border-bottom: none; }
+  .nowrap { white-space: nowrap; }
+  .mono { font-family: Courier, monospace; font-size: 8pt; }
+  .resumo { width: 100%; border-collapse: separate; border-spacing: 6pt 0; margin: 4pt -6pt 8pt -6pt; }
+  .resumo td { border: 0.75pt solid #bbb; padding: 5pt 7pt; width: 25%; vertical-align: top; }
+  .resumo .numero { font-size: 14pt; font-weight: bold; display: block; }
+  .texto { line-height: 1.45; text-align: justify; }
+  .aviso { border-left: 2pt solid #b26a00; padding: 3pt 7pt; color: #5a3a00; margin: 6pt 0; }
+  .assinaturas { width: 100%; margin-top: 34pt; border-collapse: collapse; page-break-inside: avoid; }
+  .assinaturas td { width: 50%; padding: 0 14pt; text-align: center; vertical-align: top; }
+  .linha { border-top: 0.75pt solid #1a1a1a; padding-top: 3pt; height: 11pt; }
+  .local-data { margin-top: 22pt; color: #444; }
+</style>
+</head>
+<body>
+
+<!-- Cabeçalho: a empresa e o documento à esquerda, o número e a data à direita -->
+<div th:fragment="cabecalho(titulo, subtitulo, direita)" class="cabecalho">
+  <table>
+    <tr>
+      <td>
+        <div class="empresa">Backup Automação</div>
+        <div class="muted">Controle de patrimônio</div>
+      </td>
+      <td class="direita muted" th:text="${direita}"></td>
+    </tr>
+  </table>
+  <h1 th:text="${titulo}" style="margin-top: 8pt">Título</h1>
+  <p class="subtitulo" th:if="${subtitulo != null}" th:text="${subtitulo}"></p>
+</div>
+
+<!-- Rodapé de todas as páginas (o número da página fica no @page) -->
+<div th:fragment="rodape" class="rodape"
+     th:text="'Gerado em ' + ${#temporals.format(geradoEm, 'dd/MM/yyyy HH:mm')} + ' por ' + ${geradoPor} + ' · Sistema RFID ' + ${versao}"></div>
+
+</body>
+</html>

@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "org.example"
-version = "1.7.0"
+version = "1.8.0"
 
 java {
     toolchain {
@@ -56,6 +56,14 @@ dependencies {
 
     // QR code de configuração do coletor (tela Coletores): só o núcleo, o SVG é montado pelo servidor
     implementation("com.google.zxing:core:3.5.3")
+
+    // PDFs (1.8.0): laudo do inventário, valores, guia e termo. O HTML do Thymeleaf vira XHTML pelo jsoup e o
+    // openhtmltopdf desenha o PDF (PDFBox)
+    implementation("com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10")
+    implementation("org.jsoup:jsoup:1.18.1")
+    // O openhtmltopdf traz o PDFBox 2.0.24: a mesma linha 2.0, mais nova
+    implementation("org.apache.pdfbox:pdfbox:2.0.32")
+    implementation("org.apache.pdfbox:xmpbox:2.0.32")
 
     // WebFlux (SSE, streams, etc)
     implementation("org.springframework.boot:spring-boot-starter-webflux")

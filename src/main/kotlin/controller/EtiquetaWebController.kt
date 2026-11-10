@@ -27,7 +27,9 @@ class EtiquetaWebController(
     private val catalogoService: CatalogoService,
     private val historico: HistoricoEtiquetaService,
     private val cadastros: org.example.service.PatrimonioCadastrosService? = null,
-    private val auditoria: org.example.service.AuditoriaService? = null
+    private val auditoria: org.example.service.AuditoriaService? = null,
+    // 1.8.0: valor contábil do bem na tela de edição
+    private val valores: org.example.service.ValorPatrimonialService? = null
 ) {
 
     @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
@@ -42,7 +44,9 @@ class EtiquetaWebController(
         model.addAttribute("cadastro", CadastroRequest(
             tag = tag.tagReal, codigoInterno = tag.codigoInterno, patrimonio = tag.patrimonio, numeroSerie = tag.numeroSerie,
             tipoEquipamentoId = tag.tipoEquipamentoId, marcaId = tag.marcaId, modeloId = tag.modeloId, versao = tag.versao,
-            localId = tag.localId, responsavelId = tag.responsavelId, situacao = tag.situacao.name
+            localId = tag.localId, responsavelId = tag.responsavelId, situacao = tag.situacao.name,
+            valorAquisicao = tag.valorAquisicao?.let { org.example.util.FormatoBr.numero(it) },
+            dataAquisicao = tag.dataAquisicao?.toString(), notaFiscal = tag.notaFiscal
         ))
         return formulario(id, RetornoLista.de(busca, pagina), model)
     }
@@ -155,6 +159,8 @@ class EtiquetaWebController(
         model.addAttribute("situacoesEditaveis", org.example.model.SituacaoBem.EDITAVEIS)
         model.addAttribute("motivosBaixa", org.example.model.MotivoBaixa.entries)
         model.addAttribute("hoje", java.time.LocalDate.now())
+        model.addAttribute("depreciacao", valores?.depreciacaoDe(etiqueta))
+        model.addAttribute("fmt", org.example.util.FormatoBr)
         return "editar-etiqueta"
     }
 }
