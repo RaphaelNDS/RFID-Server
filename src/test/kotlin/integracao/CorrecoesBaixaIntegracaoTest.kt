@@ -124,7 +124,7 @@ class CorrecoesBaixaIntegracaoTest : IntegracaoBase() {
             .contentType("application/json").content("""{"nome":"Coletor"}"""))
         mvc.perform(get("/api/catalogo/tipos").with(Perfis.admin()))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$[0].nome").value("Coletor"))
+            .andExpect(jsonPath("$[?(@.nome == 'Coletor')].nome").value(org.hamcrest.Matchers.hasItem("Coletor")))   // 1.14.0: há os tipos da V30
             .andExpect(jsonPath("$[0].marcas").doesNotExist())
     }
 
