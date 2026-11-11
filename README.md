@@ -300,6 +300,21 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Folha de separação e relatórios da locação (1.17.0)
+
+- **Folha de separação** (botão no pedido enquanto falta sair algo, Locação · Ver): PDF com o cliente, o local de
+  entrega e as datas, e, para cada item que ainda falta, quantos separar e os equipamentos **Disponíveis** que servem,
+  com o **local** de cada um e uma caixa para marcar (até 30 por item; um equipamento aparece em um item só). Espaço
+  para "Separado por" e "Conferido por".
+- **Relatórios da locação** (menu, Locação · Ver), por período (padrão: últimos 90 dias):
+  - **Uso por modelo:** equipamentos no acervo, pedidos, dias alugado no período e a **ocupação** (dias com clientes ÷
+    equipamentos × dias do período).
+  - **Parados:** Disponíveis sem sair há N dias ou mais (padrão 60; nunca alugado conta desde o cadastro), com link para
+    a linha do tempo: candidatos à venda ou realocação.
+  - **Avarias e manutenção por modelo:** devoluções conferidas, com avaria, faltando acessório, manutenções e o custo.
+  - **Pontualidade dos clientes:** devoluções, quantas atrasaram (contra a devolução prevista já com as prorrogações),
+    o atraso médio e quantos equipamentos estão atrasados agora.
+
 ### Linha do tempo do equipamento e prorrogação do pedido (1.16.0)
 
 - **Linha do tempo** (botão na edição da etiqueta, Etiquetas · Ver): tudo o que aconteceu com o equipamento numa

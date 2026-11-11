@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Relatórios da locação · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Relatórios da locação</h1>
+      <p class="subtitulo" th:text="'De ' + ${#temporals.format(r.de, 'dd/MM/yyyy')} + ' a ' + ${#temporals.format(r.ate, 'dd/MM/yyyy')} + ' (' + ${r.diasPeriodo} + ' dias)'"></p>
+    </div>
+  </div>
+
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <form method="get" class="card toolbar" style="margin-bottom:16px">
+    <div class="field"><label for="de">De</label><input type="date" id="de" name="de" th:value="${r.de}" th:max="${hoje}"></div>
+    <div class="field"><label for="ate">Até</label><input type="date" id="ate" name="ate" th:value="${r.ate}" th:max="${hoje}"></div>
+    <div class="field"><label for="parado">Parado há pelo menos (dias)</label>
+      <input type="number" id="parado" name="parado" min="0" max="3650" th:value="${r.diasParadoMinimo}"></div>
+    <button type="submit" class="btn btn-primary">Ver</button>
+    <a th:href="@{/admin/relatorios-locacao}" class="btn btn-ghost">Últimos 90 dias</a>
+  </form>
+
+  <!-- 1. Uso e ocupação por modelo -->
+  <div class="card">
+    <div class="card-header empilhar">
+      <h2>Uso por modelo</h2>
+      <span class="muted">Ocupação = dias que os equipamentos do modelo ficaram com clientes ÷ (equipamentos × dias do período)</span>
+    </div>
+    <div class="table-wrap" th:unless="${#lists.isEmpty(r.uso)}">
+      <table class="table disponibilidade">
+        <thead><tr><th>Modelo</th><th class="num">Equipamentos</th><th class="num">Pedidos</th><th class="num">Dias alugado</th><th class="num">Ocupação</th></tr></thead>
+        <tbody>
+        <tr th:each="u : ${r.uso}">
+          <td th:text="${u.modelo}"></td>
+          <td class="num" th:text="${u.equipamentos}"></td>
+          <td class="num" th:text="${u.locacoes}"></td>
+          <td class="num" th:text="${#numbers.formatDecimal(u.diasAlugado, 1, 'POINT', 1, 'COMMA')}"></td>
+          <td class="num"><strong th:text="${#numbers.formatDecimal(u.ocupacao, 1, 'POINT', 0, 'COMMA')} + '%'"
+                                  th:classappend="${u.ocupacao >= 70} ? 'positivo' : (${u.ocupacao < 20} ? 'negativo')"></strong></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="vazio" th:if="${#lists.isEmpty(r.uso)}">Nenhum equipamento no acervo.</p>
+  </div>
+
+  <div class="grid grid-2" style="margin-top:16px">
+    <!-- 2. Parados -->
+    <div class="card">
+      <div class="card-header empilhar">
+        <h2>Parados</h2>
+        <span class="muted" th:text="'Disponíveis sem sair há ' + ${r.diasParadoMinimo} + ' dias ou mais (candidatos à venda ou realocação)'"></span>
+      </div>
+      <div class="table-wrap" th:unless="${#lists.isEmpty(r.parados)}">
+        <table class="table table-cartoes">
+          <thead><tr><th>Equipamento</th><th>Modelo</th><th>Última locação</th><th class="num">Parado</th></tr></thead>
+          <tbody>
+          <tr th:each="p : ${r.parados}">
+            <td class="principal cartao-titulo"><a th:href="@{/admin/etiquetas/{id}/linha-do-tempo(id=${p.tagId})}" th:text="${p.patrimonio}"></a></td>
+            <td data-rotulo="Modelo" th:text="${p.modelo}"></td>
+            <td data-rotulo="Última locação" class="nowrap" th:text="${p.ultimaLocacao != null} ? ${#temporals.format(p.ultimaLocacao, 'dd/MM/yyyy')} : 'nunca alugado'"></td>
+            <td data-rotulo="Parado" class="num nowrap" th:text="${p.diasParado != null} ? ${p.diasParado} + ' dias' : '—'"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="vazio" th:if="${#lists.isEmpty(r.parados)}">Nenhum equipamento parado há tanto tempo.</p>
+    </div>
+
+    <!-- 3. Avarias e manutenção -->
+    <div class="card">
+      <div class="card-header empilhar">
+        <h2>Avarias e manutenção por modelo</h2>
+        <span class="muted">Devoluções conferidas e manutenções abertas no período</span>
+      </div>
+      <div class="table-wrap" th:unless="${#lists.isEmpty(r.avarias)}">
+        <table class="table table-cartoes">
+          <thead><tr><th>Modelo</th><th class="num">Devoluções</th><th class="num">Com avaria</th><th class="num">Faltando acessório</th><th class="num">Manutenções</th><th class="num">Custo</th></tr></thead>
+          <tbody>
+          <tr th:each="a : ${r.avarias}">
+            <td class="principal cartao-titulo" th:text="${a.modelo}"></td>
+            <td data-rotulo="Devoluções" class="num" th:text="${a.devolucoes}"></td>
+            <td data-rotulo="Com avaria" class="num" th:text="${a.avarias}" th:classappend="${a.avarias > 0} ? 'negativo'"></td>
+            <td data-rotulo="Faltando acessório" class="num" th:text="${a.faltandoAcessorio}"></td>
+            <td data-rotulo="Manutenções" class="num" th:text="${a.manutencoes}"></td>
+            <td data-rotulo="Custo" class="num nowrap" th:text="${fmt.reais(a.custo)}"></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="vazio" th:if="${#lists.isEmpty(r.avarias)}">Nenhuma devolução conferida nem manutenção no período.</p>
+    </div>
+  </div>
+
+  <!-- 4. Pontualidade dos clientes -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-header empilhar">
+      <h2>Pontualidade dos clientes</h2>
+      <span class="muted">Devoluções no período comparadas com a devolução prevista do pedido (já com as prorrogações), e o que está atrasado agora</span>
+    </div>
+    <div class="table-wrap" th:unless="${#lists.isEmpty(r.atrasos)}">
+      <table class="table table-cartoes">
+        <thead><tr><th>Cliente</th><th class="num">Devoluções</th><th class="num">Atrasadas</th><th class="num">Atraso médio</th><th class="num">Atrasados agora</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="c : ${r.atrasos}">
+          <td class="principal cartao-titulo" th:text="${c.cliente}"></td>
+          <td data-rotulo="Devoluções" class="num" th:text="${c.devolucoes}"></td>
+          <td data-rotulo="Atrasadas" class="num" th:text="${c.atrasadas} + (${c.devolucoes > 0} ? ' (' + ${#numbers.formatDecimal(c.taxaAtraso, 1, 'POINT', 0, 'COMMA')} + '%)' : '')"></td>
+          <td data-rotulo="Atraso médio" class="num nowrap" th:text="${c.atrasadas > 0} ? ${#numbers.formatDecimal(c.mediaDiasAtraso, 1, 'POINT', 1, 'COMMA')} + ' dia(s)' : '—'"></td>
+          <td data-rotulo="Atrasados agora" class="num" th:text="${c.atrasadosAgora}" th:classappend="${c.atrasadosAgora > 0} ? 'negativo'"></td>
+          <td class="acoes"><a th:href="@{/admin/pedidos(situacao='TODOS',busca=${c.cliente})}" class="btn btn-ghost btn-sm">Pedidos</a></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="vazio" th:if="${#lists.isEmpty(r.atrasos)}">Nenhuma devolução no período.</p>
+  </div>
+
+</section>
+</html>

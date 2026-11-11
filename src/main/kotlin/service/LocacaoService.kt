@@ -87,6 +87,13 @@ data class PedidoDetalhe(
     val editavel: Boolean get() = !pedido.situacao.finalizado
 }
 
+/** Uma linha da folha de separação: o que falta e os equipamentos disponíveis que servem (1.17.0). */
+data class LinhaSeparacao(val linha: LinhaConferida, val candidatos: List<BemTransferivel>)
+
+data class FolhaSeparacao(val detalhe: PedidoDetalhe, val linhas: List<LinhaSeparacao>) {
+    val faltam: Int get() = linhas.sumOf { it.linha.faltam }
+}
+
 /** Filtro da lista de pedidos. */
 enum class FiltroPedido(val rotulo: String, val situacoes: Set<SituacaoPedido>) {
     ANDAMENTO("Em aberto e na rua", setOf(SituacaoPedido.ABERTO, SituacaoPedido.EM_SEPARACAO, SituacaoPedido.ENTREGUE, SituacaoPedido.DEVOLVIDO_PARCIAL)),
@@ -142,7 +149,9 @@ class LocacaoService(
     private val auditoria: AuditoriaService,
     private val relogio: Clock,
     // 1.16.0: histórico das prorrogações da devolução prevista
-    private val prorrogacoes: org.example.repository.PedidoProrrogacaoRepository
+    private val prorrogacoes: org.example.repository.PedidoProrrogacaoRepository,
+    // 1.17.0: folha de separação (descrição e local dos equipamentos candidatos)
+    private val transferencias: TransferenciaService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -538,6 +547,29 @@ class LocacaoService(
 
     fun tagPorId(id: Long): TagEntity? = tags.findById(id).orElse(null)
 
+    /**
+     * Folha de separação (1.17.0): para cada linha que ainda falta, os equipamentos Disponíveis que servem, com o local
+     * de cada um (pelo local, depois pelo patrimônio), até [MAXIMO_CANDIDATOS] por linha. Um mesmo equipamento aparece só
+     * na primeira linha que combina (a específica antes da por tipo), como na distribuição da saída.
+     */
+    @Transactional(readOnly = true)
+    fun separacao(pedidoId: Long): FolhaSeparacao {
+        val d = detalhar(pedidoId)
+        val disponiveis = tags.findAll().filter { it.situacao == SituacaoBem.DISPONIVEL }
+        val usados = mutableSetOf<Long>()
+        val linhas = d.linhas.sortedBy { if (it.linha.especifico) 0 else 1 }.map { lc ->
+            val candidatos = if (lc.faltam == 0) emptyList() else disponiveis
+                .filter { it.id !in usados && lc.linha.combina(it) }
+                .let { lista -> transferencias?.descrever(lista) ?: lista.map { BemTransferivel(it.id, it.tagReal, it.patrimonio.ifBlank { null }, it.codigoInterno, null, null, null, it.situacao) } }
+                .sortedWith(compareBy<BemTransferivel, String?>(nullsLast()) { it.local }.thenBy(nullsLast()) { it.patrimonio })
+                .take(MAXIMO_CANDIDATOS)
+            // Reserva na folha só o que a linha precisa: o resto fica livre para as próximas linhas
+            usados += candidatos.take(lc.faltam).map { it.id }
+            LinhaSeparacao(lc, candidatos)
+        }.sortedBy { it.linha.linha.id }
+        return FolhaSeparacao(d, linhas)
+    }
+
     fun pedido(id: Long): PedidoLocacaoEntity = pedidos.findById(id).orElseThrow { NoSuchElementException("Pedido de locação nº $id não encontrado") }
 
     /* ================= INTERNOS ================= */
@@ -616,5 +648,6 @@ class LocacaoService(
         const val POR_PAGINA = 50
         const val MAXIMO_LINHAS = 100
         const val MAXIMO_LEITURAS = 500
+        const val MAXIMO_CANDIDATOS = 30
     }
 }

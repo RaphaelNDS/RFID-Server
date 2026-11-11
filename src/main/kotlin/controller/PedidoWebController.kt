@@ -217,6 +217,17 @@ class PedidoWebController(
         return "devolucoes"
     }
 
+    /** Folha de separação (1.17.0): o que falta separar e os equipamentos disponíveis, com o local, para marcar. */
+    @PreAuthorize("@authService.temPermissao('LOCACAO','READ')")
+    @GetMapping("/{id}/separacao.pdf")
+    @ResponseBody
+    fun folhaSeparacao(@PathVariable id: Long, authentication: Authentication): ResponseEntity<ByteArray> {
+        val folha = service.separacao(id)
+        val bytes = pdf.gerar("pdf/folha-separacao", mapOf("f" to folha))
+        log.info("{} gerou a folha de separação do pedido nº {} ({} a separar)", authentication.name, id, folha.faltam)
+        return pdf.resposta(bytes, "separacao-pedido-$id.pdf")
+    }
+
     @PreAuthorize("@authService.temPermissao('LOCACAO','READ')")
     @GetMapping("/{id}/contrato.pdf")
     @ResponseBody

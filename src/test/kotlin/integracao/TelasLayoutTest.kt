@@ -53,7 +53,9 @@ class TelasLayoutTest : IntegracaoBase() {
             "/admin/manutencoes", "/admin/manutencoes/nova",
             "/admin/pedidos", "/admin/pedidos/novo", "/admin/pedidos/devolucoes", "/admin/clientes",
             // 1.13.0: painel do dia (na tela inicial) e disponibilidade
-            "/dashboard", "/admin/disponibilidade"
+            "/dashboard", "/admin/disponibilidade",
+            // 1.17.0: relatórios da locação
+            "/admin/relatorios-locacao"
         ).forEach { url ->
             val resposta = mvc.perform(get(url).with(admin)).andReturn().response
             conferir(url, resposta)
