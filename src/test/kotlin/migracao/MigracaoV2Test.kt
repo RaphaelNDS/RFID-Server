@@ -75,7 +75,7 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("25") // V25 = valor e depreciação (regra no tipo, valor no bem)
+        assertThat(resultado.targetSchemaVersion).isEqualTo("26") // V26 = fotos e anexos do bem
     }
 
     @Test

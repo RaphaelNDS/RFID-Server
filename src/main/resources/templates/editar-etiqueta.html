@@ -107,6 +107,50 @@
     </div>
   </form>
 
+  <!-- Fotos e anexos do bem (1.9.0): foto do equipamento, nota fiscal, laudo. Ficam no banco (vão no backup) -->
+  <div class="card" id="anexos" style="margin-top:16px">
+    <div class="card-header empilhar">
+      <h2>Fotos e anexos</h2>
+      <span class="muted">Foto do equipamento, nota fiscal, laudo. Fotos (JPEG, PNG ou WebP) e PDF de até
+        <span th:text="${anexoMaximo}">10 MB</span>, no máximo <span th:text="${anexoMaximoPorBem}">20</span> por bem.</span>
+    </div>
+    <div class="card-body">
+      <p class="vazio" th:if="${#lists.isEmpty(anexos)}">Nenhuma foto ou documento ainda.</p>
+      <ul class="anexos" th:unless="${#lists.isEmpty(anexos)}">
+        <li class="anexo" th:each="a : ${anexos}">
+          <a class="anexo-previa" th:href="@{/admin/etiquetas/{id}/anexos/{a}(id=${etiquetaId},a=${a.id})}" target="_blank" rel="noopener"
+             th:title="'Abrir ' + ${a.nome}">
+            <img th:if="${a.imagem}" th:src="@{/admin/etiquetas/{id}/anexos/{a}(id=${etiquetaId},a=${a.id})}" th:alt="${a.descricao ?: a.nome}" loading="lazy">
+            <span th:unless="${a.imagem}" class="anexo-pdf">PDF</span>
+          </a>
+          <div class="anexo-dados">
+            <strong th:text="${a.nome}">foto.jpg</strong>
+            <span class="muted" th:if="${a.descricao != null}" th:text="${a.descricao}"></span>
+            <span class="muted" th:text="${a.tamanhoRotulo} + ' · ' + ${#temporals.format(a.enviadoEm, 'dd/MM/yyyy HH:mm')} + ' · ' + ${a.enviadoPor}"></span>
+          </div>
+          <div class="anexo-acoes">
+            <a class="btn btn-ghost btn-sm" th:href="@{/admin/etiquetas/{id}/anexos/{a}(id=${etiquetaId},a=${a.id},baixar=true)}" title="Baixar">
+              <svg class="ic"><use href="/img/icones.svg#download"/></svg><span class="sr-only">Baixar</span>
+            </a>
+            <form th:action="@{/admin/etiquetas/{id}/anexos/{a}/excluir(id=${etiquetaId},a=${a.id})}" method="post"
+                  th:attr="data-confirmar='Excluir o anexo ' + ${a.nome} + '? O arquivo some; o nome fica no histórico.'"
+                  data-confirmar-titulo="Excluir anexo" data-confirmar-botao="Excluir" data-confirmar-perigo>
+              <button type="submit" class="btn btn-danger-ghost btn-sm" title="Excluir">
+                <svg class="ic"><use href="/img/icones.svg#lixeira"/></svg><span class="sr-only">Excluir</span>
+              </button>
+            </form>
+          </div>
+        </li>
+      </ul>
+    </div>
+    <form class="card-footer anexo-envio" th:action="@{/admin/etiquetas/{id}/anexos(id=${etiquetaId})}" method="post" enctype="multipart/form-data"
+          th:if="${#lists.size(anexos) < anexoMaximoPorBem}">
+      <input type="file" name="arquivo" accept="image/jpeg,image/png,image/webp,application/pdf" required aria-label="Arquivo">
+      <input type="text" name="descricao" maxlength="200" placeholder="Descrição (opcional), ex.: nota fiscal" aria-label="Descrição">
+      <button type="submit" class="btn btn-secondary">Enviar</button>
+    </form>
+  </div>
+
   <!-- Baixa patrimonial (1.6.0): separada do formulário de edição, com o motivo -->
   <div class="card" style="margin-top:16px" th:if="${@authService.temPermissao('RFID','UPDATE')}">
     <div class="card-header empilhar">

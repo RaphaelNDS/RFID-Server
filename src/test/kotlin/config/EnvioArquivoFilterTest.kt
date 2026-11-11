@@ -92,6 +92,23 @@ class EnvioArquivoFilterTest {
     }
 
     @Test
+    fun `anexo do bem passa para quem edita etiquetas e e recusado para quem so ve`() {
+        logado("ROLE_CUSTOM", "RFID_UPDATE")
+        assertThat(passar(EnvioArquivoFilter(), multipart(caminho = "/admin/etiquetas/42/anexos")).second.request).isNotNull()
+
+        logado("ROLE_USER", "RFID_READ")
+        val request = multipart(caminho = "/admin/etiquetas/42/anexos")
+        val (response, _) = passar(EnvioArquivoFilter(), request)
+        assertThat(response.status).isEqualTo(403)
+        assertThat(request.corpoLido).isFalse()
+
+        // Só a rota exata do envio: nem a exclusão nem caminhos parecidos aceitam arquivo
+        logado("ROLE_ADMIN")
+        assertThat(passar(EnvioArquivoFilter(), multipart(caminho = "/admin/etiquetas/42/anexos/7/excluir")).first.status).isEqualTo(403)
+        assertThat(passar(EnvioArquivoFilter(), multipart(caminho = "/admin/etiquetas/abc/anexos")).first.status).isEqualTo(403)
+    }
+
+    @Test
     fun `API dos coletores nao aceita arquivo nenhum`() {
         logado("ROLE_ADMIN")
 
