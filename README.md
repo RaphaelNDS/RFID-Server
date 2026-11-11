@@ -94,6 +94,7 @@ administrador; depois disso essa tela não aparece mais.
 | Ação sobre os bens que faltaram (no detalhe do inventário finalizado) | `/admin/inventarios/{id}/divergencias` | RFID · Editar |
 | Valor patrimonial (totais de aquisição, depreciação e valor contábil; filtros de unidade, local e tipo) | `/admin/valores` | RFID · Ver (mudar a regra de depreciação de um tipo exige Catálogo · Editar) |
 | PDFs (1.8.0): laudo do inventário · guia · termo · bens com valor contábil | `/admin/inventarios/{id}/laudo.pdf` · `/admin/transferencias/{id}/guia.pdf` · `/admin/responsaveis/{id}/termo.pdf` · `/admin/valores/pdf` | as mesmas da tela de onde saem (Leituras · Ver; RFID · Ver; Catálogo · Ver e RFID · Ver; RFID · Ver) |
+| Fotos e anexos do bem (1.9.0), na edição da etiqueta: enviar e excluir · abrir ou baixar | `/admin/etiquetas/{id}/anexos` · `/admin/etiquetas/{id}/anexos/{anexo}` | RFID · Editar · RFID · Ver |
 | Relatórios (gráficos; avisa quando chegam leituras novas; período de até 366 dias) | `/admin/dashboard` | Relatórios · Ver |
 | Usuários (+ pedidos de nova senha e senha temporária; editar perfil e permissões; desativar e reativar) | `/admin/usuarios` | somente ADMIN |
 | Coletores (último contato, IP, versão do app, operador, fila de envio e estado do aparelho de cada coletor) | `/admin/coletores` | somente ADMIN |
@@ -285,6 +286,19 @@ Gerados pelo servidor (openhtmltopdf), abrem no navegador e trazem no rodapé qu
 - **Guia de transferência** e **termo de responsabilidade**: as mesmas páginas de imprimir, em PDF.
 
 O laudo e o relatório de valores vão para a auditoria (Exportações), como as planilhas.
+
+### Fotos e anexos do bem (1.9.0)
+
+Na edição da etiqueta, o card **Fotos e anexos** guarda a foto do equipamento, a nota fiscal, o laudo etc.
+
+- Aceita fotos **JPEG, PNG e WebP** e **PDF**, reconhecidos pelos primeiros bytes do arquivo (não pela extensão):
+  um arquivo de outro tipo é recusado, e o nome ganha a extensão do tipo real.
+- Até **10 MB** por arquivo e **20** por bem (`RFID_ANEXOS_MAX_BYTES` e `RFID_ANEXOS_MAX_POR_BEM`).
+- Os arquivos ficam **no banco** (V26, tabelas `anexos_bem` e `anexos_bem_conteudo`): o backup diário e a cópia
+  cifrada fora do computador já os levam. Cada foto aumenta o tamanho dos dumps.
+- Enviar e excluir vão para o histórico da etiqueta (campo "Anexo", com o nome e o tamanho). Excluir a etiqueta
+  apaga os anexos dela; os nomes continuam no histórico.
+- O envio só é aceito de quem tem RFID · Editar, conferido antes de o servidor ler o arquivo (EnvioArquivoFilter).
 
 ### Inventário: o que faltou
 
@@ -779,6 +793,8 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_BACKUP_CRON` | `0 0 2 * * *` | Horário (todo dia às 02:00) |
 | `RFID_SESSAO_WEB_TIMEOUT` | `30m` | Tempo sem uso até a sessão das telas acabar (ex.: `45m`) |
 | `RFID_WEB_MAX_CORPO_BYTES` | `1048576` | Tamanho máximo do corpo das requisições das telas que não são upload (1 MB) |
+| `RFID_ANEXOS_MAX_BYTES` | `10485760` | Tamanho máximo de cada foto ou anexo do bem (10 MB) |
+| `RFID_ANEXOS_MAX_POR_BEM` | `20` | Quantos anexos cada bem pode ter |
 | `RFID_BACKUP_MANTER` | `14` | Quantos backups do certificado guardar |
 | `RFID_LOG_ARQUIVO` | `./data/logs/rfid-server.log` | Arquivo de log (vazio = só console); um por dia, guarda 30 dias |
 | `RFID_MOSTRAR_SQL` | `false` | Mostra no log cada SQL executado (só para investigar problema) |

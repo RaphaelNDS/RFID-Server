@@ -87,6 +87,13 @@ class HistoricoEtiquetaService(
         return mudaram
     }
 
+    /** Foto ou documento enviado ([novo]) ou excluído ([antigo]) (1.9.0): uma linha no campo "Anexo". */
+    @Transactional(propagation = Propagation.MANDATORY)
+    fun registrarAnexo(tag: TagEntity, antigo: String?, novo: String?) {
+        val (usuario, origem) = autor()
+        salvar(tag.id, tag.tagReal, AcaoHistorico.ALTERACAO, "Anexo", antigo, novo, usuario, origem)
+    }
+
     @Transactional(propagation = Propagation.MANDATORY)
     fun registrarExclusao(tagId: Long, tagReal: String, antes: RetratoEtiqueta) {
         val (usuario, origem) = autor()

@@ -11,7 +11,8 @@ import org.springframework.web.filter.OncePerRequestFilter
 
 /**
  * Envio de arquivo (multipart) só onde existe: o APK do app, no POST de /admin/app, por um ADMIN logado, e a planilha
- * de etiquetas (1.6.0), no POST de /admin/tags-cadastradas/importar, por quem pode cadastrar etiquetas.
+ * de etiquetas (1.6.0), no POST de /admin/tags-cadastradas/importar, por quem pode cadastrar etiquetas, e as fotos e
+ * anexos do bem (1.9.0), no POST de /admin/etiquetas/{id}/anexos, por quem pode editar etiquetas.
  *
  * Sem este filtro, o CsrfFilter do Spring Security procura o campo _csrf do formulário com getParameter(), e o
  * Tomcat lê o multipart inteiro (até 101 MB, gravando em disco) ANTES de qualquer conferência de permissão: qualquer
@@ -55,7 +56,9 @@ class EnvioArquivoFilter(private val permitido: String? = "/admin/app") : OncePe
             permitido -> "ROLE_ADMIN" in autoridades
             // Importação de planilha de etiquetas (1.6.0): quem pode cadastrar etiquetas
             IMPORTACAO_ETIQUETAS -> "ROLE_ADMIN" in autoridades || "RFID_CREATE" in autoridades
-            else -> false
+            // Fotos e anexos do bem (1.9.0): quem pode editar etiquetas
+            else -> org.example.controller.AnexoBemWebController.CAMINHO_ENVIO.matches(caminho) &&
+                ("ROLE_ADMIN" in autoridades || "RFID_UPDATE" in autoridades)
         }
     }
 

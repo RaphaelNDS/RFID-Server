@@ -29,7 +29,9 @@ class EtiquetaWebController(
     private val cadastros: org.example.service.PatrimonioCadastrosService? = null,
     private val auditoria: org.example.service.AuditoriaService? = null,
     // 1.8.0: valor contábil do bem na tela de edição
-    private val valores: org.example.service.ValorPatrimonialService? = null
+    private val valores: org.example.service.ValorPatrimonialService? = null,
+    // 1.9.0: fotos e anexos do bem
+    private val anexos: org.example.service.AnexoBemService? = null
 ) {
 
     @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
@@ -161,6 +163,9 @@ class EtiquetaWebController(
         model.addAttribute("hoje", java.time.LocalDate.now())
         model.addAttribute("depreciacao", valores?.depreciacaoDe(etiqueta))
         model.addAttribute("fmt", org.example.util.FormatoBr)
+        model.addAttribute("anexos", anexos?.listar(id).orEmpty())
+        model.addAttribute("anexoMaximo", anexos?.maximoRotulo)
+        model.addAttribute("anexoMaximoPorBem", anexos?.maximoPorBem)
         return "editar-etiqueta"
     }
 }
