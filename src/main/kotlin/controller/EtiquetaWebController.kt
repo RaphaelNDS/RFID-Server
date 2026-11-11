@@ -31,7 +31,9 @@ class EtiquetaWebController(
     // 1.8.0: valor contábil do bem na tela de edição
     private val valores: org.example.service.ValorPatrimonialService? = null,
     // 1.9.0: fotos e anexos do bem
-    private val anexos: org.example.service.AnexoBemService? = null
+    private val anexos: org.example.service.AnexoBemService? = null,
+    // 1.10.0: empréstimo aberto do bem
+    private val emprestimos: org.example.service.EmprestimoService? = null
 ) {
 
     @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
@@ -95,10 +97,14 @@ class EtiquetaWebController(
 
     @PreAuthorize("@authService.temPermissao('RFID','DELETE')")
     @PostMapping("/{id}/excluir")
-    fun excluir(@PathVariable id: Long, redirect: RedirectAttributes): String {
+    fun excluir(@PathVariable id: Long, redirect: RedirectAttributes): String = try {
         val tag = rfidService.excluirTag(id)
         redirect.addFlashAttribute("msg", "Etiqueta ${tag.tagReal} excluída. O histórico dela continua disponível.")
-        return "redirect:/admin/tags-cadastradas"
+        "redirect:/admin/tags-cadastradas"
+    } catch (e: IllegalArgumentException) {
+        // Bem emprestado (1.10.0): volta para a edição com o motivo
+        redirect.addFlashAttribute("erro", e.message)
+        "redirect:/admin/etiquetas/$id/editar"
     }
 
     /** Histórico de uma etiqueta (pelo EPC, inclusive excluída) ou, sem filtro, as últimas mudanças. */
@@ -166,6 +172,7 @@ class EtiquetaWebController(
         model.addAttribute("anexos", anexos?.listar(id).orEmpty())
         model.addAttribute("anexoMaximo", anexos?.maximoRotulo)
         model.addAttribute("anexoMaximoPorBem", anexos?.maximoPorBem)
+        model.addAttribute("emprestimo", emprestimos?.abertoDoBem(id))
         return "editar-etiqueta"
     }
 }

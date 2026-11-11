@@ -12,6 +12,11 @@
       <p class="subtitulo">A mudança fica registrada no histórico da etiqueta (quem, quando, valor antigo e novo)</p>
     </div>
     <div class="page-header-acoes">
+      <a th:href="@{/admin/emprestimos/novo(tags=${cadastro.tag})}" class="btn btn-ghost"
+         th:if="${emprestimo == null and (etiqueta.situacao.name() == 'EM_USO' or etiqueta.situacao.name() == 'EM_ESTOQUE')}"
+         title="Emprestar o bem para alguém, com prazo de devolução e termo">
+        <svg class="ic"><use href="/img/icones.svg#calendario"/></svg>Emprestar
+      </a>
       <a th:href="@{/admin/transferencias/nova(tags=${cadastro.tag})}" class="btn btn-ghost" th:unless="${baixado}"
          title="Mudar o local e/ou o responsável com guia de transferência">
         <svg class="ic"><use href="/img/icones.svg#transferir"/></svg>Transferir
@@ -27,6 +32,13 @@
   </div>
   <div class="alert alert-ok" th:if="${msg}" role="status">
     <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+  <div class="alert alert-aviso" th:if="${emprestimo != null}" role="note">
+    <svg class="ic"><use href="/img/icones.svg#calendario"/></svg>
+    <span>Bem <strong>emprestado</strong> para <span th:text="${emprestimo.emprestimo.responsavel}"></span>, devolução prevista em
+      <span th:text="${#temporals.format(emprestimo.emprestimo.previsaoDevolucao, 'dd/MM/yyyy')}"></span><span th:if="${emprestimo.atrasado}"
+        th:text="' (atrasado ' + ${emprestimo.diasAtraso} + ' dia(s))'"></span>.
+      <a th:href="@{/admin/emprestimos/{id}(id=${emprestimo.emprestimo.id})}" th:text="'Empréstimo nº ' + ${emprestimo.emprestimo.id}"></a></span>
   </div>
   <div class="alert alert-aviso" th:if="${baixado}" role="note">
     <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>

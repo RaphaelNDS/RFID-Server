@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Empréstimo · Sistema RFID</title>
+
+<!-- O termo é a parte que sai na impressão (app.css, @media print); a devolução fica só na tela -->
+<section class="page termo" th:with="e=${d.emprestimo}">
+
+  <div class="page-header nao-imprimir">
+    <div>
+      <h1 th:text="'Empréstimo nº ' + ${e.id}">Empréstimo</h1>
+      <p class="subtitulo">
+        <span th:if="${d.atrasado}" class="badge badge-inativo" th:text="'Atrasado ' + ${d.diasAtraso} + ' dia(s)'"></span>
+        <span th:if="${d.aberto and !d.atrasado}" class="badge badge-CUSTOM">Aberto</span>
+        <span th:unless="${d.aberto}" class="badge badge-online">Devolvido</span>
+        Imprima o termo (Ctrl+P ou PDF) para a assinatura de quem recebe
+      </p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/emprestimos}" class="btn btn-ghost"><svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Empréstimos</a>
+      <button type="button" class="btn btn-secondary" data-acao="imprimir">Imprimir</button>
+      <a th:href="@{/admin/emprestimos/{id}/termo.pdf(id=${e.id})}" class="btn btn-primary" target="_blank" rel="noopener"><svg class="ic"><use href="/img/icones.svg#download"/></svg>PDF</a>
+    </div>
+  </div>
+
+  <div class="alert alert-ok nao-imprimir" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+  <div class="alert alert-erro nao-imprimir" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <!-- Devolução: só para quem pode editar e enquanto há bens fora -->
+  <form class="card nao-imprimir" style="margin-bottom:16px" th:if="${d.aberto and @authService.temPermissao('RFID','UPDATE')}"
+        th:action="@{/admin/emprestimos/{id}/devolucao(id=${e.id})}" method="post" data-enviar-uma-vez>
+    <div class="card-header empilhar">
+      <h2>Registrar devolução</h2>
+      <span class="muted">Marque os bens que voltaram. Cada um volta para a situação de antes do empréstimo.</span>
+    </div>
+    <div class="card-body">
+      <ul class="lista-simples">
+        <li th:each="i : ${d.pendentes}">
+          <label>
+            <input type="checkbox" name="itens" th:value="${i.id}" checked>
+            <strong th:text="${i.patrimonio} ?: ${i.tagReal}"></strong>
+            <span class="muted" th:text="${i.descricao} ?: ''"></span>
+            <span class="mono muted" style="font-size:12px" th:text="${i.tagReal}"></span>
+          </label>
+        </li>
+      </ul>
+      <div class="form-grid" style="margin-top:12px">
+        <div class="field">
+          <label for="dataDevolucao">Data da devolução</label>
+          <input type="date" id="dataDevolucao" name="data" th:value="${hoje}" th:min="${e.dataSaida}" th:max="${hoje}">
+        </div>
+        <div class="field">
+          <label for="condicao">Condição</label>
+          <input type="text" id="condicao" name="condicao" maxlength="500" placeholder="Ex.: sem avarias; tela riscada">
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <button type="submit" class="btn btn-primary" data-enviando="Registrando...">
+        <svg class="ic"><use href="/img/icones.svg#ok"/></svg>Registrar devolução
+      </button>
+    </div>
+  </form>
+
+  <article class="card termo-folha">
+    <div class="card-body">
+      <header class="termo-cabecalho">
+        <div>
+          <strong>Backup Automação</strong>
+          <span class="muted">Controle de patrimônio</span>
+        </div>
+        <span class="muted" th:text="'Empréstimo nº ' + ${e.id} + ' · ' + ${#temporals.format(e.dataSaida, 'dd/MM/yyyy')}"></span>
+      </header>
+
+      <h2 class="termo-titulo">Termo de empréstimo de bens</h2>
+
+      <dl class="dados termo-dados">
+        <div><dt>Com quem</dt><dd th:text="${e.responsavel}"></dd></div>
+        <div><dt>Saída</dt><dd th:text="${#temporals.format(e.dataSaida, 'dd/MM/yyyy')}"></dd></div>
+        <div><dt>Devolução prevista</dt><dd th:text="${#temporals.format(e.previsaoDevolucao, 'dd/MM/yyyy')}"></dd></div>
+        <div th:if="${e.finalidade != null}"><dt>Finalidade</dt><dd th:text="${e.finalidade}"></dd></div>
+        <div><dt>Registrado por</dt><dd th:text="${e.registradoPor} + ' em ' + ${#temporals.format(e.criadoEm, 'dd/MM/yyyy HH:mm')}"></dd></div>
+      </dl>
+
+      <table class="table termo-tabela">
+        <thead><tr><th>#</th><th>Patrimônio</th><th>Descrição</th><th>Etiqueta (EPC)</th><th>Devolvido</th></tr></thead>
+        <tbody>
+        <tr th:each="i, n : ${d.itens}">
+          <td th:text="${n.count}"></td>
+          <td class="principal" th:text="${i.patrimonio} ?: '—'"></td>
+          <td th:text="${i.descricao} ?: '—'"></td>
+          <td class="mono" th:text="${i.tagReal}"></td>
+          <td th:text="${i.devolvido} ? ${#temporals.format(i.devolvidoEm, 'dd/MM/yyyy')} + (${i.condicaoDevolucao != null} ? ' · ' + ${i.condicaoDevolucao} : '') : '—'"></td>
+        </tr>
+        </tbody>
+      </table>
+      <p class="muted" th:text="'Total: ' + ${#lists.size(d.itens)} + ' bem(ns).'"></p>
+
+      <p class="termo-texto">Declaro ter recebido os bens acima em perfeitas condições, comprometendo-me a zelar por eles e a
+        devolvê-los até a data prevista, no mesmo estado, respondendo por perda ou dano causado por mau uso.</p>
+
+      <div class="termo-assinaturas">
+        <div><span class="termo-linha"></span><span>&nbsp;</span><span class="muted">Entregue por</span></div>
+        <div><span class="termo-linha"></span><span th:text="${e.responsavel}"></span><span class="muted">Recebido por</span></div>
+      </div>
+      <p class="muted termo-local-data">Local e data: ____________________________, ____ / ____ / ________</p>
+    </div>
+  </article>
+
+</section>
+</html>
