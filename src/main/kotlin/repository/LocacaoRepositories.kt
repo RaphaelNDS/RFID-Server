@@ -82,3 +82,24 @@ interface VendaRepository : JpaRepository<VendaEntity, Long> {
 interface PedidoProrrogacaoRepository : JpaRepository<org.example.model.PedidoProrrogacaoEntity, Long> {
     fun findAllByPedidoIdOrderByIdAsc(pedidoId: Long): List<org.example.model.PedidoProrrogacaoEntity>
 }
+
+/** 1.18.0: acessórios, kits e os acessórios dos pedidos. */
+interface AcessorioRepository : JpaRepository<org.example.model.AcessorioEntity, Long> {
+    fun findAllByOrderByAtivoDescNomeAsc(): List<org.example.model.AcessorioEntity>
+    fun findFirstByNomeIgnoreCase(nome: String): org.example.model.AcessorioEntity?
+}
+
+interface KitItemRepository : JpaRepository<org.example.model.KitItemEntity, Long> {
+    fun findAllByTipoEquipamentoId(tipoId: Long): List<org.example.model.KitItemEntity>
+    fun countByAcessorioId(acessorioId: Long): Long
+}
+
+interface PedidoAcessorioRepository : JpaRepository<org.example.model.PedidoAcessorioEntity, Long> {
+    fun findAllByPedidoIdOrderByIdAsc(pedidoId: Long): List<org.example.model.PedidoAcessorioEntity>
+    fun findAllByPedidoIdIn(ids: Collection<Long>): List<org.example.model.PedidoAcessorioEntity>
+    fun findAllByLinhaId(linhaId: Long): List<org.example.model.PedidoAcessorioEntity>
+
+    /** Enviados que não voltaram, de todos os pedidos. */
+    @Query("select a from PedidoAcessorioEntity a where a.devolvida < a.enviada order by a.pedidoId, a.id")
+    fun pendentes(): List<org.example.model.PedidoAcessorioEntity>
+}

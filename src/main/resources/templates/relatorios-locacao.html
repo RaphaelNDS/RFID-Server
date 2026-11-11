@@ -122,5 +122,30 @@
     <p class="vazio" th:if="${#lists.isEmpty(r.atrasos)}">Nenhuma devolução no período.</p>
   </div>
 
+  <!-- 5. Acessórios que não voltaram (1.18.0) -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-header empilhar">
+      <h2>Acessórios que não voltaram</h2>
+      <span class="muted">Enviados e não devolvidos, de pedidos encerrados ou com a devolução vencida (agora, sem olhar o período)</span>
+    </div>
+    <div class="table-wrap" th:unless="${#lists.isEmpty(acessoriosACobrar)}">
+      <table class="table table-cartoes">
+        <thead><tr><th>Pedido</th><th>Cliente</th><th>Acessório</th><th class="num">Enviados</th><th class="num">Faltando</th><th>Devolução prevista</th></tr></thead>
+        <tbody>
+        <tr th:each="a : ${acessoriosACobrar}">
+          <td class="principal cartao-titulo"><a th:href="@{'/admin/pedidos/' + ${a.pedidoId} + '#acessorios'}" th:text="'Nº ' + ${a.pedidoId}"></a>
+            <span class="badge" th:text="${a.situacao.rotulo}"></span></td>
+          <td data-rotulo="Cliente" th:text="${a.cliente}"></td>
+          <td data-rotulo="Acessório" th:text="${a.descricao}"></td>
+          <td data-rotulo="Enviados" class="num" th:text="${a.enviada}"></td>
+          <td data-rotulo="Faltando" class="num"><strong class="negativo" th:text="${a.faltando}"></strong></td>
+          <td data-rotulo="Devolução prevista" class="nowrap" th:text="${#temporals.format(a.previsaoDevolucao, 'dd/MM/yyyy')}"></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="vazio" th:if="${#lists.isEmpty(acessoriosACobrar)}">Nenhum acessório pendente.</p>
+  </div>
+
 </section>
 </html>

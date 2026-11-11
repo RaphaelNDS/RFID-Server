@@ -300,6 +300,21 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Kits e acessórios (1.18.0)
+
+- **Acessórios e kits** (menu, Locação · Ver; cadastrar e pôr no kit: Criar; alterar e tirar do kit: Editar):
+  cadastro dos acessórios (carregador, bateria, berço, cabo...), que são **contados**, sem etiqueta. O **kit** diz
+  quantos de cada acessório acompanham um equipamento de um **tipo**, ou de um **modelo** (o kit do modelo vale antes
+  do kit do tipo). Acessório desativado não entra em kits nem em pedidos novos (V33).
+- No **pedido**, ao acrescentar uma linha, o kit entra junto (quantidade do kit × quantidade da linha); dá para
+  acrescentar acessório **avulso**. Para cada acessório ficam o pedido, os **enviados**, os **devolvidos** e o que
+  **falta** voltar, com os botões "Tudo enviado" e "Tudo devolvido". Devolvido não passa do enviado; o que já foi
+  enviado não sai do pedido; com o pedido encerrado só a devolução muda (acessório que chegou depois). Tirar a linha
+  leva junto os acessórios dela que não foram enviados.
+- O pedido com os equipamentos de volta e acessório faltando mostra o aviso "Faltam N acessório(s)". A **folha de
+  separação** lista os acessórios a separar; o **contrato** lista os acessórios com enviados e devolvidos; os
+  **Relatórios da locação** mostram os **acessórios que não voltaram** (pedidos encerrados ou com a devolução vencida).
+
 ### Folha de separação e relatórios da locação (1.17.0)
 
 - **Folha de separação** (botão no pedido enquanto falta sair algo, Locação · Ver): PDF com o cliente, o local de
