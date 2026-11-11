@@ -183,6 +183,17 @@ class PedidoWebController(
         return destinoTela
     }
 
+    /** Prorrogação (1.16.0): nova devolução prevista e o motivo; fica no histórico do pedido e no contrato. */
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
+    @PostMapping("/{id}/prorrogacao")
+    fun prorrogar(
+        @PathVariable id: Long, @RequestParam(required = false) data: String?, @RequestParam(required = false) motivo: String?,
+        redirect: RedirectAttributes
+    ): String = acao(id, redirect) {
+        val p = service.prorrogar(id, dia(data, "devolução"), motivo)
+        "Devolução prevista mudada para ${org.example.util.FormatoBr.data(p.previsaoDevolucao)}. A mudança ficou no histórico do pedido."
+    }
+
     @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
     @PostMapping("/{id}/separacao/encerrar")
     fun encerrarSeparacao(@PathVariable id: Long, redirect: RedirectAttributes): String = acao(id, redirect) {

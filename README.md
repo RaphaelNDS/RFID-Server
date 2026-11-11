@@ -300,6 +300,19 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Linha do tempo do equipamento e prorrogação do pedido (1.16.0)
+
+- **Linha do tempo** (botão na edição da etiqueta, Etiquetas · Ver): tudo o que aconteceu com o equipamento numa
+  lista só, do mais novo para o mais antigo: cadastro e alterações feitas à mão, cada saída e devolução de locação
+  (com o cliente, o local de entrega e os dias de atraso), a conferência (avarias em destaque), as manutenções com o
+  resultado e o custo, as transferências, os inventários que o encontraram e as vendas. No topo, o resumo: quantas
+  locações, para quantos clientes, quantos dias alugado, quantas manutenções e o custo total, quantas avarias e o
+  último cliente. As mudanças de situação que vêm desses fluxos não aparecem de novo como alteração.
+- **Prorrogar o pedido** (na tela do pedido, Locação · Editar): nova devolução prevista e o motivo (obrigatório).
+  Cada mudança fica no histórico do pedido (data de antes, nova, motivo, quem e quando), no contrato em PDF e na
+  auditoria; mudar a data pela edição dos dados do pedido também entra no histórico (V32). Não aceita data no
+  passado nem pedido encerrado ou cancelado.
+
 ### Painel do dia e disponibilidade (1.13.0)
 
 Pensados para o uso interno da equipe. Só leitura, com RFID · Ver.

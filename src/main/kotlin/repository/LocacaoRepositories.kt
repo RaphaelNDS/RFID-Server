@@ -66,8 +66,19 @@ interface PedidoItemRepository : JpaRepository<PedidoItemEntity, Long> {
     fun findAllByDevolvidoEmIsNotNullAndConferidoEmIsNullOrderByDevolvidoEmAsc(): List<PedidoItemEntity>
 
     fun countByDevolvidoEmIsNotNullAndConferidoEmIsNull(): Long
+
+    /** Linha do tempo do equipamento (1.16.0): todas as saídas dele, pela etiqueta (continua depois de excluído). */
+    fun findAllByTagRealOrderBySaidaEmDesc(tagReal: String): List<PedidoItemEntity>
 }
 
 interface VendaRepository : JpaRepository<VendaEntity, Long> {
     fun findFirstByTagIdAndDesfeitaEmIsNullOrderByIdDesc(tagId: Long): VendaEntity?
+
+    /** Linha do tempo do equipamento (1.16.0). */
+    fun findAllByTagRealOrderByIdDesc(tagReal: String): List<VendaEntity>
+}
+
+/** Prorrogações da devolução prevista de um pedido (1.16.0). */
+interface PedidoProrrogacaoRepository : JpaRepository<org.example.model.PedidoProrrogacaoEntity, Long> {
+    fun findAllByPedidoIdOrderByIdAsc(pedidoId: Long): List<org.example.model.PedidoProrrogacaoEntity>
 }

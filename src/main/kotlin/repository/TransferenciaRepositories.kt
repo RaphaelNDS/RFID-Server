@@ -25,6 +25,9 @@ interface TransferenciaRepository : JpaRepository<TransferenciaEntity, Long> {
 interface TransferenciaItemRepository : JpaRepository<TransferenciaItemEntity, Long> {
     fun findAllByTransferenciaIdOrderByIdAsc(transferenciaId: Long): List<TransferenciaItemEntity>
 
+    /** Linha do tempo do equipamento (1.16.0): as guias em que ele aparece. */
+    fun findAllByTagRealOrderByIdDesc(tagReal: String): List<TransferenciaItemEntity>
+
     /** Quantos bens por guia (lista de transferências). */
     @Query("select i.transferenciaId, count(i) from TransferenciaItemEntity i where i.transferenciaId in :ids group by i.transferenciaId")
     fun contarPorTransferencia(@Param("ids") ids: Collection<Long>): List<Array<Any>>

@@ -151,6 +151,36 @@
     <button type="submit" class="btn btn-ghost btn-sm">Encerrar a separação com o que saiu</button>
   </form>
 
+  <!-- Prorrogação (1.16.0): nova devolução prevista com o motivo, e o histórico das mudanças -->
+  <div class="card" style="margin-top:16px" id="prorrogacao" th:if="${d.editavel or !#lists.isEmpty(d.prorrogacoes)}">
+    <div class="card-header empilhar">
+      <h2>Devolução prevista</h2>
+      <span class="muted" th:text="${#temporals.format(p.previsaoDevolucao, 'dd/MM/yyyy')} + (${#lists.isEmpty(d.prorrogacoes)} ? '' : ' · mudou ' + ${#lists.size(d.prorrogacoes)} + ' vez(es)')"></span>
+    </div>
+    <div class="table-wrap" th:unless="${#lists.isEmpty(d.prorrogacoes)}">
+      <table class="table table-cartoes">
+        <thead><tr><th>Quando</th><th>De</th><th>Para</th><th>Motivo</th><th>Por</th></tr></thead>
+        <tbody>
+        <tr th:each="r : ${d.prorrogacoes}">
+          <td class="nowrap" data-rotulo="Quando" th:text="${#temporals.format(r.criadaEm, 'dd/MM/yyyy HH:mm')}"></td>
+          <td class="nowrap" data-rotulo="De" th:text="${#temporals.format(r.dataAnterior, 'dd/MM/yyyy')}"></td>
+          <td class="nowrap principal" data-rotulo="Para" th:text="${#temporals.format(r.dataNova, 'dd/MM/yyyy')}"></td>
+          <td data-rotulo="Motivo" th:text="${r.motivo}"></td>
+          <td data-rotulo="Por" th:text="${r.registradaPor}"></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <form class="card-footer toolbar" style="border-top:1px solid var(--border)" th:if="${pode and d.editavel}"
+          th:action="@{/admin/pedidos/{id}/prorrogacao(id=${p.id})}" method="post">
+      <div class="field"><label for="prorrogarData">Nova devolução</label>
+        <input type="date" id="prorrogarData" name="data" th:min="${hoje}" required></div>
+      <div class="field" style="flex:2 1 260px"><label for="prorrogarMotivo">Motivo</label>
+        <input id="prorrogarMotivo" name="motivo" maxlength="500" required placeholder="Ex.: cliente pediu mais 15 dias"></div>
+      <button type="submit" class="btn btn-secondary">Prorrogar</button>
+    </form>
+  </div>
+
   <!-- Equipamentos que saíram -->
   <div class="card" style="margin-top:16px" id="equipamentos">
     <div class="card-header empilhar">

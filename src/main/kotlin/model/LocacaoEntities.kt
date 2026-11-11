@@ -237,3 +237,30 @@ class VendaEntity(
     var desfeitaEm: LocalDateTime? = null,
     var desfeitaPor: String? = null
 )
+
+/** Uma prorrogação da devolução prevista do pedido (tabela pedido_prorrogacoes, V32). */
+@Entity
+@Table(name = "pedido_prorrogacoes")
+class PedidoProrrogacaoEntity(
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    val id: Long = 0,
+
+    @Column(nullable = false)
+    val pedidoId: Long,
+
+    @Column(nullable = false)
+    val dataAnterior: LocalDate,
+
+    @Column(nullable = false)
+    val dataNova: LocalDate,
+
+    @Column(nullable = false, length = 500)
+    val motivo: String,
+
+    @Column(nullable = false)
+    val registradaPor: String,
+
+    @Column(nullable = false)
+    val criadaEm: LocalDateTime = LocalDateTime.now()
+)
