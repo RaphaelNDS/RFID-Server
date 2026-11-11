@@ -94,6 +94,7 @@ administrador; depois disso essa tela não aparece mais.
 | Ação sobre os bens que faltaram (no detalhe do inventário finalizado) | `/admin/inventarios/{id}/divergencias` | RFID · Editar |
 | Valor patrimonial (totais de aquisição, depreciação e valor contábil; filtros de unidade, local e tipo) | `/admin/valores` | RFID · Ver (mudar a regra de depreciação de um tipo exige Catálogo · Editar) |
 | PDFs (1.8.0): laudo do inventário · guia · termo · bens com valor contábil | `/admin/inventarios/{id}/laudo.pdf` · `/admin/transferencias/{id}/guia.pdf` · `/admin/responsaveis/{id}/termo.pdf` · `/admin/valores/pdf` | as mesmas da tela de onde saem (Leituras · Ver; RFID · Ver; Catálogo · Ver e RFID · Ver; RFID · Ver) |
+| Empréstimos (1.10.0): lista (abertos, atrasados, devolvidos) · novo · empréstimo com o termo e a devolução · termo em PDF | `/admin/emprestimos` · `/admin/emprestimos/novo` · `/admin/emprestimos/{id}` · `/admin/emprestimos/{id}/termo.pdf` | RFID · Ver (emprestar e devolver exigem RFID · Editar) |
 | Fotos e anexos do bem (1.9.0), na edição da etiqueta: enviar e excluir · abrir ou baixar | `/admin/etiquetas/{id}/anexos` · `/admin/etiquetas/{id}/anexos/{anexo}` | RFID · Editar · RFID · Ver |
 | Relatórios (gráficos; avisa quando chegam leituras novas; período de até 366 dias) | `/admin/dashboard` | Relatórios · Ver |
 | Usuários (+ pedidos de nova senha e senha temporária; editar perfil e permissões; desativar e reativar) | `/admin/usuarios` | somente ADMIN |
@@ -286,6 +287,23 @@ Gerados pelo servidor (openhtmltopdf), abrem no navegador e trazem no rodapé qu
 - **Guia de transferência** e **termo de responsabilidade**: as mesmas páginas de imprimir, em PDF.
 
 O laudo e o relatório de valores vão para a auditoria (Exportações), como as planilhas.
+
+### Empréstimo e devolução (1.10.0)
+
+Menu **Empréstimos**, ou o botão **Emprestar** na edição da etiqueta. Um empréstimo numerado leva um ou mais bens
+para um **responsável cadastrado**, com a data de saída, a **devolução prevista** e a finalidade.
+
+- Só sai bem **Em uso** ou **Em estoque**. Na saída ele fica **Emprestado**; na devolução volta para a situação de
+  antes. O local e o responsável do bem não mudam (para mudar de vez, use a transferência).
+- A devolução é por bem: marque os que voltaram, com a data e a condição (ex.: "tela riscada"). O empréstimo fica
+  aberto até o último bem voltar.
+- A lista filtra **abertos**, **atrasados** (prazo vencido), **devolvidos** ou todos, e busca por etiqueta,
+  patrimônio ou nome de quem recebeu. Os atrasados aparecem num aviso no topo da lista e na edição da etiqueta.
+- O **termo de empréstimo** sai na tela (imprimir) e em PDF, para a assinatura de quem recebe.
+- Enquanto emprestado, o bem não recebe baixa, não é excluído e a situação não muda pela edição. Nas divergências
+  do inventário, o bem emprestado que faltou fica como está.
+- Saída e devolução vão para o histórico de cada bem ("Empréstimo nº X", "Devolução do empréstimo nº X") e para a
+  auditoria (Patrimônio). Um bem só pode estar em um empréstimo aberto (índice único no banco, V27).
 
 ### Fotos e anexos do bem (1.9.0)
 
