@@ -33,7 +33,9 @@ class EtiquetaWebController(
     // 1.9.0: fotos e anexos do bem
     private val anexos: org.example.service.AnexoBemService? = null,
     // 1.10.0: empréstimo aberto do bem
-    private val emprestimos: org.example.service.EmprestimoService? = null
+    private val emprestimos: org.example.service.EmprestimoService? = null,
+    // 1.11.0: manutenções do bem
+    private val manutencoes: org.example.service.ManutencaoService? = null
 ) {
 
     @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
@@ -173,6 +175,7 @@ class EtiquetaWebController(
         model.addAttribute("anexoMaximo", anexos?.maximoRotulo)
         model.addAttribute("anexoMaximoPorBem", anexos?.maximoPorBem)
         model.addAttribute("emprestimo", emprestimos?.abertoDoBem(id))
+        model.addAttribute("manutencoes", manutencoes?.doBem(id))
         return "editar-etiqueta"
     }
 }

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Manutenção · Sistema RFID</title>
+
+<section class="page page-estreita" th:with="m=${r.manutencao}">
+
+  <div class="page-header">
+    <div>
+      <h1 th:text="'Manutenção nº ' + ${m.id}">Manutenção</h1>
+      <p class="subtitulo">
+        <span th:if="${r.atrasada}" class="badge badge-inativo" th:text="'Atrasada ' + ${r.diasAtraso} + ' dia(s)'"></span>
+        <span th:if="${m.aberta and !r.atrasada}" class="badge badge-CUSTOM">Aberta</span>
+        <span th:unless="${m.aberta}" class="badge" th:classappend="${m.status.name() == 'CONCLUIDA'} ? 'badge-online' : 'badge-inativo'"
+              th:text="${m.status.rotulo}"></span>
+        <span th:text="${m.tipo.rotulo}"></span>
+      </p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/manutencoes}" class="btn btn-ghost"><svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Manutenções</a>
+      <a th:if="${m.tagId != null and @authService.temPermissao('RFID','UPDATE')}" th:href="@{/admin/etiquetas/{id}/editar(id=${m.tagId})}" class="btn btn-ghost">Etiqueta</a>
+      <a th:href="@{/admin/manutencoes/{id}/ordem.pdf(id=${m.id})}" class="btn btn-secondary" target="_blank" rel="noopener"><svg class="ic"><use href="/img/icones.svg#download"/></svg>PDF</a>
+    </div>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <dl class="dados">
+        <div><dt>Bem</dt><dd th:text="${m.patrimonio ?: m.tagReal} + (${m.descricaoBem != null} ? ' · ' + ${m.descricaoBem} : '')"></dd></div>
+        <div><dt>Etiqueta (EPC)</dt><dd class="mono" th:text="${m.tagReal}"></dd></div>
+        <div><dt>Problema / revisão</dt><dd th:text="${m.problema}"></dd></div>
+        <div><dt>Fornecedor / técnico</dt><dd th:text="${m.fornecedor} ?: '—'"></dd></div>
+        <div><dt>Envio</dt><dd th:text="${#temporals.format(m.dataEnvio, 'dd/MM/yyyy')}"></dd></div>
+        <div><dt>Previsão de retorno</dt><dd th:text="${m.previsaoRetorno != null} ? ${#temporals.format(m.previsaoRetorno, 'dd/MM/yyyy')} : '—'"></dd></div>
+        <div><dt>Situação antes</dt><dd th:text="${m.situacaoAnterior.rotulo}"></dd></div>
+        <div><dt>Aberta por</dt><dd th:text="${m.registradaPor} + ' em ' + ${#temporals.format(m.criadaEm, 'dd/MM/yyyy HH:mm')}"></dd></div>
+        <th:block th:unless="${m.aberta}">
+          <div th:if="${m.resultado != null}"><dt>Resultado</dt><dd th:text="${m.resultado.rotulo}"></dd></div>
+          <div th:if="${m.servicoRealizado != null}"><dt>Serviço realizado</dt><dd th:text="${m.servicoRealizado}"></dd></div>
+          <div th:if="${m.custo != null}"><dt>Custo</dt><dd th:text="${fmt.reais(m.custo)}"></dd></div>
+          <div><dt th:text="${m.status.name() == 'CONCLUIDA'} ? 'Concluída' : 'Cancelada'"></dt>
+            <dd th:text="${#temporals.format(m.concluidaEm, 'dd/MM/yyyy')} + ' por ' + ${m.concluidaPor}"></dd></div>
+        </th:block>
+      </dl>
+    </div>
+  </div>
+
+  <th:block th:if="${m.aberta and @authService.temPermissao('RFID','UPDATE')}">
+    <form class="card" style="margin-top:16px" th:action="@{/admin/manutencoes/{id}/conclusao(id=${m.id})}" method="post" data-enviar-uma-vez>
+      <div class="card-header empilhar">
+        <h2>Concluir</h2>
+        <span class="muted" th:text="'O bem volta a ficar ' + ${m.situacaoAnterior.rotulo} + '.'"></span>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field">
+            <label for="resultado">Resultado <span class="obrigatorio">*</span></label>
+            <select id="resultado" name="resultado" required>
+              <option th:each="x : ${resultados}" th:value="${x.name()}" th:text="${x.rotulo}"></option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="custo">Custo (R$)</label>
+            <input type="text" id="custo" name="custo" inputmode="decimal" maxlength="20" placeholder="Ex.: 350,00">
+          </div>
+          <div class="field span-2">
+            <label for="servico">Serviço realizado</label>
+            <input type="text" id="servico" name="servico" maxlength="500" placeholder="Ex.: troca da fonte; limpeza interna">
+          </div>
+          <div class="field">
+            <label for="dataConclusao">Data do retorno</label>
+            <input type="date" id="dataConclusao" name="data" th:value="${hoje}" th:min="${m.dataEnvio}" th:max="${hoje}">
+          </div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button type="submit" class="btn btn-primary" data-enviando="Concluindo...">
+          <svg class="ic"><use href="/img/icones.svg#ok"/></svg>Concluir manutenção
+        </button>
+      </div>
+    </form>
+
+    <form class="card" style="margin-top:16px" th:action="@{/admin/manutencoes/{id}/cancelamento(id=${m.id})}" method="post"
+          data-confirmar="Cancelar esta manutenção? O bem volta como estava antes." data-confirmar-titulo="Cancelar manutenção"
+          data-confirmar-botao="Cancelar manutenção" data-confirmar-perigo>
+      <div class="card-header empilhar">
+        <h2>Cancelar</h2>
+        <span class="muted">Aberta por engano ou o bem não chegou a ir.</span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label for="motivoCancelamento">Motivo <span class="obrigatorio">*</span></label>
+          <input type="text" id="motivoCancelamento" name="motivo" maxlength="500" required>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button type="submit" class="btn btn-danger-ghost">Cancelar manutenção</button>
+      </div>
+    </form>
+  </th:block>
+
+</section>
+</html>

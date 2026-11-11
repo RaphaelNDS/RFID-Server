@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Manutenções · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Manutenções</h1>
+      <p class="subtitulo">Ordens de manutenção dos bens: conserto ou revisão, fornecedor, prazo e custo</p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/manutencoes/nova}" class="btn btn-primary" th:if="${@authService.temPermissao('RFID','UPDATE')}">
+        <svg class="ic"><use href="/img/icones.svg#mais"/></svg>Nova manutenção
+      </a>
+    </div>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+  <div class="alert alert-aviso" th:if="${atrasadas > 0 and filtro.name() != 'ATRASADAS'}" role="note">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+    <span><strong th:text="${atrasadas}"></strong> manutenção(ões) com a previsão de retorno vencida.
+      <a th:href="@{/admin/manutencoes(situacao='ATRASADAS')}">Ver atrasadas</a></span>
+  </div>
+
+  <div class="card">
+    <form method="get" class="toolbar" role="search">
+      <div class="field">
+        <label for="situacao" class="sr-only">Situação</label>
+        <select id="situacao" name="situacao" class="select-sm">
+          <option th:each="f : ${filtros}" th:value="${f.name()}" th:text="${f.rotulo}" th:selected="${f == filtro}"></option>
+        </select>
+      </div>
+      <div class="field busca">
+        <label for="busca" class="sr-only">Buscar</label>
+        <svg class="ic"><use href="/img/icones.svg#busca"/></svg>
+        <input id="busca" name="busca" type="search" th:value="${busca}" placeholder="Etiqueta, patrimônio ou fornecedor">
+      </div>
+      <button type="submit" class="btn btn-primary">Filtrar</button>
+      <a th:if="${busca != '' or filtro.name() != 'ABERTAS'}" th:href="@{/admin/manutencoes}" class="btn btn-ghost">Limpar</a>
+      <span class="muted nowrap" style="align-self:center" th:text="${#numbers.formatInteger(total, 1, 'POINT')} + ' manutenção(ões)'"></span>
+    </form>
+
+    <div class="table-wrap">
+      <table class="table table-cartoes" th:unless="${#lists.isEmpty(manutencoes)}">
+        <thead>
+        <tr><th>Nº</th><th>Bem</th><th>Tipo</th><th>Fornecedor</th><th>Envio</th><th>Retorno</th><th>Custo</th><th>Situação</th><th></th></tr>
+        </thead>
+        <tbody>
+        <tr th:each="r : ${manutencoes}" th:with="m=${r.manutencao}">
+          <td class="principal cartao-titulo nowrap" th:text="'Nº ' + ${m.id}"></td>
+          <td data-rotulo="Bem">
+            <span th:text="${m.patrimonio} ?: ${m.tagReal}"></span>
+            <div class="muted" style="font-size:12px" th:text="${m.descricaoBem} ?: ''"></div>
+          </td>
+          <td data-rotulo="Tipo" th:text="${m.tipo.rotulo}"></td>
+          <td data-rotulo="Fornecedor" th:text="${m.fornecedor} ?: '—'"></td>
+          <td data-rotulo="Envio" class="nowrap" th:text="${#temporals.format(m.dataEnvio, 'dd/MM/yyyy')}"></td>
+          <td data-rotulo="Retorno" class="nowrap"
+              th:text="${m.concluidaEm != null} ? ${#temporals.format(m.concluidaEm, 'dd/MM/yyyy')} : (${m.previsaoRetorno != null} ? 'previsto ' + ${#temporals.format(m.previsaoRetorno, 'dd/MM/yyyy')} : '—')"></td>
+          <td data-rotulo="Custo" class="nowrap" th:text="${m.custo != null} ? ${fmt.reais(m.custo)} : '—'"></td>
+          <td data-rotulo="Situação">
+            <span th:if="${r.atrasada}" class="badge badge-inativo" th:text="'Atrasada ' + ${r.diasAtraso} + ' dia(s)'"></span>
+            <span th:if="${m.aberta and !r.atrasada}" class="badge badge-CUSTOM">Aberta</span>
+            <span th:unless="${m.aberta}" class="badge" th:classappend="${m.status.name() == 'CONCLUIDA'} ? 'badge-online' : 'badge-inativo'"
+                  th:text="${m.status.rotulo}"></span>
+          </td>
+          <td class="acoes">
+            <a th:href="@{/admin/manutencoes/{id}(id=${m.id})}" class="btn btn-ghost btn-sm">
+              <svg class="ic"><use href="/img/icones.svg#lapis"/></svg><span class="texto-btn">Abrir</span>
+            </a>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+
+      <div class="vazio" th:if="${#lists.isEmpty(manutencoes)}">
+        <svg class="ic"><use href="/img/icones.svg#lapis"/></svg>
+        <strong th:text="${busca == '' and filtro.name() == 'ABERTAS'} ? 'Nenhum bem em manutenção agora' : 'Nada encontrado'"></strong>
+        <span>Abra pela edição da etiqueta (botão Manutenção) ou pelo botão Nova manutenção.</span>
+      </div>
+    </div>
+
+    <nav th:replace="~{layout/paginacao :: paginacao}"></nav>
+  </div>
+
+</section>
+</html>

@@ -59,13 +59,28 @@ class RfidService(
     private val unidadesRepo: UnidadeRepository? = null,
     private val responsaveisRepo: ResponsavelRepository? = null,
     // Empréstimos (1.10.0): bem emprestado não recebe baixa, não é excluído e a situação não muda pela edição
-    private val emprestimoItens: org.example.repository.EmprestimoItemRepository? = null
+    private val emprestimoItens: org.example.repository.EmprestimoItemRepository? = null,
+    // Manutenção (1.11.0): mesmas travas do empréstimo
+    private val manutencoes: org.example.repository.ManutencaoRepository? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    /** Número do empréstimo aberto do bem, ou null. */
-    fun emprestimoAberto(tagId: Long): Long? = emprestimoItens?.findFirstByTagIdAndDevolvidoEmIsNull(tagId)?.emprestimoId
+    /**
+     * O bem está fora num empréstimo ou numa manutenção aberta: [onde] ("no empréstimo nº 3"), a situação que ele
+     * tem por isso, o que encerra ([fim]) e o que fazer antes de mexer nele ([acao]).
+     */
+    data class Ocupacao(val onde: String, val situacao: SituacaoBem, val fim: String, val acao: String)
+
+    fun ocupacao(tagId: Long): Ocupacao? {
+        emprestimoItens?.findFirstByTagIdAndDevolvidoEmIsNull(tagId)?.let {
+            return Ocupacao("no empréstimo nº ${it.emprestimoId}", SituacaoBem.EMPRESTADO, "a devolução for registrada", "registre a devolução")
+        }
+        manutencoes?.findFirstByTagIdAndStatus(tagId, org.example.model.StatusManutencao.ABERTA)?.let {
+            return Ocupacao("na manutenção nº ${it.id}", SituacaoBem.EM_MANUTENCAO, "a manutenção for concluída", "conclua a manutenção")
+        }
+        return null
+    }
 
     /* ================= CADASTRO NORMAL ================= */
 
@@ -301,9 +316,9 @@ class RfidService(
         validarLocalEResponsavel(req, localAtual = tag.localId, responsavelAtual = tag.responsavelId)
         // Conferida antes de mexer na etiqueta: recusar depois deixaria a entidade alterada na sessão do JPA
         val novaSituacao = if (tag.baixado) null else situacaoEscolhida(req.situacao)
-        emprestimoAberto(tag.id)?.let { n ->
-            require(novaSituacao == null || novaSituacao == SituacaoBem.EMPRESTADO) {
-                "Este bem está no empréstimo nº $n: a situação volta sozinha quando a devolução for registrada"
+        ocupacao(tag.id)?.let { o ->
+            require(novaSituacao == null || novaSituacao == o.situacao) {
+                "Este bem está ${o.onde}: a situação volta sozinha quando ${o.fim}"
             }
         }
         val valor = valorDo(req)
@@ -385,7 +400,7 @@ class RfidService(
     fun darBaixa(id: Long, motivo: MotivoBaixa, data: java.time.LocalDate?, observacao: String?, origem: String? = null): TagEntity {
         val tag = buscarPorId(id)
         require(!tag.baixado) { "Este bem já foi baixado em ${tag.baixaEm} (${tag.baixaMotivo?.rotulo})" }
-        emprestimoAberto(tag.id)?.let { n -> throw IllegalArgumentException("Este bem está no empréstimo nº $n: registre a devolução antes da baixa") }
+        ocupacao(tag.id)?.let { o -> throw IllegalArgumentException("Este bem está ${o.onde}: ${o.acao} antes da baixa") }
         val hoje = java.time.LocalDate.now(relogio)
         val dia = data ?: hoje
         require(!dia.isAfter(hoje)) { "A data da baixa não pode ser no futuro" }
@@ -425,7 +440,7 @@ class RfidService(
     @Transactional
     fun excluirTag(id: Long): TagEntity {
         val tag = buscarPorId(id)
-        emprestimoAberto(tag.id)?.let { n -> throw IllegalArgumentException("Este bem está no empréstimo nº $n: registre a devolução antes de excluir") }
+        ocupacao(tag.id)?.let { o -> throw IllegalArgumentException("Este bem está ${o.onde}: ${o.acao} antes de excluir") }
         val antes = historico.retrato(tag)
 
         repo.delete(tag)

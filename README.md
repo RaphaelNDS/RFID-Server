@@ -94,6 +94,7 @@ administrador; depois disso essa tela não aparece mais.
 | Ação sobre os bens que faltaram (no detalhe do inventário finalizado) | `/admin/inventarios/{id}/divergencias` | RFID · Editar |
 | Valor patrimonial (totais de aquisição, depreciação e valor contábil; filtros de unidade, local e tipo) | `/admin/valores` | RFID · Ver (mudar a regra de depreciação de um tipo exige Catálogo · Editar) |
 | PDFs (1.8.0): laudo do inventário · guia · termo · bens com valor contábil | `/admin/inventarios/{id}/laudo.pdf` · `/admin/transferencias/{id}/guia.pdf` · `/admin/responsaveis/{id}/termo.pdf` · `/admin/valores/pdf` | as mesmas da tela de onde saem (Leituras · Ver; RFID · Ver; Catálogo · Ver e RFID · Ver; RFID · Ver) |
+| Manutenções (1.11.0): lista (abertas, atrasadas, encerradas) · nova · a ordem (concluir ou cancelar) · ordem em PDF | `/admin/manutencoes` · `/admin/manutencoes/nova` · `/admin/manutencoes/{id}` · `/admin/manutencoes/{id}/ordem.pdf` | RFID · Ver (abrir, concluir e cancelar exigem RFID · Editar) |
 | Empréstimos (1.10.0): lista (abertos, atrasados, devolvidos) · novo · empréstimo com o termo e a devolução · termo em PDF | `/admin/emprestimos` · `/admin/emprestimos/novo` · `/admin/emprestimos/{id}` · `/admin/emprestimos/{id}/termo.pdf` | RFID · Ver (emprestar e devolver exigem RFID · Editar) |
 | Fotos e anexos do bem (1.9.0), na edição da etiqueta: enviar e excluir · abrir ou baixar | `/admin/etiquetas/{id}/anexos` · `/admin/etiquetas/{id}/anexos/{anexo}` | RFID · Editar · RFID · Ver |
 | Relatórios (gráficos; avisa quando chegam leituras novas; período de até 366 dias) | `/admin/dashboard` | Relatórios · Ver |
@@ -287,6 +288,23 @@ Gerados pelo servidor (openhtmltopdf), abrem no navegador e trazem no rodapé qu
 - **Guia de transferência** e **termo de responsabilidade**: as mesmas páginas de imprimir, em PDF.
 
 O laudo e o relatório de valores vão para a auditoria (Exportações), como as planilhas.
+
+### Manutenção do bem (1.11.0)
+
+Menu **Manutenções**, ou o botão **Manutenção** na edição da etiqueta. Cada **ordem de manutenção** é numerada e
+vale para um bem: tipo (**corretiva** ou **preventiva**), o problema ou o que revisar, o fornecedor ou técnico, a
+data de envio e a previsão de retorno.
+
+- Só vai bem **Em uso** ou **Em estoque**. Com a ordem aberta, ele fica **Em manutenção**; ao **concluir** (resultado,
+  serviço realizado, custo e data do retorno) ou **cancelar** (com o motivo), volta para a situação de antes.
+- "Sem conserto" também devolve a situação anterior: a baixa (sucata) é uma decisão à parte, pela edição da etiqueta.
+- A lista filtra **abertas**, **atrasadas** (previsão de retorno vencida), **concluídas e canceladas** ou todas, e
+  busca por etiqueta, patrimônio ou fornecedor. A **ordem em PDF** acompanha o bem até o fornecedor.
+- A edição da etiqueta mostra a ordem aberta e o **histórico de manutenções** do bem, com o **custo total**.
+- Com a ordem aberta, o bem não recebe baixa, não é excluído, a situação não muda pela edição e ele não pode ser
+  emprestado. Nas divergências do inventário, o bem em manutenção que faltou fica como está.
+- Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
+  (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
 ### Empréstimo e devolução (1.10.0)
 
