@@ -67,10 +67,11 @@ class CadastroColetorIntegracaoTest : IntegracaoBase() {
         mvc.perform(get("/api/android/catalogo").comoOperador(token))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.podeCadastrar").value(true))
-            .andExpect(jsonPath("$.tipos[0].nome").value("Notebook"))
-            .andExpect(jsonPath("$.tipos[0].marcas[0].nome").value("Dell"))
-            .andExpect(jsonPath("$.tipos[0].marcas[0].modelos[0].nome").value("Latitude"))
-            .andExpect(jsonPath("$.tipos[0].marcas[0].modelos[0].id").value(modeloId))
+            // 1.14.0: o catálogo já vem com os tipos do site (V30); o do teste é achado pelo nome
+            .andExpect(jsonPath("$.tipos[?(@.nome == 'Notebook')].nome").value(org.hamcrest.Matchers.hasItem("Notebook")))
+            .andExpect(jsonPath("$.tipos[?(@.nome == 'Notebook')].marcas[0].nome").value(org.hamcrest.Matchers.hasItem("Dell")))
+            .andExpect(jsonPath("$.tipos[?(@.nome == 'Notebook')].marcas[0].modelos[0].nome").value(org.hamcrest.Matchers.hasItem("Latitude")))
+            .andExpect(jsonPath("$.tipos[?(@.nome == 'Notebook')].marcas[0].modelos[0].id").value(org.hamcrest.Matchers.hasItem(modeloId.toInt())))
 
         mvc.perform(get("/api/android/catalogo").comoOperador(tokenLeitura, chaveLeitura))
             .andExpect(jsonPath("$.podeCadastrar").value(false))
