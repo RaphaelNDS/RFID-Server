@@ -46,7 +46,7 @@ class TelasLayoutTest : IntegracaoBase() {
             "/admin/usuarios/${olga.id}/editar", "/admin/coletores", "/admin/app", "/admin/auditoria", "/status",
             "/perfil", "/perfil/senha", "/perfil/email",
             // 1.6.0: gestão de patrimônio
-            "/admin/locais", "/admin/responsaveis", "/admin/tags-cadastradas/importar",
+            "/admin/locais", "/admin/tags-cadastradas/importar",
             // 1.6.1: transferências
             "/admin/transferencias", "/admin/transferencias/nova",
             // 1.11.0: manutenção; 1.12.0: locadora (o valor patrimonial da 1.8.0 saiu)

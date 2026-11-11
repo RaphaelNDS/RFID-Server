@@ -38,7 +38,7 @@ import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.UUID
 
-/** 1.8.0: os PDFs (laudo, guia e termo). O valor patrimonial saiu na 1.12.0 (os dados de valor ficam no banco). */
+/** 1.8.0: os PDFs (laudo e guia; o termo saiu na 1.18.1). O valor patrimonial saiu na 1.12.0 (os dados de valor ficam no banco). */
 class Versao180IntegracaoTest : IntegracaoBase() {
 
     @Autowired lateinit var cadastros: PatrimonioCadastrosService
@@ -141,7 +141,7 @@ class Versao180IntegracaoTest : IntegracaoBase() {
     }
 
     @Test
-    fun `guia de transferencia e termo de responsabilidade em PDF`() {
+    fun `guia de transferencia em PDF (o termo de responsabilidade saiu na 1_18_1)`() {
         val origem = cadastros.salvarLocal(null, "Sala G1 $s", null)
         val destino = cadastros.salvarLocal(null, "Sala G2 $s", null)
         val rita = cadastros.salvarResponsavel(null, "Rita Gonçalves $s", "TI", "M-$s", null)
@@ -151,14 +151,10 @@ class Versao180IntegracaoTest : IntegracaoBase() {
         val textoGuia = textoDoPdf("/admin/transferencias/${guia.id}/guia.pdf")
         assertThat(textoGuia).contains("Guia de transferência de bens", "Guia nº ${guia.id}", "Sala G2 $s", "Sala G1 $s", "Mudança de sala", "Recebido por")
 
-        val textoTermo = textoDoPdf("/admin/responsaveis/${rita.id}/termo.pdf")
-        assertThat(textoTermo).contains("Termo de responsabilidade pela guarda de bens", "Rita Gonçalves $s", "M-$s", "P-E-GT1-$s", "Total: 1 bem(ns).")
 
         // As telas apontam para os PDFs
         mvc.perform(get("/admin/transferencias/${guia.id}").with(Perfis.admin())).andExpect(content().string(containsString("/guia.pdf")))
-        mvc.perform(get("/admin/responsaveis/${rita.id}/termo").with(Perfis.admin())).andExpect(content().string(containsString("/termo.pdf")))
-        // Termo pede Catálogo Ver e RFID Ver
-        mvc.perform(get("/admin/responsaveis/${rita.id}/termo.pdf").with(Perfis.somenteCatalogo())).andExpect(status().isForbidden)
+        mvc.perform(get("/admin/responsaveis/${rita.id}/termo.pdf").with(Perfis.admin())).andExpect(status().isNotFound)
     }
 
     @Test

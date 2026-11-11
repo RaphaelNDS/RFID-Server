@@ -87,12 +87,10 @@ administrador; depois disso essa tela não aparece mais.
 | Inventários (50 por página) | `/admin/inventarios` | Leituras · Ver |
 | Catálogo | `/admin/catalogo` | Catálogo · Ver (criar/excluir exigem Criar/Excluir) |
 | Locais (unidades e locais; desativar sem apagar) | `/admin/locais` | Catálogo · Ver (criar/alterar exigem Criar/Editar) |
-| Responsáveis (pessoas com setor, matrícula e email) | `/admin/responsaveis` | Catálogo · Ver (criar/alterar exigem Criar/Editar) |
-| Termo de responsabilidade (para imprimir ou salvar em PDF) | `/admin/responsaveis/{id}/termo` | Catálogo · Ver **e** RFID · Ver |
 | Transferências (guias numeradas; busca por etiqueta ou patrimônio) e a guia para imprimir | `/admin/transferencias` · `/admin/transferencias/{id}` | RFID · Ver |
 | Nova transferência | `/admin/transferencias/nova` | RFID · Editar |
 | Ação sobre os bens que faltaram (no detalhe do inventário finalizado) | `/admin/inventarios/{id}/divergencias` | RFID · Editar |
-| PDFs (1.8.0): laudo do inventário · guia · termo | `/admin/inventarios/{id}/laudo.pdf` · `/admin/transferencias/{id}/guia.pdf` · `/admin/responsaveis/{id}/termo.pdf` | as mesmas da tela de onde saem (Leituras · Ver; RFID · Ver; Catálogo · Ver e RFID · Ver) |
+| PDFs (1.8.0): laudo do inventário · guia | `/admin/inventarios/{id}/laudo.pdf` · `/admin/transferencias/{id}/guia.pdf` | as mesmas da tela de onde saem (Leituras · Ver; RFID · Ver) |
 | Manutenções (1.11.0): lista (abertas, atrasadas, encerradas) · nova · a ordem (concluir ou cancelar) · ordem em PDF | `/admin/manutencoes` · `/admin/manutencoes/nova` · `/admin/manutencoes/{id}` · `/admin/manutencoes/{id}/ordem.pdf` | Manutenção · Ver (abrir: Criar; concluir e cancelar: Editar) |
 | Pedidos de locação (1.12.0): lista · novo · o pedido (linhas, saída, devolução, conferência) · devoluções a conferir · contrato em PDF | `/admin/pedidos` · `/admin/pedidos/novo` · `/admin/pedidos/{id}` · `/admin/pedidos/devolucoes` · `/admin/pedidos/{id}/contrato.pdf` | Locação · Ver (criar pedido e linha: Criar; o resto: Editar) |
 | Disponibilidade por tipo e modelo (1.13.0); o painel do dia fica na tela Início (`/dashboard`) | `/admin/disponibilidade` | Locação · Ver |
@@ -369,8 +367,8 @@ app antigos ainda podem mandar os nomes antigos). Vendido e Baixado saem das lis
 Alugado sai do esperado (está com o cliente).
 
 **Fora da tela:** responsável, valor de aquisição, data de aquisição e nota fiscal (decisão do usuário). Os dados
-continuam no banco (a edição os manda de volta como estão), e as telas Responsáveis e Valor patrimonial saíram do menu
-(as rotas continuam).
+continuam no banco (a edição os manda de volta como estão). As telas Responsáveis, Termo de responsabilidade e Valor
+patrimonial saíram (a do valor na 1.12.0; Responsáveis e o termo, com as rotas, na limpeza da 1.18.1).
 
 - **Clientes** (menu Clientes): nome, CPF ou CNPJ (sem repetir), contato, telefone, email, endereço e observação.
 - **Pedido de locação** (menu Pedidos de locação): cliente, saída prevista, **devolução prevista**, local de entrega
@@ -390,8 +388,8 @@ continuam no banco (a edição os manda de volta como estão), e as telas Respon
 - Do momento da saída até a conferência, o equipamento não recebe baixa, não é excluído, não é vendido e a situação
   não muda pela edição; e só está em um pedido por vez (índice único no banco).
 - Tudo vai para o histórico de cada equipamento e para a auditoria (Patrimônio).
-- API do coletor: ver **Rotas** (`/api/android/pedidos`, `/conferir`, `/saida`, `/devolucoes`; o login devolve
-  `podeMovimentarLocacao`).
+- Saída e devolução são feitas pela web. O coletor só faz inventário e consulta (a ficha mostra o pedido e o
+  cliente); a API de saída e devolução pelo coletor saiu na limpeza da 1.18.1.
 
 ### Fotos e anexos do bem (1.9.0)
 
@@ -499,10 +497,6 @@ O app funciona sem rede durante a sessão e envia depois o que ficou na fila. Ca
 | `GET /api/android/tags/{epc}` | Ficha do bem: o cadastro e, desde a 1.5.0, `ultimoLocal` e `ultimoInventarioEm` (último inventário finalizado em que foi encontrado), `ultimaLeituraEm` e `ultimaLeituraPor` (opcionais, podem vir `null`); desde a 1.6.0, também `situacao` (código), `situacaoRotulo`, `unidade`, `local` e `responsavel` (opcionais) | operador · Leituras |
 | `GET /api/android/tags/patrimonio/{patrimonio}` | EPC de um patrimônio (localizar equipamento) | operador · Leituras |
 | `POST /api/android/tags/{epc}/transferencia` | Transfere o bem para um local (1.7.0): `{"local","observacao"}`. Só o local muda. Responde `{"local","situacao","situacaoRotulo","transferencia","jaEstava"}`; o bem que já estava no local responde 200 com `jaEstava: true` e sem guia (reenvio). 404 etiqueta sem cadastro, 409 bem baixado, 400 local desconhecido ou desativado | operador · RFID Editar |
-| `GET /api/android/pedidos?situacao=ABERTO,EM_SEPARACAO` · `GET /api/android/pedidos/{id}` | Pedidos de locação (1.12.0) para o coletor: a lista (padrão: a separar) e o pedido com as linhas (`quantidade`, `saidos`) e os equipamentos que já saíram | operador · Locação Editar |
-| `POST /api/android/pedidos/{id}/conferir` | `{"etiquetas":[...]}`: confere as leituras contra o pedido **sem gravar**: por item `linhaId`, `jaSaiu` e `problema` (`SEM_CADASTRO`, `FORA_DO_PEDIDO`, `NAO_DISPONIVEL`, `EXCEDENTE`); por linha `saidos` e `conferidos` | operador · Locação Editar |
-| `POST /api/android/pedidos/{id}/saida` | `{"etiquetas","observacao","idEnvio"}`: saída parcial (soma ao que já saiu). Responde `aceitas`, `recusadas` (`motivo`, `mensagem`), `faltando` e a situação do pedido. Reenvio não duplica. 409 pedido cancelado ou encerrado | operador · Locação Editar |
-| `POST /api/android/devolucoes` | `{"etiquetas","observacao","idEnvio"}`: cada equipamento alugado fica Em devolução. Responde `recebidas` (com o `pedido`), `semLocacao` e, por pedido tocado, o que ainda está com o cliente (`faltando`). Reenvio não duplica | operador · Locação Editar |
 | `POST /api/android/leitura` | Registra a leitura de uma etiqueta | operador · Leituras |
 | `POST /api/android/naocadastrada` | Envia etiqueta desconhecida para Pendentes | operador · Leituras |
 | `POST /api/android/leituras/lote` | Até 500 leituras de um operador numa requisição: classifica e registra cada uma e devolve o resultado por item (`CADASTRADA` com os dados, `NAO_CADASTRADA`, `RECUSADA` ou `ERRO`). Desde a 1.6.2, os dados trazem também `situacao` e `situacaoRotulo`, com os mesmos nomes da ficha (o app avisa quando o bem lido está baixado ou extraviado). A hora de cada leitura é conferida contra a sessão; reenvio da mesma tag com a mesma hora não duplica | operador · Leituras |

@@ -70,9 +70,6 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
     @Query("select t.situacao, count(t) from TagEntity t group by t.situacao")
     fun contarPorSituacao(): List<Array<Any>>
 
-    @Query("select t.responsavelId, count(t) from TagEntity t where t.responsavelId is not null and t.situacao not in (org.example.model.SituacaoBem.BAIXADO, org.example.model.SituacaoBem.VENDIDO) group by t.responsavelId")
-    fun contarPorResponsavel(): List<Array<Any>>
-
     /**
      * Relatório "não vistas" e exportação do cadastro: [tag_real, última leitura, hora e local do último inventário]
      * de cada etiqueta. Uma consulta por etiqueta usando os índices (tag, data_hora) das leituras (V20, não único: o

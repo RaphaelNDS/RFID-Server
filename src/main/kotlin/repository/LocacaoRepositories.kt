@@ -41,9 +41,9 @@ interface PedidoLocacaoRepository : JpaRepository<PedidoLocacaoEntity, Long> {
               and exists (select 1 from PedidoItemEntity a where a.pedidoId = p.id and a.devolvidoEm is null)""")
     fun contarAtrasados(@Param("hoje") hoje: LocalDate): Long
 
-    /** Para o coletor: os pedidos nestas situações, pela saída prevista (sem data por último) e o número. */
+    /** Os pedidos nestas situações, pela saída prevista (sem data por último) e o número. */
     @Query("select p from PedidoLocacaoEntity p where p.situacao in :situacoes order by coalesce(p.saidaPrevista, p.previsaoDevolucao), p.id")
-    fun paraColetor(@Param("situacoes") situacoes: Collection<SituacaoPedido>): List<PedidoLocacaoEntity>
+    fun porSituacao(@Param("situacoes") situacoes: Collection<SituacaoPedido>): List<PedidoLocacaoEntity>
 
     fun findAllByClienteIdOrderByIdDesc(clienteId: Long): List<PedidoLocacaoEntity>
 }

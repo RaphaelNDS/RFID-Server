@@ -59,7 +59,7 @@ class TagEntity(
 
     var baixaPor: String? = null,
 
-    // Valor e depreciação (1.8.0, V25). A vida útil e o residual vêm do tipo de equipamento
+    // Valor de aquisição, data e nota fiscal (1.8.0, V25): fora da tela desde a 1.12.0, continuam no banco
 
     @Column(name = "valor_aquisicao", precision = 14, scale = 2)
     var valorAquisicao: java.math.BigDecimal? = null,

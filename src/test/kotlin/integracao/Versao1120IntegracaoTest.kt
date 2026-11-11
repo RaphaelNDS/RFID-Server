@@ -29,7 +29,6 @@ import org.example.suporte.OperadorTeste
 import org.example.suporte.Perfis
 import org.example.suporte.comoOperador
 import org.hamcrest.Matchers.containsString
-import org.hamcrest.Matchers.hasItem
 import org.hamcrest.Matchers.not
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -94,62 +93,35 @@ class Versao1120IntegracaoTest : IntegracaoBase() {
     }
 
     @Test
-    fun `fluxo do coletor - lista, confere, sai em partes, devolve e a web confere a devolucao`() {
+    fun `fluxo da locacao - sai em partes, recusa o que nao serve, devolve e a web confere a devolucao`() {
         val id = cenario()
 
-        // Lista e detalhe do pedido
-        mvc.perform(get("/api/android/pedidos").comoOperador(token))
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$[?(@.id == $id)].totalItens").value(hasItem(3)))
-            .andExpect(jsonPath("$[?(@.id == $id)].localEntrega").value(hasItem("Obra Rua Y")))
-        mvc.perform(get("/api/android/pedidos/$id").comoOperador(token))
-            .andExpect(jsonPath("$.numero").value(id.toInt()))
-            .andExpect(jsonPath("$.linhas[0].tipo").value("Coletor $s"))
-            .andExpect(jsonPath("$.linhas[0].quantidade").value(2))
-            .andExpect(jsonPath("$.linhas[1].patrimonio").value("P-E4-$s"))
-            .andExpect(jsonPath("$.linhas[1].etiqueta").value("E4-$s"))
-
-        // Conferência sem gravar: E3 sobra (o tipo já tem 2), E5 é de outro tipo, NAOEXISTE sem cadastro
-        coletor("/api/android/pedidos/$id/conferir", """{"etiquetas":["E1-$s","E2-$s","E3-$s","E4-$s","E5-$s","NAOEXISTE-$s"]}""")
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.itens[0].problema").doesNotExist())
-            .andExpect(jsonPath("$.itens[2].problema").value("EXCEDENTE"))
-            .andExpect(jsonPath("$.itens[3].linhaId").isNumber)
-            .andExpect(jsonPath("$.itens[4].problema").value("FORA_DO_PEDIDO"))
-            .andExpect(jsonPath("$.itens[5].problema").value("SEM_CADASTRO"))
-            .andExpect(jsonPath("$.linhas[0].conferidos").value(2))
-            .andExpect(jsonPath("$.linhas[1].conferidos").value(1))
-        assertThat(tag("E1-$s").situacao).isEqualTo(SituacaoBem.DISPONIVEL)
-
-        // Saída parcial, depois o resto (com o E1 de novo: reenvio não duplica)
-        coletor("/api/android/pedidos/$id/saida", """{"etiquetas":["E1-$s"],"idEnvio":"${UUID.randomUUID()}"}""")
-            .andExpect(jsonPath("$.aceitas[0].epc").value("E1-$s"))
-            .andExpect(jsonPath("$.situacao").value("EM_SEPARACAO"))
-            .andExpect(jsonPath("$.faltando.length()").value(2))
-        coletor("/api/android/pedidos/$id/saida", """{"etiquetas":["E1-$s","E2-$s","E4-$s","E3-$s"]}""")
-            .andExpect(jsonPath("$.aceitas.length()").value(3))
-            .andExpect(jsonPath("$.recusadas[0].epc").value("E3-$s"))
-            .andExpect(jsonPath("$.recusadas[0].motivo").value("EXCEDENTE"))
-            .andExpect(jsonPath("$.faltando.length()").value(0))
-            .andExpect(jsonPath("$.situacao").value("ENTREGUE"))
+        // Saída parcial, depois o resto (com o E1 de novo: reenvio não duplica). E3 sobra (o tipo já tem 2), E5 é de
+        // outro tipo, NAOEXISTE sem cadastro
+        val primeira = locacao.registrarSaida(id, listOf("E1-$s"))
+        assertThat(primeira.aceitos.map { it.codigo }).containsExactly("E1-$s")
+        assertThat(primeira.pedido.situacao).isEqualTo(SituacaoPedido.EM_SEPARACAO)
+        val resto = locacao.registrarSaida(id, listOf("E1-$s", "E2-$s", "E4-$s", "E3-$s", "E5-$s", "NAOEXISTE-$s"))
+        assertThat(resto.saidos).hasSize(3)
+        assertThat(resto.recusados.associate { it.codigo to it.problema }).containsExactlyInAnyOrderEntriesOf(mapOf(
+            "E3-$s" to ProblemaLeitura.EXCEDENTE, "E5-$s" to ProblemaLeitura.FORA_DO_PEDIDO, "NAOEXISTE-$s" to ProblemaLeitura.SEM_CADASTRO))
+        assertThat(resto.pedido.situacao).isEqualTo(SituacaoPedido.ENTREGUE)
         assertThat(itens.findAllByPedidoIdOrderByIdAsc(id)).hasSize(3)
         assertThat(tag("E2-$s").situacao).isEqualTo(SituacaoBem.ALUGADO)
 
-        // Ficha do bem alugado mostra o pedido
+        // Ficha do bem alugado no coletor mostra o pedido
         mvc.perform(get("/api/android/tags/E1-$s").comoOperador(token))
             .andExpect(jsonPath("$.pedido").value(id.toInt()))
             .andExpect(jsonPath("$.cliente").value(containsString("Construtora $s")))
             .andExpect(jsonPath("$.situacao").value("ALUGADO"))
             .andExpect(jsonPath("$.localEntrega").value("Obra Rua Y"))
 
-        // Devolução de um (e um que não está alugado); reenviar não duplica
+        // Devolução de um (e um que não está alugado); repetir não duplica
         repeat(2) {
-            coletor("/api/android/devolucoes", """{"etiquetas":["E1-$s","E3-$s"]}""")
-                .andExpect(jsonPath("$.recebidas[0].pedido").value(id.toInt()))
-                .andExpect(jsonPath("$.semLocacao[0].epc").value("E3-$s"))
-                .andExpect(jsonPath("$.semLocacao[0].situacao").value("DISPONIVEL"))
-                .andExpect(jsonPath("$.pedidos[0].situacao").value("DEVOLVIDO_PARCIAL"))
-                .andExpect(jsonPath("$.pedidos[0].faltando.length()").value(2))
+            val r = locacao.registrarDevolucao(listOf("E1-$s", "E3-$s"))
+            assertThat(r.recebidos.map { it.second.id }).containsExactly(id)
+            assertThat(r.semLocacao.map { it.first }).containsExactly("E3-$s")
+            assertThat(r.pedidos.single().situacao).isEqualTo(SituacaoPedido.DEVOLVIDO_PARCIAL)
         }
         assertThat(tag("E1-$s").situacao).isEqualTo(SituacaoBem.EM_DEVOLUCAO)
 

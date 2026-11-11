@@ -1,14 +1,10 @@
 package org.example.controller
 
 import org.example.model.AreaAuditoria
-import org.example.response.TagViewAdmin
 import org.example.service.AuditoriaService
 import org.example.service.EsperadoInventarioService
-import org.example.service.FiltroEtiquetas
 import org.example.service.InventarioService
-import org.example.service.PatrimonioCadastrosService
 import org.example.service.PdfService
-import org.example.service.RfidService
 import org.example.service.TransferenciaService
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
@@ -23,8 +19,8 @@ import java.time.format.DateTimeFormatter
 
 /**
  * Os PDFs (1.8.0), com as mesmas permissões das telas de onde saem: laudo do inventário (Leituras), guia de
- * transferência (RFID Ver), termo de responsabilidade (Catálogo Ver e RFID Ver) e bens com valor contábil (RFID Ver).
- * Abrem no navegador (inline); o laudo vai para a auditoria, como as exportações. O relatório de valores saiu na 1.12.0.
+ * transferência (RFID Ver). Abrem no navegador (inline); o laudo vai para a auditoria, como as exportações. O relatório
+ * de valores saiu na 1.12.0 e o termo de responsabilidade na 1.18.1.
  */
 @RestController
 @RequestMapping("/admin")
@@ -33,10 +29,7 @@ class PdfWebController(
     private val inventarios: InventarioService,
     private val esperados: EsperadoInventarioService,
     private val transferencias: TransferenciaService,
-    private val cadastros: PatrimonioCadastrosService,
-    private val rfid: RfidService,
-    private val auditoria: AuditoriaService,
-    private val relogio: java.time.Clock
+    private val auditoria: AuditoriaService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -69,18 +62,6 @@ class PdfWebController(
         return pdf.resposta(bytes, "guia-transferencia-$id.pdf")
     }
 
-    @PreAuthorize("@authService.temPermissao('CATALOGO','READ') and @authService.temPermissao('RFID','READ')")
-    @GetMapping("/responsaveis/{id}/termo.pdf")
-    fun termo(@PathVariable id: Long, auth: Authentication): ResponseEntity<ByteArray> {
-        val responsavel = cadastros.responsavel(id)
-        // Mesma lista da tela do termo: sem os baixados, pelo patrimônio (sem patrimônio por último)
-        val bens = rfid.listarTodasParaAdmin(null, FiltroEtiquetas(responsavelId = id))
-            .sortedWith(compareBy<TagViewAdmin> { it.patrimonio.ifBlank { "￿" } }.thenBy { it.tag })
-        val bytes = pdf.gerar("pdf/termo-responsabilidade", mapOf("responsavel" to responsavel, "bens" to bens, "hoje" to java.time.LocalDate.now(relogio)))
-        log.info("{} gerou o termo de responsabilidade de {} em PDF ({} bem(ns))", auth.name, responsavel.nome, bens.size)
-        return pdf.resposta(bytes, "termo-responsabilidade-${nomeArquivo(responsavel.nome)}.pdf")
-    }
-
     companion object {
         private val DIA = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
@@ -89,4 +70,3 @@ class PdfWebController(
             .replace(Regex("\\p{M}"), "").lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(60).ifEmpty { "sem-nome" }
     }
 }
-
