@@ -96,7 +96,7 @@ class Versao160IntegracaoTest : IntegracaoBase() {
         val joao = cadastros.salvarResponsavel(null, "João $s", "Financeiro", null, null)
         cadastrar("E-BEM-$s", localId = local.id, responsavelId = joao.id, situacao = "EM_ESTOQUE")
         val t = tag("E-BEM-$s")
-        assertThat(t.situacao).isEqualTo(SituacaoBem.EM_ESTOQUE)
+        assertThat(t.situacao).isEqualTo(SituacaoBem.DISPONIVEL)
 
         rfid.editarTag(t.id, CadastroRequest(codigoInterno = t.codigoInterno, patrimonio = t.patrimonio, localId = outro.id,
             responsavelId = joao.id, situacao = "EM_MANUTENCAO"))
@@ -140,7 +140,7 @@ class Versao160IntegracaoTest : IntegracaoBase() {
         assertThatThrownBy { rfid.darBaixa(id, MotivoBaixa.VENDA, null, null) }.hasMessageContaining("já foi baixado")
 
         mvc.perform(post("/admin/etiquetas/$id/baixa/desfazer").with(Perfis.gestor()).with(csrf())).andExpect(status().is3xxRedirection)
-        assertThat(tag("E-BX-$s").situacao).isEqualTo(SituacaoBem.EM_USO)
+        assertThat(tag("E-BX-$s").situacao).isEqualTo(SituacaoBem.DISPONIVEL)
         assertThat(tag("E-BX-$s").baixaMotivo).isNull()
         // Quem só vê não dá baixa
         mvc.perform(post("/admin/etiquetas/$id/baixa").with(Perfis.usuario()).with(csrf()).param("motivo", "VENDA")).andExpect(status().isForbidden)
@@ -159,7 +159,7 @@ class Versao160IntegracaoTest : IntegracaoBase() {
         inventario("Sala B $s", "E-INV1-$s", "E-INV2-$s", "E-INV3-$s")
         val salaB = cadastros.localPorNome("Sala B $s", null, criar = false)!!
         assertThat(tag("E-INV1-$s").localId).isEqualTo(salaB.id)
-        assertThat(tag("E-INV1-$s").situacao).isEqualTo(SituacaoBem.EM_USO)
+        assertThat(tag("E-INV1-$s").situacao).isEqualTo(SituacaoBem.DISPONIVEL)
         assertThat(tag("E-INV2-$s").localId).isEqualTo(salaB.id)
         assertThat(tag("E-INV3-$s").localId).isNull()   // baixado não muda
         assertThat(historico.findByTagRealOrderByMomentoDescIdDesc("E-INV1-$s").first { it.campo == "Local" }.origem).startsWith("Coletor")
@@ -195,7 +195,7 @@ class Versao160IntegracaoTest : IntegracaoBase() {
             .andExpect(content().string(containsString("P-E-TELA-$s")))
             .andExpect(content().string(containsString("Unidade $s › Sala T $s")))
         mvc.perform(get("/admin/tags-cadastradas").param("local", local.id.toString()).with(Perfis.gestor())).andExpect(status().isOk)
-            .andExpect(content().string(containsString("E-TELA-$s"))).andExpect(content().string(containsString("Ana $s")))
+            .andExpect(content().string(containsString("E-TELA-$s")))   // 1.12.0: o responsável saiu da lista
             .andExpect(content().string(containsString("situacao=")).let { content().string(containsString("local=${local.id}")) })
         mvc.perform(get("/admin/etiquetas/${tag("E-TELA-$s").id}/editar").with(Perfis.gestor())).andExpect(status().isOk)
             .andExpect(content().string(containsString("Dar baixa"))).andExpect(content().string(containsString("name=\"localId\"")))

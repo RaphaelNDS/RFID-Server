@@ -165,7 +165,7 @@ class RfidServiceTest {
 
         service.listarParaAdmin("  DeLL ", 2)
 
-        verify { tagRepo.buscar("%dell%", setOf(-1L), setOf(2L), setOf(-1L), setOf(-1L), setOf(-1L), org.example.model.SituacaoBem.EDITAVEIS, -1L, -1L, any()) }
+        verify { tagRepo.buscar("%dell%", setOf(-1L), setOf(2L), setOf(-1L), setOf(-1L), setOf(-1L), org.example.model.SituacaoBem.NO_ACERVO, -1L, -1L, any()) }
         assertThat(pagina.captured.pageNumber).isEqualTo(2)
         assertThat(pagina.captured.pageSize).isEqualTo(RfidService.TAMANHO_PAGINA)
         assertThat(pagina.captured.sort.getOrderFor("id")?.isDescending).isTrue()

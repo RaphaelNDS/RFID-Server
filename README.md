@@ -92,10 +92,11 @@ administrador; depois disso essa tela não aparece mais.
 | Transferências (guias numeradas; busca por etiqueta ou patrimônio) e a guia para imprimir | `/admin/transferencias` · `/admin/transferencias/{id}` | RFID · Ver |
 | Nova transferência | `/admin/transferencias/nova` | RFID · Editar |
 | Ação sobre os bens que faltaram (no detalhe do inventário finalizado) | `/admin/inventarios/{id}/divergencias` | RFID · Editar |
-| Valor patrimonial (totais de aquisição, depreciação e valor contábil; filtros de unidade, local e tipo) | `/admin/valores` | RFID · Ver (mudar a regra de depreciação de um tipo exige Catálogo · Editar) |
-| PDFs (1.8.0): laudo do inventário · guia · termo · bens com valor contábil | `/admin/inventarios/{id}/laudo.pdf` · `/admin/transferencias/{id}/guia.pdf` · `/admin/responsaveis/{id}/termo.pdf` · `/admin/valores/pdf` | as mesmas da tela de onde saem (Leituras · Ver; RFID · Ver; Catálogo · Ver e RFID · Ver; RFID · Ver) |
+| PDFs (1.8.0): laudo do inventário · guia · termo | `/admin/inventarios/{id}/laudo.pdf` · `/admin/transferencias/{id}/guia.pdf` · `/admin/responsaveis/{id}/termo.pdf` | as mesmas da tela de onde saem (Leituras · Ver; RFID · Ver; Catálogo · Ver e RFID · Ver) |
 | Manutenções (1.11.0): lista (abertas, atrasadas, encerradas) · nova · a ordem (concluir ou cancelar) · ordem em PDF | `/admin/manutencoes` · `/admin/manutencoes/nova` · `/admin/manutencoes/{id}` · `/admin/manutencoes/{id}/ordem.pdf` | RFID · Ver (abrir, concluir e cancelar exigem RFID · Editar) |
-| Empréstimos (1.10.0): lista (abertos, atrasados, devolvidos) · novo · empréstimo com o termo e a devolução · termo em PDF | `/admin/emprestimos` · `/admin/emprestimos/novo` · `/admin/emprestimos/{id}` · `/admin/emprestimos/{id}/termo.pdf` | RFID · Ver (emprestar e devolver exigem RFID · Editar) |
+| Pedidos de locação (1.12.0): lista · novo · o pedido (linhas, saída, devolução, conferência) · devoluções a conferir · contrato em PDF | `/admin/pedidos` · `/admin/pedidos/novo` · `/admin/pedidos/{id}` · `/admin/pedidos/devolucoes` · `/admin/pedidos/{id}/contrato.pdf` | RFID · Ver (o resto exige RFID · Editar) |
+| Clientes (1.12.0) | `/admin/clientes` | RFID · Ver (cadastrar e alterar exigem RFID · Editar) |
+| Venda do equipamento (1.12.0), na edição da etiqueta | `/admin/etiquetas/{id}/venda` · `/admin/etiquetas/{id}/venda/desfazer` | RFID · Editar |
 | Fotos e anexos do bem (1.9.0), na edição da etiqueta: enviar e excluir · abrir ou baixar | `/admin/etiquetas/{id}/anexos` · `/admin/etiquetas/{id}/anexos/{anexo}` | RFID · Editar · RFID · Ver |
 | Relatórios (gráficos; avisa quando chegam leituras novas; período de até 366 dias) | `/admin/dashboard` | Relatórios · Ver |
 | Usuários (+ pedidos de nova senha e senha temporária; editar perfil e permissões; desativar e reativar) | `/admin/usuarios` | somente ADMIN |
@@ -261,33 +262,25 @@ ação vale só para os bens que faltaram naquele inventário, e no histórico d
 ela saiu. Os baixados e os transferidos para outro local saem da lista do que faltou; os extraviados continuam nela.
 Etiqueta lida sem cadastro ganha o botão **Cadastrar**, que abre o cadastro já com o local do inventário.
 
-### Valor e depreciação (1.8.0)
+### Valor de aquisição (1.8.0; o valor patrimonial saiu na 1.12.0)
 
-O bem ganha **valor de aquisição**, **data de aquisição** e **nota fiscal** (opcionais), no cadastro, na edição
-e na importação da planilha (colunas `Valor de aquisição`, `Data de aquisição` e `Nota fiscal`; o valor aceita
-`4.599,90`, `4599,90` ou a célula numérica do Excel, e a data aceita `dd/mm/aaaa` ou a célula de data). A **regra de
-depreciação fica no tipo de equipamento** (tela Valor patrimonial): vida útil em meses e valor residual em %.
-
-- Depreciação **linear** (CPC 27): (valor − residual) ÷ vida útil por **mês completo** desde a data de aquisição,
-  até no máximo o residual. Bem baixado para de depreciar na data da baixa.
-- Sem vida útil no tipo, ou sem data de aquisição, o bem não deprecia (fica pelo valor de aquisição). Sem valor de
-  aquisição, ele entra na contagem, mas não nos totais.
-- A edição da etiqueta mostra o valor contábil de hoje. Valor, data e nota vão para o histórico; a mudança da regra
-  do tipo vai para a auditoria (Catálogo).
-- A tela **Valor patrimonial** soma por tipo e por local, com filtro de unidade, local, tipo e "com os baixados".
+O bem tem **valor de aquisição**, **data de aquisição** e **nota fiscal** (opcionais). Desde a 1.12.0 (locadora)
+eles **não aparecem nas telas** e a tela Valor patrimonial, o PDF de bens com valor contábil e o valor no laudo do
+inventário **saíram**. Os dados continuam no banco (a edição da etiqueta os manda de volta como estão) e na
+importação e exportação da planilha (colunas `Valor de aquisição`, `Data de aquisição` e `Nota fiscal`). A vida útil
+e o residual do tipo (V25) também ficam no banco, sem uso.
 
 ### PDFs (1.8.0)
 
 Gerados pelo servidor (openhtmltopdf), abrem no navegador e trazem no rodapé quem gerou, quando e a versão:
 
 - **Laudo do inventário** (botão no detalhe do inventário): o resumo, os bens que faltaram com a justificativa do
-  coletor e o valor contábil (com o total), os achados em outro local, as assinaturas e, em anexo, as etiquetas lidas.
-  Inventário em andamento sai marcado como provisório.
-- **Bens com valor contábil** (tela Valor patrimonial, em paisagem): totais por tipo e por local e a lista dos bens,
-  com o mesmo filtro da tela.
+  coletor, os achados em outro local, as assinaturas e, em anexo, as etiquetas lidas. Inventário em andamento sai
+  marcado como provisório.
 - **Guia de transferência** e **termo de responsabilidade**: as mesmas páginas de imprimir, em PDF.
+- **Contrato de locação** (1.12.0) e **ordem de manutenção** (1.11.0).
 
-O laudo e o relatório de valores vão para a auditoria (Exportações), como as planilhas.
+O laudo vai para a auditoria (Exportações), como as planilhas.
 
 ### Manutenção do bem (1.11.0)
 
@@ -306,22 +299,42 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
-### Empréstimo e devolução (1.10.0)
+### Locadora: clientes, pedidos de locação e venda (1.12.0)
 
-Menu **Empréstimos**, ou o botão **Emprestar** na edição da etiqueta. Um empréstimo numerado leva um ou mais bens
-para um **responsável cadastrado**, com a data de saída, a **devolução prevista** e a finalidade.
+Desde a 1.12.0 o sistema é de **locadora**: os equipamentos são alugados a clientes, vendidos ou voltam do aluguel.
+O empréstimo para responsável da 1.10.0 virou o pedido de locação (a V29 converteu os empréstimos em pedidos com o
+mesmo número e os responsáveis deles em clientes).
 
-- Só sai bem **Em uso** ou **Em estoque**. Na saída ele fica **Emprestado**; na devolução volta para a situação de
-  antes. O local e o responsável do bem não mudam (para mudar de vez, use a transferência).
-- A devolução é por bem: marque os que voltaram, com a data e a condição (ex.: "tela riscada"). O empréstimo fica
-  aberto até o último bem voltar.
-- A lista filtra **abertos**, **atrasados** (prazo vencido), **devolvidos** ou todos, e busca por etiqueta,
-  patrimônio ou nome de quem recebeu. Os atrasados aparecem num aviso no topo da lista e na edição da etiqueta.
-- O **termo de empréstimo** sai na tela (imprimir) e em PDF, para a assinatura de quem recebe.
-- Enquanto emprestado, o bem não recebe baixa, não é excluído e a situação não muda pela edição. Nas divergências
-  do inventário, o bem emprestado que faltou fica como está.
-- Saída e devolução vão para o histórico de cada bem ("Empréstimo nº X", "Devolução do empréstimo nº X") e para a
-  auditoria (Patrimônio). Um bem só pode estar em um empréstimo aberto (índice único no banco, V27).
+**Situações do equipamento:** Disponível, Alugado, Em devolução, Em manutenção, À venda, Vendido, Extraviado e
+Baixado. Na edição só se escolhe Disponível, À venda, Em manutenção ou Extraviado; as outras vêm dos pedidos, da
+venda e da baixa. A V29 trocou Em uso e Em estoque por **Disponível** e Emprestado por **Alugado** (a planilha e o
+app antigos ainda podem mandar os nomes antigos). Vendido e Baixado saem das listas e do esperado dos inventários;
+Alugado sai do esperado (está com o cliente).
+
+**Fora da tela:** responsável, valor de aquisição, data de aquisição e nota fiscal (decisão do usuário). Os dados
+continuam no banco (a edição os manda de volta como estão), e as telas Responsáveis e Valor patrimonial saíram do menu
+(as rotas continuam).
+
+- **Clientes** (menu Clientes): nome, CPF ou CNPJ (sem repetir), contato, telefone, email, endereço e observação.
+- **Pedido de locação** (menu Pedidos de locação): cliente, saída prevista, **devolução prevista**, local de entrega
+  (vazio = o endereço do cliente) e as **linhas**: N de um tipo (marca e modelo opcionais: qualquer um serve) ou um
+  equipamento específico.
+- **Saída** pelo coletor (o operador abre o pedido e lê; o app mostra o que falta e o que sobra) ou pela web. É
+  parcial e soma ao que já saiu: o pedido fica Em separação até preencher as vagas (ou a web encerrar a separação) e
+  então Entregue. O equipamento fica **Alugado**. Recusados: sem cadastro, fora do pedido, não disponível, excedente.
+- **Devolução** pelo coletor ou pela web: o equipamento fica **Em devolução**; o pedido fica Devolvido em parte ou
+  Encerrado.
+- **Conferência da devolução** (fila em Pedidos › Devoluções a conferir, ou no pedido): o estado (sem avarias, com
+  avaria, faltando acessório) e o destino: **Disponível** ou a **manutenção** (abre a ordem com o que foi observado).
+  Fotos: nos anexos da etiqueta.
+- **Contrato de locação** em PDF, e aviso de **devolução atrasada** (lista e pedido).
+- **Venda** (edição da etiqueta, equipamento Disponível ou À venda): cliente, valor, data e observação; fica
+  **Vendido**. Desfazer volta para À venda.
+- Do momento da saída até a conferência, o equipamento não recebe baixa, não é excluído, não é vendido e a situação
+  não muda pela edição; e só está em um pedido por vez (índice único no banco).
+- Tudo vai para o histórico de cada equipamento e para a auditoria (Patrimônio).
+- API do coletor: ver **Rotas** (`/api/android/pedidos`, `/conferir`, `/saida`, `/devolucoes`; o login devolve
+  `podeMovimentarLocacao`).
 
 ### Fotos e anexos do bem (1.9.0)
 
@@ -419,6 +432,10 @@ O app funciona sem rede durante a sessão e envia depois o que ficou na fila. Ca
 | `GET /api/android/tags/{epc}` | Ficha do bem: o cadastro e, desde a 1.5.0, `ultimoLocal` e `ultimoInventarioEm` (último inventário finalizado em que foi encontrado), `ultimaLeituraEm` e `ultimaLeituraPor` (opcionais, podem vir `null`); desde a 1.6.0, também `situacao` (código), `situacaoRotulo`, `unidade`, `local` e `responsavel` (opcionais) | operador · Leituras |
 | `GET /api/android/tags/patrimonio/{patrimonio}` | EPC de um patrimônio (localizar equipamento) | operador · Leituras |
 | `POST /api/android/tags/{epc}/transferencia` | Transfere o bem para um local (1.7.0): `{"local","observacao"}`. Só o local muda. Responde `{"local","situacao","situacaoRotulo","transferencia","jaEstava"}`; o bem que já estava no local responde 200 com `jaEstava: true` e sem guia (reenvio). 404 etiqueta sem cadastro, 409 bem baixado, 400 local desconhecido ou desativado | operador · RFID Editar |
+| `GET /api/android/pedidos?situacao=ABERTO,EM_SEPARACAO` · `GET /api/android/pedidos/{id}` | Pedidos de locação (1.12.0) para o coletor: a lista (padrão: a separar) e o pedido com as linhas (`quantidade`, `saidos`) e os equipamentos que já saíram | operador · RFID Editar |
+| `POST /api/android/pedidos/{id}/conferir` | `{"etiquetas":[...]}`: confere as leituras contra o pedido **sem gravar**: por item `linhaId`, `jaSaiu` e `problema` (`SEM_CADASTRO`, `FORA_DO_PEDIDO`, `NAO_DISPONIVEL`, `EXCEDENTE`); por linha `saidos` e `conferidos` | operador · RFID Editar |
+| `POST /api/android/pedidos/{id}/saida` | `{"etiquetas","observacao","idEnvio"}`: saída parcial (soma ao que já saiu). Responde `aceitas`, `recusadas` (`motivo`, `mensagem`), `faltando` e a situação do pedido. Reenvio não duplica. 409 pedido cancelado ou encerrado | operador · RFID Editar |
+| `POST /api/android/devolucoes` | `{"etiquetas","observacao","idEnvio"}`: cada equipamento alugado fica Em devolução. Responde `recebidas` (com o `pedido`), `semLocacao` e, por pedido tocado, o que ainda está com o cliente (`faltando`). Reenvio não duplica | operador · RFID Editar |
 | `POST /api/android/leitura` | Registra a leitura de uma etiqueta | operador · Leituras |
 | `POST /api/android/naocadastrada` | Envia etiqueta desconhecida para Pendentes | operador · Leituras |
 | `POST /api/android/leituras/lote` | Até 500 leituras de um operador numa requisição: classifica e registra cada uma e devolve o resultado por item (`CADASTRADA` com os dados, `NAO_CADASTRADA`, `RECUSADA` ou `ERRO`). Desde a 1.6.2, os dados trazem também `situacao` e `situacaoRotulo`, com os mesmos nomes da ficha (o app avisa quando o bem lido está baixado ou extraviado). A hora de cada leitura é conferida contra a sessão; reenvio da mesma tag com a mesma hora não duplica | operador · Leituras |

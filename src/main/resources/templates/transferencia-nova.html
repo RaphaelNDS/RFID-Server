@@ -9,7 +9,7 @@
   <div class="page-header">
     <div>
       <h1>Nova transferência</h1>
-      <p class="subtitulo">Muda o local e/ou o responsável dos bens e gera uma guia numerada para imprimir e assinar</p>
+      <p class="subtitulo">Muda o local dos equipamentos e gera uma guia numerada para imprimir e assinar</p>
     </div>
     <a th:href="${inventario != null} ? @{/admin/inventarios/{id}(id=${inventario})} : @{/admin/transferencias}" class="btn btn-ghost">
       <svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Voltar
@@ -59,7 +59,7 @@
       <div class="table-wrap" th:if="${localizados != null and !#lists.isEmpty(localizados.bens)}">
         <table class="table table-cartoes">
           <thead>
-          <tr><th>Patrimônio</th><th>Equipamento</th><th>Local atual</th><th>Responsável atual</th><th>Situação</th></tr>
+          <tr><th>Patrimônio</th><th>Equipamento</th><th>Local atual</th><th>Situação</th></tr>
           </thead>
           <tbody>
           <tr th:each="b : ${localizados.bens}" th:classappend="${b.situacao.name() == 'BAIXADO'} ? 'inativo'">
@@ -69,7 +69,6 @@
             </td>
             <td data-rotulo="Equipamento" th:text="${b.descricao} ?: '—'"></td>
             <td data-rotulo="Local atual" th:text="${b.local} ?: '—'"></td>
-            <td data-rotulo="Responsável atual" th:text="${b.responsavel} ?: '—'"></td>
             <td data-rotulo="Situação">
               <span class="badge" th:classappend="${b.situacao.name() == 'BAIXADO' or b.situacao.name() == 'EXTRAVIADO'} ? 'badge-inativo'"
                     th:text="${b.situacao.rotulo}"></span>
@@ -83,7 +82,7 @@
     <div class="card" style="margin-top:16px">
       <div class="card-header empilhar">
         <h2>Destino</h2>
-        <span class="muted">Escolha o local, o responsável ou os dois. O que ficar em branco continua como está em cada bem.</span>
+        <span class="muted">Escolha o local para onde os equipamentos vão.</span>
       </div>
       <div class="card-body">
         <div class="form-grid">
@@ -95,7 +94,8 @@
                       th:selected="${localDestino != null and l.id == localDestino}"></option>
             </select>
           </div>
-          <div class="field">
+          <!-- Responsável fora da tela desde a 1.12.0 (locadora) -->
+          <div class="field" th:if="false">
             <label for="responsavelDestino">Responsável de destino</label>
             <select id="responsavelDestino" name="responsavelDestino">
               <option value="">Mantém o responsável</option>

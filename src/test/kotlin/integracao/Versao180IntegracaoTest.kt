@@ -14,13 +14,11 @@ import org.example.request.CadastroRequest
 import org.example.request.TipoEquipamentoRequest
 import org.example.service.AcaoLinha
 import org.example.service.CatalogoService
-import org.example.service.FiltroValores
 import org.example.service.ImportacaoEtiquetasService
 import org.example.service.PatrimonioCadastrosService
 import org.example.service.PedidoTransferencia
 import org.example.service.RfidService
 import org.example.service.TransferenciaService
-import org.example.service.ValorPatrimonialService
 import org.example.suporte.IntegracaoBase
 import org.example.suporte.OperadorTeste
 import org.example.suporte.Perfis
@@ -40,7 +38,7 @@ import java.math.BigDecimal
 import java.time.LocalDate
 import java.util.UUID
 
-/** 1.8.0: valor e depreciação do bem (regra no tipo) e os PDFs (laudo, valores, guia e termo). */
+/** 1.8.0: os PDFs (laudo, guia e termo). O valor patrimonial saiu na 1.12.0 (os dados de valor ficam no banco). */
 class Versao180IntegracaoTest : IntegracaoBase() {
 
     @Autowired lateinit var cadastros: PatrimonioCadastrosService
@@ -50,7 +48,6 @@ class Versao180IntegracaoTest : IntegracaoBase() {
     @Autowired lateinit var tipos: TipoEquipamentoRepository
     @Autowired lateinit var historico: HistoricoEtiquetaRepository
     @Autowired lateinit var auditoria: AuditoriaRepository
-    @Autowired lateinit var valores: ValorPatrimonialService
     @Autowired lateinit var transferencias: TransferenciaService
     @Autowired lateinit var importacao: ImportacaoEtiquetasService
     @Autowired lateinit var operadores: OperadorTeste
@@ -61,15 +58,7 @@ class Versao180IntegracaoTest : IntegracaoBase() {
 
     private fun tag(epc: String) = tags.findByTagReal(epc).get()
 
-    /** Tipo com 60 meses e residual de 10%, pela tela (Catálogo Editar). */
-    private fun tipoComRegra(nome: String = "Notebook $s"): Long {
-        val tipo = catalogo.salvarTipo(TipoEquipamentoRequest(nome))
-        mvc.perform(post("/admin/valores/tipos/${tipo.id}").with(Perfis.gestor()).with(csrf())
-            .param("vidaUtil", "60").param("residual", "10,0"))
-            .andExpect(status().is3xxRedirection)
-            .andExpect(flash().attribute("msg", containsString("60 meses, residual 10%")))
-        return tipo.id
-    }
+    private fun tipo(nome: String): Long = catalogo.salvarTipo(TipoEquipamentoRequest(nome)).id
 
     private fun cadastrar(epc: String, tipoId: Long? = null, localId: Long? = null, responsavelId: Long? = null,
                           valor: String? = null, data: LocalDate? = null) =
@@ -99,89 +88,39 @@ class Versao180IntegracaoTest : IntegracaoBase() {
         return PDDocument.load(resposta).use { PDFTextStripper().getText(it) }.replace(Regex("\r?\n"), "")
     }
 
+    /**
+     * 1.12.0: o valor patrimonial saiu do sistema e valor, data e nota fiscal saíram da tela, mas continuam no banco:
+     * a edição os manda de volta como estão, e salvar não os apaga.
+     */
     @Test
-    fun `regra do tipo e valor do bem dao o valor contabil, gravado no historico`() {
-        val tipoId = tipoComRegra()
-        assertThat(tipos.findById(tipoId).get().vidaUtilMeses).isEqualTo(60)
-        assertThat(auditoria.findAll().any { it.area == AreaAuditoria.CATALOGO && it.acao == "Depreciação do tipo alterada" && it.alvo == "Notebook $s" }).isTrue()
-
-        // R$ 6.000 comprado há 12 meses: 5.400 depreciáveis / 60 = 90 por mês → 1.080 → contábil 4.920
-        cadastrar("E-VL1-$s", tipoId = tipoId, valor = "6.000,00", data = hoje.minusMonths(12))
-        val d = valores.depreciacaoDe(tag("E-VL1-$s"))!!
-        assertThat(d.mesesDepreciados).isEqualTo(12)
-        assertThat(d.valorContabil).isEqualByComparingTo("4920.00")
-        assertThat(tag("E-VL1-$s").notaFiscal).isEqualTo("NF-E-VL1-$s")
-
-        // Edição pela tela: valor digitado como o brasileiro escreve; a mudança vai para o histórico
+    fun `valor, data e nota fiscal continuam no banco e a edicao nao os apaga`() {
+        cadastrar("E-VL1-$s", valor = "6.000,00", data = hoje.minusMonths(12))
         val id = tag("E-VL1-$s").id
+        val tela = mvc.perform(get("/admin/etiquetas/$id/editar").with(Perfis.admin()))
+            .andExpect(status().isOk)
+            .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Valor de aquisição"))))
+            .andReturn().response.contentAsString
+        assertThat(tela).contains("type=\"hidden\" name=\"valorAquisicao\" value=\"6.000,00\"", "name=\"notaFiscal\" value=\"NF-E-VL1-$s\"")
+
+        // Salvar como a tela manda (com os ocultos): nada some
         mvc.perform(post("/admin/etiquetas/$id/editar").with(Perfis.admin()).with(csrf())
-            .param("codigoInterno", "TI-E-VL1-$s").param("patrimonio", "P-E-VL1-$s").param("tipoEquipamentoId", "$tipoId")
-            .param("valorAquisicao", "R$ 7.200,50").param("dataAquisicao", hoje.minusMonths(12).toString()).param("notaFiscal", "NF 999"))
+            .param("codigoInterno", "TI-NOVO-$s").param("patrimonio", "P-E-VL1-$s")
+            .param("valorAquisicao", "6.000,00").param("dataAquisicao", hoje.minusMonths(12).toString()).param("notaFiscal", "NF-E-VL1-$s"))
             .andExpect(status().is3xxRedirection)
-        assertThat(tag("E-VL1-$s").valorAquisicao).isEqualByComparingTo("7200.50")
-        assertThat(historico.findByTagRealOrderByMomentoDescIdDesc("E-VL1-$s").map { it.campo })
-            .contains("Valor de aquisição", "Nota fiscal")
+        val t = tag("E-VL1-$s")
+        assertThat(t.codigoInterno).isEqualTo("TI-NOVO-$s")
+        assertThat(t.valorAquisicao).isEqualByComparingTo("6000.00")
+        assertThat(t.notaFiscal).isEqualTo("NF-E-VL1-$s")
+        assertThat(historico.findByTagRealOrderByMomentoDescIdDesc("E-VL1-$s").map { it.campo }).doesNotContain("Valor de aquisição", "Nota fiscal")
 
-        // A tela de edição mostra o valor contábil de hoje
-        mvc.perform(get("/admin/etiquetas/$id/editar").with(Perfis.admin()))
-            .andExpect(status().isOk)
-            .andExpect(content().string(containsString("Valor contábil hoje")))
-            .andExpect(content().string(containsString("7.200,50")))
+        // A tela e o PDF de valores não existem mais
+        mvc.perform(get("/admin/valores").with(Perfis.admin())).andExpect(status().isNotFound)
+        mvc.perform(get("/admin/valores/pdf").with(Perfis.admin())).andExpect(status().isNotFound)
     }
 
     @Test
-    fun `valor invalido, data futura e regra invalida sao recusados sem mudar nada`() {
-        assertThatThrownBy { cadastrar("E-VL2-$s", valor = "-5") }.hasMessageContaining("negativo")
-        assertThatThrownBy { cadastrar("E-VL2-$s", valor = "10", data = hoje.plusDays(1)) }.hasMessageContaining("no futuro")
-        assertThat(tags.findByTagReal("E-VL2-$s")).isEmpty
-
-        val tipo = catalogo.salvarTipo(TipoEquipamentoRequest("Mesa $s"))
-        mvc.perform(post("/admin/valores/tipos/${tipo.id}").with(Perfis.gestor()).with(csrf()).param("vidaUtil", "0"))
-            .andExpect(flash().attribute("erro", containsString("Vida útil inválida")))
-        mvc.perform(post("/admin/valores/tipos/${tipo.id}").with(Perfis.gestor()).with(csrf()).param("vidaUtil", "").param("residual", "5"))
-            .andExpect(flash().attribute("erro", containsString("Informe a vida útil")))
-        assertThat(tipos.findById(tipo.id).get().vidaUtilMeses).isNull()
-
-        // Mudar a regra é do Catálogo Editar: quem só vê não muda
-        mvc.perform(post("/admin/valores/tipos/${tipo.id}").with(Perfis.usuario()).with(csrf()).param("vidaUtil", "12"))
-            .andExpect(status().isForbidden)
-    }
-
-    @Test
-    fun `relatorio de valores soma por tipo e por local, deixa os baixados de fora e sai em PDF`() {
-        val tipoId = tipoComRegra("Coletor $s")
-        val local = cadastros.salvarLocal(null, "Sala V $s", null)
-        cadastrar("E-VR1-$s", tipoId = tipoId, localId = local.id, valor = "1000", data = hoje)
-        cadastrar("E-VR2-$s", tipoId = tipoId, localId = local.id, valor = "2000", data = hoje)
-        cadastrar("E-VR3-$s", tipoId = tipoId, localId = local.id)              // sem valor
-        cadastrar("E-VR4-$s", tipoId = tipoId, localId = local.id, valor = "500", data = hoje)
-        rfid.darBaixa(tag("E-VR4-$s").id, MotivoBaixa.SUCATA, hoje, null)
-
-        val r = valores.relatorio(FiltroValores(localId = local.id))
-        assertThat(r.total.bens).isEqualTo(3)
-        assertThat(r.total.comValor).isEqualTo(2)
-        assertThat(r.total.valorAquisicao).isEqualByComparingTo("3000")
-        assertThat(r.porTipo.single().nome).isEqualTo("Coletor $s")
-        assertThat(valores.relatorio(FiltroValores(localId = local.id, incluirBaixados = true)).total.bens).isEqualTo(4)
-
-        mvc.perform(get("/admin/valores").param("local", "${local.id}").with(Perfis.usuario()))
-            .andExpect(status().isOk)
-            .andExpect(content().string(containsString("R$ 3.000,00")))
-            .andExpect(content().string(containsString("1 sem valor de aquisição")))
-
-        val texto = textoDoPdf("/admin/valores/pdf?local=${local.id}", Perfis.usuario())
-        assertThat(texto).contains("Bens com valor contábil", "Local Sala V $s", "R$ 3.000,00", "P-E-VR1-$s", "sem valor de aquisição")
-        assertThat(texto).doesNotContain("P-E-VR4-$s")
-        assertThat(auditoria.findAll().any { it.area == AreaAuditoria.EXPORTACAO && it.acao == "Bens com valor contábil em PDF" }).isTrue()
-
-        // Sem RFID Ver não vê os valores
-        mvc.perform(get("/admin/valores/pdf").with(Perfis.somenteCatalogo())).andExpect(status().isForbidden)
-        mvc.perform(get("/admin/valores").with(Perfis.somenteCatalogo())).andExpect(status().isForbidden)
-    }
-
-    @Test
-    fun `laudo do inventario em PDF traz os faltantes com justificativa e valor contabil`() {
-        val tipoId = tipoComRegra("Monitor $s")
+    fun `laudo do inventario em PDF traz os faltantes com justificativa`() {
+        val tipoId = tipo("Monitor $s")
         val local = cadastros.salvarLocal(null, "Sala L $s", null)
         cadastrar("E-LD1-$s", tipoId = tipoId, localId = local.id, valor = "800", data = hoje)
         cadastrar("E-LD2-$s", tipoId = tipoId, localId = local.id, valor = "1.500,00", data = hoje)
@@ -191,7 +130,7 @@ class Versao180IntegracaoTest : IntegracaoBase() {
 
         val texto = textoDoPdf("/admin/inventarios/$id/laudo.pdf")
         assertThat(texto).contains("Laudo de inventário", "Sala L $s", "Bens que faltaram (2)", "P-E-LD2-$s", "com o João",
-            "R$ 1.500,00", "sem valor", "Anexo: etiquetas lidas (2)", "E-NOVA-$s", "Responsável pela contagem")
+            "Anexo: etiquetas lidas (2)", "E-NOVA-$s", "Responsável pela contagem")
         // O que foi lido não está entre os que faltaram (aparece só no anexo)
         assertThat(texto.substringBefore("Anexo")).doesNotContain("P-E-LD1-$s")
         assertThat(auditoria.findAll().any { it.area == AreaAuditoria.EXPORTACAO && it.acao == "Laudo do inventário em PDF" }).isTrue()

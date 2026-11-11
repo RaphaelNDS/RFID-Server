@@ -28,15 +28,49 @@ class EtiquetaWebController(
     private val historico: HistoricoEtiquetaService,
     private val cadastros: org.example.service.PatrimonioCadastrosService? = null,
     private val auditoria: org.example.service.AuditoriaService? = null,
-    // 1.8.0: valor contábil do bem na tela de edição
-    private val valores: org.example.service.ValorPatrimonialService? = null,
     // 1.9.0: fotos e anexos do bem
     private val anexos: org.example.service.AnexoBemService? = null,
-    // 1.10.0: empréstimo aberto do bem
-    private val emprestimos: org.example.service.EmprestimoService? = null,
     // 1.11.0: manutenções do bem
-    private val manutencoes: org.example.service.ManutencaoService? = null
+    private val manutencoes: org.example.service.ManutencaoService? = null,
+    // 1.12.0: venda e clientes (locadora)
+    private val vendas: org.example.service.VendaService? = null,
+    private val locacao: org.example.service.LocacaoService? = null
 ) {
+
+    /** Venda (1.12.0): cliente opcional, valor como a pessoa digitou, data vazia = hoje. */
+    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PostMapping("/{id}/venda")
+    fun vender(
+        @PathVariable id: Long,
+        @RequestParam(required = false) cliente: Long?,
+        @RequestParam(required = false) valor: String?,
+        @RequestParam(required = false) data: String?,
+        @RequestParam(required = false) observacao: String?,
+        redirect: RedirectAttributes
+    ): String {
+        try {
+            val dia = data?.trim()?.takeIf { it.isNotEmpty() }?.let {
+                runCatching { java.time.LocalDate.parse(it) }.getOrElse { throw IllegalArgumentException("Data da venda inválida") }
+            }
+            val v = requireNotNull(vendas).vender(id, cliente?.takeIf { it > 0 }, valor, dia, observacao)
+            redirect.addFlashAttribute("msg", "Venda registrada (nº ${v.id}): o equipamento está Vendido.")
+        } catch (e: IllegalArgumentException) {
+            redirect.addFlashAttribute("erro", e.message)
+        }
+        return "redirect:/admin/etiquetas/$id/editar"
+    }
+
+    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PostMapping("/{id}/venda/desfazer")
+    fun desfazerVenda(@PathVariable id: Long, redirect: RedirectAttributes): String {
+        try {
+            requireNotNull(vendas).desfazer(id)
+            redirect.addFlashAttribute("msg", "Venda desfeita: o equipamento voltou para À venda.")
+        } catch (e: IllegalArgumentException) {
+            redirect.addFlashAttribute("erro", e.message)
+        }
+        return "redirect:/admin/etiquetas/$id/editar"
+    }
 
     @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
     @GetMapping("/{id}/editar")
@@ -169,12 +203,13 @@ class EtiquetaWebController(
         model.addAttribute("situacoesEditaveis", org.example.model.SituacaoBem.EDITAVEIS)
         model.addAttribute("motivosBaixa", org.example.model.MotivoBaixa.entries)
         model.addAttribute("hoje", java.time.LocalDate.now())
-        model.addAttribute("depreciacao", valores?.depreciacaoDe(etiqueta))
         model.addAttribute("fmt", org.example.util.FormatoBr)
         model.addAttribute("anexos", anexos?.listar(id).orEmpty())
         model.addAttribute("anexoMaximo", anexos?.maximoRotulo)
         model.addAttribute("anexoMaximoPorBem", anexos?.maximoPorBem)
-        model.addAttribute("emprestimo", emprestimos?.abertoDoBem(id))
+        model.addAttribute("pedidoAtual", rfidService.pedidoAtual(id))
+        model.addAttribute("venda", vendas?.vendaAtual(id))
+        model.addAttribute("clientesVenda", locacao?.clientesAtivos().orEmpty())
         model.addAttribute("manutencoes", manutencoes?.doBem(id))
         return "editar-etiqueta"
     }

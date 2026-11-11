@@ -16,11 +16,12 @@ import org.example.repository.ManutencaoRepository
 import org.example.repository.TagRepository
 import org.example.request.CadastroRequest
 import org.example.service.ConclusaoManutencao
-import org.example.service.EmprestimoService
+import org.example.service.DadosCliente
+import org.example.service.DadosPedido
+import org.example.service.LocacaoService
 import org.example.service.FiltroManutencao
 import org.example.service.ManutencaoService
 import org.example.service.PatrimonioCadastrosService
-import org.example.service.PedidoEmprestimo
 import org.example.service.PedidoManutencao
 import org.example.service.RfidService
 import org.example.suporte.IntegracaoBase
@@ -46,7 +47,7 @@ class Versao1110IntegracaoTest : IntegracaoBase() {
     @Autowired lateinit var tags: TagRepository
     @Autowired lateinit var manutencoes: ManutencaoService
     @Autowired lateinit var repo: ManutencaoRepository
-    @Autowired lateinit var emprestimos: EmprestimoService
+    @Autowired lateinit var locacao: LocacaoService
     @Autowired lateinit var cadastros: PatrimonioCadastrosService
     @Autowired lateinit var historico: HistoricoEtiquetaRepository
     @Autowired lateinit var auditoria: AuditoriaRepository
@@ -56,7 +57,7 @@ class Versao1110IntegracaoTest : IntegracaoBase() {
 
     private fun tag(epc: String) = tags.findByTagReal(epc).get()
 
-    private fun cadastrar(epc: String, situacao: SituacaoBem = SituacaoBem.EM_USO): Long {
+    private fun cadastrar(epc: String, situacao: SituacaoBem = SituacaoBem.DISPONIVEL): Long {
         rfid.cadastrarTag(CadastroRequest(tag = epc, codigoInterno = "TI-$epc", patrimonio = "P-$epc", situacao = situacao.name))
         return tag(epc).id
     }
@@ -66,7 +67,7 @@ class Versao1110IntegracaoTest : IntegracaoBase() {
 
     @Test
     fun `abrir pela tela deixa o bem Em manutencao e concluir com custo volta a situacao de antes`() {
-        val tagId = cadastrar("E-MN1-$s", SituacaoBem.EM_ESTOQUE)
+        val tagId = cadastrar("E-MN1-$s", SituacaoBem.A_VENDA)
 
         val url = mvc.perform(post("/admin/manutencoes").with(Perfis.gestor()).with(csrf())
             .param("codigo", "P-E-MN1-$s").param("tipo", "CORRETIVA").param("problema", "Tela piscando")
@@ -76,7 +77,7 @@ class Versao1110IntegracaoTest : IntegracaoBase() {
             .andReturn().response.redirectedUrl!!
         val id = url.substringAfterLast('/').toLong()
         assertThat(tag("E-MN1-$s").situacao).isEqualTo(SituacaoBem.EM_MANUTENCAO)
-        assertThat(repo.findById(id).get().situacaoAnterior).isEqualTo(SituacaoBem.EM_ESTOQUE)
+        assertThat(repo.findById(id).get().situacaoAnterior).isEqualTo(SituacaoBem.A_VENDA)
 
         mvc.perform(get("/admin/etiquetas/$tagId/editar").with(Perfis.gestor()))
             .andExpect(content().string(containsString("Manutenção nº $id")))
@@ -88,13 +89,13 @@ class Versao1110IntegracaoTest : IntegracaoBase() {
 
         mvc.perform(post("/admin/manutencoes/$id/conclusao").with(Perfis.gestor()).with(csrf())
             .param("resultado", "CONSERTADO").param("servico", "Troca do cabo flat").param("custo", "1.250,50"))
-            .andExpect(flash().attribute("msg", containsString("voltou a ficar Em estoque")))
+            .andExpect(flash().attribute("msg", containsString("voltou a ficar À venda")))
 
         val ordem = repo.findById(id).get()
         assertThat(ordem.status).isEqualTo(StatusManutencao.CONCLUIDA)
         assertThat(ordem.custo).isEqualByComparingTo("1250.50")
         assertThat(ordem.concluidaPor).isEqualTo("gestor@x.com")
-        assertThat(tag("E-MN1-$s").situacao).isEqualTo(SituacaoBem.EM_ESTOQUE)
+        assertThat(tag("E-MN1-$s").situacao).isEqualTo(SituacaoBem.A_VENDA)
         assertThat(historico.findByTagRealOrderByMomentoDescIdDesc("E-MN1-$s").map { it.origem })
             .anyMatch { it.contains("Manutenção nº $id concluída") }.anyMatch { it.endsWith("Manutenção nº $id") }
         assertThat(auditoria.findAll().any { it.area == AreaAuditoria.PATRIMONIO && it.acao == "Manutenção concluída" && it.alvo == "Manutenção nº $id" }).isTrue()
@@ -107,22 +108,25 @@ class Versao1110IntegracaoTest : IntegracaoBase() {
     }
 
     @Test
-    fun `cancelar devolve a situacao, e so vai bem Em uso ou Em estoque`() {
+    fun `cancelar devolve a situacao, e so vai equipamento Disponivel ou A venda`() {
         cadastrar("E-MN2-$s")
         cadastrar("E-MN3-$s")
         val ordem = abrir("E-MN2-$s")
 
         assertThatThrownBy { abrir("E-MN2-$s") }.hasMessageContaining("Em manutenção")
-        // Bem emprestado não vai para a manutenção, e bem em manutenção não é emprestado
-        val rita = cadastros.salvarResponsavel(null, "Rita $s", null, null, null)
-        emprestimos.emprestar(PedidoEmprestimo(listOf("E-MN3-$s"), rita.id, hoje.plusDays(2)))
-        assertThatThrownBy { abrir("E-MN3-$s") }.hasMessageContaining("Emprestado")
-        assertThatThrownBy { emprestimos.emprestar(PedidoEmprestimo(listOf("E-MN2-$s"), rita.id, hoje.plusDays(2))) }
-            .hasMessageContaining("Em manutenção")
+        // Alugado não vai para a manutenção, e o que está em manutenção não sai no pedido
+        val cliente = locacao.salvarCliente(null, DadosCliente("Cliente $s"))
+        val pedido = locacao.criarPedido(DadosPedido(cliente.id, hoje.plusDays(2)))
+        locacao.adicionarLinha(pedido.id, null, null, null, null, "E-MN3-$s")
+        locacao.adicionarLinha(pedido.id, null, null, null, null, "E-MN2-$s")
+        val saida = locacao.registrarSaida(pedido.id, listOf("E-MN3-$s", "E-MN2-$s"))
+        assertThat(saida.aceitos.map { it.tag!!.tagReal }).containsExactly("E-MN3-$s")
+        assertThat(saida.recusados.single().problema).isEqualTo(org.example.service.ProblemaLeitura.NAO_DISPONIVEL)
+        assertThatThrownBy { abrir("E-MN3-$s") }.hasMessageContaining("Alugado")
 
         assertThatThrownBy { manutencoes.cancelar(ordem.id, " ") }.hasMessageContaining("motivo")
         manutencoes.cancelar(ordem.id, "Aberta por engano")
-        assertThat(tag("E-MN2-$s").situacao).isEqualTo(SituacaoBem.EM_USO)
+        assertThat(tag("E-MN2-$s").situacao).isEqualTo(SituacaoBem.DISPONIVEL)
         assertThat(repo.findById(ordem.id).get().status).isEqualTo(StatusManutencao.CANCELADA)
         assertThatThrownBy { manutencoes.concluir(ordem.id, ConclusaoManutencao(ResultadoManutencao.CONSERTADO, null, null)) }
             .hasMessageContaining("já está cancelada")
@@ -138,7 +142,7 @@ class Versao1110IntegracaoTest : IntegracaoBase() {
         mvc.perform(post("/admin/etiquetas/$id/excluir").with(Perfis.admin()).with(csrf()))
             .andExpect(flash().attribute("erro", containsString("conclua a manutenção antes de excluir")))
         mvc.perform(post("/admin/etiquetas/$id/editar").with(Perfis.admin()).with(csrf())
-            .param("codigoInterno", "TI-E-MN4-$s").param("patrimonio", "P-E-MN4-$s").param("situacao", "EM_USO"))
+            .param("codigoInterno", "TI-E-MN4-$s").param("patrimonio", "P-E-MN4-$s").param("situacao", "DISPONIVEL"))
             .andExpect(content().string(containsString("a situação volta sozinha quando a manutenção for concluída")))
 
         // Sem conserto também volta a situação; a baixa (sucata) passa a ser possível depois

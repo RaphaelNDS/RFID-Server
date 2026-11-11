@@ -75,7 +75,7 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("28") // V28 = manutenção do bem
+        assertThat(resultado.targetSchemaVersion).isEqualTo("29") // V29 = locadora (clientes, pedidos, vendas)
     }
 
     @Test

@@ -1,7 +1,10 @@
 <!--
-  Local, responsável e situação do bem (1.6.0), no cadastro e na edição da etiqueta. O modelo precisa de "cadastro"
-  (CadastroRequest), "opcoesLocal" (OpcaoLocal), "opcoesResponsavel" (ResponsavelEntity) e "situacoesEditaveis".
-  Desativados só aparecem se já forem os do bem (a edição não obriga a trocar).
+  Local e situação do equipamento (1.6.0), no cadastro e na edição da etiqueta. O modelo precisa de "cadastro"
+  (CadastroRequest), "opcoesLocal" (OpcaoLocal) e "situacoesEditaveis". Desativados só aparecem se já forem os do bem.
+
+  Locadora (1.12.0): responsável, valor de aquisição, data de aquisição e nota fiscal saíram da tela (decisão do
+  usuário), mas continuam no banco: vão como campos ocultos com o valor atual, para salvar não apagar o que já existe.
+  A situação só aparece para escolher quando é uma das editáveis; alugado, em devolução e vendido vêm das telas próprias.
 -->
 <th:block th:fragment="campos" xmlns:th="http://www.thymeleaf.org">
   <div class="field">
@@ -12,50 +15,29 @@
               th:value="${l.id}" th:text="${l.descricao} + (${l.ativo} ? '' : ' (desativado)')"
               th:selected="${cadastro.localId != null and l.id == cadastro.localId}"></option>
     </select>
-    <span class="field-dica">Atualizado sozinho quando um inventário finalizado encontra o bem em outro local.
+    <span class="field-dica">Onde o equipamento fica guardado. Atualizado sozinho quando um inventário finalizado o encontra em outro local.
       <a th:href="@{/admin/locais}" th:if="${@authService.temPermissao('CATALOGO','READ')}">Locais</a></span>
   </div>
 
-  <div class="field">
-    <label for="responsavelId">Responsável</label>
-    <select id="responsavelId" name="responsavelId">
-      <option value="">Sem responsável</option>
-      <option th:each="r : ${opcoesResponsavel}" th:if="${r.ativo or r.id == cadastro.responsavelId}"
-              th:value="${r.id}" th:text="${r.descricao} + (${r.ativo} ? '' : ' (desativado)')"
-              th:selected="${cadastro.responsavelId != null and r.id == cadastro.responsavelId}"></option>
-    </select>
-    <span class="field-dica"><a th:href="@{/admin/responsaveis}" th:if="${@authService.temPermissao('CATALOGO','READ')}">Responsáveis</a></span>
-  </div>
+  <th:block th:with="editavel=${cadastro.situacao == null or #lists.contains(situacoesEditaveis.![name()], cadastro.situacao)}">
+    <div class="field" th:if="${editavel}">
+      <label for="situacao">Situação</label>
+      <select id="situacao" name="situacao">
+        <option th:each="s : ${situacoesEditaveis}" th:value="${s.name()}" th:text="${s.rotulo}"
+                th:selected="${(cadastro.situacao == null and s.name() == 'DISPONIVEL') or s.name() == cadastro.situacao}"></option>
+      </select>
+      <span class="field-dica">Alugado e Em devolução vêm dos pedidos de locação; Vendido, da venda; Baixado, de "Dar baixa".</span>
+    </div>
+    <div class="field" th:unless="${editavel}">
+      <label>Situação</label>
+      <input type="text" th:value="${T(org.example.model.SituacaoBem).valueOf(cadastro.situacao).rotulo}" readonly>
+      <span class="field-dica">Muda pela tela do pedido, da venda ou da baixa.</span>
+    </div>
+  </th:block>
 
-  <div class="field" th:if="${!(baixado ?: false)}">
-    <label for="situacao">Situação</label>
-    <select id="situacao" name="situacao">
-      <option th:each="s : ${situacoesEditaveis}" th:value="${s.name()}" th:text="${s.rotulo}"
-              th:selected="${(cadastro.situacao == null and s.name() == 'EM_USO') or s.name() == cadastro.situacao}"></option>
-    </select>
-    <span class="field-dica">Para tirar o bem do patrimônio (venda, doação, descarte, furto), use "Dar baixa".</span>
-  </div>
-
-  <!-- Valor (1.8.0): a depreciação usa a vida útil e o residual do tipo de equipamento (tela Valor patrimonial) -->
-  <div class="field">
-    <label for="valorAquisicao">Valor de aquisição (R$)</label>
-    <input type="text" id="valorAquisicao" name="valorAquisicao" inputmode="decimal" maxlength="20" placeholder="Ex.: 4.599,90"
-           th:value="${cadastro.valorAquisicao}">
-    <span class="field-dica" th:if="${depreciacao != null}"
-          th:text="'Valor contábil hoje: ' + ${fmt.reais(depreciacao.valorContabil)} + (${depreciacao.semDepreciacao != null}
-            ? ' (não deprecia: ' + ${depreciacao.semDepreciacao} + ')'
-            : ' (' + ${depreciacao.mesesDepreciados} + ' de ' + ${depreciacao.vidaUtilMeses} + ' meses, depreciação de ' + ${fmt.reais(depreciacao.depreciacaoAcumulada)} + ')')"></span>
-    <span class="field-dica" th:if="${depreciacao == null}">Opcional. Sem valor, o bem fica fora dos totais do valor patrimonial.</span>
-  </div>
-
-  <div class="field">
-    <label for="dataAquisicao">Data de aquisição</label>
-    <input type="date" id="dataAquisicao" name="dataAquisicao" th:value="${cadastro.dataAquisicao}" th:max="${#temporals.format(#temporals.createToday(), 'yyyy-MM-dd')}">
-    <span class="field-dica">A depreciação conta os meses completos desde esta data.</span>
-  </div>
-
-  <div class="field">
-    <label for="notaFiscal">Nota fiscal</label>
-    <input type="text" id="notaFiscal" name="notaFiscal" maxlength="60" th:value="${cadastro.notaFiscal}">
-  </div>
+  <!-- Fora da tela desde a 1.12.0: o valor atual vai junto para não ser apagado ao salvar -->
+  <input type="hidden" name="responsavelId" th:value="${cadastro.responsavelId}">
+  <input type="hidden" name="valorAquisicao" th:value="${cadastro.valorAquisicao}">
+  <input type="hidden" name="dataAquisicao" th:value="${cadastro.dataAquisicao}">
+  <input type="hidden" name="notaFiscal" th:value="${cadastro.notaFiscal}">
 </th:block>

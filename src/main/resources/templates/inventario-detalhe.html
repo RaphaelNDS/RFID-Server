@@ -20,7 +20,7 @@
       <a th:href="@{${linkVoltar}}" class="btn btn-ghost">
         <svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Voltar
       </a>
-      <!-- 1.8.0: laudo em PDF, com os faltantes, as justificativas, o valor contábil e as assinaturas -->
+      <!-- 1.8.0: laudo em PDF, com os faltantes, as justificativas e as assinaturas -->
       <a th:href="@{/admin/inventarios/{id}/laudo.pdf(id=${inventario.id})}" class="btn btn-primary" target="_blank" rel="noopener">
         <svg class="ic"><use href="/img/icones.svg#download"/></svg>Laudo (PDF)
       </a>
@@ -170,7 +170,7 @@
             </td>
             <td data-rotulo="Situação atual">
               <th:block th:if="${a != null}">
-                <span class="badge" th:classappend="${a.situacao.name() == 'EXTRAVIADO'} ? 'badge-inativo' : (${a.situacao.name() == 'EM_USO'} ? '' : 'badge-CUSTOM')"
+                <span class="badge" th:classappend="${a.situacao.name() == 'EXTRAVIADO'} ? 'badge-inativo' : (${a.situacao.name() == 'DISPONIVEL'} ? '' : 'badge-CUSTOM')"
                       th:text="${a.situacao.rotulo}"></span>
                 <div class="muted" style="font-size:12px" th:if="${a.responsavel != null}" th:text="${a.responsavel}"></div>
               </th:block>

@@ -62,8 +62,8 @@ class Versao170IntegracaoTest : IntegracaoBase() {
         val resposta = transferir("e-col1-$s", """{"local":"  sala   destino $s ","observacao":"achado no armário"}""")
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.local").value("Sala Destino $s"))
-            .andExpect(jsonPath("$.situacao").value("EM_USO"))       // extraviado achado volta em uso
-            .andExpect(jsonPath("$.situacaoRotulo").value("Em uso"))
+            .andExpect(jsonPath("$.situacao").value("DISPONIVEL"))       // extraviado achado volta Disponível
+            .andExpect(jsonPath("$.situacaoRotulo").value("Disponível"))
             .andExpect(jsonPath("$.jaEstava").value(false))
             .andReturn().response.contentAsString
         val numero = (JsonPath.read<Number>(resposta, "$.transferencia")).toLong()
@@ -83,7 +83,7 @@ class Versao170IntegracaoTest : IntegracaoBase() {
             .andExpect(jsonPath("$.jaEstava").value(true))
             .andExpect(jsonPath("$.transferencia").doesNotExist())
         assertThat(guias.count()).isEqualTo(antes + 1)
-        assertThat(tag("E-COL1-$s").situacao).isEqualTo(SituacaoBem.EM_USO)
+        assertThat(tag("E-COL1-$s").situacao).isEqualTo(SituacaoBem.DISPONIVEL)
     }
 
     @Test

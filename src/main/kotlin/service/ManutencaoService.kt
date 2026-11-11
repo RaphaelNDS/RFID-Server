@@ -61,7 +61,7 @@ data class ManutencoesDoBem(val aberta: ManutencaoResumo?, val todas: List<Manut
  * concluir (com o serviço, o custo e o resultado) ou cancelar, volta para a situação anterior.
  *
  * Regras:
- *  - só vai para manutenção bem "Em uso" ou "Em estoque" (não emprestado, extraviado, baixado nem já em manutenção);
+ *  - só vai para manutenção equipamento "Disponível" ou "À venda" (não alugado, extraviado, baixado nem já em manutenção);
  *  - enquanto a ordem está aberta, o bem não recebe baixa, não é excluído e a situação não muda pela edição;
  *  - "Sem conserto" também devolve a situação anterior: a baixa (sucata) é uma decisão à parte, pela tela da baixa;
  *  - tudo vai para o histórico do bem ("Manutenção nº X") e para a auditoria (Patrimônio).
@@ -99,7 +99,7 @@ class ManutencaoService(
         pedido.previsaoRetorno?.let { require(!it.isBefore(envio)) { "A previsão de retorno não pode ser antes do envio" } }
 
         val tag = tags.findById(bem.id).orElseThrow()
-        require(tag.situacao in PODEM_IR) { "Só vai para manutenção bem Em uso ou Em estoque: este está ${tag.situacao.rotulo}" }
+        require(tag.situacao in PODEM_IR) { "Só vai para manutenção equipamento Disponível ou À venda: este está ${tag.situacao.rotulo}" }
 
         val usuario = historico.autor().first
         val ordem = manutencoes.save(ManutencaoEntity(
@@ -230,6 +230,6 @@ class ManutencaoService(
 
     companion object {
         const val POR_PAGINA = 50
-        val PODEM_IR = setOf(SituacaoBem.EM_USO, SituacaoBem.EM_ESTOQUE)
+        val PODEM_IR = setOf(SituacaoBem.DISPONIVEL, SituacaoBem.A_VENDA)
     }
 }

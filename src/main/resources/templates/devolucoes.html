@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Devoluções a conferir · Sistema RFID</title>
+
+<section class="page" th:with="pode=${@authService.temPermissao('RFID','UPDATE')}">
+
+  <div class="page-header">
+    <div>
+      <h1>Devoluções a conferir</h1>
+      <p class="subtitulo">Equipamentos que voltaram do cliente: confira o estado e mande para Disponível ou para a manutenção</p>
+    </div>
+    <a th:href="@{/admin/pedidos}" class="btn btn-ghost"><svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Pedidos</a>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <div class="card">
+    <div class="table-wrap">
+      <table class="table table-cartoes" th:unless="${#lists.isEmpty(fila)}">
+        <thead><tr><th>Equipamento</th><th>Pedido</th><th>Voltou em</th><th>Conferência</th></tr></thead>
+        <tbody>
+        <tr th:each="par : ${fila}" th:with="i=${par.first},p=${par.second}">
+          <td class="principal cartao-titulo">
+            <a th:if="${i.tagId != null and pode}" th:href="@{/admin/etiquetas/{t}/editar(t=${i.tagId})}" th:text="${i.patrimonio} ?: ${i.tagReal}"></a>
+            <span th:unless="${i.tagId != null and pode}" th:text="${i.patrimonio} ?: ${i.tagReal}"></span>
+            <div class="muted" style="font-size:12px" th:text="${i.descricao} ?: ''"></div>
+          </td>
+          <td data-rotulo="Pedido"><a th:href="@{/admin/pedidos/{id}(id=${p.id})}" th:text="'Nº ' + ${p.id} + ' · ' + ${p.cliente}"></a></td>
+          <td data-rotulo="Voltou em" class="nowrap" th:text="${#temporals.format(i.devolvidoEm, 'dd/MM/yyyy HH:mm')}"></td>
+          <td data-rotulo="Conferência">
+            <form th:if="${pode}" class="toolbar" style="border:0;padding:0"
+                  th:action="@{/admin/pedidos/{id}/itens/{it}/conferencia(id=${p.id},it=${i.id})}" method="post">
+              <input type="hidden" name="voltar" value="fila">
+              <select name="estado" class="select-sm" required aria-label="Estado">
+                <option th:each="e : ${estados}" th:value="${e.name()}" th:text="${e.rotulo}"></option>
+              </select>
+              <select name="destino" class="select-sm" aria-label="Para onde vai">
+                <option value="DISPONIVEL">Disponível</option>
+                <option value="MANUTENCAO">Manutenção</option>
+              </select>
+              <input name="observacao" class="input-sm" maxlength="500" placeholder="Avaria, acessório que falta…" aria-label="Observação">
+              <button type="submit" class="btn btn-secondary btn-sm">Conferir</button>
+            </form>
+            <span th:unless="${pode}" class="muted">aguardando</span>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+      <div class="vazio" th:if="${#lists.isEmpty(fila)}">
+        <svg class="ic"><use href="/img/icones.svg#ok"/></svg>
+        <strong>Nada para conferir</strong>
+        Os equipamentos devolvidos pelo coletor (ou pela tela do pedido) aparecem aqui.
+      </div>
+    </div>
+  </div>
+
+</section>
+</html>

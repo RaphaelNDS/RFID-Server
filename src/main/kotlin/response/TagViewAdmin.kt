@@ -15,7 +15,7 @@ data class TagViewAdmin(
     val unidadeNome: String? = null,
     val localNome: String? = null,
     val responsavelNome: String? = null,
-    val situacao: SituacaoBem = SituacaoBem.EM_USO,
+    val situacao: SituacaoBem = SituacaoBem.DISPONIVEL,
     // Valor (1.8.0)
     val valorAquisicao: java.math.BigDecimal? = null,
     val dataAquisicao: java.time.LocalDate? = null,

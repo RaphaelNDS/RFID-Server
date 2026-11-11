@@ -34,6 +34,8 @@ data class SessaoCriada(
     val podeCadastrar: Boolean,
     /** 1.7.0: operador com RFID/UPDATE (a mesma permissão de transferir na web): o app mostra "Transferir para este local". */
     val podeTransferir: Boolean = false,
+    /** 1.12.0: operador com RFID/UPDATE: o app mostra a saída e a devolução dos pedidos de locação. */
+    val podeMovimentarLocacao: Boolean = false,
     /** A senha não atende mais à política de senha: o app sugere trocar na web. */
     val senhaFraca: Boolean
 )
@@ -157,6 +159,7 @@ class SessaoOperadorService(
             podeLer = true,
             podeCadastrar = podeCadastrar,
             podeTransferir = podeTransferir,
+            podeMovimentarLocacao = podeTransferir,
             senhaFraca = senhaFraca
         )
     }

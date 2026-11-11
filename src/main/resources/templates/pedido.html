@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Pedido de locação · Sistema RFID</title>
+
+<section class="page" th:with="p=${d.pedido},pode=${@authService.temPermissao('RFID','UPDATE')}">
+
+  <div class="page-header">
+    <div>
+      <h1 th:text="'Pedido nº ' + ${p.id}">Pedido</h1>
+      <p class="subtitulo">
+        <span class="badge" th:classappend="${p.situacao.name() == 'ENCERRADO'} ? 'badge-online' : (${p.situacao.name() == 'CANCELADO'} ? 'badge-inativo' : 'badge-CUSTOM')"
+              th:text="${p.situacao.rotulo}"></span>
+        <span th:if="${d.atrasado}" class="badge badge-inativo" th:text="'Devolução atrasada ' + ${d.diasAtraso} + ' dia(s)'"></span>
+        <span th:text="${p.cliente}"></span>
+      </p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/pedidos}" class="btn btn-ghost"><svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Pedidos</a>
+      <a th:href="@{/admin/pedidos/{id}/contrato.pdf(id=${p.id})}" class="btn btn-secondary" target="_blank" rel="noopener">
+        <svg class="ic"><use href="/img/icones.svg#download"/></svg>Contrato (PDF)
+      </a>
+    </div>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <div class="grid grid-2">
+    <!-- Dados do pedido -->
+    <div class="card">
+      <div class="card-header"><h2>Pedido</h2></div>
+      <div class="card-body">
+        <dl class="dados">
+          <div><dt>Cliente</dt><dd th:text="${p.cliente}"></dd></div>
+          <div><dt>Saída prevista</dt><dd th:text="${p.saidaPrevista != null} ? ${#temporals.format(p.saidaPrevista, 'dd/MM/yyyy')} : '—'"></dd></div>
+          <div><dt>Devolução prevista</dt><dd th:text="${#temporals.format(p.previsaoDevolucao, 'dd/MM/yyyy')}"></dd></div>
+          <div><dt>Local de entrega</dt><dd th:text="${p.localEntrega} ?: '—'"></dd></div>
+          <div th:if="${p.observacao != null}"><dt>Observação</dt><dd th:text="${p.observacao}"></dd></div>
+          <div th:if="${p.cancelamentoMotivo != null}"><dt>Cancelado</dt><dd th:text="${p.cancelamentoMotivo}"></dd></div>
+          <div><dt>Registrado por</dt><dd th:text="${p.registradoPor} + ' em ' + ${#temporals.format(p.criadoEm, 'dd/MM/yyyy HH:mm')}"></dd></div>
+        </dl>
+      </div>
+      <details class="card-footer" th:if="${pode and d.editavel}">
+        <summary class="btn btn-ghost btn-sm">Alterar dados do pedido</summary>
+        <form th:action="@{/admin/pedidos/{id}(id=${p.id})}" method="post" style="margin-top:12px">
+          <div class="form-grid">
+            <div class="field span-2">
+              <label for="e-cliente">Cliente</label>
+              <select id="e-cliente" name="cliente" required>
+                <option th:if="${!#lists.contains(clientes.![id], p.clienteId)}" th:value="${p.clienteId}" th:text="${p.cliente}" selected></option>
+                <option th:each="c : ${clientes}" th:value="${c.id}" th:text="${c.descricao}" th:selected="${c.id == p.clienteId}"></option>
+              </select>
+            </div>
+            <div class="field"><label for="e-saida">Saída prevista</label><input type="date" id="e-saida" name="saida" th:value="${p.saidaPrevista}"></div>
+            <div class="field"><label for="e-prev">Devolução prevista</label><input type="date" id="e-prev" name="previsao" th:value="${p.previsaoDevolucao}" required></div>
+            <div class="field span-2"><label for="e-local">Local de entrega</label><input id="e-local" name="localEntrega" maxlength="300" th:value="${p.localEntrega}"></div>
+            <div class="field span-2"><label for="e-obs">Observação</label><input id="e-obs" name="observacao" maxlength="500" th:value="${p.observacao}"></div>
+          </div>
+          <div style="margin-top:10px"><button type="submit" class="btn btn-secondary btn-sm">Salvar</button></div>
+        </form>
+      </details>
+    </div>
+
+    <!-- Linhas: o que o cliente pediu -->
+    <div class="card">
+      <div class="card-header empilhar">
+        <h2>O que foi pedido</h2>
+        <span class="muted">Quantidade de um tipo (marca e modelo opcionais) ou um equipamento específico</span>
+      </div>
+      <div class="table-wrap" th:unless="${#lists.isEmpty(d.linhas)}">
+        <table class="table table-cartoes">
+          <thead><tr><th>Item</th><th>Pedido</th><th>Saíram</th><th></th></tr></thead>
+          <tbody>
+          <tr th:each="l : ${d.linhas}">
+            <td class="principal cartao-titulo">
+              <span th:text="${l.linha.descricao}"></span>
+              <span class="badge" th:if="${l.linha.especifico}">específico</span>
+            </td>
+            <td data-rotulo="Pedido" th:text="${l.linha.quantidade}"></td>
+            <td data-rotulo="Saíram" th:text="${l.saidos}" th:classappend="${l.saidos >= l.linha.quantidade} ? 'texto-ok'"></td>
+            <td class="acoes">
+              <form th:if="${pode and d.editavel and l.saidos == 0}" th:action="@{/admin/pedidos/{id}/linhas/{l}/excluir(id=${p.id},l=${l.linha.id})}" method="post">
+                <button type="submit" class="btn btn-danger-ghost btn-sm" title="Tirar do pedido">
+                  <svg class="ic"><use href="/img/icones.svg#lixeira"/></svg><span class="sr-only">Tirar do pedido</span>
+                </button>
+              </form>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="vazio" th:if="${#lists.isEmpty(d.linhas)}">Nenhum item ainda: acrescente abaixo o que o cliente pediu.</p>
+
+      <form class="card-footer" th:if="${pode and d.editavel}" th:action="@{/admin/pedidos/{id}/linhas(id=${p.id})}" method="post">
+        <input type="hidden" id="marcaValor" name="marcaId">
+        <input type="hidden" id="modeloValor" name="modeloId">
+        <div class="form-grid" style="width:100%">
+          <div class="field">
+            <label for="tipoSelect">Tipo</label>
+            <select id="tipoSelect" name="tipoEquipamentoId">
+              <option value="">Selecione o tipo</option>
+              <option th:each="t : ${tipos}" th:value="${t.id}" th:text="${t.nome}"></option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="quantidade">Quantidade</label>
+            <input type="number" id="quantidade" name="quantidade" min="1" max="1000" value="1">
+          </div>
+          <div class="field">
+            <label for="marcaSelect">Marca (opcional)</label>
+            <select id="marcaSelect" disabled><option value="">Escolha o tipo primeiro</option></select>
+          </div>
+          <div class="field">
+            <label for="modeloSelect">Modelo (opcional)</label>
+            <select id="modeloSelect" disabled><option value="">Escolha a marca primeiro</option></select>
+          </div>
+          <div class="field span-2">
+            <label for="bem">Ou um equipamento específico</label>
+            <input id="bem" name="bem" maxlength="255" class="mono" placeholder="Etiqueta (EPC) ou patrimônio">
+          </div>
+        </div>
+        <div style="margin-top:10px"><button type="submit" class="btn btn-secondary btn-sm"><svg class="ic"><use href="/img/icones.svg#mais"/></svg>Acrescentar</button></div>
+        <div class="alert alert-erro" id="catalogoErro" role="alert" hidden><span>Não foi possível carregar as marcas e os modelos.</span></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Saída pela web (o coletor faz o mesmo lendo as etiquetas) -->
+  <form class="card" style="margin-top:16px" th:if="${pode and d.podeSair and !#lists.isEmpty(d.linhas)}"
+        th:action="@{/admin/pedidos/{id}/saida(id=${p.id})}" method="post" data-enviar-uma-vez>
+    <div class="card-header empilhar">
+      <h2>Registrar saída</h2>
+      <span class="muted">Pelo coletor: abra o pedido e leia as etiquetas. Aqui: etiqueta ou patrimônio, um por linha. A saída pode ser parcial.</span>
+    </div>
+    <div class="card-body">
+      <textarea name="codigos" rows="3" class="mono" aria-label="Equipamentos que saem" required placeholder="E28011700000020A1B2C3D01&#10;000123"></textarea>
+    </div>
+    <div class="card-footer">
+      <button type="submit" class="btn btn-primary" data-enviando="Registrando..."><svg class="ic"><use href="/img/icones.svg#ok"/></svg>Registrar saída</button>
+    </div>
+  </form>
+  <form th:if="${pode and d.podeSair and !#lists.isEmpty(d.itens)}" th:action="@{/admin/pedidos/{id}/separacao/encerrar(id=${p.id})}" method="post"
+        style="margin-top:8px" data-confirmar="Encerrar a separação com o que já saiu? O que falta não sai mais por este pedido."
+        data-confirmar-titulo="Encerrar separação" data-confirmar-botao="Encerrar">
+    <button type="submit" class="btn btn-ghost btn-sm">Encerrar a separação com o que saiu</button>
+  </form>
+
+  <!-- Equipamentos que saíram -->
+  <div class="card" style="margin-top:16px" id="equipamentos">
+    <div class="card-header empilhar">
+      <h2>Equipamentos <span class="contagem" th:text="'(' + ${#lists.size(d.itens)} + ')'"></span></h2>
+      <span class="muted" th:text="${#lists.size(d.naRua)} + ' com o cliente · ' + ${#lists.size(d.aguardandoConferencia)} + ' esperando a conferência da devolução'"></span>
+    </div>
+    <div class="table-wrap" th:unless="${#lists.isEmpty(d.itens)}">
+      <table class="table table-cartoes">
+        <thead><tr><th>Equipamento</th><th>Saída</th><th>Devolução</th><th>Conferência</th></tr></thead>
+        <tbody>
+        <tr th:each="i : ${d.itens}">
+          <td class="principal cartao-titulo">
+            <a th:if="${i.tagId != null and pode}" th:href="@{/admin/etiquetas/{t}/editar(t=${i.tagId})}" th:text="${i.patrimonio} ?: ${i.tagReal}"></a>
+            <span th:unless="${i.tagId != null and pode}" th:text="${i.patrimonio} ?: ${i.tagReal}"></span>
+            <div class="muted" style="font-size:12px" th:text="${i.descricao} ?: ''"></div>
+            <div class="mono muted" style="font-size:12px" th:text="${i.tagReal}"></div>
+          </td>
+          <td data-rotulo="Saída" class="nowrap" th:text="${#temporals.format(i.saidaEm, 'dd/MM/yyyy HH:mm')}"></td>
+          <td data-rotulo="Devolução" class="nowrap" th:text="${i.devolvido} ? ${#temporals.format(i.devolvidoEm, 'dd/MM/yyyy HH:mm')} : 'com o cliente'"></td>
+          <td data-rotulo="Conferência">
+            <th:block th:if="${i.conferido}">
+              <span th:text="${i.estadoDevolucao?.rotulo}"></span><span class="muted" th:if="${i.observacaoDevolucao != null}" th:text="' · ' + ${i.observacaoDevolucao}"></span>
+              <a th:if="${i.manutencaoId != null}" th:href="@{/admin/manutencoes/{m}(m=${i.manutencaoId})}" th:text="' · manutenção nº ' + ${i.manutencaoId}"></a>
+            </th:block>
+            <span th:if="${!i.devolvido}" class="muted">—</span>
+            <form th:if="${i.aguardandoConferencia and pode}" class="toolbar" style="border:0;padding:0"
+                  th:action="@{/admin/pedidos/{id}/itens/{it}/conferencia(id=${p.id},it=${i.id})}" method="post">
+              <select name="estado" class="select-sm" required aria-label="Estado">
+                <option th:each="e : ${estados}" th:value="${e.name()}" th:text="${e.rotulo}"></option>
+              </select>
+              <select name="destino" class="select-sm" aria-label="Para onde vai">
+                <option value="DISPONIVEL">Disponível</option>
+                <option value="MANUTENCAO">Manutenção</option>
+              </select>
+              <input name="observacao" class="input-sm" maxlength="500" placeholder="Avaria, acessório que falta…" aria-label="Observação">
+              <button type="submit" class="btn btn-secondary btn-sm">Conferir</button>
+            </form>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="vazio" th:if="${#lists.isEmpty(d.itens)}">Nenhum equipamento saiu ainda.</p>
+    <p class="muted" style="padding:0 16px 14px" th:unless="${#lists.isEmpty(d.aguardandoConferencia)}">
+      Fotos da devolução: anexe na edição de cada etiqueta (Fotos e anexos).</p>
+  </div>
+
+  <!-- Devolução pela web -->
+  <form class="card" style="margin-top:16px" th:if="${pode and !#lists.isEmpty(d.naRua)}"
+        th:action="@{/admin/pedidos/{id}/devolucao(id=${p.id})}" method="post" data-enviar-uma-vez>
+    <div class="card-header empilhar">
+      <h2>Registrar devolução</h2>
+      <span class="muted">Pelo coletor: Devolução e leia as etiquetas. Aqui: etiqueta ou patrimônio, um por linha. Os equipamentos ficam Em devolução até a conferência.</span>
+    </div>
+    <div class="card-body">
+      <textarea name="codigos" rows="3" class="mono" aria-label="Equipamentos devolvidos" required></textarea>
+    </div>
+    <div class="card-footer">
+      <button type="submit" class="btn btn-primary" data-enviando="Registrando..."><svg class="ic"><use href="/img/icones.svg#ok"/></svg>Registrar devolução</button>
+    </div>
+  </form>
+
+  <!-- Cancelar: só enquanto nada saiu -->
+  <form class="card" style="margin-top:16px" th:if="${pode and d.editavel and #lists.isEmpty(d.itens)}"
+        th:action="@{/admin/pedidos/{id}/cancelamento(id=${p.id})}" method="post"
+        data-confirmar="Cancelar este pedido?" data-confirmar-titulo="Cancelar pedido" data-confirmar-botao="Cancelar pedido" data-confirmar-perigo>
+    <div class="card-header"><h2>Cancelar pedido</h2></div>
+    <div class="card-body">
+      <div class="field"><label for="motivo">Motivo <span class="obrigatorio">*</span></label><input id="motivo" name="motivo" maxlength="500" required></div>
+    </div>
+    <div class="card-footer"><button type="submit" class="btn btn-danger-ghost">Cancelar pedido</button></div>
+  </form>
+
+  <th:block th:if="${pode and d.editavel}"><script th:replace="~{layout/catalogo-selects :: script}"></script></th:block>
+
+</section>
+</html>

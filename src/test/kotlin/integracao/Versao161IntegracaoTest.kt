@@ -89,7 +89,7 @@ class Versao161IntegracaoTest : IntegracaoBase() {
 
         assertThat(tag("E-TR1-$s").localId).isEqualTo(almox.id)
         assertThat(tag("E-TR1-$s").responsavelId).isEqualTo(bia.id)
-        assertThat(tag("E-TR2-$s").situacao).isEqualTo(SituacaoBem.EM_USO)   // extraviado que muda de local foi achado
+        assertThat(tag("E-TR2-$s").situacao).isEqualTo(SituacaoBem.DISPONIVEL)   // extraviado que muda de local foi achado
         assertThat(guia.localDestino).isEqualTo("Matriz $s › Almox $s")
         assertThat(guia.responsavelDestino).isEqualTo("Bia $s (RH)")
         assertThat(guia.data).isEqualTo(LocalDate.now())
@@ -167,7 +167,7 @@ class Versao161IntegracaoTest : IntegracaoBase() {
         mvc.perform(get("/api/android/inventarios/esperado").param("local", "Sala D $s").comoOperador(token)).andExpect(status().isOk)
             .andExpect(jsonPath("$.itens[?(@.tag == 'E-DV2-$s')].situacao").value(hasItem("EXTRAVIADO")))
             .andExpect(jsonPath("$.itens[?(@.tag == 'E-DV2-$s')].situacaoRotulo").value(hasItem("Extraviado")))
-            .andExpect(jsonPath("$.itens[?(@.tag == 'E-DV1-$s')].situacao").value(hasItem("EM_USO")))
+            .andExpect(jsonPath("$.itens[?(@.tag == 'E-DV1-$s')].situacao").value(hasItem("DISPONIVEL")))
     }
 
     @Test

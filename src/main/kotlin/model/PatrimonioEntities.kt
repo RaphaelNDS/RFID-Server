@@ -3,21 +3,41 @@ package org.example.model
 import jakarta.persistence.*
 import java.time.LocalDateTime
 
-/** Situação do bem (tags.situacao, V23). BAIXADO só pela baixa (RfidService.darBaixa), nunca pela edição. */
+/**
+ * Situação do equipamento (tags.situacao, V23; locadora desde a 1.12.0, V29). Só as [EDITAVEIS] mudam pela edição da
+ * etiqueta: ALUGADO e EM_DEVOLUCAO vêm dos pedidos de locação, VENDIDO da venda e BAIXADO da baixa.
+ */
 enum class SituacaoBem(val rotulo: String) {
-    EM_USO("Em uso"),
-    EM_ESTOQUE("Em estoque"),
+    DISPONIVEL("Disponível"),
+    ALUGADO("Alugado"),
+    EM_DEVOLUCAO("Em devolução"),
     EM_MANUTENCAO("Em manutenção"),
-    EMPRESTADO("Emprestado"),
+    A_VENDA("À venda"),
+    VENDIDO("Vendido"),
     EXTRAVIADO("Extraviado"),
     BAIXADO("Baixado");
 
     companion object {
-        /** As que a edição da etiqueta pode escolher (a baixa tem tela própria). */
-        val EDITAVEIS = entries.filter { it != BAIXADO }
+        /** As que a edição da etiqueta (e a importação) pode escolher. */
+        val EDITAVEIS = listOf(DISPONIVEL, A_VENDA, EM_MANUTENCAO, EXTRAVIADO)
+
+        /** Fora do acervo: não aparecem nas listas por padrão nem no esperado dos inventários. */
+        val FORA_DO_ACERVO = setOf(BAIXADO, VENDIDO)
+
+        /** Fora do esperado do inventário: além das de fora do acervo, o que está com o cliente. */
+        val FORA_DO_ESPERADO = FORA_DO_ACERVO + ALUGADO
+
+        /** O que a lista de etiquetas mostra sem filtro. */
+        val NO_ACERVO = entries.filter { it !in FORA_DO_ACERVO }
+
+        /** Nomes de antes da 1.12.0 (planilhas antigas, app antigo): viram os de agora. */
+        private val ANTIGOS = mapOf("EM_USO" to DISPONIVEL, "EM_ESTOQUE" to DISPONIVEL, "EMPRESTADO" to ALUGADO)
 
         /** Pelo código ou pelo nome ("Em manutenção"), sem diferenciar maiúsculas nem acento (importação de planilha). */
-        fun de(texto: String?): SituacaoBem? = porCodigoOuNome(texto, entries) { it.rotulo }
+        fun de(texto: String?): SituacaoBem? = porCodigoOuNome(texto, entries) { it.rotulo } ?: texto?.let {
+            ANTIGOS[java.text.Normalizer.normalize(it.trim(), java.text.Normalizer.Form.NFD).replace(Regex("\\p{M}"), "")
+                .uppercase().replace(Regex("[^A-Z0-9]+"), "_").trim('_')]
+        }
     }
 }
 
@@ -35,7 +55,7 @@ enum class MotivoBaixa(val rotulo: String) {
     }
 }
 
-/** Código (EM_USO) ou nome ("Em uso"), sem diferenciar maiúsculas, acento, espaço ou "/". */
+/** Código (DISPONIVEL) ou nome ("Disponível"), sem diferenciar maiúsculas, acento, espaço ou "/". */
 internal fun <E : Enum<E>> porCodigoOuNome(texto: String?, valores: List<E>, rotulo: (E) -> String): E? {
     fun limpar(s: String) = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
         .replace(Regex("\\p{M}"), "").uppercase().replace(Regex("[^A-Z0-9]+"), "_").trim('_')
