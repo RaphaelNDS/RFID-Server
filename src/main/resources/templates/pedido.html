@@ -4,7 +4,7 @@
 
 <title>Pedido de locação · Sistema RFID</title>
 
-<section class="page" th:with="p=${d.pedido},pode=${@authService.temPermissao('RFID','UPDATE')}">
+<section class="page" th:with="p=${d.pedido},pode=${@authService.temPermissao('LOCACAO','UPDATE')},criar=${@authService.temPermissao('LOCACAO','CREATE')},editaEtiqueta=${@authService.temPermissao('RFID','UPDATE')},paraManutencao=${@authService.temPermissao('MANUTENCAO','CREATE')}">
 
   <div class="page-header">
     <div>
@@ -97,7 +97,7 @@
       </div>
       <p class="vazio" th:if="${#lists.isEmpty(d.linhas)}">Nenhum item ainda: acrescente abaixo o que o cliente pediu.</p>
 
-      <form class="card-footer" th:if="${pode and d.editavel}" th:action="@{/admin/pedidos/{id}/linhas(id=${p.id})}" method="post">
+      <form class="card-footer" th:if="${criar and d.editavel}" th:action="@{/admin/pedidos/{id}/linhas(id=${p.id})}" method="post">
         <input type="hidden" id="marcaValor" name="marcaId">
         <input type="hidden" id="modeloValor" name="modeloId">
         <div class="form-grid" style="width:100%">
@@ -163,8 +163,8 @@
         <tbody>
         <tr th:each="i : ${d.itens}">
           <td class="principal cartao-titulo">
-            <a th:if="${i.tagId != null and pode}" th:href="@{/admin/etiquetas/{t}/editar(t=${i.tagId})}" th:text="${i.patrimonio} ?: ${i.tagReal}"></a>
-            <span th:unless="${i.tagId != null and pode}" th:text="${i.patrimonio} ?: ${i.tagReal}"></span>
+            <a th:if="${i.tagId != null and editaEtiqueta}" th:href="@{/admin/etiquetas/{t}/editar(t=${i.tagId})}" th:text="${i.patrimonio} ?: ${i.tagReal}"></a>
+            <span th:unless="${i.tagId != null and editaEtiqueta}" th:text="${i.patrimonio} ?: ${i.tagReal}"></span>
             <div class="muted" style="font-size:12px" th:text="${i.descricao} ?: ''"></div>
             <div class="mono muted" style="font-size:12px" th:text="${i.tagReal}"></div>
           </td>
@@ -183,7 +183,7 @@
               </select>
               <select name="destino" class="select-sm" aria-label="Para onde vai">
                 <option value="DISPONIVEL">Disponível</option>
-                <option value="MANUTENCAO">Manutenção</option>
+                <option value="MANUTENCAO" th:if="${paraManutencao}">Manutenção</option>
               </select>
               <input name="observacao" class="input-sm" maxlength="500" placeholder="Avaria, acessório que falta…" aria-label="Observação">
               <button type="submit" class="btn btn-secondary btn-sm">Conferir</button>
@@ -224,7 +224,7 @@
     <div class="card-footer"><button type="submit" class="btn btn-danger-ghost">Cancelar pedido</button></div>
   </form>
 
-  <th:block th:if="${pode and d.editavel}"><script th:replace="~{layout/catalogo-selects :: script}"></script></th:block>
+  <th:block th:if="${criar and d.editavel}"><script th:replace="~{layout/catalogo-selects :: script}"></script></th:block>
 
 </section>
 </html>

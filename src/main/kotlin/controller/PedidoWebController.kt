@@ -24,20 +24,22 @@ import java.time.LocalDate
 
 /**
  * Pedidos de locação (1.12.0): lista, novo pedido, o pedido (linhas, saída e devolução pela web, conferência da
- * devolução, encerrar separação, cancelar), a fila de devoluções a conferir e o contrato em PDF. Ver: RFID · Ver;
- * o resto muda a situação dos equipamentos, então pede RFID · Editar.
+ * devolução, encerrar separação, cancelar), a fila de devoluções a conferir e o contrato em PDF. Módulo Locação (1.15.0):
+ * Ver; criar pedido e acrescentar linha: Criar; saída, devolução, conferência e o resto: Editar. Mandar para a manutenção na
+ * conferência pede também Manutenção · Criar.
  */
 @Controller
 @RequestMapping("/admin/pedidos")
 class PedidoWebController(
     private val service: LocacaoService,
     private val catalogo: CatalogoService,
-    private val pdf: PdfService
+    private val pdf: PdfService,
+    private val auth: org.example.service.AuthService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @PreAuthorize("@authService.temPermissao('RFID','READ')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','READ')")
     @GetMapping
     fun listar(
         @RequestParam(required = false) situacao: String?,
@@ -57,14 +59,14 @@ class PedidoWebController(
         return "pedidos"
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','CREATE')")
     @GetMapping("/novo")
     fun novo(@RequestParam(required = false) cliente: Long?, model: Model): String {
         formulario(model, DadosPedido(cliente, null), null)
         return "pedido-novo"
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','CREATE')")
     @PostMapping
     fun criar(
         @RequestParam(required = false) cliente: Long?, @RequestParam(required = false) previsao: String?,
@@ -85,7 +87,7 @@ class PedidoWebController(
         }
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','READ')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','READ')")
     @GetMapping("/{id}")
     fun detalhe(@PathVariable id: Long, model: Model): String {
         val d = service.detalhar(id)
@@ -97,7 +99,7 @@ class PedidoWebController(
         return "pedido"
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
     @PostMapping("/{id}")
     fun editar(
         @PathVariable id: Long, @RequestParam(required = false) cliente: Long?, @RequestParam(required = false) previsao: String?,
@@ -108,7 +110,7 @@ class PedidoWebController(
         "Pedido alterado."
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','CREATE')")
     @PostMapping("/{id}/linhas")
     fun adicionarLinha(
         @PathVariable id: Long,
@@ -120,7 +122,7 @@ class PedidoWebController(
         "Linha acrescentada: ${l.quantidade} × ${l.descricao}."
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
     @PostMapping("/{id}/linhas/{linhaId}/excluir")
     fun removerLinha(@PathVariable id: Long, @PathVariable linhaId: Long, redirect: RedirectAttributes): String = acao(id, redirect) {
         service.removerLinha(id, linhaId)
@@ -128,7 +130,7 @@ class PedidoWebController(
     }
 
     /** Saída pela web (sem coletor): etiquetas ou patrimônios, um por linha. */
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
     @PostMapping("/{id}/saida")
     fun saida(@PathVariable id: Long, @RequestParam(required = false) codigos: String?, redirect: RedirectAttributes): String = acao(id, redirect) {
         val r = try {
@@ -146,7 +148,7 @@ class PedidoWebController(
     }
 
     /** Devolução pela web (sem coletor). */
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
     @PostMapping("/{id}/devolucao")
     fun devolucao(@PathVariable id: Long, @RequestParam(required = false) codigos: String?, redirect: RedirectAttributes): String = acao(id, redirect) {
         val r = service.registrarDevolucao(separar(codigos))
@@ -157,7 +159,7 @@ class PedidoWebController(
         ).joinToString(" ")
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
     @PostMapping("/{id}/itens/{itemId}/conferencia")
     fun conferirDevolucao(
         @PathVariable id: Long, @PathVariable itemId: Long,
@@ -167,6 +169,10 @@ class PedidoWebController(
     ): String {
         val destinoTela = if (voltar == "fila") "redirect:/admin/pedidos/devolucoes" else "redirect:/admin/pedidos/$id"
         try {
+            // 1.15.0: mandar para a manutenção abre uma ordem: pede também Manutenção · Criar
+            require(destino != "MANUTENCAO" || auth.temPermissao("MANUTENCAO", "CREATE")) {
+                "Para mandar para a manutenção é preciso a permissão Manutenção · Criar. Mande para Disponível ou peça a quem tem."
+            }
             val e = EstadoDevolucao.entries.firstOrNull { it.name == estado }
             val item = service.conferirDevolucao(itemId, e, destino == "MANUTENCAO", observacao)
             redirect.addFlashAttribute("msg", "Devolução de ${item.patrimonio ?: item.tagReal} conferida: " +
@@ -177,14 +183,14 @@ class PedidoWebController(
         return destinoTela
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
     @PostMapping("/{id}/separacao/encerrar")
     fun encerrarSeparacao(@PathVariable id: Long, redirect: RedirectAttributes): String = acao(id, redirect) {
         val p = service.encerrarSeparacao(id)
         "Separação encerrada com o que saiu. Pedido ${p.situacao.rotulo.lowercase()}."
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
     @PostMapping("/{id}/cancelamento")
     fun cancelar(@PathVariable id: Long, @RequestParam(required = false) motivo: String?, redirect: RedirectAttributes): String = acao(id, redirect) {
         service.cancelarPedido(id, motivo)
@@ -192,7 +198,7 @@ class PedidoWebController(
     }
 
     /** Fila das devoluções que esperam a conferência, de todos os pedidos. */
-    @PreAuthorize("@authService.temPermissao('RFID','READ')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','READ')")
     @GetMapping("/devolucoes")
     fun devolucoes(model: Model): String {
         model.addAttribute("fila", service.aguardandoConferencia())
@@ -200,7 +206,7 @@ class PedidoWebController(
         return "devolucoes"
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','READ')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','READ')")
     @GetMapping("/{id}/contrato.pdf")
     @ResponseBody
     fun contrato(@PathVariable id: Long, auth: Authentication): ResponseEntity<ByteArray> {

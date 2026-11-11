@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController
 
 /**
  * Locação pelo coletor (1.12.0): lista e detalhe dos pedidos, conferência das leituras (sem gravar), saída e devolução.
- * Exige o operador com RFID · Editar (o login devolve podeMovimentarLocacao). Erros: {"status","mensagem"}; 404 pedido
+ * Exige o operador com Locação · Editar (1.15.0; o login devolve podeMovimentarLocacao). Erros: {"status","mensagem"}; 404 pedido
  * inexistente, 409 saída em pedido cancelado ou encerrado, 400 corpo inválido (sem etiquetas, mais de 500).
  */
 @RestController
@@ -33,7 +33,7 @@ class LocacaoAndroidController(private val service: LocacaoService) {
 
     data class Leituras(val etiquetas: List<String>? = null, val observacao: String? = null, val idEnvio: String? = null)
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
     @GetMapping("/pedidos")
     fun listar(@RequestParam(required = false) situacao: String?): ResponseEntity<Any> = tratar("lista de pedidos", null) {
         val situacoes = situacao.orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() }.map { s ->
@@ -42,7 +42,7 @@ class LocacaoAndroidController(private val service: LocacaoService) {
         service.paraColetor(situacoes).map(::resumo)
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
     @GetMapping("/pedidos/{id}")
     fun detalhe(@PathVariable id: Long): ResponseEntity<Any> = tratar("pedido", id) {
         val d = service.detalhar(id)
@@ -52,14 +52,14 @@ class LocacaoAndroidController(private val service: LocacaoService) {
         )
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
     @PostMapping("/pedidos/{id}/conferir")
     fun conferir(@PathVariable id: Long, @RequestBody corpo: Leituras): ResponseEntity<Any> = tratar("conferência do pedido", id) {
         val c = service.conferir(id, corpo.etiquetas.orEmpty())
         mapOf("itens" to c.itens.map(::item), "linhas" to c.linhas.map(::linha))
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
     @PostMapping("/pedidos/{id}/saida")
     fun saida(@PathVariable id: Long, @RequestBody corpo: Leituras, auth: Authentication): ResponseEntity<Any> = tratar("saída do pedido", id) {
         if (corpo.idEnvio != null) log.info("Saída do pedido {} pelo coletor {} (envio {})", id, auth.name, corpo.idEnvio.take(60))
@@ -80,7 +80,7 @@ class LocacaoAndroidController(private val service: LocacaoService) {
         )
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
     @PostMapping("/devolucoes")
     fun devolucoes(@RequestBody corpo: Leituras, auth: Authentication): ResponseEntity<Any> = tratar("devolução", null) {
         if (corpo.idEnvio != null) log.info("Devolução pelo coletor {} (envio {})", auth.name, corpo.idEnvio.take(60))

@@ -12,12 +12,12 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 
-/** Clientes da locadora (1.12.0). Ver: RFID · Ver; cadastrar e alterar: RFID · Editar (os mesmos dos pedidos). */
+/** Clientes da locadora (1.12.0). Módulo Locação (1.15.0): Ver; cadastrar: Criar; alterar: Editar. */
 @Controller
 @RequestMapping("/admin/clientes")
 class ClienteWebController(private val service: LocacaoService) {
 
-    @PreAuthorize("@authService.temPermissao('RFID','READ')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','READ')")
     @GetMapping
     fun listar(@RequestParam(required = false) busca: String?, model: Model): String {
         val texto = busca?.trim().orEmpty()
@@ -30,7 +30,7 @@ class ClienteWebController(private val service: LocacaoService) {
         return "clientes"
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','CREATE')")
     @PostMapping
     fun cadastrar(
         @RequestParam(required = false) nome: String?, @RequestParam(required = false) documento: String?,
@@ -47,7 +47,7 @@ class ClienteWebController(private val service: LocacaoService) {
         return "redirect:/admin/clientes"
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
     @PostMapping("/{id}")
     fun alterar(
         @PathVariable id: Long,

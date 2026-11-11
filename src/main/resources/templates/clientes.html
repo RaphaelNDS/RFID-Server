@@ -20,7 +20,7 @@
     <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
   </div>
 
-  <form class="card" style="margin-bottom:20px" th:action="@{/admin/clientes}" method="post" th:if="${@authService.temPermissao('RFID','UPDATE')}">
+  <form class="card" style="margin-bottom:20px" th:action="@{/admin/clientes}" method="post" th:if="${@authService.temPermissao('LOCACAO','CREATE')}">
     <div class="card-header"><h2>Novo cliente</h2></div>
     <div class="toolbar" style="border:0">
       <div class="field" style="flex:2 1 220px"><label for="c-nome">Nome ou razão social <span class="obrigatorio">*</span></label>
@@ -64,7 +64,7 @@
             <a th:href="@{/admin/pedidos(situacao='TODOS',busca=${c.nome})}" class="btn btn-ghost btn-sm">
               <svg class="ic"><use href="/img/icones.svg#calendario"/></svg><span class="texto-btn">Pedidos</span>
             </a>
-            <details th:if="${@authService.temPermissao('RFID','UPDATE')}" style="display:inline-block">
+            <details th:if="${@authService.temPermissao('LOCACAO','UPDATE')}" style="display:inline-block">
               <summary class="btn btn-ghost btn-sm">Editar</summary>
               <form class="toolbar" style="border:0;padding:10px 0 0;justify-content:flex-end" th:action="@{/admin/clientes/{id}(id=${c.id})}" method="post">
                 <div class="field"><label th:for="'cn-' + ${c.id}">Nome</label><input th:id="'cn-' + ${c.id}" name="nome" maxlength="160" required th:value="${c.nome}"></div>

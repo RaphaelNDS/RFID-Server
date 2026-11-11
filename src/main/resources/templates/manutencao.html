@@ -53,7 +53,7 @@
     </div>
   </div>
 
-  <th:block th:if="${m.aberta and @authService.temPermissao('RFID','UPDATE')}">
+  <th:block th:if="${m.aberta and @authService.temPermissao('MANUTENCAO','UPDATE')}">
     <form class="card" style="margin-top:16px" th:action="@{/admin/manutencoes/{id}/conclusao(id=${m.id})}" method="post" data-enviar-uma-vez>
       <div class="card-header empilhar">
         <h2>Concluir</h2>

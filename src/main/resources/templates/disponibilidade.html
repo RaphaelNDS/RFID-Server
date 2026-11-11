@@ -12,7 +12,7 @@
       <p class="subtitulo">Quantos equipamentos de cada tipo e modelo estão livres agora e quantos voltam até uma data</p>
     </div>
     <div class="page-header-acoes">
-      <a th:href="@{/admin/pedidos/novo}" class="btn btn-primary" th:if="${@authService.temPermissao('RFID','UPDATE')}">
+      <a th:href="@{/admin/pedidos/novo}" class="btn btn-primary" th:if="${@authService.temPermissao('LOCACAO','CREATE')}">
         <svg class="ic"><use href="/img/icones.svg#mais"/></svg>Novo pedido
       </a>
     </div>

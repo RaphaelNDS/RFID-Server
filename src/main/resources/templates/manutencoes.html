@@ -12,7 +12,7 @@
       <p class="subtitulo">Ordens de manutenção dos bens: conserto ou revisão, fornecedor, prazo e custo</p>
     </div>
     <div class="page-header-acoes">
-      <a th:href="@{/admin/manutencoes/nova}" class="btn btn-primary" th:if="${@authService.temPermissao('RFID','UPDATE')}">
+      <a th:href="@{/admin/manutencoes/nova}" class="btn btn-primary" th:if="${@authService.temPermissao('MANUTENCAO','CREATE')}">
         <svg class="ic"><use href="/img/icones.svg#mais"/></svg>Nova manutenção
       </a>
     </div>

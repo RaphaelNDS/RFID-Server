@@ -20,7 +20,7 @@
         <svg class="ic"><use href="/img/icones.svg#inicio"/></svg>Início
       </a>
 
-      <th:block th:if="${@authService.temPermissao('RFID','READ') or @authService.temPermissao('LEITURA','READ')}">
+      <th:block th:if="${@authService.temPermissao('RFID','READ') or @authService.temPermissao('LEITURA','READ') or @authService.temPermissao('LOCACAO','READ') or @authService.temPermissao('MANUTENCAO','READ')}">
         <span class="nav-grupo">Operação</span>
         <a th:href="@{/admin/tags-cadastradas}" th:if="${@authService.temPermissao('RFID','READ')}">
           <svg class="ic"><use href="/img/icones.svg#etiqueta"/></svg>Etiquetas
@@ -41,16 +41,16 @@
           <svg class="ic"><use href="/img/icones.svg#transferir"/></svg>Transferências
         </a>
         <!-- Locadora (1.12.0). Valor patrimonial (/admin/valores) e Responsáveis saíram do menu: as rotas continuam -->
-        <a th:href="@{/admin/pedidos}" th:if="${@authService.temPermissao('RFID','READ')}">
+        <a th:href="@{/admin/pedidos}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
           <svg class="ic"><use href="/img/icones.svg#calendario"/></svg>Pedidos de locação
         </a>
-        <a th:href="@{/admin/disponibilidade}" th:if="${@authService.temPermissao('RFID','READ')}">
+        <a th:href="@{/admin/disponibilidade}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
           <svg class="ic"><use href="/img/icones.svg#grafico"/></svg>Disponibilidade
         </a>
-        <a th:href="@{/admin/clientes}" th:if="${@authService.temPermissao('RFID','READ')}">
+        <a th:href="@{/admin/clientes}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
           <svg class="ic"><use href="/img/icones.svg#usuarios"/></svg>Clientes
         </a>
-        <a th:href="@{/admin/manutencoes}" th:if="${@authService.temPermissao('RFID','READ')}">
+        <a th:href="@{/admin/manutencoes}" th:if="${@authService.temPermissao('MANUTENCAO','READ')}">
           <svg class="ic"><use href="/img/icones.svg#lapis"/></svg>Manutenções
         </a>
       </th:block>

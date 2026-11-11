@@ -53,7 +53,21 @@ class CopiaExternaBancoService(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    val pasta: Path? = pastaConfigurada.trim().takeIf { it.isNotEmpty() }?.let { Path.of(it).toAbsolutePath().normalize() }
+    /**
+     * 1.15.0: a pasta usa uma variável do Windows que não chegou ao processo (ex.: OneDriveCommercial): a cópia fica
+     * desligada e o Status avisa, em vez de o servidor não subir (VariaveisAusentes).
+     */
+    private val variavelAusente: String? = org.example.config.VariaveisAusentes.pastaIndisponivel(pastaConfigurada)
+
+    val pasta: Path? = pastaConfigurada.trim().takeIf { it.isNotEmpty() && variavelAusente == null }?.let { Path.of(it).toAbsolutePath().normalize() }
+
+    init {
+        if (variavelAusente != null) {
+            log.error("Cópia do backup do banco para fora do computador DESLIGADA: a variável do Windows {} não existe neste processo " +
+                "(rfid.banco.copia-externa = {}). O servidor sobe sem a cópia; reinicie o servidor depois de entrar no Windows com o OneDrive ativo",
+                variavelAusente, pastaConfigurada.replace(org.example.config.VariaveisAusentes.MARCADOR, "%"))
+        }
+    }
 
     @Volatile private var ultimoErro: String? = null
 
@@ -96,6 +110,10 @@ class CopiaExternaBancoService(
     }
 
     fun situacao(): SituacaoCopiaExterna {
+        variavelAusente?.let { v ->
+            val motivo = "a variável do Windows $v não existe neste processo; reinicie o servidor com o OneDrive ativo"
+            return SituacaoCopiaExterna(true, null, motivo, true, "INDISPONÍVEL: $motivo")
+        }
         val destino = pasta ?: return SituacaoCopiaExterna(false, null, null, false,
             "desligada: defina RFID_BANCO_COPIA_EXTERNA (ex.: a pasta do OneDrive) para guardar o banco fora do computador")
         val agora = LocalDateTime.now(relogio)

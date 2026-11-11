@@ -25,7 +25,7 @@ import java.time.LocalDate
 
 /**
  * Manutenção do bem (1.11.0): lista das ordens, nova ordem, a ordem (concluir ou cancelar) e a ordem em PDF.
- * Ver: RFID · Ver; abrir, concluir e cancelar mudam a situação do bem, então pedem RFID · Editar.
+ * Módulo Manutenção (1.15.0): Ver; abrir: Criar; concluir e cancelar: Editar.
  */
 @Controller
 @RequestMapping("/admin/manutencoes")
@@ -36,7 +36,7 @@ class ManutencaoWebController(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @PreAuthorize("@authService.temPermissao('RFID','READ')")
+    @PreAuthorize("@authService.temPermissao('MANUTENCAO','READ')")
     @GetMapping
     fun listar(
         @RequestParam(required = false) situacao: String?,
@@ -57,14 +57,14 @@ class ManutencaoWebController(
     }
 
     /** Formulário; [tag] vem do botão "Manutenção" na edição da etiqueta. */
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('MANUTENCAO','CREATE')")
     @GetMapping("/nova")
     fun nova(@RequestParam(required = false) tag: String?, model: Model): String {
         formulario(model, tag, null, null, null, null, null, null)
         return "manutencao-nova"
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('MANUTENCAO','CREATE')")
     @PostMapping
     fun abrir(
         @RequestParam(required = false) codigo: String?,
@@ -92,7 +92,7 @@ class ManutencaoWebController(
         return "manutencao-nova"
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','READ')")
+    @PreAuthorize("@authService.temPermissao('MANUTENCAO','READ')")
     @GetMapping("/{id}")
     fun detalhe(@PathVariable id: Long, model: Model): String {
         model.addAttribute("r", service.detalhar(id))
@@ -102,7 +102,7 @@ class ManutencaoWebController(
         return "manutencao"
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('MANUTENCAO','UPDATE')")
     @PostMapping("/{id}/conclusao")
     fun concluir(
         @PathVariable id: Long,
@@ -123,7 +123,7 @@ class ManutencaoWebController(
         return "redirect:/admin/manutencoes/$id"
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PreAuthorize("@authService.temPermissao('MANUTENCAO','UPDATE')")
     @PostMapping("/{id}/cancelamento")
     fun cancelar(@PathVariable id: Long, @RequestParam(required = false) motivo: String?, redirect: RedirectAttributes): String {
         try {
@@ -135,7 +135,7 @@ class ManutencaoWebController(
         return "redirect:/admin/manutencoes/$id"
     }
 
-    @PreAuthorize("@authService.temPermissao('RFID','READ')")
+    @PreAuthorize("@authService.temPermissao('MANUTENCAO','READ')")
     @GetMapping("/{id}/ordem.pdf")
     @ResponseBody
     fun ordemPdf(@PathVariable id: Long, auth: Authentication): ResponseEntity<ByteArray> {
