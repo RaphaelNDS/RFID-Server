@@ -1,11 +1,15 @@
 package org.example.controller
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.example.config.OperadorFilter
+import org.example.security.nomeOperador
 import org.example.service.EsperadoInventarioService
 import org.example.service.InventarioService
 import org.example.service.ItemLido
+import org.example.service.JustificativaRecebida
 import org.example.service.ResultadoItens
-import org.example.security.nomeOperador
+import org.example.service.ResultadoJustificativas
+import org.example.service.SessaoOperadorService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -27,7 +31,7 @@ import java.time.OffsetDateTime
 class InventarioAndroidController(
     private val service: InventarioService,
     private val esperados: EsperadoInventarioService,
-    private val sessoes: org.example.service.SessaoOperadorService,
+    private val sessoes: SessaoOperadorService,
     /** O mesmo ObjectMapper das outras respostas: o JSON do esperado sai igual ao de antes do ETag. */
     private val json: ObjectMapper
 ) {
@@ -99,7 +103,7 @@ class InventarioAndroidController(
               request: jakarta.servlet.http.HttpServletRequest): ResultadoItens {
         // Hora de leitura fora da sessão do operador (qualquer data passada era aceita): o item continua no
         // inventário, com a hora do recebimento. Recusar só o item faria o app reenviar para sempre
-        val token = request.getHeader(org.example.config.OperadorFilter.HEADER_SESSAO)?.trim().orEmpty()
+        val token = request.getHeader(OperadorFilter.HEADER_SESSAO)?.trim().orEmpty()
         val foraDaSessao = sessoes.conferirHorasDoColetor(token, auth.name, req.itens.map { it.lidoEm })
         if (foraDaSessao.isNotEmpty()) {
             org.slf4j.LoggerFactory.getLogger(javaClass).warn(
@@ -119,8 +123,8 @@ class InventarioAndroidController(
      */
     @PreAuthorize(LEITURA)
     @PostMapping("/inventarios/{id}/justificativas")
-    fun justificativas(@PathVariable id: String, @RequestBody req: List<org.example.service.JustificativaRecebida>,
-                       auth: Authentication): org.example.service.ResultadoJustificativas =
+    fun justificativas(@PathVariable id: String, @RequestBody req: List<JustificativaRecebida>,
+                       auth: Authentication): ResultadoJustificativas =
         repetindoSeReenvioSimultaneo("Justificativas do inventário $id") {
             service.registrarJustificativas(id, req, auth.name, auth.nomeOperador())
         }

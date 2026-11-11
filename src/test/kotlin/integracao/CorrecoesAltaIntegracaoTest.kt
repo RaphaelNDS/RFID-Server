@@ -7,13 +7,14 @@ import org.example.request.TipoEquipamentoRequest
 import org.example.service.CatalogoService
 import org.example.service.RfidService
 import org.example.suporte.IntegracaoBase
+import org.example.suporte.OperadorTeste
 import org.example.suporte.Perfis
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.matchesPattern
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.mock.web.MockMultipartFile
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
@@ -63,7 +64,7 @@ class CorrecoesAltaIntegracaoTest : IntegracaoBase() {
         // A cadeia dos coletores também não aceita arquivo
         mvc.perform(
             multipart("/api/android/leituras/lote").file(MockMultipartFile("arquivo", "x.bin", "application/octet-stream", ByteArray(10)))
-                .header(org.example.suporte.OperadorTeste.HEADER_CHAVE, CHAVE_COLETOR)
+                .header(OperadorTeste.HEADER_CHAVE, CHAVE_COLETOR)
         ).andExpect(status().isForbidden)
     }
 }

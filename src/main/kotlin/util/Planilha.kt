@@ -13,6 +13,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.util.Locale
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -205,7 +206,7 @@ object GeradorPlanilha {
     internal fun serialExcel(dataHora: LocalDateTime): String {
         val dias = ChronoUnit.DAYS.between(BASE_EXCEL, dataHora.toLocalDate())
         val fracao = dataHora.toLocalTime().toSecondOfDay() / 86_400.0
-        return "%.8f".format(java.util.Locale.ROOT, dias + fracao)
+        return "%.8f".format(Locale.ROOT, dias + fracao)
     }
 
     // XML não aceita caracteres de controle (exceto tab e quebras de linha): saem, para o arquivo não corromper

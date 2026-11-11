@@ -3,6 +3,7 @@ package org.example.integracao
 import org.assertj.core.api.Assertions.assertThat
 import org.example.repository.VersaoAppRepository
 import org.example.service.AtualizacaoAppService
+import org.example.service.ColetorService
 import org.example.suporte.IntegracaoBase
 import org.example.suporte.OperadorTeste
 import org.example.suporte.Perfis
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.mock.web.MockMultipartFile
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.web.servlet.ResultActions
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart
@@ -21,7 +23,6 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import java.nio.file.Files
 
 /**
@@ -32,7 +33,7 @@ class AtualizacaoAppIntegracaoTest : IntegracaoBase() {
 
     @Autowired lateinit var service: AtualizacaoAppService
     @Autowired lateinit var versoes: VersaoAppRepository
-    @Autowired lateinit var coletores: org.example.service.ColetorService
+    @Autowired lateinit var coletores: ColetorService
 
     @BeforeEach
     fun limparPasta() {

@@ -298,6 +298,22 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Limpeza e organização do código (1.18.1)
+
+Sem mudança no uso nem no banco (nenhuma migração; os dados antigos ficam como estão).
+
+- **Saiu o código sem uso:**
+  - a API de saída e devolução pelo coletor (`/api/android/pedidos`, `/conferir`, `/saida`, `/devolucoes`): o coletor
+    só faz inventário e consulta, e a saída e a devolução são pela web;
+  - a tela de Responsáveis e o termo de responsabilidade (tela e PDF), que estavam fora do menu desde a 1.12.0;
+  - a regra de depreciação e os campos dela no tipo de equipamento.
+- **Código organizado:**
+  - os nomes completos de classe no meio do código (`org.example.service.X`) viraram imports;
+  - os imports sem uso saíram, e os imports estão em ordem;
+  - os tipos da locação foram para `LocacaoTipos.kt`, e o `FormatoBr` foi para o próprio arquivo.
+- Continuam no banco e no cadastro da etiqueta: o responsável, o valor, a data de aquisição e a nota fiscal; e as
+  tabelas antigas de empréstimos (os dados já estão nos pedidos).
+
 ### Kits e acessórios (1.18.0)
 
 - **Acessórios e kits** (menu, Locação · Ver; cadastrar e pôr no kit: Criar; alterar e tirar do kit: Editar):

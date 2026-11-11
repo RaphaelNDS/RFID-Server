@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.multipart.MultipartFile
+import java.io.Serializable
 
 /**
  * Importação de etiquetas por planilha (1.6.0), em duas etapas: o envio simula e mostra o que vai acontecer (nada é
@@ -29,7 +30,7 @@ class ImportacaoEtiquetasController(
 ) {
 
     /** Serializável: o Tomcat grava as sessões ao desligar, e um atributo que não fosse dava erro no log. */
-    private class Pendente(val nome: String, val conteudo: ByteArray, val criar: Boolean) : java.io.Serializable
+    private class Pendente(val nome: String, val conteudo: ByteArray, val criar: Boolean) : Serializable
 
     @PreAuthorize("@authService.temPermissao('RFID','CREATE')")
     @GetMapping

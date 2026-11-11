@@ -1,6 +1,8 @@
 package org.example.model
 
 import jakarta.persistence.*
+import java.math.BigDecimal
+import java.time.LocalDate
 
 @Entity
 @Table(name = "tags")
@@ -52,7 +54,7 @@ class TagEntity(
     @Column(length = 20)
     var baixaMotivo: MotivoBaixa? = null,
 
-    var baixaEm: java.time.LocalDate? = null,
+    var baixaEm: LocalDate? = null,
 
     @Column(length = 500)
     var baixaObservacao: String? = null,
@@ -62,10 +64,10 @@ class TagEntity(
     // Valor de aquisição, data e nota fiscal (1.8.0, V25): fora da tela desde a 1.12.0, continuam no banco
 
     @Column(name = "valor_aquisicao", precision = 14, scale = 2)
-    var valorAquisicao: java.math.BigDecimal? = null,
+    var valorAquisicao: BigDecimal? = null,
 
     @Column(name = "data_aquisicao")
-    var dataAquisicao: java.time.LocalDate? = null,
+    var dataAquisicao: LocalDate? = null,
 
     @Column(name = "nota_fiscal", length = 60)
     var notaFiscal: String? = null

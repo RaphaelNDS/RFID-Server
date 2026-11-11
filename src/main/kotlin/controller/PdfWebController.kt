@@ -13,8 +13,8 @@ import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.text.Normalizer
 import java.time.format.DateTimeFormatter
 
 /**
@@ -66,7 +66,7 @@ class PdfWebController(
         private val DIA = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
         /** "Sala 101 / Térreo" → "sala-101-terreo" (o nome do arquivo sem acento nem símbolo). */
-        fun nomeArquivo(texto: String): String = java.text.Normalizer.normalize(texto, java.text.Normalizer.Form.NFD)
+        fun nomeArquivo(texto: String): String = Normalizer.normalize(texto, Normalizer.Form.NFD)
             .replace(Regex("\\p{M}"), "").lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-').take(60).ifEmpty { "sem-nome" }
     }
 }

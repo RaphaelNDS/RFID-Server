@@ -1,5 +1,6 @@
 package org.example.repository
 
+import org.example.model.SituacaoBem
 import org.example.model.TagEntity
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -46,7 +47,7 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
         @Param("modelos") modelos: Collection<Long>,
         @Param("locais") locais: Collection<Long>,
         @Param("responsaveis") responsaveis: Collection<Long>,
-        @Param("situacoes") situacoes: Collection<org.example.model.SituacaoBem>,
+        @Param("situacoes") situacoes: Collection<SituacaoBem>,
         @Param("localId") localId: Long,
         @Param("responsavelId") responsavelId: Long,
         pagina: Pageable
@@ -55,13 +56,8 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
     // Gestão de patrimônio (1.6.0)
     fun countByLocalId(localId: Long): Long
 
-    fun countByResponsavelId(responsavelId: Long): Long
-
-    /** Os bens do responsável que não foram baixados (termo de responsabilidade), pelo patrimônio. */
-    fun findAllByResponsavelIdAndSituacaoNotOrderByPatrimonioAscIdAsc(responsavelId: Long, situacao: org.example.model.SituacaoBem): List<TagEntity>
-
     /** Os bens cadastrados no local fora destas situações (esperado do inventário: sem baixados, vendidos e alugados). */
-    fun findAllByLocalIdAndSituacaoNotIn(localId: Long, situacoes: Collection<org.example.model.SituacaoBem>): List<TagEntity>
+    fun findAllByLocalIdAndSituacaoNotIn(localId: Long, situacoes: Collection<SituacaoBem>): List<TagEntity>
 
     @Query("select t.localId, count(t) from TagEntity t where t.localId is not null and t.situacao not in (org.example.model.SituacaoBem.BAIXADO, org.example.model.SituacaoBem.VENDIDO) group by t.localId")
     fun contarPorLocal(): List<Array<Any>>

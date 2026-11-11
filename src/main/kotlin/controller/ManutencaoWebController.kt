@@ -7,6 +7,7 @@ import org.example.service.FiltroManutencao
 import org.example.service.ManutencaoService
 import org.example.service.PdfService
 import org.example.service.PedidoManutencao
+import org.example.util.FormatoBr
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.ResponseEntity
@@ -51,7 +52,7 @@ class ManutencaoWebController(
         model.addAttribute("filtros", FiltroManutencao.entries)
         model.addAttribute("busca", busca?.trim().orEmpty())
         model.addAttribute("atrasadas", service.contarAtrasadas())
-        model.addAttribute("fmt", org.example.util.FormatoBr)
+        model.addAttribute("fmt", FormatoBr)
         model.adicionarPaginacao(resultado, "/admin/manutencoes", mapOf("situacao" to filtro.name, "busca" to busca))
         return "manutencoes"
     }
@@ -98,7 +99,7 @@ class ManutencaoWebController(
         model.addAttribute("r", service.detalhar(id))
         model.addAttribute("hoje", service.hoje())
         model.addAttribute("resultados", ResultadoManutencao.entries)
-        model.addAttribute("fmt", org.example.util.FormatoBr)
+        model.addAttribute("fmt", FormatoBr)
         return "manutencao"
     }
 

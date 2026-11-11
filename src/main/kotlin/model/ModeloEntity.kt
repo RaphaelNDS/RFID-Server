@@ -1,8 +1,7 @@
 package org.example.model
 
-import jakarta.persistence.*
 import com.fasterxml.jackson.annotation.JsonBackReference
-
+import jakarta.persistence.*
 
 @Entity
 @Table(name = "modelo")

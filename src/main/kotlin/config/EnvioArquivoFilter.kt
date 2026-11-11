@@ -3,6 +3,7 @@ package org.example.config
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.example.controller.AnexoBemWebController
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -57,7 +58,7 @@ class EnvioArquivoFilter(private val permitido: String? = "/admin/app") : OncePe
             // Importação de planilha de etiquetas (1.6.0): quem pode cadastrar etiquetas
             IMPORTACAO_ETIQUETAS -> "ROLE_ADMIN" in autoridades || "RFID_CREATE" in autoridades
             // Fotos e anexos do bem (1.9.0): quem pode editar etiquetas
-            else -> org.example.controller.AnexoBemWebController.CAMINHO_ENVIO.matches(caminho) &&
+            else -> AnexoBemWebController.CAMINHO_ENVIO.matches(caminho) &&
                 ("ROLE_ADMIN" in autoridades || "RFID_UPDATE" in autoridades)
         }
     }

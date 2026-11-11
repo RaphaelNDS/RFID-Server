@@ -1,5 +1,6 @@
 package org.example.service
 
+import org.example.config.VariaveisAusentes
 import org.example.util.CifraBackup
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -7,14 +8,14 @@ import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -44,7 +45,7 @@ class BackupService(
      * 1.15.0: a pasta configurada usa uma variável do Windows que não chegou ao processo (ex.: OneDriveCommercial). O
      * backup vai para data/backups (no próprio computador), com aviso, em vez de o servidor não subir (VariaveisAusentes).
      */
-    val variavelAusente: String? = org.example.config.VariaveisAusentes.pastaIndisponivel(pastaConfigurada)
+    val variavelAusente: String? = VariaveisAusentes.pastaIndisponivel(pastaConfigurada)
 
     /** Pasta dos backups: a configurada, ou data/backups (ao lado do certificado no caminho padrão). */
     val pasta: Path = pastaConfigurada.trim().ifEmpty { null }?.takeIf { variavelAusente == null }?.let { Path.of(it) } ?: Path.of("data", "backups")
@@ -53,7 +54,7 @@ class BackupService(
         if (variavelAusente != null) {
             log.error("Backup do certificado HTTPS: a variável do Windows {} não existe neste processo (rfid.backup.pasta = {}). " +
                 "Até reiniciar o servidor com o OneDrive ativo, o backup vai para {} (no próprio computador)",
-                variavelAusente, pastaConfigurada.replace(org.example.config.VariaveisAusentes.MARCADOR, "%"), pasta.toAbsolutePath())
+                variavelAusente, pastaConfigurada.replace(VariaveisAusentes.MARCADOR, "%"), pasta.toAbsolutePath())
         }
     }
 

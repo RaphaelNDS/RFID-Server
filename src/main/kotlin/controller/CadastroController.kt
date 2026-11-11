@@ -1,11 +1,13 @@
 package org.example.controller
 
+import org.example.model.SituacaoBem
 import org.example.request.CadastroRequest
 import org.example.service.CatalogoService
-import org.springframework.security.access.prepost.PreAuthorize
+import org.example.service.PatrimonioCadastrosService
 import org.example.service.RfidService
 import org.example.util.normalizarEpc
 import org.slf4j.LoggerFactory
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
@@ -16,7 +18,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 class CadastroController(
     private val rfidService: RfidService,
     private val catalogoService: CatalogoService,
-    private val cadastros: org.example.service.PatrimonioCadastrosService? = null
+    private val cadastros: PatrimonioCadastrosService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -105,6 +107,6 @@ class CadastroController(
         // Gestão de patrimônio (1.6.0): local, responsável e situação
         model.addAttribute("opcoesLocal", cadastros?.opcoesDeLocal().orEmpty())
         model.addAttribute("opcoesResponsavel", cadastros?.responsaveisAtivos().orEmpty())
-        model.addAttribute("situacoesEditaveis", org.example.model.SituacaoBem.EDITAVEIS)
+        model.addAttribute("situacoesEditaveis", SituacaoBem.EDITAVEIS)
     }
 }

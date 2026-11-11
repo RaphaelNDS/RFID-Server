@@ -4,11 +4,15 @@ import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.example.security.OperadorNoColetor
 import org.example.service.ColetorService
+import org.example.service.DiagnosticoColetor
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.servlet.HandlerInterceptor
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneId
 
 /**
  * Registra cada contato ACEITO de um coletor em /api/android (chave válida e, quando exigido, operador válido:
@@ -53,9 +57,9 @@ class ColetorContatoInterceptor(private val coletores: ColetorService) : Handler
          * Diagnóstico pelos cabeçalhos. Cada valor é conferido sozinho: um inválido vira null e não derruba os
          * outros nem a requisição. A fila só conta como informada com um número válido.
          */
-        fun diagnostico(header: (String) -> String?): org.example.service.DiagnosticoColetor {
+        fun diagnostico(header: (String) -> String?): DiagnosticoColetor {
             val fila = header(HEADER_FILA_PENDENTES)?.trim()?.toIntOrNull()?.takeIf { it in 0..MAXIMO_FILA }
-            return org.example.service.DiagnosticoColetor(
+            return DiagnosticoColetor(
                 filaInformada = fila != null,
                 filaPendentes = fila,
                 filaMaisAntiga = if (fila != null && fila > 0) horaLocal(header(HEADER_FILA_MAIS_ANTIGA)) else null,
@@ -71,13 +75,13 @@ class ColetorContatoInterceptor(private val coletores: ColetorService) : Handler
         private const val MAXIMO_ESPACO_MB = 100_000_000L   // 100 TB: acima disso o número não é de verdade
 
         /** ISO-8601 com fuso, entre 2020 e 2100 (fora disso o relógio do aparelho não está configurado). */
-        fun hora(texto: String?): java.time.OffsetDateTime? =
+        fun hora(texto: String?): OffsetDateTime? =
             texto?.trim()?.takeIf { it.length <= 40 }
-                ?.let { runCatching { java.time.OffsetDateTime.parse(it) }.getOrNull() }
+                ?.let { runCatching { OffsetDateTime.parse(it) }.getOrNull() }
                 ?.takeIf { it.year in 2020..2100 }
 
-        private fun horaLocal(texto: String?): java.time.LocalDateTime? =
-            hora(texto)?.atZoneSameInstant(java.time.ZoneId.systemDefault())?.toLocalDateTime()
+        private fun horaLocal(texto: String?): LocalDateTime? =
+            hora(texto)?.atZoneSameInstant(ZoneId.systemDefault())?.toLocalDateTime()
 
         /** Versão do Android e modelo: letras, números, espaço e . - _ ( ) / + ? (o app troca acento por ?). */
         fun textoSimples(texto: String?, maximo: Int): String? =

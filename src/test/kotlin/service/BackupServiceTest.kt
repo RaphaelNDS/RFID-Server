@@ -2,6 +2,7 @@ package org.example.service
 
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.example.util.CifraBackup
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -164,11 +165,11 @@ class BackupServiceTest {
             val bytes = Files.readAllBytes(arquivo)
             // Não é um zip legível (a senha do certificado não aparece em texto)
             assertThat(String(bytes, Charsets.ISO_8859_1)).doesNotContain("senha-gerada")
-            assertThatThrownBy { org.example.util.CifraBackup.decifrar(bytes, "outra") }
+            assertThatThrownBy { CifraBackup.decifrar(bytes, "outra") }
                 .isInstanceOf(IllegalArgumentException::class.java)
 
             val zip = dir.resolve("decifrado.zip")
-            Files.write(zip, org.example.util.CifraBackup.decifrar(bytes, "senha-do-backup-fora-da-maquina"))
+            Files.write(zip, CifraBackup.decifrar(bytes, "senha-do-backup-fora-da-maquina"))
             assertThat(conteudo(zip, "rfid-https.p12")).containsExactly(1, 2, 3, 4)
             assertThat(conteudo(zip, "rfid-https.p12.senha")).isEqualTo("senha-gerada".toByteArray())
         }

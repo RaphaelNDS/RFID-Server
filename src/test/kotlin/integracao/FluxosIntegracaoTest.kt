@@ -4,12 +4,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.example.model.Role
 import org.example.repository.UserRepository
 import org.example.request.CadastroRequest
+import org.example.request.MarcaRequest
 import org.example.request.SetupAdminRequest
+import org.example.request.TipoEquipamentoRequest
 import org.example.service.CatalogoService
 import org.example.service.RfidService
 import org.example.service.UsuarioService
-import org.example.request.MarcaRequest
-import org.example.request.TipoEquipamentoRequest
 import org.example.suporte.IntegracaoBase
 import org.example.suporte.Perfis
 import org.hamcrest.Matchers.containsString

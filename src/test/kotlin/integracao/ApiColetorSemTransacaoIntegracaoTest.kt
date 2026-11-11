@@ -1,5 +1,7 @@
 package org.example.integracao
 
+import org.example.model.Acao
+import org.example.model.Modulo
 import org.example.request.CadastroRequest
 import org.example.request.MarcaRequest
 import org.example.request.ModeloRequest
@@ -79,7 +81,7 @@ class ApiColetorSemTransacaoIntegracaoTest : IntegracaoBase() {
         rfid.cadastrarTag(CadastroRequest(tag = tag, codigoInterno = "TI-$sufixo", patrimonio = "PAT-$sufixo",
             tipoEquipamentoId = tipo.id, marcaId = marca.id, modeloId = modelo.id))
         operadores.criarUsuario(email = email, permissoes = arrayOf(
-            org.example.model.Modulo.LEITURA to org.example.model.Acao.READ, org.example.model.Modulo.RFID to org.example.model.Acao.CREATE))
+            Modulo.LEITURA to Acao.READ, Modulo.RFID to Acao.CREATE))
         val token = operadores.entrar(mvc, email)
 
         mvc.perform(get("/api/android/ping").comoOperador(token)).andExpect(status().isOk)

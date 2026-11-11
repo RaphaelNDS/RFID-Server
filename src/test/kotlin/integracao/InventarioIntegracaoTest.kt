@@ -9,8 +9,8 @@ import org.example.request.CadastroRequest
 import org.example.service.RfidService
 import org.example.suporte.IntegracaoBase
 import org.example.suporte.OperadorTeste
-import org.example.suporte.comoOperador
 import org.example.suporte.Perfis
+import org.example.suporte.comoOperador
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.not
 import org.junit.jupiter.api.Test
@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.util.UUID
 
@@ -72,7 +73,7 @@ class InventarioIntegracaoTest : IntegracaoBase() {
         assertThat(itens.findByInventarioIdOrderByLidoEmAsc(id).map { it.operador }).containsOnly("Olga Operadora")
         assertThat(inventario.status).isEqualTo(StatusInventario.FINALIZADO)
         // Hora do coletor convertida para o fuso do servidor
-        val esperado = java.time.OffsetDateTime.parse("2026-10-13T10:00:00-03:00").atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()
+        val esperado = OffsetDateTime.parse("2026-10-13T10:00:00-03:00").atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()
         assertThat(inventario.iniciadoEm).isEqualTo(esperado)
 
         val lidos = itens.findByInventarioIdOrderByLidoEmAsc(id).associateBy { it.tag }

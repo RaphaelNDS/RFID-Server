@@ -3,6 +3,7 @@ package org.example.service
 import org.example.model.LeituraAndroidEntity
 import org.example.model.TagEntity
 import org.example.repository.*
+import org.example.util.HoraColetor
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
@@ -149,7 +150,7 @@ class LeituraAndroidService(
      * para o fuso do servidor. Sem ela, ou se estiver no futuro (relógio do coletor adiantado),
      * vale a hora do recebimento.
      */
-    private fun paraHoraDoServidor(lidoEm: OffsetDateTime): LocalDateTime = org.example.util.HoraColetor.noFusoDoServidor(lidoEm)
+    private fun paraHoraDoServidor(lidoEm: OffsetDateTime): LocalDateTime = HoraColetor.noFusoDoServidor(lidoEm)
 
     private fun dataHoraDaLeitura(tagReal: String, lidoEm: OffsetDateTime?): LocalDateTime {
         val agora = LocalDateTime.now(relogio)
@@ -157,7 +158,7 @@ class LeituraAndroidService(
 
         val lida = paraHoraDoServidor(lidoEm)
 
-        if (org.example.util.HoraColetor.noFuturo(lida, agora)) {
+        if (HoraColetor.noFuturo(lida, agora)) {
             log.warn(
                 "Leitura da tag {} com data no futuro ({}): relógio do coletor adiantado? Usando a hora do recebimento",
                 tagReal, lidoEm

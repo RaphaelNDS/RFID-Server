@@ -4,10 +4,13 @@ import org.example.model.AcaoHistorico
 import org.example.model.HistoricoEtiquetaEntity
 import org.example.model.TagEntity
 import org.example.repository.HistoricoEtiquetaRepository
+import org.example.repository.LocalRepository
 import org.example.repository.MarcaRepository
 import org.example.repository.ModeloRepository
+import org.example.repository.ResponsavelRepository
 import org.example.repository.TipoEquipamentoRepository
 import org.example.security.OperadorNoColetor
+import org.example.util.FormatoBr
 import org.slf4j.LoggerFactory
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
@@ -15,6 +18,7 @@ import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 /** Os campos de uma etiqueta num momento, com tipo/marca/modelo pelo NOME (legível mesmo se o catálogo mudar). */
 data class RetratoEtiqueta(val campos: LinkedHashMap<String, String?>) {
@@ -35,8 +39,8 @@ class HistoricoEtiquetaService(
     private val modelos: ModeloRepository,
     private val relogio: Clock,
     // Gestão de patrimônio (1.6.0). Opcionais para os testes que montam o serviço à mão
-    private val locais: org.example.repository.LocalRepository? = null,
-    private val responsaveis: org.example.repository.ResponsavelRepository? = null
+    private val locais: LocalRepository? = null,
+    private val responsaveis: ResponsavelRepository? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -54,11 +58,11 @@ class HistoricoEtiquetaService(
             "Responsável" to tag.responsavelId?.let { id -> responsaveis?.findById(id)?.map { it.descricao }?.orElse("#$id") ?: "#$id" },
             "Situação" to tag.situacao.rotulo,
             // 1.8.0: valor e aquisição
-            "Valor de aquisição" to tag.valorAquisicao?.let { org.example.util.FormatoBr.reais(it) },
-            "Data de aquisição" to tag.dataAquisicao?.let { org.example.util.FormatoBr.data(it) },
+            "Valor de aquisição" to tag.valorAquisicao?.let { FormatoBr.reais(it) },
+            "Data de aquisição" to tag.dataAquisicao?.let { FormatoBr.data(it) },
             "Nota fiscal" to tag.notaFiscal,
             "Baixa" to tag.baixaMotivo?.let { m ->
-                listOfNotNull(m.rotulo, tag.baixaEm?.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                listOfNotNull(m.rotulo, tag.baixaEm?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
                     tag.baixaObservacao, tag.baixaPor?.let { "por $it" }).joinToString(" · ")
             }
         )

@@ -4,6 +4,7 @@ import org.example.model.AreaAuditoria
 import org.example.service.AuditoriaService
 import org.example.service.EtiquetaVista
 import org.example.service.RelatorioEtiquetasService
+import org.example.util.FormatoBr
 import org.example.util.FormatoPlanilha
 import org.example.util.Planilha
 import org.example.util.respostaPlanilha
@@ -98,7 +99,7 @@ class RelatorioEtiquetasController(
                 val e = v.etiqueta
                 listOf(e.tag, e.codigoInterno, e.patrimonio, e.tipoNome, e.marcaNome, e.modeloNome, e.numeroSerie,
                     e.unidadeNome, e.localNome, e.responsavelNome, e.situacao.rotulo,
-                    e.valorAquisicao?.let { org.example.util.FormatoBr.numero(it) }, e.dataAquisicao?.let { org.example.util.FormatoBr.data(it) }, e.notaFiscal,
+                    e.valorAquisicao?.let { FormatoBr.numero(it) }, e.dataAquisicao?.let { FormatoBr.data(it) }, e.notaFiscal,
                     v.ultimaLeitura, v.ultimoInventario, v.ultimoLocal,
                     v.diasSemSerVista)
             }

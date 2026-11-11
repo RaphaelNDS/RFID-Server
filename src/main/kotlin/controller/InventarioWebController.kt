@@ -1,10 +1,14 @@
 package org.example.controller
 
-import org.example.model.StatusInventario
 import org.example.model.AreaAuditoria
+import org.example.model.MotivoBaixa
+import org.example.model.StatusInventario
+import org.example.service.AcaoDivergencia
 import org.example.service.AuditoriaService
+import org.example.service.DivergenciaInventarioService
 import org.example.service.EsperadoInventarioService
 import org.example.service.InventarioService
+import org.example.service.TransferenciaService
 import org.example.util.FormatoPlanilha
 import org.example.util.Planilha
 import org.example.util.respostaPlanilha
@@ -27,8 +31,8 @@ class InventarioWebController(
     private val esperados: EsperadoInventarioService,
     private val auditoria: AuditoriaService,
     // 1.6.1: ação sobre as divergências (bens que faltaram) e as transferências que saíram delas
-    private val divergencias: org.example.service.DivergenciaInventarioService,
-    private val transferencias: org.example.service.TransferenciaService
+    private val divergencias: DivergenciaInventarioService,
+    private val transferencias: TransferenciaService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -66,7 +70,7 @@ class InventarioWebController(
         // Divergências (1.6.1): como cada bem que faltou está AGORA no cadastro e o que já foi feito a partir daqui
         model.addAttribute("atuais", divergencias.situacaoAtual(comparacao.faltando.map { it.tag }))
         model.addAttribute("transferenciasDoInventario", transferencias.doInventario(id))
-        model.addAttribute("motivosBaixa", org.example.model.MotivoBaixa.entries)
+        model.addAttribute("motivosBaixa", MotivoBaixa.entries)
         model.addAttribute("idLocal", detalhe.resumo.localId)
         // "Voltar" leva ao mesmo filtro de local e página da lista (antes voltava para a lista limpa). Só esses dois
         // parâmetros, validados como números; texto inválido é ignorado e o destino é sempre a lista de inventários
@@ -96,14 +100,14 @@ class InventarioWebController(
     ): String {
         try {
             val escolhida = when (acao) {
-                "extraviado" -> org.example.service.AcaoDivergencia.EXTRAVIADO
-                "baixa" -> org.example.service.AcaoDivergencia.BAIXA
+                "extraviado" -> AcaoDivergencia.EXTRAVIADO
+                "baixa" -> AcaoDivergencia.BAIXA
                 else -> throw IllegalArgumentException("Ação inválida")
             }
-            val motivoEscolhido = if (escolhida == org.example.service.AcaoDivergencia.BAIXA)
-                org.example.model.MotivoBaixa.de(motivoBaixa) ?: throw IllegalArgumentException("Escolha o motivo da baixa") else null
+            val motivoEscolhido = if (escolhida == AcaoDivergencia.BAIXA)
+                MotivoBaixa.de(motivoBaixa) ?: throw IllegalArgumentException("Escolha o motivo da baixa") else null
             val r = divergencias.tratar(id, tags.orEmpty(), escolhida, motivoEscolhido, null, observacaoBaixa)
-            val feito = if (escolhida == org.example.service.AcaoDivergencia.EXTRAVIADO) "marcado(s) como extraviado(s)"
+            val feito = if (escolhida == AcaoDivergencia.EXTRAVIADO) "marcado(s) como extraviado(s)"
                 else "baixado(s): saíram da lista do que faltou e continuam no cadastro como baixados"
             redirect.addFlashAttribute("msg", "${r.tratados} bem(ns) $feito." +
                 if (r.ignorados.isNotEmpty()) " ${r.ignorados.size} já estava(m) assim: ${r.ignorados.take(5).joinToString(", ")}." else "")

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.dao.DataIntegrityViolationException
 import java.time.OffsetDateTime
+import java.time.ZoneId
 import java.util.Optional
 
 class LeituraAndroidServiceTest {
@@ -134,7 +135,7 @@ class LeituraAndroidServiceTest {
         service.salvarLeitura("E1", futuro)
 
         verify { leituraRepo.saveAndFlush(capture(gravada)) }
-        val horaDoColetor = futuro.atZoneSameInstant(java.time.ZoneId.systemDefault()).toLocalDateTime()
+        val horaDoColetor = futuro.atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime()
         assertThat(gravada.captured.lidoEmColetor).isEqualTo(horaDoColetor)
         assertThat(gravada.captured.dataHora).isBefore(horaDoColetor)
 

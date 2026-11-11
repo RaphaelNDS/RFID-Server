@@ -1,11 +1,13 @@
 package org.example.util
 
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.Charset
 import java.nio.charset.CodingErrorAction
+import java.util.zip.ZipException
 import java.util.zip.ZipInputStream
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamConstants
@@ -55,7 +57,7 @@ object LeitorPlanilha {
                     }
                 }
             }
-        } catch (e: java.util.zip.ZipException) {
+        } catch (e: ZipException) {
             throw PlanilhaInvalidaException("O arquivo não é uma planilha .xlsx válida")
         }
         val compartilhados = partes["xl/sharedStrings.xml"]?.let(::textosCompartilhados).orEmpty()
@@ -64,7 +66,7 @@ object LeitorPlanilha {
     }
 
     private fun lerLimitado(entrada: InputStream, restante: Long): ByteArray {
-        val saida = java.io.ByteArrayOutputStream()
+        val saida = ByteArrayOutputStream()
         val buffer = ByteArray(64 * 1024)
         var lidos = 0L
         while (true) {

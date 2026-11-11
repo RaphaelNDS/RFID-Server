@@ -1,14 +1,14 @@
 package org.example.controller
 
 import org.example.dto.MarcaDTO
-import org.example.dto.TipoDTO
 import org.example.dto.ModeloDTO
-import org.example.service.CatalogoService
-import org.springframework.web.bind.annotation.*
+import org.example.dto.TipoDTO
 import org.example.request.MarcaRequest
 import org.example.request.ModeloRequest
 import org.example.request.TipoEquipamentoRequest
+import org.example.service.CatalogoService
 import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api/catalogo")

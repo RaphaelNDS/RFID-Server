@@ -3,6 +3,7 @@ package org.example.config
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.example.service.BackupBancoService
+import org.example.service.BackupService
 import org.example.service.CopiaExternaBancoService
 import org.junit.jupiter.api.Test
 import org.springframework.boot.SpringApplication
@@ -48,7 +49,7 @@ class VariaveisAusentesTest {
         val situacao = copia.situacao()
         assertThat(situacao.resumo).contains("INDISPONÍVEL", "OneDriveCommercial")
 
-        val backup = org.example.service.BackupService(true, env.getProperty("rfid.backup.pasta")!!, 14, mockk(relaxed = true))
+        val backup = BackupService(true, env.getProperty("rfid.backup.pasta")!!, 14, mockk(relaxed = true))
         assertThat(backup.variavelAusente).isEqualTo("OneDriveCommercial")
         assertThat(backup.pasta).isEqualTo(Path.of("data", "backups"))
     }

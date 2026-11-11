@@ -17,6 +17,7 @@ import org.example.suporte.OperadorTeste
 import org.example.suporte.Perfis
 import org.example.suporte.comoOperador
 import org.example.util.FormatoPlanilha
+import org.example.util.GeradorPlanilha
 import org.example.util.Planilha
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.not
@@ -257,7 +258,7 @@ class Versao160IntegracaoTest : IntegracaoBase() {
         // Exportação (xlsx) → importação: o que veio do cadastro volta igual ("sem mudança")
         val local = cadastros.salvarLocal(null, "Sala X $s", null)
         cadastrar("E-VOLTA-$s", localId = local.id)
-        val exportada = org.example.util.GeradorPlanilha.gerar(Planilha("Etiquetas", listOf("Etiqueta (EPC)", "Código", "Patrimônio", "Local", "Situação", "Última leitura"),
+        val exportada = GeradorPlanilha.gerar(Planilha("Etiquetas", listOf("Etiqueta (EPC)", "Código", "Patrimônio", "Local", "Situação", "Última leitura"),
             listOf(listOf("E-VOLTA-$s", "TI-E-VOLTA-$s", "P-E-VOLTA-$s", "Sala X $s", "Em uso", null))), FormatoPlanilha.XLSX)
         val volta = importacao.processar("etiquetas.xlsx", exportada, criarFaltantes = false, podeAlterar = true, gravar = false)
         assertThat(volta.linhas.single().acao.name).isEqualTo("SEM_MUDANCA")

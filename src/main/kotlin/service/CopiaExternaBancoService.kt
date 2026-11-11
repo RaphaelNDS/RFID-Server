@@ -1,10 +1,12 @@
 package org.example.service
 
+import org.example.config.VariaveisAusentes
 import org.example.util.CifraBackup
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -57,7 +59,7 @@ class CopiaExternaBancoService(
      * 1.15.0: a pasta usa uma variável do Windows que não chegou ao processo (ex.: OneDriveCommercial): a cópia fica
      * desligada e o Status avisa, em vez de o servidor não subir (VariaveisAusentes).
      */
-    private val variavelAusente: String? = org.example.config.VariaveisAusentes.pastaIndisponivel(pastaConfigurada)
+    private val variavelAusente: String? = VariaveisAusentes.pastaIndisponivel(pastaConfigurada)
 
     val pasta: Path? = pastaConfigurada.trim().takeIf { it.isNotEmpty() && variavelAusente == null }?.let { Path.of(it).toAbsolutePath().normalize() }
 
@@ -65,7 +67,7 @@ class CopiaExternaBancoService(
         if (variavelAusente != null) {
             log.error("Cópia do backup do banco para fora do computador DESLIGADA: a variável do Windows {} não existe neste processo " +
                 "(rfid.banco.copia-externa = {}). O servidor sobe sem a cópia; reinicie o servidor depois de entrar no Windows com o OneDrive ativo",
-                variavelAusente, pastaConfigurada.replace(org.example.config.VariaveisAusentes.MARCADOR, "%"))
+                variavelAusente, pastaConfigurada.replace(VariaveisAusentes.MARCADOR, "%"))
         }
     }
 
@@ -97,7 +99,7 @@ class CopiaExternaBancoService(
             CifraBackup.cifrarArquivo(dump, parcial, senha)
             try {
                 Files.move(parcial, arquivo, StandardCopyOption.ATOMIC_MOVE)
-            } catch (e: java.nio.file.AtomicMoveNotSupportedException) {
+            } catch (e: AtomicMoveNotSupportedException) {
                 Files.move(parcial, arquivo, StandardCopyOption.REPLACE_EXISTING)
             }
             log.info("Cópia cifrada do backup do banco gravada fora do computador: {} ({} KB)", arquivo, arquivo.fileSize() / 1024)

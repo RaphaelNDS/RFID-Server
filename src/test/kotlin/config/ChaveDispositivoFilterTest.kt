@@ -7,6 +7,10 @@ import org.springframework.mock.web.MockFilterChain
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 import org.springframework.security.core.context.SecurityContextHolder
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 
 class ChaveDispositivoFilterTest {
 
@@ -146,11 +150,11 @@ class ChaveDispositivoFilterTest {
 
     @Test
     fun `bloqueio por chave errada vence com o tempo`() {
-        val relogio = object : java.time.Clock() {
-            var agora: java.time.Instant = java.time.Instant.parse("2026-11-04T10:00:00Z")
+        val relogio = object : Clock() {
+            var agora: Instant = Instant.parse("2026-11-04T10:00:00Z")
             override fun instant() = agora
-            override fun getZone(): java.time.ZoneId = java.time.ZoneOffset.UTC
-            override fun withZone(zone: java.time.ZoneId?) = this
+            override fun getZone(): ZoneId = ZoneOffset.UTC
+            override fun withZone(zone: ZoneId?) = this
         }
         val filtro = ChaveDispositivoFilter(chaves, relogio)
         repeat(ChaveDispositivoFilter.MAXIMO_CHAVES_ERRADAS) { executar(filtro, "chute-$it-0123456789") }

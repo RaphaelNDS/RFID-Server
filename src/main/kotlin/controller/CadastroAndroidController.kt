@@ -2,12 +2,12 @@ package org.example.controller
 
 import jakarta.servlet.http.HttpServletRequest
 import org.example.request.CadastroRequest
+import org.example.security.nomeOperador
 import org.example.service.CadastroColetorService
 import org.example.service.CatalogoColetor
 import org.example.service.ColetorSemPermissaoException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.example.security.nomeOperador
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.*

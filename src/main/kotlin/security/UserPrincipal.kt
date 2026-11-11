@@ -3,7 +3,6 @@ package org.example.security
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
 
-
 class UserPrincipal(
     val id: Long,
     val nome: String,

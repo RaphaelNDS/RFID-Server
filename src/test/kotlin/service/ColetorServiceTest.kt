@@ -2,9 +2,9 @@ package org.example.service
 
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
 import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
+import org.example.config.ColetorContatoInterceptor
 import org.example.model.ColetorEntity
 import org.example.repository.ColetorRepository
 import org.junit.jupiter.api.BeforeEach
@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.util.Optional
 
@@ -119,7 +120,7 @@ class ColetorServiceTest {
 
     @Test
     fun `diagnostico vai junto na gravacao de uma por minuto e nunca grava sozinho`() {
-        val hora = java.time.OffsetDateTime.ofInstant(agora, zona)
+        val hora = OffsetDateTime.ofInstant(agora, zona)
         service.registrarContato("coletor-01", "10.0.0.5", "1.7.3", 116, "Ana", DiagnosticoColetor(filaInformada = true, filaPendentes = 3, relogioColetor = hora))
         // A fila muda, mas continua com pendentes: não grava (só zerar ou o relógio mudar de estado grava na hora)
         repeat(10) { service.registrarContato("coletor-01", "10.0.0.5", "1.7.3", 116, "Ana", DiagnosticoColetor(filaInformada = true, filaPendentes = it + 1)) }
@@ -129,7 +130,7 @@ class ColetorServiceTest {
 
         minutos(1)
         service.registrarContato("coletor-01", "10.0.0.5", "1.7.3", 116, "Ana",
-            DiagnosticoColetor(filaInformada = true, filaPendentes = 0, relogioColetor = java.time.OffsetDateTime.ofInstant(agora.minusSeconds(150), zona)))
+            DiagnosticoColetor(filaInformada = true, filaPendentes = 0, relogioColetor = OffsetDateTime.ofInstant(agora.minusSeconds(150), zona)))
         assertThat(banco.getValue("coletor-01").filaPendentes).isZero()
         assertThat(banco.getValue("coletor-01").desvioRelogioSegundos).isEqualTo(-150)
         assertThat(service.listar().first { it.nome == "coletor-01" }.desvioLegivel).isEqualTo("atrasado 2 min")
@@ -137,7 +138,7 @@ class ColetorServiceTest {
 
     @Test
     fun `fila que zera ou relogio que fica errado gravam na hora mesmo dentro do minuto`() {
-        val hora = { segundos: Long -> java.time.OffsetDateTime.ofInstant(agora.plusSeconds(segundos), zona) }
+        val hora = { segundos: Long -> OffsetDateTime.ofInstant(agora.plusSeconds(segundos), zona) }
         // Volta de horas offline: o primeiro lote grava a fila com pendentes
         service.registrarContato("coletor-01", "10.0.0.5", "2.0.2", 123, "Ana",
             DiagnosticoColetor(filaInformada = true, filaPendentes = 3000, relogioColetor = hora(0)))
@@ -174,11 +175,11 @@ class ColetorServiceTest {
 
     @Test
     fun `versao vinda do header e conferida`() {
-        assertThat(org.example.config.ColetorContatoInterceptor.versaoApp(" 1.4.0 ")).isEqualTo("1.4.0")
-        assertThat(org.example.config.ColetorContatoInterceptor.versaoApp("1.4.0\nFALSO")).isNull()
-        assertThat(org.example.config.ColetorContatoInterceptor.versaoApp("x".repeat(51))).isNull()
-        assertThat(org.example.config.ColetorContatoInterceptor.codigoVersao("13")).isEqualTo(13)
-        assertThat(org.example.config.ColetorContatoInterceptor.codigoVersao("-1")).isNull()
-        assertThat(org.example.config.ColetorContatoInterceptor.codigoVersao("abc")).isNull()
+        assertThat(ColetorContatoInterceptor.versaoApp(" 1.4.0 ")).isEqualTo("1.4.0")
+        assertThat(ColetorContatoInterceptor.versaoApp("1.4.0\nFALSO")).isNull()
+        assertThat(ColetorContatoInterceptor.versaoApp("x".repeat(51))).isNull()
+        assertThat(ColetorContatoInterceptor.codigoVersao("13")).isEqualTo(13)
+        assertThat(ColetorContatoInterceptor.codigoVersao("-1")).isNull()
+        assertThat(ColetorContatoInterceptor.codigoVersao("abc")).isNull()
     }
 }

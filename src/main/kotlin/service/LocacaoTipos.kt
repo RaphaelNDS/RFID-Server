@@ -1,33 +1,13 @@
 package org.example.service
 
-import org.example.model.AreaAuditoria
-import org.example.model.ClienteEntity
-import org.example.model.EstadoDevolucao
+import org.example.model.PedidoAcessorioEntity
 import org.example.model.PedidoItemEntity
 import org.example.model.PedidoLinhaEntity
 import org.example.model.PedidoLocacaoEntity
-import org.example.model.SituacaoBem
+import org.example.model.PedidoProrrogacaoEntity
 import org.example.model.SituacaoPedido
 import org.example.model.TagEntity
-import org.example.model.TipoManutencao
-import org.example.repository.ClienteRepository
-import org.example.repository.MarcaRepository
-import org.example.repository.ModeloRepository
-import org.example.repository.PedidoItemRepository
-import org.example.repository.PedidoLinhaRepository
-import org.example.repository.PedidoLocacaoRepository
-import org.example.repository.TagRepository
-import org.example.repository.TipoEquipamentoRepository
-import org.example.util.normalizarEpc
-import org.slf4j.LoggerFactory
-import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageRequest
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
-import java.time.Clock
 import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.temporal.ChronoUnit
 
 // Tipos da locação (o que vem da tela e o que as consultas devolvem). Ficavam no topo do LocacaoService até a 1.18.1.
 
@@ -80,9 +60,9 @@ data class PedidoDetalhe(
     val itens: List<PedidoItemEntity>,
     val diasAtraso: Long,
     /** 1.16.0: as mudanças da devolução prevista, mais antigas primeiro. */
-    val prorrogacoes: List<org.example.model.PedidoProrrogacaoEntity> = emptyList(),
+    val prorrogacoes: List<PedidoProrrogacaoEntity> = emptyList(),
     /** 1.18.0: os acessórios do pedido (do kit das linhas e avulsos). */
-    val acessorios: List<org.example.model.PedidoAcessorioEntity> = emptyList()
+    val acessorios: List<PedidoAcessorioEntity> = emptyList()
 ) {
     /** Acessórios enviados que ainda não voltaram. */
     val acessoriosFaltando: Int get() = acessorios.sumOf { it.faltando }

@@ -1,6 +1,8 @@
 package org.example.service
 
 import org.assertj.core.api.Assertions.assertThat
+import org.example.model.Acao
+import org.example.model.Modulo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.security.authentication.TestingAuthenticationToken
@@ -48,8 +50,8 @@ class AuthServiceTest {
     fun `modulo inexistente nunca libera usuario comum`() {
         // Foi o bug do 'TAG': o modulo nao existe no enum, entao nenhuma permissao gravada no banco
         // corresponde a ele e so o ADMIN passava. Aqui: gestor com TODAS as permissoes reais.
-        val todasReais = org.example.model.Modulo.values().flatMap { m ->
-            org.example.model.Acao.values().map { a -> "${m}_$a" }
+        val todasReais = Modulo.values().flatMap { m ->
+            Acao.values().map { a -> "${m}_$a" }
         }
         logado("ROLE_GESTOR", *todasReais.toTypedArray())
 

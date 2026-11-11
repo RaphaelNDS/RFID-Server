@@ -6,6 +6,7 @@ import org.example.model.EstadoDevolucao
 import org.example.model.PedidoItemEntity
 import org.example.model.PedidoLinhaEntity
 import org.example.model.PedidoLocacaoEntity
+import org.example.model.PedidoProrrogacaoEntity
 import org.example.model.SituacaoBem
 import org.example.model.SituacaoPedido
 import org.example.model.TagEntity
@@ -16,8 +17,10 @@ import org.example.repository.ModeloRepository
 import org.example.repository.PedidoItemRepository
 import org.example.repository.PedidoLinhaRepository
 import org.example.repository.PedidoLocacaoRepository
+import org.example.repository.PedidoProrrogacaoRepository
 import org.example.repository.TagRepository
 import org.example.repository.TipoEquipamentoRepository
+import org.example.util.FormatoBr
 import org.example.util.normalizarEpc
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
@@ -58,7 +61,7 @@ class LocacaoService(
     private val auditoria: AuditoriaService,
     private val relogio: Clock,
     // 1.16.0: histórico das prorrogações da devolução prevista
-    private val prorrogacoes: org.example.repository.PedidoProrrogacaoRepository,
+    private val prorrogacoes: PedidoProrrogacaoRepository,
     // 1.17.0: folha de separação (descrição e local dos equipamentos candidatos)
     private val transferencias: TransferenciaService? = null,
     // 1.18.0: o kit de acessórios entra com a linha
@@ -78,7 +81,7 @@ class LocacaoService(
         val p = pedido(pedidoId)
         require(!p.situacao.finalizado) { "O pedido nº $pedidoId está ${p.situacao.rotulo.lowercase()}: a devolução não muda mais" }
         val data = novaData ?: throw IllegalArgumentException("Informe a nova data de devolução")
-        require(data != p.previsaoDevolucao) { "A devolução já está prevista para ${org.example.util.FormatoBr.data(data)}" }
+        require(data != p.previsaoDevolucao) { "A devolução já está prevista para ${FormatoBr.data(data)}" }
         require(!data.isBefore(hoje())) { "A nova devolução não pode ser no passado" }
         p.saidaPrevista?.let { require(!data.isBefore(it)) { "A devolução não pode ser antes da saída prevista" } }
         val obs = texto(motivo, "O motivo", 500) ?: throw IllegalArgumentException("Informe o motivo da prorrogação")
@@ -88,16 +91,16 @@ class LocacaoService(
         return p
     }
 
-    fun prorrogacoesDo(pedidoId: Long): List<org.example.model.PedidoProrrogacaoEntity> = prorrogacoes.findAllByPedidoIdOrderByIdAsc(pedidoId)
+    fun prorrogacoesDo(pedidoId: Long): List<PedidoProrrogacaoEntity> = prorrogacoes.findAllByPedidoIdOrderByIdAsc(pedidoId)
 
     private fun registrarProrrogacao(p: PedidoLocacaoEntity, nova: LocalDate, motivo: String) {
         val anterior = p.previsaoDevolucao
         val usuario = autor()
-        prorrogacoes.save(org.example.model.PedidoProrrogacaoEntity(pedidoId = p.id, dataAnterior = anterior, dataNova = nova, motivo = motivo, registradaPor = usuario))
+        prorrogacoes.save(PedidoProrrogacaoEntity(pedidoId = p.id, dataAnterior = anterior, dataNova = nova, motivo = motivo, registradaPor = usuario))
         val verbo = if (nova.isAfter(anterior)) "prorrogada" else "antecipada"
         log.info("Pedido de locação nº {}: devolução {} de {} para {} por {} ({})", p.id, verbo, anterior, nova, usuario, motivo)
         auditoria.registrar(AreaAuditoria.PATRIMONIO, "Devolução $verbo", "Pedido nº ${p.id}",
-            "${org.example.util.FormatoBr.data(anterior)} → ${org.example.util.FormatoBr.data(nova)}: $motivo")
+            "${FormatoBr.data(anterior)} → ${FormatoBr.data(nova)}: $motivo")
     }
 
     /* ================= CLIENTES ================= */
@@ -156,7 +159,7 @@ class LocacaoService(
             observacao = texto(dados.observacao, "A observação", 500), registradoPor = autor()
         ))
         log.info("Pedido de locação nº {} criado por {}: cliente {}, devolução prevista em {}", p.id, p.registradoPor, cliente.nome, previsao)
-        auditoria.registrar(AreaAuditoria.PATRIMONIO, "Pedido de locação criado", "Pedido nº ${p.id}", "${cliente.nome}, devolução prevista em ${org.example.util.FormatoBr.data(previsao)}")
+        auditoria.registrar(AreaAuditoria.PATRIMONIO, "Pedido de locação criado", "Pedido nº ${p.id}", "${cliente.nome}, devolução prevista em ${FormatoBr.data(previsao)}")
         return p
     }
 

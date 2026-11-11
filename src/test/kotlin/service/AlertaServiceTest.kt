@@ -16,6 +16,7 @@ import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.concurrent.CopyOnWriteArrayList
 
 /** Avisos por email (1.5.1) e o monitor de fora do ar. */
 class AlertaServiceTest {
@@ -55,7 +56,7 @@ class AlertaServiceTest {
 
     @Test
     fun `email vai para todos os destinatarios com o assunto marcado`() {
-        val enviadas = java.util.concurrent.CopyOnWriteArrayList<SimpleMailMessage>()
+        val enviadas = CopyOnWriteArrayList<SimpleMailMessage>()
         every { enviador.send(any<SimpleMailMessage>()) } answers { enviadas += firstArg<SimpleMailMessage>() }
 
         alertas().informar("Servidor ficou fora do ar por 2h 0min", "texto")

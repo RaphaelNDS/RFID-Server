@@ -1,27 +1,35 @@
 package org.example.service
 
-import org.example.util.normalizarEpc
-import org.springframework.transaction.annotation.Transactional
 import org.example.model.MotivoBaixa
+import org.example.model.PedidoLocacaoEntity
 import org.example.model.SituacaoBem
+import org.example.model.StatusManutencao
 import org.example.model.TagEntity
 import org.example.model.TagNaoCadastradaEntity
 import org.example.repository.*
+import org.example.repository.ManutencaoRepository
+import org.example.repository.PedidoItemRepository
+import org.example.repository.PedidoLocacaoRepository
 import org.example.request.CadastroRequest
 import org.example.request.TagNaoCadastradaView
 import org.example.response.TagResponse
-import org.springframework.stereotype.Service
+import org.example.response.TagViewAdmin
+import org.example.util.FormatoBr
+import org.example.util.normalizarEpc
+import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
-import java.security.MessageDigest
-import org.example.response.TagViewAdmin
-import java.time.Clock
-import java.time.LocalDateTime
-import org.slf4j.LoggerFactory
 import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import java.math.BigDecimal
+import java.security.MessageDigest
+import java.time.Clock
+import java.time.LocalDate
+import java.time.LocalDateTime
 
 /** A etiqueta mudou desde que a tela de edição abriu (versão diferente). */
 class EdicaoConcorrenteException(mensagem: String) : IllegalArgumentException(mensagem)
@@ -59,10 +67,10 @@ class RfidService(
     private val unidadesRepo: UnidadeRepository? = null,
     private val responsaveisRepo: ResponsavelRepository? = null,
     // Locação (1.12.0): equipamento num pedido não recebe baixa, não é excluído e a situação não muda pela edição
-    private val pedidoItens: org.example.repository.PedidoItemRepository? = null,
+    private val pedidoItens: PedidoItemRepository? = null,
     // Manutenção (1.11.0): mesmas travas
-    private val manutencoes: org.example.repository.ManutencaoRepository? = null,
-    private val pedidos: org.example.repository.PedidoLocacaoRepository? = null
+    private val manutencoes: ManutencaoRepository? = null,
+    private val pedidos: PedidoLocacaoRepository? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -77,7 +85,7 @@ class RfidService(
         pedidoItens?.findFirstByTagIdAndConferidoEmIsNull(tagId)?.let {
             return Ocupacao("no pedido de locação nº ${it.pedidoId}", "a devolução for conferida", "registre a devolução e a conferência")
         }
-        manutencoes?.findFirstByTagIdAndStatus(tagId, org.example.model.StatusManutencao.ABERTA)?.let {
+        manutencoes?.findFirstByTagIdAndStatus(tagId, StatusManutencao.ABERTA)?.let {
             return Ocupacao("na manutenção nº ${it.id}", "a manutenção for concluída", "conclua a manutenção")
         }
         return null
@@ -177,7 +185,7 @@ class RfidService(
     }
 
     /** O pedido de locação em que o equipamento está agora (saiu e a devolução ainda não foi conferida), ou null. */
-    fun pedidoAtual(tagId: Long): org.example.model.PedidoLocacaoEntity? =
+    fun pedidoAtual(tagId: Long): PedidoLocacaoEntity? =
         pedidoItens?.findFirstByTagIdAndConferidoEmIsNull(tagId)?.let { pedidos?.findById(it.pedidoId)?.orElse(null) }
 
     /**
@@ -365,17 +373,17 @@ class RfidService(
         return mudaram
     }
 
-    private data class ValorInformado(val valor: java.math.BigDecimal?, val data: java.time.LocalDate?, val notaFiscal: String?)
+    private data class ValorInformado(val valor: BigDecimal?, val data: LocalDate?, val notaFiscal: String?)
 
     /**
      * Valor, data de aquisição e nota fiscal do pedido (1.8.0), já conferidos: valor não negativo, data que não está
      * no futuro e nota de até 60 caracteres. Tudo opcional (vazio = sem valor).
      */
     private fun valorDo(req: CadastroRequest): ValorInformado {
-        val valor = org.example.util.FormatoBr.lerValor(req.valorAquisicao)
-        val data = org.example.util.FormatoBr.lerData(req.dataAquisicao)
-        require(data == null || !data.isAfter(java.time.LocalDate.now(relogio))) {
-            "A data de aquisição ${org.example.util.FormatoBr.data(data)} está no futuro"
+        val valor = FormatoBr.lerValor(req.valorAquisicao)
+        val data = FormatoBr.lerData(req.dataAquisicao)
+        require(data == null || !data.isAfter(LocalDate.now(relogio))) {
+            "A data de aquisição ${FormatoBr.data(data)} está no futuro"
         }
         val nota = req.notaFiscal?.trim()?.takeIf { it.isNotEmpty() }
         require(nota == null || nota.length <= 60) { "A nota fiscal passa de 60 caracteres (tem ${nota!!.length})" }
@@ -414,12 +422,12 @@ class RfidService(
      * continua no cadastro (filtro "Baixados"), no histórico e na auditoria. Diferente de excluir.
      */
     @Transactional
-    fun darBaixa(id: Long, motivo: MotivoBaixa, data: java.time.LocalDate?, observacao: String?, origem: String? = null): TagEntity {
+    fun darBaixa(id: Long, motivo: MotivoBaixa, data: LocalDate?, observacao: String?, origem: String? = null): TagEntity {
         val tag = buscarPorId(id)
         require(!tag.baixado) { "Este bem já foi baixado em ${tag.baixaEm} (${tag.baixaMotivo?.rotulo})" }
         require(tag.situacao != SituacaoBem.VENDIDO) { "Este equipamento foi vendido: desfaça a venda antes de dar baixa" }
         ocupacao(tag.id)?.let { o -> throw IllegalArgumentException("Este bem está ${o.onde}: ${o.acao} antes da baixa") }
-        val hoje = java.time.LocalDate.now(relogio)
+        val hoje = LocalDate.now(relogio)
         val dia = data ?: hoje
         require(!dia.isAfter(hoje)) { "A data da baixa não pode ser no futuro" }
         val obs = observacao?.trim()?.takeIf { it.isNotEmpty() }?.also { require(it.length <= 500) { "A observação pode ter no máximo 500 caracteres" } }

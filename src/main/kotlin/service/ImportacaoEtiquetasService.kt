@@ -11,12 +11,14 @@ import org.example.request.CadastroRequest
 import org.example.request.MarcaRequest
 import org.example.request.ModeloRequest
 import org.example.request.TipoEquipamentoRequest
+import org.example.util.FormatoBr
 import org.example.util.LeitorPlanilha
 import org.example.util.Planilha
 import org.example.util.normalizarEpc
-import org.example.util.FormatoBr
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import java.text.Normalizer
+import java.time.LocalDate
 
 enum class AcaoLinha(val rotulo: String) { NOVA("Nova"), ATUALIZA("Atualiza"), SEM_MUDANCA("Sem mudança"), ERRO("Erro") }
 
@@ -199,7 +201,7 @@ class ImportacaoEtiquetasService(
         }
         valor(Coluna.DATA_AQUISICAO).takeIf { it.isNotEmpty() }?.let { texto ->
             val d = runCatching { FormatoBr.lerData(texto) }.getOrElse { throw IllegalArgumentException("data de aquisição inválida: $texto (use dd/mm/aaaa)") }
-            if (d != null && d.isAfter(java.time.LocalDate.now())) throw IllegalArgumentException("a data de aquisição ${FormatoBr.data(d)} está no futuro")
+            if (d != null && d.isAfter(LocalDate.now())) throw IllegalArgumentException("a data de aquisição ${FormatoBr.data(d)} está no futuro")
             pedido.dataAquisicao = d?.toString()
         }
         valor(Coluna.NOTA_FISCAL).takeIf { it.isNotEmpty() }?.let { pedido.notaFiscal = it }
@@ -275,7 +277,7 @@ class ImportacaoEtiquetasService(
     }
 
     private fun colunas(cabecalho: List<String>): Map<Coluna, Int> {
-        fun limpar(s: String) = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
+        fun limpar(s: String) = Normalizer.normalize(s, Normalizer.Form.NFD)
             .replace(Regex("\\p{M}"), "").uppercase().replace(Regex("[^A-Z0-9]+"), "_").trim('_')
         val mapa = mutableMapOf<Coluna, Int>()
         cabecalho.forEachIndexed { i, h ->

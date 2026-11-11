@@ -1,5 +1,6 @@
 package org.example.service
 
+import org.example.model.FimSessao
 import org.example.repository.SessaoOperadorRepository
 import org.example.security.UserPrincipal
 import org.slf4j.LoggerFactory
@@ -40,7 +41,7 @@ class SessoesUsuarioService(
             .size
 
         // Encerrada pelo servidor (desativação, senha): sem a margem de relógio do "Sair" (SessaoOperadorService)
-        val coletores = sessoesColetor.encerrarAbertasDoUsuario(usuarioId, LocalDateTime.now(relogio), org.example.model.FimSessao.ADMIN.name)
+        val coletores = sessoesColetor.encerrarAbertasDoUsuario(usuarioId, LocalDateTime.now(relogio), FimSessao.ADMIN.name)
 
         if (web + coletores > 0) {
             log.info("Sessões do usuário {} encerradas ({}): {} na web, {} em coletores", usuarioId, motivo, web, coletores)

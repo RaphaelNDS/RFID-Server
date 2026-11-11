@@ -6,8 +6,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.example.model.Acao
 import org.example.model.EstadoDevolucao
-import org.example.model.MotivoBaixa
 import org.example.model.Modulo
+import org.example.model.MotivoBaixa
 import org.example.model.SituacaoBem
 import org.example.model.SituacaoPedido
 import org.example.model.StatusManutencao

@@ -6,12 +6,10 @@ import org.example.model.LeituraAndroidEntity
 import org.example.repository.LeituraAndroidRepository
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Sort
 import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Service
 import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 
 /** Filtros da tela de leituras. Campos vazios não filtram. */
@@ -156,7 +154,7 @@ class LeituraAndroidConsultaService(
     fun descreverFiltro(filtro: FiltroLeituras): String = descrever(filtro)
 
     // Atalhos de dia: agrupar 31 dias a cada carga da tela pesa com milhões de leituras; 1 minuto de atraso não faz falta
-    @Volatile private var diasEmCache: Pair<java.time.Instant, Map<String, Long>>? = null
+    @Volatile private var diasEmCache: Pair<Instant, Map<String, Long>>? = null
 
     /** Leituras por dia nos últimos [dias] dias, do mais recente para o mais antigo (atalhos da tela; cache de 1 min). */
     fun diasRecentes(dias: Long = DIAS_ATALHO): Map<String, Long> {

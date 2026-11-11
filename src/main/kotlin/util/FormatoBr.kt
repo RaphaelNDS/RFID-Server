@@ -2,8 +2,11 @@ package org.example.util
 
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.format.ResolverStyle
+import java.util.Locale
 
 /** Valores em reais e datas no formato brasileiro, para as telas, os PDFs e a importação. */
 object FormatoBr {
@@ -12,7 +15,7 @@ object FormatoBr {
     /** "R$ 1.234,56". */
     fun reais(valor: BigDecimal?): String {
         if (valor == null) return ""
-        val f = java.text.NumberFormat.getNumberInstance(java.util.Locale("pt", "BR"))
+        val f = NumberFormat.getNumberInstance(Locale("pt", "BR"))
         f.minimumFractionDigits = 2
         f.maximumFractionDigits = 2
         return "R$ " + f.format(valor)
@@ -53,7 +56,7 @@ object FormatoBr {
             if (dias in 20_000..80_000) return LocalDate.of(1899, 12, 30).plusDays(dias)
         }
         return runCatching { LocalDate.parse(t) }.getOrNull()
-            ?: runCatching { LocalDate.parse(t, DateTimeFormatter.ofPattern("d/M/uuuu").withResolverStyle(java.time.format.ResolverStyle.STRICT)) }.getOrNull()
+            ?: runCatching { LocalDate.parse(t, DateTimeFormatter.ofPattern("d/M/uuuu").withResolverStyle(ResolverStyle.STRICT)) }.getOrNull()
             ?: throw IllegalArgumentException("Data inválida: $texto (use dd/mm/aaaa)")
     }
 }

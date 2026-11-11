@@ -2,6 +2,7 @@ package org.example.controller
 
 import org.example.repository.TagRepository
 import org.example.response.TagResponse
+import org.example.service.FichaBemService
 import org.example.service.RfidService
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.*
 class AndroidApiController(
     private val service: RfidService,
     private val tagRepository: TagRepository,
-    private val fichas: org.example.service.FichaBemService
+    private val fichas: FichaBemService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)

@@ -1,6 +1,7 @@
 package org.example.model
 
 import jakarta.persistence.*
+import java.text.Normalizer
 import java.time.LocalDateTime
 
 /**
@@ -35,7 +36,7 @@ enum class SituacaoBem(val rotulo: String) {
 
         /** Pelo código ou pelo nome ("Em manutenção"), sem diferenciar maiúsculas nem acento (importação de planilha). */
         fun de(texto: String?): SituacaoBem? = porCodigoOuNome(texto, entries) { it.rotulo } ?: texto?.let {
-            ANTIGOS[java.text.Normalizer.normalize(it.trim(), java.text.Normalizer.Form.NFD).replace(Regex("\\p{M}"), "")
+            ANTIGOS[Normalizer.normalize(it.trim(), Normalizer.Form.NFD).replace(Regex("\\p{M}"), "")
                 .uppercase().replace(Regex("[^A-Z0-9]+"), "_").trim('_')]
         }
     }
@@ -57,7 +58,7 @@ enum class MotivoBaixa(val rotulo: String) {
 
 /** Código (DISPONIVEL) ou nome ("Disponível"), sem diferenciar maiúsculas, acento, espaço ou "/". */
 internal fun <E : Enum<E>> porCodigoOuNome(texto: String?, valores: List<E>, rotulo: (E) -> String): E? {
-    fun limpar(s: String) = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
+    fun limpar(s: String) = Normalizer.normalize(s, Normalizer.Form.NFD)
         .replace(Regex("\\p{M}"), "").uppercase().replace(Regex("[^A-Z0-9]+"), "_").trim('_')
     val alvo = limpar(texto?.trim().orEmpty())
     if (alvo.isEmpty()) return null

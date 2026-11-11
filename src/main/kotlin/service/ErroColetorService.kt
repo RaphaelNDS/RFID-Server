@@ -2,6 +2,7 @@ package org.example.service
 
 import org.example.model.ErroColetorEntity
 import org.example.repository.ErroColetorRepository
+import org.example.util.HoraColetor
 import org.example.util.MascaraSensivel
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -143,7 +144,7 @@ class ErroColetorService(
 
     // Hora do relógio do coletor; sem ela, ou no futuro (relógio adiantado), vale a de chegada
     private fun momentoDoColetor(momento: OffsetDateTime?, agora: LocalDateTime): LocalDateTime =
-        org.example.util.HoraColetor.aceita(momento, agora) ?: agora
+        HoraColetor.aceita(momento, agora) ?: agora
 
     /** Erros por coletor nas últimas 24 h: conta registros (um erro agrupado com várias ocorrências conta 1). */
     fun contarUltimas24h(): Map<String, Long> =

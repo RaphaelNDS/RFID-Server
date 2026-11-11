@@ -1,9 +1,12 @@
 package org.example
 
+import org.example.util.CifraBackup
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
 import org.springframework.scheduling.annotation.EnableScheduling
+import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Clock
 
 @SpringBootApplication
@@ -29,8 +32,8 @@ fun main(args: Array<String>) {
  * A senha vem de RFID_BACKUP_SENHA ou é pedida no terminal. Grava ao lado o .zip (extraia-o na pasta data) ou o .dump.
  */
 private fun decifrarBackup(argumentos: List<String>): Int {
-    val origem = argumentos.firstOrNull()?.let { java.nio.file.Path.of(it) }
-    if (origem == null || !java.nio.file.Files.isRegularFile(origem)) {
+    val origem = argumentos.firstOrNull()?.let { Path.of(it) }
+    if (origem == null || !Files.isRegularFile(origem)) {
         System.err.println("Uso: java -jar rfid-server.jar --decifrar-backup arquivo.zip.cifrado")
         return 2
     }
@@ -44,7 +47,7 @@ private fun decifrarBackup(argumentos: List<String>): Int {
     val nome = origem.fileName.toString().removeSuffix(".cifrado")
     val destino = origem.resolveSibling(if (nome.endsWith(".zip") || nome.endsWith(".dump")) nome else "$nome.zip")
     return try {
-        org.example.util.CifraBackup.decifrarArquivo(origem, destino, senha)
+        CifraBackup.decifrarArquivo(origem, destino, senha)
         if (nome.endsWith(".dump")) {
             println("Backup do banco decifrado em $destino. Para restaurar, copie o arquivo para docker\\backups\\last e siga o README (Restaurar o banco).")
         } else {
