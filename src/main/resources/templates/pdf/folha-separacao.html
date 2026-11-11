@@ -43,6 +43,21 @@
      th:text="'Há mais opções que o necessário: marque os ' + ${ls.linha.faltam} + ' que forem separados.'"></p>
 </th:block>
 
+<th:block th:with="aSeparar=${f.detalhe.acessorios.?[aEnviar > 0]}">
+  <h2 th:unless="${#lists.isEmpty(aSeparar)}">Acessórios a separar</h2>
+  <table class="lista" th:unless="${#lists.isEmpty(aSeparar)}">
+    <thead><tr><th></th><th>Acessório</th><th>Quantidade</th><th>Do item</th></tr></thead>
+    <tbody>
+    <tr th:each="a : ${aSeparar}">
+      <td><span class="caixa"></span></td>
+      <td th:text="${a.descricao}"></td>
+      <td th:text="${a.aEnviar}"></td>
+      <td th:text="${f.detalhe.linhaDoAcessorio(a.linhaId)} ?: 'avulso'"></td>
+    </tr>
+    </tbody>
+  </table>
+</th:block>
+
 <table class="assinaturas">
   <tr>
     <td><div class="linha">&#160;</div><div class="muted">Separado por</div></td>

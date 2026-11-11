@@ -13,6 +13,8 @@
         <span class="badge" th:classappend="${p.situacao.name() == 'ENCERRADO'} ? 'badge-online' : (${p.situacao.name() == 'CANCELADO'} ? 'badge-inativo' : 'badge-CUSTOM')"
               th:text="${p.situacao.rotulo}"></span>
         <span th:if="${d.atrasado}" class="badge badge-inativo" th:text="'Devolução atrasada ' + ${d.diasAtraso} + ' dia(s)'"></span>
+        <span th:if="${d.acessoriosFaltando > 0 and #lists.isEmpty(d.naRua) and !#lists.isEmpty(d.itens)}" class="badge badge-inativo"
+              th:text="'Faltam ' + ${d.acessoriosFaltando} + ' acessório(s)'"></span>
         <span th:text="${p.cliente}"></span>
       </p>
     </div>
@@ -133,6 +135,66 @@
         <div class="alert alert-erro" id="catalogoErro" role="alert" hidden><span>Não foi possível carregar as marcas e os modelos.</span></div>
       </form>
     </div>
+  </div>
+
+  <!-- Acessórios (1.18.0): do kit das linhas e avulsos; quantos foram enviados e devolvidos -->
+  <div class="card" style="margin-top:16px" id="acessorios"
+       th:if="${!#lists.isEmpty(d.acessorios) or (criar and d.editavel and !#lists.isEmpty(acessoriosAtivos))}"
+       th:with="mudaAcessorio=${pode and p.situacao.name() != 'CANCELADO'}">
+    <div class="card-header empilhar">
+      <h2>Acessórios</h2>
+      <span class="muted" th:if="${#lists.isEmpty(d.acessorios)}">Os do kit entram com cada linha. Acrescente aqui um acessório avulso.</span>
+      <span class="muted" th:unless="${#lists.isEmpty(d.acessorios)}"
+            th:text="${d.acessoriosAEnviar} + ' a enviar · ' + ${d.acessoriosFaltando} + ' enviado(s) que não voltaram'"></span>
+    </div>
+    <form th:unless="${#lists.isEmpty(d.acessorios)}" th:action="@{/admin/pedidos/{id}/acessorios(id=${p.id})}" method="post">
+      <div class="table-wrap">
+        <table class="table table-cartoes">
+          <thead><tr><th>Acessório</th><th class="num">Pedido</th><th class="num">Enviados</th><th class="num">Devolvidos</th><th class="num">Faltando</th><th></th></tr></thead>
+          <tbody>
+          <tr th:each="a : ${d.acessorios}">
+            <td class="principal cartao-titulo">
+              <span th:text="${a.descricao}"></span>
+              <div class="muted" style="font-size:12px" th:text="${d.linhaDoAcessorio(a.linhaId)} != null ? 'kit de ' + ${d.linhaDoAcessorio(a.linhaId)} : 'avulso'"></div>
+            </td>
+            <td data-rotulo="Pedido" class="num" th:text="${a.quantidade}"></td>
+            <td data-rotulo="Enviados" class="num">
+              <input th:if="${mudaAcessorio and d.editavel}" type="number" class="input-sm" style="width:80px" min="0" max="100000"
+                     th:name="'enviada_' + ${a.id}" th:value="${a.enviada}" th:aria-label="'Enviados de ' + ${a.descricao}">
+              <span th:unless="${mudaAcessorio and d.editavel}" th:text="${a.enviada}"></span>
+            </td>
+            <td data-rotulo="Devolvidos" class="num">
+              <input th:if="${mudaAcessorio}" type="number" class="input-sm" style="width:80px" min="0" th:max="${a.enviada}"
+                     th:name="'devolvida_' + ${a.id}" th:value="${a.devolvida}" th:aria-label="'Devolvidos de ' + ${a.descricao}">
+              <span th:unless="${mudaAcessorio}" th:text="${a.devolvida}"></span>
+            </td>
+            <td data-rotulo="Faltando" class="num"><strong th:text="${a.faltando}" th:classappend="${a.faltando > 0} ? 'negativo'"></strong></td>
+            <td class="acoes">
+              <button th:if="${pode and d.editavel and a.enviada == 0}" type="submit" class="btn btn-danger-ghost btn-sm" title="Tirar do pedido"
+                      th:formaction="@{/admin/pedidos/{id}/acessorios/{a}/excluir(id=${p.id},a=${a.id})}">
+                <svg class="ic"><use href="/img/icones.svg#lixeira"/></svg><span class="sr-only">Tirar do pedido</span>
+              </button>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card-footer toolbar" th:if="${mudaAcessorio}" style="border-top:1px solid var(--border)">
+        <button type="submit" name="acao" value="salvar" class="btn btn-secondary btn-sm">Salvar quantidades</button>
+        <button type="submit" name="acao" value="enviarTudo" class="btn btn-ghost btn-sm" th:if="${d.editavel and d.acessoriosAEnviar > 0}">Tudo enviado</button>
+        <button type="submit" name="acao" value="devolverTudo" class="btn btn-ghost btn-sm" th:if="${d.acessoriosFaltando > 0}">Tudo devolvido</button>
+      </div>
+    </form>
+    <form class="card-footer toolbar" style="border-top:1px solid var(--border)" th:if="${criar and d.editavel and !#lists.isEmpty(acessoriosAtivos)}"
+          th:action="@{/admin/pedidos/{id}/acessorios/avulso(id=${p.id})}" method="post">
+      <div class="field"><label for="avulsoAcessorio">Acessório avulso</label>
+        <select id="avulsoAcessorio" name="acessorioId" required>
+          <option value="">Selecione</option>
+          <option th:each="a : ${acessoriosAtivos}" th:value="${a.id}" th:text="${a.nome}"></option>
+        </select></div>
+      <div class="field"><label for="avulsoQtd">Quantidade</label><input type="number" id="avulsoQtd" name="quantidade" min="1" max="1000" value="1" required></div>
+      <button type="submit" class="btn btn-secondary btn-sm"><svg class="ic"><use href="/img/icones.svg#mais"/></svg>Acrescentar</button>
+    </form>
   </div>
 
   <!-- Saída pela web (o coletor faz o mesmo lendo as etiquetas) -->

@@ -34,7 +34,9 @@ class PedidoWebController(
     private val service: LocacaoService,
     private val catalogo: CatalogoService,
     private val pdf: PdfService,
-    private val auth: org.example.service.AuthService
+    private val auth: org.example.service.AuthService,
+    // 1.18.0: kits e acessórios
+    private val acessorios: org.example.service.AcessorioService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -96,6 +98,7 @@ class PedidoWebController(
         model.addAttribute("tipos", catalogo.listarTipos())
         model.addAttribute("estados", EstadoDevolucao.entries)
         model.addAttribute("clientes", service.clientesAtivos())
+        model.addAttribute("acessoriosAtivos", acessorios.ativos())
         return "pedido"
     }
 
@@ -119,7 +122,8 @@ class PedidoWebController(
         @RequestParam(required = false) bem: String?, redirect: RedirectAttributes
     ): String = acao(id, redirect) {
         val l = service.adicionarLinha(id, tipoEquipamentoId, marcaId, modeloId, quantidade, bem)
-        "Linha acrescentada: ${l.quantidade} × ${l.descricao}."
+        val kit = acessorios.doPedido(id).filter { it.linhaId == l.id }
+        "Linha acrescentada: ${l.quantidade} × ${l.descricao}." + if (kit.isEmpty()) "" else " Com o kit: ${acessorios.resumo(kit)}."
     }
 
     @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
@@ -206,6 +210,45 @@ class PedidoWebController(
     fun cancelar(@PathVariable id: Long, @RequestParam(required = false) motivo: String?, redirect: RedirectAttributes): String = acao(id, redirect) {
         service.cancelarPedido(id, motivo)
         "Pedido cancelado."
+    }
+
+    /**
+     * Acessórios do pedido (1.18.0): quantos foram enviados e devolvidos de cada um (campos enviada_<id> e
+     * devolvida_<id>), ou [acao] = enviarTudo / devolverTudo.
+     */
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
+    @PostMapping("/{id}/acessorios")
+    fun registrarAcessorios(@PathVariable id: Long, @RequestParam campos: Map<String, String>, redirect: RedirectAttributes): String = acao(id, redirect) {
+        when (campos["acao"]) {
+            "enviarTudo" -> { acessorios.enviarTudo(id); "Todos os acessórios pedidos foram marcados como enviados." }
+            "devolverTudo" -> { acessorios.devolverTudo(id); "Todos os acessórios enviados foram marcados como devolvidos." }
+            else -> {
+                fun numero(nome: String): Int? = campos[nome]?.trim()?.takeIf { it.isNotEmpty() }?.let {
+                    it.toIntOrNull() ?: throw IllegalArgumentException("Quantidade inválida: $it")
+                }
+                val ids = campos.keys.mapNotNull { Regex("^(enviada|devolvida)_(\\d+)$").find(it)?.groupValues?.get(2)?.toLong() }.toSet()
+                val lista = acessorios.registrar(id, ids.associateWith { org.example.service.QuantidadesAcessorio(numero("enviada_$it"), numero("devolvida_$it")) })
+                val faltam = lista.sumOf { it.faltando }
+                "Acessórios registrados." + if (faltam > 0) " Faltam voltar $faltam." else ""
+            }
+        }
+    }
+
+    @PreAuthorize("@authService.temPermissao('LOCACAO','CREATE')")
+    @PostMapping("/{id}/acessorios/avulso")
+    fun acessorioAvulso(
+        @PathVariable id: Long, @RequestParam(required = false) acessorioId: Long?, @RequestParam(required = false) quantidade: Int?,
+        redirect: RedirectAttributes
+    ): String = acao(id, redirect) {
+        val a = acessorios.adicionarAvulso(id, acessorioId, quantidade)
+        "Acessório acrescentado: ${a.quantidade} × ${a.descricao}."
+    }
+
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
+    @PostMapping("/{id}/acessorios/{acessorioId}/excluir")
+    fun removerAcessorio(@PathVariable id: Long, @PathVariable acessorioId: Long, redirect: RedirectAttributes): String = acao(id, redirect) {
+        acessorios.removerDoPedido(id, acessorioId)
+        "Acessório tirado do pedido."
     }
 
     /** Fila das devoluções que esperam a conferência, de todos os pedidos. */

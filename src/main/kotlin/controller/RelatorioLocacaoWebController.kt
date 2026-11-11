@@ -10,7 +10,11 @@ import java.time.LocalDate
 
 /** Relatórios internos da locação (1.17.0): uso, parados, avarias e pontualidade dos clientes. Locação · Ver. */
 @Controller
-class RelatorioLocacaoWebController(private val service: RelatorioLocacaoService) {
+class RelatorioLocacaoWebController(
+    private val service: RelatorioLocacaoService,
+    // 1.18.0: acessórios que não voltaram
+    private val acessorios: org.example.service.AcessorioService
+) {
 
     @PreAuthorize("@authService.temPermissao('LOCACAO','READ')")
     @GetMapping("/admin/relatorios-locacao")
@@ -28,6 +32,7 @@ class RelatorioLocacaoWebController(private val service: RelatorioLocacaoService
             service.relatorio(null, null)
         }
         model.addAttribute("r", r)
+        model.addAttribute("acessoriosACobrar", acessorios.aCobrar())
         model.addAttribute("hoje", service.hoje())
         model.addAttribute("fmt", org.example.util.FormatoBr)
         return "relatorios-locacao"

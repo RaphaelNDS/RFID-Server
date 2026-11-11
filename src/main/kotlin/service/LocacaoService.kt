@@ -78,8 +78,17 @@ data class PedidoDetalhe(
     val itens: List<PedidoItemEntity>,
     val diasAtraso: Long,
     /** 1.16.0: as mudanças da devolução prevista, mais antigas primeiro. */
-    val prorrogacoes: List<org.example.model.PedidoProrrogacaoEntity> = emptyList()
+    val prorrogacoes: List<org.example.model.PedidoProrrogacaoEntity> = emptyList(),
+    /** 1.18.0: os acessórios do pedido (do kit das linhas e avulsos). */
+    val acessorios: List<org.example.model.PedidoAcessorioEntity> = emptyList()
 ) {
+    /** Acessórios enviados que ainda não voltaram. */
+    val acessoriosFaltando: Int get() = acessorios.sumOf { it.faltando }
+    val acessoriosAEnviar: Int get() = acessorios.sumOf { it.aEnviar }
+
+    /** A descrição da linha que trouxe o acessório pelo kit (nulo: avulso). */
+    fun linhaDoAcessorio(linhaId: Long?): String? = linhaId?.let { id -> linhas.firstOrNull { it.linha.id == id }?.linha?.descricao }
+
     val naRua: List<PedidoItemEntity> get() = itens.filter { !it.devolvido }
     val aguardandoConferencia: List<PedidoItemEntity> get() = itens.filter { it.aguardandoConferencia }
     val atrasado: Boolean get() = diasAtraso > 0
@@ -151,7 +160,9 @@ class LocacaoService(
     // 1.16.0: histórico das prorrogações da devolução prevista
     private val prorrogacoes: org.example.repository.PedidoProrrogacaoRepository,
     // 1.17.0: folha de separação (descrição e local dos equipamentos candidatos)
-    private val transferencias: TransferenciaService? = null
+    private val transferencias: TransferenciaService? = null,
+    // 1.18.0: o kit de acessórios entra com a linha
+    private val acessorios: AcessorioService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -307,6 +318,7 @@ class LocacaoService(
                 descricao = listOfNotNull(tipo.nome, marca?.nome, modelo?.nome).joinToString(" ").take(255), quantidade = qtd)
         }
         val salva = linhas.save(linha)
+        acessorios?.aplicarKit(salva)
         recalcular(p, abrirSeparacao = true)
         log.info("Pedido de locação nº {}: linha {} x {} acrescentada por {}", pedidoId, salva.quantidade, salva.descricao, autor())
         return salva
@@ -318,6 +330,7 @@ class LocacaoService(
         require(!p.situacao.finalizado) { "O pedido nº $pedidoId está ${p.situacao.rotulo.lowercase()}: não muda mais" }
         val linha = linhas.findById(linhaId).filter { it.pedidoId == pedidoId }.orElseThrow { NoSuchElementException("Linha $linhaId não encontrada no pedido") }
         require(itens.findAllByPedidoIdOrderByIdAsc(pedidoId).none { it.linhaId == linhaId }) { "Já saiu equipamento por esta linha: ela não pode sair do pedido" }
+        acessorios?.aoRemoverLinha(linhaId)
         linhas.delete(linha)
         linhas.flush()
         recalcular(p)
@@ -502,7 +515,7 @@ class LocacaoService(
         val ls = linhas.findAllByPedidoIdOrderByIdAsc(id)
         val its = itens.findAllByPedidoIdOrderByIdAsc(id)
         return PedidoDetalhe(p, ls.map { l -> LinhaConferida(l, its.count { it.linhaId == l.id }, 0) }, its, atraso(p, its.count { !it.devolvido }, hoje()),
-            prorrogacoes.findAllByPedidoIdOrderByIdAsc(id))
+            prorrogacoes.findAllByPedidoIdOrderByIdAsc(id), acessorios?.doPedido(id).orEmpty())
     }
 
     /** Pedidos para o coletor (padrão: a separar). */

@@ -50,6 +50,20 @@
   </tbody>
 </table>
 
+<h2 th:unless="${#lists.isEmpty(d.acessorios)}">Acessórios</h2>
+<table class="lista" th:unless="${#lists.isEmpty(d.acessorios)}">
+  <thead><tr><th>Acessório</th><th>Do item</th><th>Pedido</th><th>Enviados</th><th>Devolvidos</th></tr></thead>
+  <tbody>
+  <tr th:each="a : ${d.acessorios}">
+    <td th:text="${a.descricao}"></td>
+    <td th:text="${d.linhaDoAcessorio(a.linhaId)} ?: 'avulso'"></td>
+    <td th:text="${a.quantidade}"></td>
+    <td th:text="${a.enviada}"></td>
+    <td th:text="${a.devolvida}"></td>
+  </tr>
+  </tbody>
+</table>
+
 <p>O cliente declara ter recebido os equipamentos acima em perfeito estado de funcionamento, comprometendo-se a
   utilizá-los adequadamente e a devolvê-los até a data prevista, no mesmo estado e com todos os acessórios,
   respondendo por perda, roubo ou dano causado por mau uso.</p>
