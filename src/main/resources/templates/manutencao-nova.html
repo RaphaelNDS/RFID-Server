@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Nova manutenção · Sistema RFID</title>
+
+<section class="page page-estreita">
+
+  <div class="page-header">
+    <div>
+      <h1>Nova manutenção</h1>
+      <p class="subtitulo">O bem fica "Em manutenção" até a ordem ser concluída ou cancelada</p>
+    </div>
+    <a th:href="@{/admin/manutencoes}" class="btn btn-ghost">
+      <svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Voltar
+    </a>
+  </div>
+
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <form class="card" th:action="@{/admin/manutencoes}" method="post" data-enviar-uma-vez>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="field span-2">
+          <label for="codigo">Bem (etiqueta ou patrimônio) <span class="obrigatorio">*</span></label>
+          <input type="text" id="codigo" name="codigo" maxlength="255" class="mono" th:value="${codigo}" required>
+          <span class="field-dica" th:if="${bem != null}"
+                th:text="${bem.patrimonio ?: bem.tag} + (${bem.descricao != null} ? ' · ' + ${bem.descricao} : '') + ' · ' + ${bem.situacao.rotulo}"></span>
+        </div>
+        <div class="field">
+          <label for="tipo">Tipo <span class="obrigatorio">*</span></label>
+          <select id="tipo" name="tipo" required>
+            <option th:each="t : ${tipos}" th:value="${t.name()}" th:text="${t.rotulo}" th:selected="${t.name() == tipo}"></option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fornecedor">Fornecedor / técnico</label>
+          <input type="text" id="fornecedor" name="fornecedor" maxlength="160" th:value="${fornecedor}" placeholder="Ex.: Assistência XYZ, TI interna">
+        </div>
+        <div class="field span-2">
+          <label for="problema">Problema ou o que revisar <span class="obrigatorio">*</span></label>
+          <input type="text" id="problema" name="problema" maxlength="500" th:value="${problema}" required placeholder="Ex.: não liga; troca de bateria; revisão anual">
+        </div>
+        <div class="field">
+          <label for="envio">Envio</label>
+          <input type="date" id="envio" name="envio" th:value="${envio}" th:max="${hoje}">
+        </div>
+        <div class="field">
+          <label for="previsao">Previsão de retorno</label>
+          <input type="date" id="previsao" name="previsao" th:value="${previsao}" th:min="${hoje}">
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <a th:href="@{/admin/manutencoes}" class="btn btn-ghost">Cancelar</a>
+      <button type="submit" class="btn btn-primary" data-enviando="Abrindo...">
+        <svg class="ic"><use href="/img/icones.svg#ok"/></svg>Abrir manutenção
+      </button>
+    </div>
+  </form>
+
+</section>
+</html>

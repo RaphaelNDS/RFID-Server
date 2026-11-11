@@ -43,6 +43,9 @@
         <a th:href="@{/admin/emprestimos}" th:if="${@authService.temPermissao('RFID','READ')}">
           <svg class="ic"><use href="/img/icones.svg#calendario"/></svg>Empréstimos
         </a>
+        <a th:href="@{/admin/manutencoes}" th:if="${@authService.temPermissao('RFID','READ')}">
+          <svg class="ic"><use href="/img/icones.svg#lapis"/></svg>Manutenções
+        </a>
         <a th:href="@{/admin/valores}" th:if="${@authService.temPermissao('RFID','READ')}">
           <svg class="ic"><use href="/img/icones.svg#grafico"/></svg>Valor patrimonial
         </a>
