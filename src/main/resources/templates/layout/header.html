@@ -47,6 +47,9 @@
         <a th:href="@{/admin/disponibilidade}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
           <svg class="ic"><use href="/img/icones.svg#grafico"/></svg>Disponibilidade
         </a>
+        <a th:href="@{/admin/relatorios-locacao}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
+          <svg class="ic"><use href="/img/icones.svg#atividade"/></svg>Relatórios da locação
+        </a>
         <a th:href="@{/admin/clientes}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
           <svg class="ic"><use href="/img/icones.svg#usuarios"/></svg>Clientes
         </a>

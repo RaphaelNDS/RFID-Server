@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<!-- Folha de separação do pedido (1.17.0): o que falta separar e os equipamentos disponíveis que servem, com o local -->
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR" th:with="p=${f.detalhe.pedido}">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="'Folha de separação - pedido nº ' + ${p.id}">Separação</title>
+  <style th:replace="~{pdf/base :: estilo}"></style>
+  <style>
+    .caixa { width: 10pt; height: 10pt; border: 1pt solid #1a1a1a; display: inline-block; }
+    .linha-titulo { background: #eee; }
+  </style>
+</head>
+<body>
+<div th:replace="~{pdf/base :: rodape}"></div>
+<div th:replace="~{pdf/base :: cabecalho('Folha de separação', ${p.cliente}, 'Pedido nº ' + ${p.id})}"></div>
+
+<table class="dados">
+  <tr><th>Cliente</th><td th:text="${p.cliente}"></td></tr>
+  <tr><th>Local de entrega</th><td th:text="${p.localEntrega} ?: '-'"></td></tr>
+  <tr><th>Saída prevista</th><td th:text="${p.saidaPrevista != null} ? ${fmt.data(p.saidaPrevista)} : '-'"></td></tr>
+  <tr><th>Devolução prevista</th><td th:text="${fmt.data(p.previsaoDevolucao)}"></td></tr>
+  <tr><th>A separar</th><td th:text="${f.faltam} + ' equipamento(s)'"></td></tr>
+</table>
+
+<p class="muted" th:if="${f.faltam == 0}">Nada a separar: tudo o que foi pedido já saiu.</p>
+
+<th:block th:each="ls : ${f.linhas}" th:if="${ls.linha.faltam > 0}">
+  <h2 th:text="${ls.linha.linha.descricao} + ' - separar ' + ${ls.linha.faltam} + (${ls.linha.saidos > 0} ? ' (já saíram ' + ${ls.linha.saidos} + ' de ' + ${ls.linha.linha.quantidade} + ')' : '')"></h2>
+  <p class="muted" th:if="${#lists.isEmpty(ls.candidatos)}">Nenhum equipamento disponível que sirva para este item.</p>
+  <table class="lista" th:unless="${#lists.isEmpty(ls.candidatos)}">
+    <thead><tr><th></th><th>Patrimônio</th><th>Equipamento</th><th>Local</th><th>Etiqueta</th></tr></thead>
+    <tbody>
+    <tr th:each="b : ${ls.candidatos}">
+      <td><span class="caixa"></span></td>
+      <td th:text="${b.patrimonio} ?: (${b.codigoInterno} ?: '-')"></td>
+      <td th:text="${b.descricao} ?: '-'"></td>
+      <td th:text="${b.local} ?: 'sem local'"></td>
+      <td class="mono" th:text="${b.tag}"></td>
+    </tr>
+    </tbody>
+  </table>
+  <p class="muted" th:if="${#lists.size(ls.candidatos) > ls.linha.faltam}"
+     th:text="'Há mais opções que o necessário: marque os ' + ${ls.linha.faltam} + ' que forem separados.'"></p>
+</th:block>
+
+<table class="assinaturas">
+  <tr>
+    <td><div class="linha">&#160;</div><div class="muted">Separado por</div></td>
+    <td><div class="linha">&#160;</div><div class="muted">Conferido por</div></td>
+  </tr>
+</table>
+<p class="local-data">Data: ____ / ____ / ________</p>
+</body>
+</html>

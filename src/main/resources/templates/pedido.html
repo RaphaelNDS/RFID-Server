@@ -18,6 +18,10 @@
     </div>
     <div class="page-header-acoes">
       <a th:href="@{/admin/pedidos}" class="btn btn-ghost"><svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Pedidos</a>
+      <a th:if="${d.podeSair and !#lists.isEmpty(d.linhas)}" th:href="@{/admin/pedidos/{id}/separacao.pdf(id=${p.id})}" class="btn btn-secondary" target="_blank" rel="noopener"
+         title="O que falta separar e os equipamentos disponíveis, com o local, para marcar">
+        <svg class="ic"><use href="/img/icones.svg#pacote"/></svg>Folha de separação
+      </a>
       <a th:href="@{/admin/pedidos/{id}/contrato.pdf(id=${p.id})}" class="btn btn-secondary" target="_blank" rel="noopener">
         <svg class="ic"><use href="/img/icones.svg#download"/></svg>Contrato (PDF)
       </a>
