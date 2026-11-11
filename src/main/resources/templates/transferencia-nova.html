@@ -88,19 +88,10 @@
         <div class="form-grid">
           <div class="field">
             <label for="localDestino">Local de destino</label>
-            <select id="localDestino" name="localDestino">
-              <option value="">Mantém o local</option>
+            <select id="localDestino" name="localDestino" required>
+              <option value="">Selecione o local</option>
               <option th:each="l : ${opcoesLocal}" th:value="${l.id}" th:text="${l.descricao}"
                       th:selected="${localDestino != null and l.id == localDestino}"></option>
-            </select>
-          </div>
-          <!-- Responsável fora da tela desde a 1.12.0 (locadora) -->
-          <div class="field" th:if="false">
-            <label for="responsavelDestino">Responsável de destino</label>
-            <select id="responsavelDestino" name="responsavelDestino">
-              <option value="">Mantém o responsável</option>
-              <option th:each="r : ${opcoesResponsavel}" th:value="${r.id}" th:text="${r.descricao}"
-                      th:selected="${responsavelDestino != null and r.id == responsavelDestino}"></option>
             </select>
           </div>
           <div class="field">

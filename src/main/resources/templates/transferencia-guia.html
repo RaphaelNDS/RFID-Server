@@ -38,14 +38,14 @@
 
       <dl class="dados termo-dados">
         <div><dt>Local de destino</dt><dd th:text="${guia.localDestino} ?: 'mantido (cada bem continua onde estava)'"></dd></div>
-        <div><dt>Responsável de destino</dt><dd th:text="${guia.responsavelDestino} ?: 'mantido (cada bem continua com quem estava)'"></dd></div>
+        <div th:if="${guia.responsavelDestino != null}"><dt>Responsável de destino</dt><dd th:text="${guia.responsavelDestino} ?: 'mantido (cada bem continua com quem estava)'"></dd></div>
         <div th:if="${guia.solicitante != null}"><dt>Solicitante</dt><dd th:text="${guia.solicitante}"></dd></div>
         <div th:if="${guia.motivo != null}"><dt>Motivo</dt><dd th:text="${guia.motivo}"></dd></div>
         <div><dt>Registrada por</dt><dd th:text="${guia.registradaPor} + ' em ' + ${#temporals.format(guia.criadaEm, 'dd/MM/yyyy HH:mm')}"></dd></div>
       </dl>
 
       <table class="table termo-tabela">
-        <thead><tr><th>#</th><th>Patrimônio</th><th>Descrição</th><th>Etiqueta (EPC)</th><th>Local anterior</th><th>Responsável anterior</th></tr></thead>
+        <thead><tr><th>#</th><th>Patrimônio</th><th>Descrição</th><th>Etiqueta (EPC)</th><th>Local anterior</th><th th:if="${guia.responsavelDestino != null}">Responsável anterior</th></tr></thead>
         <tbody>
         <tr th:each="i, n : ${itens}">
           <td th:text="${n.count}"></td>
@@ -53,7 +53,7 @@
           <td th:text="${i.descricao} ?: '—'"></td>
           <td class="mono" th:text="${i.tagReal}"></td>
           <td th:text="${i.localAnterior} ?: '—'"></td>
-          <td th:text="${i.responsavelAnterior} ?: '—'"></td>
+          <td th:if="${guia.responsavelDestino != null}" th:text="${i.responsavelAnterior} ?: '—'"></td>
         </tr>
         </tbody>
       </table>
