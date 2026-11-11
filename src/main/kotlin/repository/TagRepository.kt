@@ -60,13 +60,13 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
     /** Os bens do responsável que não foram baixados (termo de responsabilidade), pelo patrimônio. */
     fun findAllByResponsavelIdAndSituacaoNotOrderByPatrimonioAscIdAsc(responsavelId: Long, situacao: org.example.model.SituacaoBem): List<TagEntity>
 
-    /** Os bens cadastrados no local que não foram baixados (esperado do inventário). */
-    fun findAllByLocalIdAndSituacaoNot(localId: Long, situacao: org.example.model.SituacaoBem): List<TagEntity>
+    /** Os bens cadastrados no local fora destas situações (esperado do inventário: sem baixados, vendidos e alugados). */
+    fun findAllByLocalIdAndSituacaoNotIn(localId: Long, situacoes: Collection<org.example.model.SituacaoBem>): List<TagEntity>
 
-    @Query("select t.localId, count(t) from TagEntity t where t.localId is not null and t.situacao <> org.example.model.SituacaoBem.BAIXADO group by t.localId")
+    @Query("select t.localId, count(t) from TagEntity t where t.localId is not null and t.situacao not in (org.example.model.SituacaoBem.BAIXADO, org.example.model.SituacaoBem.VENDIDO) group by t.localId")
     fun contarPorLocal(): List<Array<Any>>
 
-    @Query("select t.responsavelId, count(t) from TagEntity t where t.responsavelId is not null and t.situacao <> org.example.model.SituacaoBem.BAIXADO group by t.responsavelId")
+    @Query("select t.responsavelId, count(t) from TagEntity t where t.responsavelId is not null and t.situacao not in (org.example.model.SituacaoBem.BAIXADO, org.example.model.SituacaoBem.VENDIDO) group by t.responsavelId")
     fun contarPorResponsavel(): List<Array<Any>>
 
     /**

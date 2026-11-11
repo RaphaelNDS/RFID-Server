@@ -27,7 +27,7 @@ import org.springframework.security.core.context.SecurityContextHolder
 class EdicaoConcorrenteException(mensagem: String) : IllegalArgumentException(mensagem)
 
 /**
- * Filtros da tela de etiquetas (1.6.0). Por padrão, todas as situações menos BAIXADO. [situacao] escolhe uma só
+ * Filtros da tela de etiquetas (1.6.0). Por padrão, todas as situações menos BAIXADO e VENDIDO (1.12.0). [situacao] escolhe uma só
  * (inclusive BAIXADO); [incluirBaixados] junta os baixados às demais.
  */
 data class FiltroEtiquetas(
@@ -39,7 +39,7 @@ data class FiltroEtiquetas(
     fun situacoes(): List<SituacaoBem> = when {
         situacao != null -> listOf(situacao)
         incluirBaixados -> SituacaoBem.entries
-        else -> SituacaoBem.EDITAVEIS
+        else -> SituacaoBem.NO_ACERVO
     }
 
     val ativo: Boolean get() = situacao != null || localId != null || responsavelId != null || incluirBaixados
@@ -58,26 +58,27 @@ class RfidService(
     private val locaisRepo: LocalRepository? = null,
     private val unidadesRepo: UnidadeRepository? = null,
     private val responsaveisRepo: ResponsavelRepository? = null,
-    // Empréstimos (1.10.0): bem emprestado não recebe baixa, não é excluído e a situação não muda pela edição
-    private val emprestimoItens: org.example.repository.EmprestimoItemRepository? = null,
-    // Manutenção (1.11.0): mesmas travas do empréstimo
-    private val manutencoes: org.example.repository.ManutencaoRepository? = null
+    // Locação (1.12.0): equipamento num pedido não recebe baixa, não é excluído e a situação não muda pela edição
+    private val pedidoItens: org.example.repository.PedidoItemRepository? = null,
+    // Manutenção (1.11.0): mesmas travas
+    private val manutencoes: org.example.repository.ManutencaoRepository? = null,
+    private val pedidos: org.example.repository.PedidoLocacaoRepository? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
     /**
-     * O bem está fora num empréstimo ou numa manutenção aberta: [onde] ("no empréstimo nº 3"), a situação que ele
-     * tem por isso, o que encerra ([fim]) e o que fazer antes de mexer nele ([acao]).
+     * O bem está fora num pedido de locação ou numa manutenção aberta: [onde] ("no pedido de locação nº 3"), o que
+     * encerra ([fim]) e o que fazer antes de mexer nele ([acao]). A situação dele não muda pela edição enquanto isso.
      */
-    data class Ocupacao(val onde: String, val situacao: SituacaoBem, val fim: String, val acao: String)
+    data class Ocupacao(val onde: String, val fim: String, val acao: String)
 
     fun ocupacao(tagId: Long): Ocupacao? {
-        emprestimoItens?.findFirstByTagIdAndDevolvidoEmIsNull(tagId)?.let {
-            return Ocupacao("no empréstimo nº ${it.emprestimoId}", SituacaoBem.EMPRESTADO, "a devolução for registrada", "registre a devolução")
+        pedidoItens?.findFirstByTagIdAndConferidoEmIsNull(tagId)?.let {
+            return Ocupacao("no pedido de locação nº ${it.pedidoId}", "a devolução for conferida", "registre a devolução e a conferência")
         }
         manutencoes?.findFirstByTagIdAndStatus(tagId, org.example.model.StatusManutencao.ABERTA)?.let {
-            return Ocupacao("na manutenção nº ${it.id}", SituacaoBem.EM_MANUTENCAO, "a manutenção for concluída", "conclua a manutenção")
+            return Ocupacao("na manutenção nº ${it.id}", "a manutenção for concluída", "conclua a manutenção")
         }
         return null
     }
@@ -118,7 +119,7 @@ class RfidService(
 
             localId = req.localId,
             responsavelId = req.responsavelId,
-            situacao = situacaoEscolhida(req.situacao) ?: SituacaoBem.EM_USO,
+            situacao = situacaoEscolhida(req.situacao) ?: SituacaoBem.DISPONIVEL,
             valorAquisicao = valor.valor,
             dataAquisicao = valor.data,
             notaFiscal = valor.notaFiscal
@@ -154,6 +155,7 @@ class RfidService(
             ?.nome
 
         val local = tag.localId?.let { id -> locaisRepo?.findById(id)?.orElse(null) }
+        val locacao = pedidoAtual(tag.id)
         return TagResponse(
             codigoInterno = tag.codigoInterno,
             tipo = tipoNome,
@@ -165,9 +167,18 @@ class RfidService(
             situacaoRotulo = tag.situacao.rotulo,
             unidade = local?.unidadeId?.let { id -> unidadesRepo?.findById(id)?.orElse(null)?.nome },
             local = local?.nome,
-            responsavel = tag.responsavelId?.let { id -> responsaveisRepo?.findById(id)?.orElse(null)?.nome }
+            responsavel = tag.responsavelId?.let { id -> responsaveisRepo?.findById(id)?.orElse(null)?.nome },
+            // Locação (1.12.0): o pedido em que o equipamento está (alugado ou esperando a conferência da devolução)
+            pedido = locacao?.id,
+            cliente = locacao?.cliente,
+            previsaoDevolucao = locacao?.previsaoDevolucao,
+            localEntrega = locacao?.localEntrega
         )
     }
+
+    /** O pedido de locação em que o equipamento está agora (saiu e a devolução ainda não foi conferida), ou null. */
+    fun pedidoAtual(tagId: Long): org.example.model.PedidoLocacaoEntity? =
+        pedidoItens?.findFirstByTagIdAndConferidoEmIsNull(tagId)?.let { pedidos?.findById(it.pedidoId)?.orElse(null) }
 
     /**
      * Local e responsável escolhidos existem; os desativados só valem se já eram os do bem (a edição de um bem que
@@ -184,11 +195,16 @@ class RfidService(
         }
     }
 
-    /** A situação escolhida no formulário; vazio = não escolheu. BAIXADO é recusado (a baixa tem tela própria). */
+    /**
+     * A situação escolhida no formulário; vazio = não escolheu. Só as editáveis: as outras vêm das telas próprias
+     * (baixa, venda e pedido de locação).
+     */
     private fun situacaoEscolhida(texto: String?): SituacaoBem? {
         if (texto.isNullOrBlank()) return null
         val s = SituacaoBem.de(texto) ?: throw IllegalArgumentException("Situação inválida: $texto")
         require(s != SituacaoBem.BAIXADO) { "Para baixar o bem use \"Dar baixa\", com o motivo" }
+        require(s != SituacaoBem.VENDIDO) { "Para vender o equipamento use \"Registrar venda\", na edição da etiqueta" }
+        require(s in SituacaoBem.EDITAVEIS) { "\"${s.rotulo}\" vem do pedido de locação (saída e devolução), não da edição" }
         return s
     }
 
@@ -315,9 +331,10 @@ class RfidService(
         recusarPatrimonioRepetido(req.patrimonio, idAtual = tag.id)
         validarLocalEResponsavel(req, localAtual = tag.localId, responsavelAtual = tag.responsavelId)
         // Conferida antes de mexer na etiqueta: recusar depois deixaria a entidade alterada na sessão do JPA
-        val novaSituacao = if (tag.baixado) null else situacaoEscolhida(req.situacao)
+        // Fora das editáveis (alugado, em devolução, vendido, baixado): fica como está; muda pelas telas próprias
+        val novaSituacao = if (tag.situacao !in SituacaoBem.EDITAVEIS) null else situacaoEscolhida(req.situacao)
         ocupacao(tag.id)?.let { o ->
-            require(novaSituacao == null || novaSituacao == o.situacao) {
+            require(novaSituacao == null || novaSituacao == tag.situacao) {
                 "Este bem está ${o.onde}: a situação volta sozinha quando ${o.fim}"
             }
         }
@@ -400,6 +417,7 @@ class RfidService(
     fun darBaixa(id: Long, motivo: MotivoBaixa, data: java.time.LocalDate?, observacao: String?, origem: String? = null): TagEntity {
         val tag = buscarPorId(id)
         require(!tag.baixado) { "Este bem já foi baixado em ${tag.baixaEm} (${tag.baixaMotivo?.rotulo})" }
+        require(tag.situacao != SituacaoBem.VENDIDO) { "Este equipamento foi vendido: desfaça a venda antes de dar baixa" }
         ocupacao(tag.id)?.let { o -> throw IllegalArgumentException("Este bem está ${o.onde}: ${o.acao} antes da baixa") }
         val hoje = java.time.LocalDate.now(relogio)
         val dia = data ?: hoje
@@ -425,7 +443,7 @@ class RfidService(
         val tag = buscarPorId(id)
         require(tag.baixado) { "Este bem não está baixado" }
         val antes = historico.retrato(tag)
-        tag.situacao = SituacaoBem.EM_USO
+        tag.situacao = SituacaoBem.DISPONIVEL
         tag.baixaMotivo = null
         tag.baixaEm = null
         tag.baixaObservacao = null

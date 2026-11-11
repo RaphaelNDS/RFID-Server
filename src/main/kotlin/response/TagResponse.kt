@@ -17,12 +17,20 @@ val ultimaLeituraEm: java.time.OffsetDateTime? = null,
 val ultimaLeituraPor: String? = null,
 
 // Gestão de patrimônio (1.6.0). Opcionais: o app antigo ignora
-/** Código da situação (EM_USO, EM_ESTOQUE, EM_MANUTENCAO, EMPRESTADO, EXTRAVIADO, BAIXADO) e o nome dela. */
+/** Código da situação (DISPONIVEL, ALUGADO, EM_DEVOLUCAO, EM_MANUTENCAO, A_VENDA, VENDIDO, EXTRAVIADO, BAIXADO) e o nome dela. */
 val situacao: String? = null,
 val situacaoRotulo: String? = null,
 /** Onde o bem está pelo cadastro (o ultimoLocal é o do último inventário que o encontrou). */
 val unidade: String? = null,
 val local: String? = null,
-val responsavel: String? = null
+val responsavel: String? = null,
+
+// Locação (1.12.0): preenchidos quando o equipamento está num pedido (ALUGADO ou EM_DEVOLUCAO)
+/** Número do pedido de locação. */
+val pedido: Long? = null,
+val cliente: String? = null,
+val previsaoDevolucao: java.time.LocalDate? = null,
+/** Para onde foi: o local de entrega do pedido (o app mostra "Foi para: ..."). */
+val localEntrega: String? = null
 )
 

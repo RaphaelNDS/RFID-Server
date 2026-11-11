@@ -57,7 +57,8 @@
                   th:selected="${filtro.localId == l.id}"></option>
         </select>
       </div>
-      <div class="field" style="flex:0 1 190px" th:unless="${#lists.isEmpty(opcoesResponsavel)}">
+      <!-- Responsável fora da tela desde a 1.12.0 (locadora); o filtro por ?responsavel= continua na URL -->
+      <div class="field" style="flex:0 1 190px" th:if="false">
         <label for="f-responsavel">Responsável</label>
         <select id="f-responsavel" name="responsavel">
           <option value="">Todos</option>
@@ -95,22 +96,20 @@
           <th>Equipamento</th>
           <th>Nº série</th>
           <th>Local</th>
-          <th>Responsável</th>
           <th>Situação</th>
           <th></th>
         </tr>
         </thead>
         <tbody>
-        <tr th:each="t : ${tags}" th:classappend="${t.situacao.name() == 'BAIXADO'} ? 'inativo'">
+        <tr th:each="t : ${tags}" th:classappend="${t.situacao.name() == 'BAIXADO' or t.situacao.name() == 'VENDIDO'} ? 'inativo'">
           <td class="mono cartao-titulo" th:text="${t.tag}"></td>
           <td data-rotulo="Código" class="principal" th:text="${t.codigoInterno}"></td>
           <td data-rotulo="Patrimônio" th:text="${t.patrimonio}"></td>
           <td data-rotulo="Equipamento" th:text="${t.descricao} ?: '—'"></td>
           <td class="nowrap" data-rotulo="Nº série" th:text="${t.numeroSerie}"></td>
           <td data-rotulo="Local" th:text="${t.localDescricao} ?: '—'"></td>
-          <td data-rotulo="Responsável" th:text="${t.responsavelNome} ?: '—'"></td>
           <td data-rotulo="Situação" class="nowrap">
-            <span class="badge" th:classappend="${t.situacao.name() == 'EM_USO'} ? 'badge-online' : (${t.situacao.name() == 'BAIXADO' or t.situacao.name() == 'EXTRAVIADO'} ? 'badge-inativo' : 'badge-CUSTOM')"
+            <span class="badge" th:classappend="${t.situacao.name() == 'DISPONIVEL'} ? 'badge-online' : (${t.situacao.name() == 'BAIXADO' or t.situacao.name() == 'EXTRAVIADO'} ? 'badge-inativo' : 'badge-CUSTOM')"
                   th:text="${t.situacao.rotulo}"></span>
           </td>
           <td class="acoes">

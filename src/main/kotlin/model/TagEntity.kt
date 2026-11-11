@@ -46,7 +46,7 @@ class TagEntity(
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    var situacao: SituacaoBem = SituacaoBem.EM_USO,
+    var situacao: SituacaoBem = SituacaoBem.DISPONIVEL,
 
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
@@ -71,5 +71,8 @@ class TagEntity(
     var notaFiscal: String? = null
 ) {
     val baixado: Boolean get() = situacao == SituacaoBem.BAIXADO
+
+    /** Baixado ou vendido (1.12.0): não está mais no acervo da locadora. */
+    val foraDoAcervo: Boolean get() = situacao in SituacaoBem.FORA_DO_ACERVO
 }
 

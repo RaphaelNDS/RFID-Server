@@ -152,8 +152,8 @@ class TransferenciaService(
 
         val entidades = tags.findAllById(localizados.bens.map { it.id }).associateBy { it.id }
         val bens = localizados.bens.map { entidades.getValue(it.id) to it }
-        val baixados = bens.filter { it.first.baixado }
-        require(baixados.isEmpty()) { "Bem baixado não pode ser transferido: ${lista(baixados.map { rotulo(it.second) })}" }
+        val baixados = bens.filter { it.first.foraDoAcervo }
+        require(baixados.isEmpty()) { "Bem baixado ou vendido não pode ser transferido: ${lista(baixados.map { rotulo(it.second) })}" }
         val semMudanca = bens.filter { (t, _) -> (local == null || t.localId == local.id) && (responsavel == null || t.responsavelId == responsavel.id) }
         require(semMudanca.isEmpty()) { "Já está(ão) no destino: ${lista(semMudanca.map { rotulo(it.second) })}" }
 
@@ -175,7 +175,7 @@ class TransferenciaService(
                     descricao = antes.descricao?.take(255), localAnterior = antes.local?.take(255), responsavelAnterior = antes.responsavel?.take(255)
                 )
             )
-            if (local != null && tag.localId != local.id && tag.situacao == SituacaoBem.EXTRAVIADO) tag.situacao = SituacaoBem.EM_USO
+            if (local != null && tag.localId != local.id && tag.situacao == SituacaoBem.EXTRAVIADO) tag.situacao = SituacaoBem.DISPONIVEL
             local?.let { tag.localId = it.id }
             responsavel?.let { tag.responsavelId = it.id }
             tags.save(tag)
@@ -207,7 +207,7 @@ class TransferenciaService(
         val local = locais.findFirstByNomeIgnoreCaseOrderByIdAsc(limpo).orElse(null)
             ?: throw IllegalArgumentException("Local $limpo não encontrado. Ele passa a existir quando um inventário é aberto nele ou quando é cadastrado na web")
         require(local.ativo) { "O local ${local.nome} está desativado" }
-        if (tag.baixado) throw IllegalStateException("Bem baixado não pode ser transferido (patrimônio ${tag.patrimonio.ifBlank { tag.tagReal }})")
+        if (tag.foraDoAcervo) throw IllegalStateException("Bem baixado ou vendido não pode ser transferido (patrimônio ${tag.patrimonio.ifBlank { tag.tagReal }})")
 
         if (tag.localId == local.id) {
             log.info("Transferência pelo coletor {}: o bem {} já estava em '{}' (reenvio ou nada a mudar)", dispositivo, tag.tagReal, local.nome)

@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!--
-  Laudo do inventário em PDF (1.8.0): o resumo, os bens que faltaram (com a justificativa do coletor e o valor
-  contábil), os achados em outro local, as assinaturas e, no fim, a lista do que foi lido. Mesmos dados da tela
-  inventario-detalhe.html; os valores vêm do ValorPatrimonialService.
+  Laudo do inventário em PDF (1.8.0): o resumo, os bens que faltaram (com a justificativa do coletor), os achados em
+  outro local, as assinaturas e, no fim, a lista do que foi lido. Mesmos dados da tela inventario-detalhe.html. O valor
+  contábil saiu na 1.12.0 (locadora: o valor patrimonial foi tirado do sistema).
 -->
 <html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
 <head>
@@ -38,8 +38,7 @@
       <span class="muted" th:text="${inventario.naoCadastradas} + ' sem cadastro'"></span></td>
     <td><span class="muted">Esperados</span><span class="numero" th:text="${comparacao.referencia.temReferencia ? comparacao.esperadas : '-'}">0</span></td>
     <td><span class="muted">Encontrados</span><span class="numero" th:text="${comparacao.referencia.temReferencia ? comparacao.encontradas : '-'}">0</span></td>
-    <td><span class="muted">Faltaram</span><span class="numero" th:text="${comparacao.referencia.temReferencia ? #lists.size(comparacao.faltando) : '-'}">0</span>
-      <span class="muted" th:if="${!#lists.isEmpty(comparacao.faltando)}" th:text="${fmt.reais(totalFaltante)} + ' em valor contábil'"></span></td>
+    <td><span class="muted">Faltaram</span><span class="numero" th:text="${comparacao.referencia.temReferencia ? #lists.size(comparacao.faltando) : '-'}">0</span></td>
   </tr>
 </table>
 
@@ -47,19 +46,14 @@
   <h2 th:text="'Bens que faltaram (' + ${#lists.size(comparacao.faltando)} + ')'">Bens que faltaram</h2>
   <p class="muted" th:if="${#lists.isEmpty(comparacao.faltando)}" th:text="'Nada faltou: todos os ' + ${comparacao.esperadas} + ' bens esperados foram lidos.'"></p>
   <table class="lista" th:unless="${#lists.isEmpty(comparacao.faltando)}">
-    <thead><tr><th>Patrimônio</th><th>Descrição</th><th>Etiqueta</th><th>Situação</th><th>Justificativa</th><th class="num">Valor contábil</th></tr></thead>
+    <thead><tr><th>Patrimônio</th><th>Descrição</th><th>Etiqueta</th><th>Situação</th><th>Justificativa</th></tr></thead>
     <tbody>
-    <tr th:each="f : ${comparacao.faltando}" th:with="j=${justificativas[f.tag]}, v=${valores[f.tag]}">
+    <tr th:each="f : ${comparacao.faltando}" th:with="j=${justificativas[f.tag]}">
       <td th:text="${f.patrimonio} ?: (${f.codigoInterno} ?: '-')"></td>
       <td th:with="d=${#strings.trim((f.tipo ?: '') + ' ' + (f.marca ?: '') + ' ' + (f.modelo ?: ''))}" th:text="${d != '' ? d : '-'}"></td>
       <td class="mono" th:text="${f.tag}"></td>
       <td th:text="${f.situacaoRotulo} ?: '-'"></td>
       <td th:text="${j != null ? j.motivo.rotulo + (j.observacao != null ? ' (' + j.observacao + ')' : '') : '-'}"></td>
-      <td class="num" th:text="${v != null ? fmt.reais(v.valorContabil) : 'sem valor'}"></td>
-    </tr>
-    <tr class="total">
-      <td colspan="5" th:text="'Total' + (${faltantesSemValor} > 0 ? ' (' + ${faltantesSemValor} + ' sem valor de aquisição)' : '')">Total</td>
-      <td class="num" th:text="${fmt.reais(totalFaltante)}"></td>
     </tr>
     </tbody>
   </table>

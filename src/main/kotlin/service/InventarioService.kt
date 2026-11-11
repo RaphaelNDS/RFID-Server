@@ -190,13 +190,13 @@ class InventarioService(
         val lidas = itens.tagsDoInventario(inventario.id)
         if (lidas.isEmpty()) return 0
         var atualizados = 0
-        lidas.chunked(5_000).flatMap { repo.findAllByTagRealIn(it) }.filter { !it.baixado }.forEach { tag ->
+        lidas.chunked(5_000).flatMap { repo.findAllByTagRealIn(it) }.filter { !it.foraDoAcervo }.forEach { tag ->
             val mudarLocal = tag.localId != inventario.localId
             val achado = tag.situacao == org.example.model.SituacaoBem.EXTRAVIADO
             if (!mudarLocal && !achado) return@forEach
             val antes = historico?.retrato(tag)
             tag.localId = inventario.localId
-            if (achado) tag.situacao = org.example.model.SituacaoBem.EM_USO
+            if (achado) tag.situacao = org.example.model.SituacaoBem.DISPONIVEL
             repo.save(tag)
             if (antes != null) historico.registrarAlteracao(tag, antes)
             atualizados++

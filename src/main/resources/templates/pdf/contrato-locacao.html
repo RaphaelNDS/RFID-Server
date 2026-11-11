@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!-- Contrato do pedido de locação em PDF (1.12.0): o cliente, as datas e os equipamentos que saíram -->
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR" th:with="p=${d.pedido}">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="'Contrato de locação - pedido nº ' + ${p.id}">Contrato</title>
+  <style th:replace="~{pdf/base :: estilo}"></style>
+</head>
+<body>
+<div th:replace="~{pdf/base :: rodape}"></div>
+<div th:replace="~{pdf/base :: cabecalho('Contrato de locação de equipamentos', ${p.situacao.rotulo}, 'Pedido nº ' + ${p.id} + ' - ' + ${fmt.data(p.criadoEm.toLocalDate())})}"></div>
+
+<table class="dados">
+  <tr><th>Cliente</th><td th:text="${c.nome}"></td></tr>
+  <tr th:if="${c.documentoFormatado != null}"><th>Documento</th><td th:text="${c.documentoFormatado}"></td></tr>
+  <tr th:if="${c.contato != null}"><th>Contato</th><td th:text="${c.contato}"></td></tr>
+  <tr th:if="${c.telefone != null}"><th>Telefone</th><td th:text="${c.telefone}"></td></tr>
+  <tr><th>Local de entrega</th><td th:text="${p.localEntrega} ?: '-'"></td></tr>
+  <tr th:if="${p.saidaPrevista != null}"><th>Saída prevista</th><td th:text="${fmt.data(p.saidaPrevista)}"></td></tr>
+  <tr><th>Devolução prevista</th><td th:text="${fmt.data(p.previsaoDevolucao)}"></td></tr>
+  <tr th:if="${p.observacao != null}"><th>Observação</th><td th:text="${p.observacao}"></td></tr>
+</table>
+
+<h2>Equipamentos pedidos</h2>
+<table class="lista">
+  <thead><tr><th>Item</th><th>Quantidade</th><th>Saíram</th></tr></thead>
+  <tbody>
+  <tr th:each="l : ${d.linhas}">
+    <td th:text="${l.linha.descricao}"></td>
+    <td th:text="${l.linha.quantidade}"></td>
+    <td th:text="${l.saidos}"></td>
+  </tr>
+  </tbody>
+</table>
+
+<h2 th:unless="${#lists.isEmpty(d.itens)}">Equipamentos entregues</h2>
+<table class="lista" th:unless="${#lists.isEmpty(d.itens)}">
+  <thead><tr><th>#</th><th>Patrimônio</th><th>Descrição</th><th>Etiqueta</th><th>Saída</th><th>Devolução</th></tr></thead>
+  <tbody>
+  <tr th:each="i, n : ${d.itens}">
+    <td th:text="${n.count}"></td>
+    <td th:text="${i.patrimonio} ?: '-'"></td>
+    <td th:text="${i.descricao} ?: '-'"></td>
+    <td class="mono" th:text="${i.tagReal}"></td>
+    <td th:text="${#temporals.format(i.saidaEm, 'dd/MM/yyyy')}"></td>
+    <td th:text="${i.devolvido} ? ${#temporals.format(i.devolvidoEm, 'dd/MM/yyyy')} : '-'"></td>
+  </tr>
+  </tbody>
+</table>
+
+<p>O cliente declara ter recebido os equipamentos acima em perfeito estado de funcionamento, comprometendo-se a
+  utilizá-los adequadamente e a devolvê-los até a data prevista, no mesmo estado e com todos os acessórios,
+  respondendo por perda, roubo ou dano causado por mau uso.</p>
+
+<table class="assinaturas">
+  <tr>
+    <td><div class="linha">&#160;</div><div class="muted">Locadora</div></td>
+    <td><div class="linha" th:text="${c.nome}">&#160;</div><div class="muted">Cliente</div></td>
+  </tr>
+</table>
+<p class="local-data">Local e data: ____________________________, ____ / ____ / ________</p>
+</body>
+</html>

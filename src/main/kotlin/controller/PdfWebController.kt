@@ -10,7 +10,6 @@ import org.example.service.PatrimonioCadastrosService
 import org.example.service.PdfService
 import org.example.service.RfidService
 import org.example.service.TransferenciaService
-import org.example.service.ValorPatrimonialService
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
@@ -20,13 +19,12 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
-import java.math.BigDecimal
 import java.time.format.DateTimeFormatter
 
 /**
  * Os PDFs (1.8.0), com as mesmas permissões das telas de onde saem: laudo do inventário (Leituras), guia de
  * transferência (RFID Ver), termo de responsabilidade (Catálogo Ver e RFID Ver) e bens com valor contábil (RFID Ver).
- * Abrem no navegador (inline); o laudo e o relatório de valores vão para a auditoria, como as exportações.
+ * Abrem no navegador (inline); o laudo vai para a auditoria, como as exportações. O relatório de valores saiu na 1.12.0.
  */
 @RestController
 @RequestMapping("/admin")
@@ -37,8 +35,8 @@ class PdfWebController(
     private val transferencias: TransferenciaService,
     private val cadastros: PatrimonioCadastrosService,
     private val rfid: RfidService,
-    private val valores: ValorPatrimonialService,
-    private val auditoria: AuditoriaService
+    private val auditoria: AuditoriaService,
+    private val relogio: java.time.Clock
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -48,15 +46,11 @@ class PdfWebController(
     fun laudo(@PathVariable id: String, auth: Authentication): ResponseEntity<ByteArray> {
         val detalhe = inventarios.detalhar(id)
         val comparacao = esperados.faltandoNoInventario(id)
-        val valoresFaltando = valores.valoresDe(comparacao.faltando.map { it.tag })
         val bytes = pdf.gerar("pdf/laudo-inventario", mapOf(
             "inventario" to detalhe.resumo,
             "itens" to detalhe.itens,
             "comparacao" to comparacao,
-            "justificativas" to inventarios.justificativasDo(id),
-            "valores" to valoresFaltando,
-            "totalFaltante" to valoresFaltando.values.fold(BigDecimal.ZERO) { s, d -> s + d.valorContabil },
-            "faltantesSemValor" to comparacao.faltando.count { it.tag !in valoresFaltando }
+            "justificativas" to inventarios.justificativasDo(id)
         ))
         val local = detalhe.resumo.local
         log.info("{} gerou o laudo do inventário {} de '{}' em PDF: {} lida(s), {} faltando", auth.name, id, local,
@@ -82,28 +76,9 @@ class PdfWebController(
         // Mesma lista da tela do termo: sem os baixados, pelo patrimônio (sem patrimônio por último)
         val bens = rfid.listarTodasParaAdmin(null, FiltroEtiquetas(responsavelId = id))
             .sortedWith(compareBy<TagViewAdmin> { it.patrimonio.ifBlank { "￿" } }.thenBy { it.tag })
-        val bytes = pdf.gerar("pdf/termo-responsabilidade", mapOf("responsavel" to responsavel, "bens" to bens, "hoje" to valores.hoje()))
+        val bytes = pdf.gerar("pdf/termo-responsabilidade", mapOf("responsavel" to responsavel, "bens" to bens, "hoje" to java.time.LocalDate.now(relogio)))
         log.info("{} gerou o termo de responsabilidade de {} em PDF ({} bem(ns))", auth.name, responsavel.nome, bens.size)
         return pdf.resposta(bytes, "termo-responsabilidade-${nomeArquivo(responsavel.nome)}.pdf")
-    }
-
-    @PreAuthorize("@authService.temPermissao('RFID','READ')")
-    @GetMapping("/valores/pdf")
-    fun valoresPdf(
-        @RequestParam(required = false) unidade: String?,
-        @RequestParam(required = false) local: String?,
-        @RequestParam(required = false) tipo: String?,
-        @RequestParam(required = false) baixados: Boolean?,
-        auth: Authentication
-    ): ResponseEntity<ByteArray> {
-        val filtro = ValorWebController.filtro(unidade, local, tipo, baixados)
-        val relatorio = valores.relatorio(filtro)
-        val descricao = valores.descricaoFiltro(filtro)
-        val bytes = pdf.gerar("pdf/valores", mapOf("relatorio" to relatorio, "filtro" to descricao))
-        log.info("{} gerou o relatório de valores em PDF ({}): {} bem(ns), valor contábil {}", auth.name, descricao,
-            relatorio.total.bens, org.example.util.FormatoBr.reais(relatorio.total.valorContabil))
-        auditoria.registrar(AreaAuditoria.EXPORTACAO, "Bens com valor contábil em PDF", descricao, "${relatorio.total.bens} bem(ns)")
-        return pdf.resposta(bytes, "bens-valor-contabil-${relatorio.referencia}.pdf")
     }
 
     companion object {
