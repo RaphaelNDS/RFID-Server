@@ -35,5 +35,8 @@ interface ManutencaoRepository : JpaRepository<ManutencaoEntity, Long> {
 
     fun findFirstByTagIdAndStatus(tagId: Long, status: StatusManutencao): ManutencaoEntity?
 
+    /** Painel do dia (1.13.0): as abertas, mais antigas primeiro. */
+    fun findAllByStatusOrderByDataEnvioAsc(status: StatusManutencao): List<ManutencaoEntity>
+
     fun findAllByTagIdOrderByDataEnvioDescIdDesc(tagId: Long): List<ManutencaoEntity>
 }

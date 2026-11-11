@@ -66,6 +66,10 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
     @Query("select t.localId, count(t) from TagEntity t where t.localId is not null and t.situacao not in (org.example.model.SituacaoBem.BAIXADO, org.example.model.SituacaoBem.VENDIDO) group by t.localId")
     fun contarPorLocal(): List<Array<Any>>
 
+    /** Painel do dia (1.13.0): quantos equipamentos em cada situação. */
+    @Query("select t.situacao, count(t) from TagEntity t group by t.situacao")
+    fun contarPorSituacao(): List<Array<Any>>
+
     @Query("select t.responsavelId, count(t) from TagEntity t where t.responsavelId is not null and t.situacao not in (org.example.model.SituacaoBem.BAIXADO, org.example.model.SituacaoBem.VENDIDO) group by t.responsavelId")
     fun contarPorResponsavel(): List<Array<Any>>
 

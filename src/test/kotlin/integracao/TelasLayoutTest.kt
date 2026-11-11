@@ -51,7 +51,9 @@ class TelasLayoutTest : IntegracaoBase() {
             "/admin/transferencias", "/admin/transferencias/nova",
             // 1.11.0: manutenção; 1.12.0: locadora (o valor patrimonial da 1.8.0 saiu)
             "/admin/manutencoes", "/admin/manutencoes/nova",
-            "/admin/pedidos", "/admin/pedidos/novo", "/admin/pedidos/devolucoes", "/admin/clientes"
+            "/admin/pedidos", "/admin/pedidos/novo", "/admin/pedidos/devolucoes", "/admin/clientes",
+            // 1.13.0: painel do dia (na tela inicial) e disponibilidade
+            "/dashboard", "/admin/disponibilidade"
         ).forEach { url ->
             val resposta = mvc.perform(get(url).with(admin)).andReturn().response
             conferir(url, resposta)

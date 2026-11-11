@@ -95,6 +95,7 @@ administrador; depois disso essa tela não aparece mais.
 | PDFs (1.8.0): laudo do inventário · guia · termo | `/admin/inventarios/{id}/laudo.pdf` · `/admin/transferencias/{id}/guia.pdf` · `/admin/responsaveis/{id}/termo.pdf` | as mesmas da tela de onde saem (Leituras · Ver; RFID · Ver; Catálogo · Ver e RFID · Ver) |
 | Manutenções (1.11.0): lista (abertas, atrasadas, encerradas) · nova · a ordem (concluir ou cancelar) · ordem em PDF | `/admin/manutencoes` · `/admin/manutencoes/nova` · `/admin/manutencoes/{id}` · `/admin/manutencoes/{id}/ordem.pdf` | RFID · Ver (abrir, concluir e cancelar exigem RFID · Editar) |
 | Pedidos de locação (1.12.0): lista · novo · o pedido (linhas, saída, devolução, conferência) · devoluções a conferir · contrato em PDF | `/admin/pedidos` · `/admin/pedidos/novo` · `/admin/pedidos/{id}` · `/admin/pedidos/devolucoes` · `/admin/pedidos/{id}/contrato.pdf` | RFID · Ver (o resto exige RFID · Editar) |
+| Disponibilidade por tipo e modelo (1.13.0); o painel do dia fica na tela Início (`/dashboard`) | `/admin/disponibilidade` | RFID · Ver |
 | Clientes (1.12.0) | `/admin/clientes` | RFID · Ver (cadastrar e alterar exigem RFID · Editar) |
 | Venda do equipamento (1.12.0), na edição da etiqueta | `/admin/etiquetas/{id}/venda` · `/admin/etiquetas/{id}/venda/desfazer` | RFID · Editar |
 | Fotos e anexos do bem (1.9.0), na edição da etiqueta: enviar e excluir · abrir ou baixar | `/admin/etiquetas/{id}/anexos` · `/admin/etiquetas/{id}/anexos/{anexo}` | RFID · Editar · RFID · Ver |
@@ -298,6 +299,19 @@ data de envio e a previsão de retorno.
   emprestado. Nas divergências do inventário, o bem em manutenção que faltou fica como está.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
+
+### Painel do dia e disponibilidade (1.13.0)
+
+Pensados para o uso interno da equipe. Só leitura, com RFID · Ver.
+
+- **Painel do dia** (tela **Início**): quantos equipamentos estão disponíveis, alugados, esperando a conferência e em
+  manutenção; os pedidos a **separar e entregar** (saída prevista até amanhã, já passada ou sem data, com quantos
+  faltam); as **devoluções** atrasadas e as previstas para hoje; e as **manutenções** com o retorno atrasado. Cada
+  número leva à tela correspondente.
+- **Disponibilidade** (menu): por tipo e por marca/modelo, quantos estão disponíveis, alugados, em devolução, em
+  manutenção e à venda; quantos alugados **voltam até** uma data escolhida; quantos já estão **comprometidos** nas
+  vagas dos pedidos a separar; e os **livres** (disponíveis menos os comprometidos, por tipo; negativo = os pedidos
+  abertos pedem mais do que há). Filtro por tipo.
 
 ### Locadora: clientes, pedidos de locação e venda (1.12.0)
 
