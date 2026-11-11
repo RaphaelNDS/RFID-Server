@@ -1,6 +1,8 @@
 package org.example.integracao
 
 import org.assertj.core.api.Assertions.assertThat
+import org.example.model.Acao
+import org.example.model.Modulo
 import org.example.request.MarcaRequest
 import org.example.request.ModeloRequest
 import org.example.request.TipoEquipamentoRequest
@@ -9,8 +11,6 @@ import org.example.service.RfidService
 import org.example.suporte.IntegracaoBase
 import org.example.suporte.OperadorTeste
 import org.example.suporte.comoOperador
-import org.example.model.Acao
-import org.example.model.Modulo
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired

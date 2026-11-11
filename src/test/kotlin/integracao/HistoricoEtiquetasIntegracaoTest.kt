@@ -1,8 +1,8 @@
 package org.example.integracao
 
 import org.assertj.core.api.Assertions.assertThat
-import org.example.model.AcaoHistorico
 import org.example.model.Acao
+import org.example.model.AcaoHistorico
 import org.example.model.Modulo
 import org.example.repository.HistoricoEtiquetaRepository
 import org.example.repository.TagRepository

@@ -8,6 +8,7 @@ import org.example.model.UsuarioEntity
 import org.example.repository.SessaoOperadorRepository
 import org.example.repository.UserRepository
 import org.example.security.UserPrincipal
+import org.example.util.HoraColetor
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
@@ -289,11 +290,11 @@ class SessaoOperadorService(
      * do lote: o OperadorFilter só confere o X-Momento, e o corpo podia trazer qualquer data passada (ex.: uma leitura
      * de 2025 gravada no período antigo dos relatórios). Hora ausente ou no futuro vale como "agora".
      */
-    fun conferirHorasDoColetor(token: String, dispositivo: String, horas: List<java.time.OffsetDateTime?>): Map<Int, SessaoInvalidaException> {
+    fun conferirHorasDoColetor(token: String, dispositivo: String, horas: List<OffsetDateTime?>): Map<Int, SessaoInvalidaException> {
         if (horas.isEmpty() || token.isBlank()) return emptyMap()
         val agora = LocalDateTime.now(relogio)
         // null = sem hora do coletor (ausente ou no futuro): vale agora, sem a margem de relógio
-        val momentos = horas.map { org.example.util.HoraColetor.aceita(it, agora) }
+        val momentos = horas.map { HoraColetor.aceita(it, agora) }
         return try {
             conferirMomentos(token, dispositivo, momentos)
         } catch (e: SessaoInvalidaException) {
@@ -449,7 +450,7 @@ class SessaoOperadorService(
         const val MENSAGEM_SO_ADMIN_PIN = "Só um administrador pode liberar o PIN das Configurações do coletor."
 
         /** Diferença aceita entre o relógio do coletor e o do servidor. */
-        val TOLERANCIA: Duration = org.example.util.HoraColetor.TOLERANCIA
+        val TOLERANCIA: Duration = HoraColetor.TOLERANCIA
 
         /**
          * Margem depois do "Sair" ou de outro login no mesmo coletor para as ações com a hora do coletor adiantada

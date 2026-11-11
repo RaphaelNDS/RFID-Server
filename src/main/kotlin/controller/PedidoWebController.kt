@@ -1,11 +1,15 @@
 package org.example.controller
 
 import org.example.model.EstadoDevolucao
+import org.example.service.AcessorioService
+import org.example.service.AuthService
 import org.example.service.CatalogoService
 import org.example.service.DadosPedido
 import org.example.service.FiltroPedido
 import org.example.service.LocacaoService
 import org.example.service.PdfService
+import org.example.service.QuantidadesAcessorio
+import org.example.util.FormatoBr
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.ResponseEntity
@@ -34,9 +38,9 @@ class PedidoWebController(
     private val service: LocacaoService,
     private val catalogo: CatalogoService,
     private val pdf: PdfService,
-    private val auth: org.example.service.AuthService,
+    private val auth: AuthService,
     // 1.18.0: kits e acessórios
-    private val acessorios: org.example.service.AcessorioService
+    private val acessorios: AcessorioService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -195,7 +199,7 @@ class PedidoWebController(
         redirect: RedirectAttributes
     ): String = acao(id, redirect) {
         val p = service.prorrogar(id, dia(data, "devolução"), motivo)
-        "Devolução prevista mudada para ${org.example.util.FormatoBr.data(p.previsaoDevolucao)}. A mudança ficou no histórico do pedido."
+        "Devolução prevista mudada para ${FormatoBr.data(p.previsaoDevolucao)}. A mudança ficou no histórico do pedido."
     }
 
     @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
@@ -227,7 +231,7 @@ class PedidoWebController(
                     it.toIntOrNull() ?: throw IllegalArgumentException("Quantidade inválida: $it")
                 }
                 val ids = campos.keys.mapNotNull { Regex("^(enviada|devolvida)_(\\d+)$").find(it)?.groupValues?.get(2)?.toLong() }.toSet()
-                val lista = acessorios.registrar(id, ids.associateWith { org.example.service.QuantidadesAcessorio(numero("enviada_$it"), numero("devolvida_$it")) })
+                val lista = acessorios.registrar(id, ids.associateWith { QuantidadesAcessorio(numero("enviada_$it"), numero("devolvida_$it")) })
                 val faltam = lista.sumOf { it.faltando }
                 "Acessórios registrados." + if (faltam > 0) " Faltam voltar $faltam." else ""
             }

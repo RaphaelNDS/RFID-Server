@@ -1,6 +1,8 @@
 package org.example.controller
 
+import org.example.service.AcessorioService
 import org.example.service.RelatorioLocacaoService
+import org.example.util.FormatoBr
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -13,7 +15,7 @@ import java.time.LocalDate
 class RelatorioLocacaoWebController(
     private val service: RelatorioLocacaoService,
     // 1.18.0: acessórios que não voltaram
-    private val acessorios: org.example.service.AcessorioService
+    private val acessorios: AcessorioService
 ) {
 
     @PreAuthorize("@authService.temPermissao('LOCACAO','READ')")
@@ -34,7 +36,7 @@ class RelatorioLocacaoWebController(
         model.addAttribute("r", r)
         model.addAttribute("acessoriosACobrar", acessorios.aCobrar())
         model.addAttribute("hoje", service.hoje())
-        model.addAttribute("fmt", org.example.util.FormatoBr)
+        model.addAttribute("fmt", FormatoBr)
         return "relatorios-locacao"
     }
 }

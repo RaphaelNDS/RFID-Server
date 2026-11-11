@@ -3,7 +3,6 @@ package org.example.integracao
 import org.example.suporte.IntegracaoBase
 import org.example.suporte.Perfis
 import org.hamcrest.Matchers.containsString
-import org.hamcrest.Matchers.not
 import org.junit.jupiter.api.Test
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get

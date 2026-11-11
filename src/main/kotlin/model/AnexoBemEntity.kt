@@ -2,6 +2,7 @@ package org.example.model
 
 import jakarta.persistence.*
 import java.time.LocalDateTime
+import java.util.Locale
 
 /**
  * Tipo do anexo, reconhecido pelos primeiros bytes do arquivo (não pela extensão nem pelo que o navegador diz).
@@ -61,7 +62,7 @@ class AnexoBemEntity(
 
     /** "1,2 MB", "350 KB". */
     val tamanhoRotulo: String get() = when {
-        tamanhoBytes >= 1024 * 1024 -> String.format(java.util.Locale.forLanguageTag("pt-BR"), "%.1f MB", tamanhoBytes / (1024.0 * 1024.0))
+        tamanhoBytes >= 1024 * 1024 -> String.format(Locale.forLanguageTag("pt-BR"), "%.1f MB", tamanhoBytes / (1024.0 * 1024.0))
         tamanhoBytes >= 1024 -> "${tamanhoBytes / 1024} KB"
         else -> "$tamanhoBytes bytes"
     }

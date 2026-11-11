@@ -7,6 +7,7 @@ import io.mockk.verify
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.example.model.*
+import org.example.model.SituacaoBem
 import org.example.repository.*
 import org.example.request.CadastroRequest
 import org.junit.jupiter.api.Test
@@ -165,7 +166,7 @@ class RfidServiceTest {
 
         service.listarParaAdmin("  DeLL ", 2)
 
-        verify { tagRepo.buscar("%dell%", setOf(-1L), setOf(2L), setOf(-1L), setOf(-1L), setOf(-1L), org.example.model.SituacaoBem.NO_ACERVO, -1L, -1L, any()) }
+        verify { tagRepo.buscar("%dell%", setOf(-1L), setOf(2L), setOf(-1L), setOf(-1L), setOf(-1L), SituacaoBem.NO_ACERVO, -1L, -1L, any()) }
         assertThat(pagina.captured.pageNumber).isEqualTo(2)
         assertThat(pagina.captured.pageSize).isEqualTo(RfidService.TAMANHO_PAGINA)
         assertThat(pagina.captured.sort.getOrderFor("id")?.isDescending).isTrue()

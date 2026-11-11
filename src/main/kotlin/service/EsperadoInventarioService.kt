@@ -1,7 +1,9 @@
 package org.example.service
 
 import org.example.model.InventarioEntity
+import org.example.model.SituacaoBem
 import org.example.model.StatusInventario
+import org.example.model.TagEntity
 import org.example.repository.InventarioItemRepository
 import org.example.repository.InventarioRepository
 import org.example.repository.LocalRepository
@@ -12,6 +14,7 @@ import org.example.repository.TipoEquipamentoRepository
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.Clock
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -65,7 +68,7 @@ class EsperadoInventarioService(
     private val tipos: TipoEquipamentoRepository,
     private val marcas: MarcaRepository,
     private val modelos: ModeloRepository,
-    private val relogio: java.time.Clock = java.time.Clock.systemDefaultZone()
+    private val relogio: Clock = Clock.systemDefaultZone()
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -149,9 +152,9 @@ class EsperadoInventarioService(
         // 1.6.0: fora da referência ficam as baixadas e as que o cadastro põe em outro local (o local do bem é o do
         // cadastro, atualizado também pelos inventários finalizados). Entram as cadastradas neste local, mesmo sem
         // terem aparecido na referência (bem novo, ou local que ainda não teve inventário)
-        val doCadastro = tags.findAllByLocalIdAndSituacaoNotIn(localId, org.example.model.SituacaoBem.FORA_DO_ESPERADO)
+        val doCadastro = tags.findAllByLocalIdAndSituacaoNotIn(localId, SituacaoBem.FORA_DO_ESPERADO)
         val noCadastro = doCadastro.map { it.tagReal }.toSet()
-        val referenciaNaoBaixada = daReferencia.filter { it.situacao !in org.example.model.SituacaoBem.FORA_DO_ESPERADO && it.tagReal !in noCadastro }
+        val referenciaNaoBaixada = daReferencia.filter { it.situacao !in SituacaoBem.FORA_DO_ESPERADO && it.tagReal !in noCadastro }
 
         // Em outro local: o cadastro põe o bem em outro local (mudado na web, ou por um inventário finalizado de lá), ou,
         // sem local no cadastro, um inventário finalizado de outro local o encontrou depois da referência
@@ -178,7 +181,7 @@ class EsperadoInventarioService(
         val nomesTipo = tipos.findAllById(cadastroAgora.mapNotNull { it.tipoEquipamentoId }.toSet()).associate { it.id to it.nome }
         val nomesMarca = marcas.findAllById(cadastroAgora.mapNotNull { it.marcaId }.toSet()).associate { it.id to it.nome }
         val nomesModelo = modelos.findAllById(cadastroAgora.mapNotNull { it.modeloId }.toSet()).associate { it.id to it.nome }
-        fun item(t: org.example.model.TagEntity) = ItemEsperado(
+        fun item(t: TagEntity) = ItemEsperado(
             tag = t.tagReal,
             patrimonio = t.patrimonio.ifBlank { null },
             codigoInterno = t.codigoInterno.ifBlank { null },

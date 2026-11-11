@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service
 import java.time.Clock
 import java.time.Duration
 import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 /** Como o coletor está, pelo último contato. */
@@ -37,7 +39,7 @@ data class DiagnosticoColetor(
     val versaoAndroid: String? = null,
     val modelo: String? = null,
     /** Hora do aparelho no momento da requisição (X-Relogio-Coletor). */
-    val relogioColetor: java.time.OffsetDateTime? = null
+    val relogioColetor: OffsetDateTime? = null
 ) {
     val vazio: Boolean
         get() = !filaInformada && ultimaSincOk == null && espacoLivreMb == null && versaoAndroid == null &&
@@ -353,7 +355,7 @@ class ColetorService(
         }
 
         fun descreverEspaco(mb: Long): String =
-            if (mb < 1024) "$mb MB" else String.format(java.util.Locale.forLanguageTag("pt-BR"), "%.1f GB", mb / 1024.0)
+            if (mb < 1024) "$mb MB" else String.format(Locale.forLanguageTag("pt-BR"), "%.1f GB", mb / 1024.0)
 
         fun descreverVersao(versaoApp: String?, codigoVersao: Int?): String = when {
             versaoApp == null && codigoVersao == null -> "sem versão (anterior à 1.4.0)"

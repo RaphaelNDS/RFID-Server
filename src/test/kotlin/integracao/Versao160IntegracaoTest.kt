@@ -17,6 +17,7 @@ import org.example.suporte.OperadorTeste
 import org.example.suporte.Perfis
 import org.example.suporte.comoOperador
 import org.example.util.FormatoPlanilha
+import org.example.util.GeradorPlanilha
 import org.example.util.Planilha
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.not
@@ -180,7 +181,7 @@ class Versao160IntegracaoTest : IntegracaoBase() {
     // ---------- Telas ----------
 
     @Test
-    fun `telas de locais responsaveis termo e etiquetas com filtros`() {
+    fun `telas de locais e etiquetas com filtros (responsaveis e termo sairam na 1_18_1)`() {
         val unidade = cadastros.salvarUnidade(null, "Unidade $s")
         val local = cadastros.salvarLocal(null, "Sala T $s", unidade.id)
         val r = cadastros.salvarResponsavel(null, "Ana $s", "Compras", "A$s", null)
@@ -188,12 +189,8 @@ class Versao160IntegracaoTest : IntegracaoBase() {
 
         mvc.perform(get("/admin/locais").with(Perfis.gestor())).andExpect(status().isOk)
             .andExpect(content().string(containsString("Unidade $s"))).andExpect(content().string(containsString("Sala T $s")))
-        mvc.perform(get("/admin/responsaveis").with(Perfis.gestor())).andExpect(status().isOk)
-            .andExpect(content().string(containsString("Ana $s"))).andExpect(content().string(containsString("/admin/responsaveis/${r.id}/termo")))
-        mvc.perform(get("/admin/responsaveis/${r.id}/termo").with(Perfis.gestor())).andExpect(status().isOk)
-            .andExpect(content().string(containsString("Termo de responsabilidade pela guarda de bens")))
-            .andExpect(content().string(containsString("P-E-TELA-$s")))
-            .andExpect(content().string(containsString("Unidade $s › Sala T $s")))
+        mvc.perform(get("/admin/responsaveis").with(Perfis.gestor())).andExpect(status().isNotFound)
+        mvc.perform(get("/admin/responsaveis/${r.id}/termo").with(Perfis.gestor())).andExpect(status().isNotFound)
         mvc.perform(get("/admin/tags-cadastradas").param("local", local.id.toString()).with(Perfis.gestor())).andExpect(status().isOk)
             .andExpect(content().string(containsString("E-TELA-$s")))   // 1.12.0: o responsável saiu da lista
             .andExpect(content().string(containsString("situacao=")).let { content().string(containsString("local=${local.id}")) })
@@ -207,9 +204,6 @@ class Versao160IntegracaoTest : IntegracaoBase() {
             .andExpect(status().is3xxRedirection)
         assertThat(cadastros.localPorNome("Sala Web $s", null, criar = false)?.unidadeId).isEqualTo(unidade.id)
         mvc.perform(post("/admin/locais").with(Perfis.usuario()).with(csrf()).param("nome", "Proibido $s")).andExpect(status().isForbidden)
-        mvc.perform(post("/admin/responsaveis").with(Perfis.gestor()).with(csrf()).param("nome", "Bruno $s").param("matricula", "A$s"))
-            .andExpect(status().is3xxRedirection)
-        mvc.perform(get("/admin/responsaveis").with(Perfis.gestor())).andExpect(content().string(containsString("já é de Ana $s")).let { status().isOk })
     }
 
     // ---------- Importação ----------
@@ -264,7 +258,7 @@ class Versao160IntegracaoTest : IntegracaoBase() {
         // Exportação (xlsx) → importação: o que veio do cadastro volta igual ("sem mudança")
         val local = cadastros.salvarLocal(null, "Sala X $s", null)
         cadastrar("E-VOLTA-$s", localId = local.id)
-        val exportada = org.example.util.GeradorPlanilha.gerar(Planilha("Etiquetas", listOf("Etiqueta (EPC)", "Código", "Patrimônio", "Local", "Situação", "Última leitura"),
+        val exportada = GeradorPlanilha.gerar(Planilha("Etiquetas", listOf("Etiqueta (EPC)", "Código", "Patrimônio", "Local", "Situação", "Última leitura"),
             listOf(listOf("E-VOLTA-$s", "TI-E-VOLTA-$s", "P-E-VOLTA-$s", "Sala X $s", "Em uso", null))), FormatoPlanilha.XLSX)
         val volta = importacao.processar("etiquetas.xlsx", exportada, criarFaltantes = false, podeAlterar = true, gravar = false)
         assertThat(volta.linhas.single().acao.name).isEqualTo("SEM_MUDANCA")

@@ -1,10 +1,20 @@
 package org.example.controller
 
+import org.example.model.AreaAuditoria
+import org.example.model.MotivoBaixa
+import org.example.model.SituacaoBem
 import org.example.request.CadastroRequest
+import org.example.service.AnexoBemService
+import org.example.service.AuditoriaService
 import org.example.service.CatalogoService
-import org.example.service.HistoricoEtiquetaService
 import org.example.service.EdicaoConcorrenteException
+import org.example.service.HistoricoEtiquetaService
+import org.example.service.LocacaoService
+import org.example.service.ManutencaoService
+import org.example.service.PatrimonioCadastrosService
 import org.example.service.RfidService
+import org.example.service.VendaService
+import org.example.util.FormatoBr
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -15,6 +25,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import java.time.LocalDate
 
 /**
  * Edição, exclusão e histórico das etiquetas cadastradas. Permissões do módulo RFID: Editar para alterar,
@@ -26,15 +37,15 @@ class EtiquetaWebController(
     private val rfidService: RfidService,
     private val catalogoService: CatalogoService,
     private val historico: HistoricoEtiquetaService,
-    private val cadastros: org.example.service.PatrimonioCadastrosService? = null,
-    private val auditoria: org.example.service.AuditoriaService? = null,
+    private val cadastros: PatrimonioCadastrosService? = null,
+    private val auditoria: AuditoriaService? = null,
     // 1.9.0: fotos e anexos do bem
-    private val anexos: org.example.service.AnexoBemService? = null,
+    private val anexos: AnexoBemService? = null,
     // 1.11.0: manutenções do bem
-    private val manutencoes: org.example.service.ManutencaoService? = null,
+    private val manutencoes: ManutencaoService? = null,
     // 1.12.0: venda e clientes (locadora)
-    private val vendas: org.example.service.VendaService? = null,
-    private val locacao: org.example.service.LocacaoService? = null
+    private val vendas: VendaService? = null,
+    private val locacao: LocacaoService? = null
 ) {
 
     /** Venda (1.12.0): cliente opcional, valor como a pessoa digitou, data vazia = hoje. */
@@ -50,7 +61,7 @@ class EtiquetaWebController(
     ): String {
         try {
             val dia = data?.trim()?.takeIf { it.isNotEmpty() }?.let {
-                runCatching { java.time.LocalDate.parse(it) }.getOrElse { throw IllegalArgumentException("Data da venda inválida") }
+                runCatching { LocalDate.parse(it) }.getOrElse { throw IllegalArgumentException("Data da venda inválida") }
             }
             val v = requireNotNull(vendas).vender(id, cliente?.takeIf { it > 0 }, valor, dia, observacao)
             redirect.addFlashAttribute("msg", "Venda registrada (nº ${v.id}): o equipamento está Vendido.")
@@ -85,7 +96,7 @@ class EtiquetaWebController(
             tag = tag.tagReal, codigoInterno = tag.codigoInterno, patrimonio = tag.patrimonio, numeroSerie = tag.numeroSerie,
             tipoEquipamentoId = tag.tipoEquipamentoId, marcaId = tag.marcaId, modeloId = tag.modeloId, versao = tag.versao,
             localId = tag.localId, responsavelId = tag.responsavelId, situacao = tag.situacao.name,
-            valorAquisicao = tag.valorAquisicao?.let { org.example.util.FormatoBr.numero(it) },
+            valorAquisicao = tag.valorAquisicao?.let { FormatoBr.numero(it) },
             dataAquisicao = tag.dataAquisicao?.toString(), notaFiscal = tag.notaFiscal
         ))
         return formulario(id, RetornoLista.de(busca, pagina), model)
@@ -163,12 +174,12 @@ class EtiquetaWebController(
         @RequestParam(required = false) observacao: String?,
         redirect: RedirectAttributes
     ): String = try {
-        val m = org.example.model.MotivoBaixa.de(motivo) ?: throw IllegalArgumentException("Escolha o motivo da baixa")
+        val m = MotivoBaixa.de(motivo) ?: throw IllegalArgumentException("Escolha o motivo da baixa")
         val dia = data?.trim()?.takeIf { it.isNotEmpty() }?.let {
-            runCatching { java.time.LocalDate.parse(it) }.getOrElse { throw IllegalArgumentException("Data da baixa inválida") }
+            runCatching { LocalDate.parse(it) }.getOrElse { throw IllegalArgumentException("Data da baixa inválida") }
         }
         val tag = rfidService.darBaixa(id, m, dia, observacao)
-        auditoria?.registrar(org.example.model.AreaAuditoria.CATALOGO, "Baixa de bem", "${tag.tagReal} (patrimônio ${tag.patrimonio.ifBlank { "—" }})",
+        auditoria?.registrar(AreaAuditoria.CATALOGO, "Baixa de bem", "${tag.tagReal} (patrimônio ${tag.patrimonio.ifBlank { "—" }})",
             "${m.rotulo} em ${tag.baixaEm}${tag.baixaObservacao?.let { " · $it" } ?: ""}")
         redirect.addFlashAttribute("msg", "Baixa do bem ${tag.patrimonio.ifBlank { tag.tagReal }} registrada (${m.rotulo}). Ele continua no filtro \"Baixados\" e no histórico.")
         "redirect:/admin/tags-cadastradas"
@@ -181,7 +192,7 @@ class EtiquetaWebController(
     @PostMapping("/{id}/baixa/desfazer")
     fun desfazerBaixa(@PathVariable id: Long, redirect: RedirectAttributes): String = try {
         val tag = rfidService.desfazerBaixa(id)
-        auditoria?.registrar(org.example.model.AreaAuditoria.CATALOGO, "Baixa de bem desfeita", "${tag.tagReal} (patrimônio ${tag.patrimonio.ifBlank { "—" }})")
+        auditoria?.registrar(AreaAuditoria.CATALOGO, "Baixa de bem desfeita", "${tag.tagReal} (patrimônio ${tag.patrimonio.ifBlank { "—" }})")
         redirect.addFlashAttribute("msg", "Baixa desfeita: o bem ${tag.patrimonio.ifBlank { tag.tagReal }} voltou a ficar Em uso.")
         "redirect:/admin/etiquetas/$id/editar"
     } catch (e: IllegalArgumentException) {
@@ -200,10 +211,10 @@ class EtiquetaWebController(
         // Gestão de patrimônio (1.6.0): inclui os desativados (o bem pode já estar num deles)
         model.addAttribute("opcoesLocal", cadastros?.opcoesDeLocal(incluirInativos = true).orEmpty())
         model.addAttribute("opcoesResponsavel", cadastros?.listarResponsaveis().orEmpty())
-        model.addAttribute("situacoesEditaveis", org.example.model.SituacaoBem.EDITAVEIS)
-        model.addAttribute("motivosBaixa", org.example.model.MotivoBaixa.entries)
-        model.addAttribute("hoje", java.time.LocalDate.now())
-        model.addAttribute("fmt", org.example.util.FormatoBr)
+        model.addAttribute("situacoesEditaveis", SituacaoBem.EDITAVEIS)
+        model.addAttribute("motivosBaixa", MotivoBaixa.entries)
+        model.addAttribute("hoje", LocalDate.now())
+        model.addAttribute("fmt", FormatoBr)
         model.addAttribute("anexos", anexos?.listar(id).orEmpty())
         model.addAttribute("anexoMaximo", anexos?.maximoRotulo)
         model.addAttribute("anexoMaximoPorBem", anexos?.maximoPorBem)

@@ -107,8 +107,6 @@ class PatrimonioCadastrosService(
 
     fun responsaveisAtivos(): List<ResponsavelEntity> = listarResponsaveis().filter { it.ativo }
 
-    fun bensPorResponsavel(): Map<Long, Long> = tags.contarPorResponsavel().associate { (it[0] as Number).toLong() to (it[1] as Number).toLong() }
-
     fun responsavel(id: Long): ResponsavelEntity = responsaveis.findById(id).orElseThrow { NoSuchElementException("Responsável $id não encontrado") }
 
     @Transactional

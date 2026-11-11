@@ -3,8 +3,8 @@ package org.example.integracao
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
 import org.example.model.Acao
-import org.example.model.MotivoBaixa
 import org.example.model.Modulo
+import org.example.model.MotivoBaixa
 import org.example.model.SituacaoBem
 import org.example.repository.HistoricoEtiquetaRepository
 import org.example.repository.TagRepository

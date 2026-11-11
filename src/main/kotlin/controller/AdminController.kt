@@ -1,8 +1,11 @@
 package org.example.controller
 
 import org.example.model.AreaAuditoria
+import org.example.model.SituacaoBem
 import org.example.service.AuditoriaService
 import org.example.service.BackupService
+import org.example.service.FiltroEtiquetas
+import org.example.service.PatrimonioCadastrosService
 import org.example.service.RfidService
 import org.example.service.StatusService
 import org.slf4j.LoggerFactory
@@ -25,7 +28,7 @@ class AdminController(
     private val statusService: StatusService,
     private val backupService: BackupService,
     private val auditoria: AuditoriaService,
-    private val cadastros: org.example.service.PatrimonioCadastrosService? = null
+    private val cadastros: PatrimonioCadastrosService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -66,7 +69,7 @@ class AdminController(
         val resultado = rfidService.listarParaAdmin(busca, pagina - 1, filtro)
         model.addAttribute("tags", resultado.content)
         model.addAttribute("filtro", filtro)
-        model.addAttribute("situacoes", org.example.model.SituacaoBem.entries)
+        model.addAttribute("situacoes", SituacaoBem.entries)
         model.addAttribute("opcoesLocal", cadastros?.opcoesDeLocal(incluirInativos = true).orEmpty())
         model.addAttribute("opcoesResponsavel", cadastros?.listarResponsaveis().orEmpty())
         paginacao(model, resultado, "/admin/tags-cadastradas", busca, filtro.parametros())
@@ -90,15 +93,15 @@ class AdminController(
 
     companion object {
         /** Filtros da tela (e da exportação): valor inválido é ignorado, nunca erro. */
-        fun filtro(situacao: String?, local: Long?, responsavel: Long?, baixados: Boolean?) = org.example.service.FiltroEtiquetas(
-            situacao = org.example.model.SituacaoBem.de(situacao),
+        fun filtro(situacao: String?, local: Long?, responsavel: Long?, baixados: Boolean?) = FiltroEtiquetas(
+            situacao = SituacaoBem.de(situacao),
             localId = local?.takeIf { it > 0 },
             responsavelId = responsavel?.takeIf { it > 0 },
             incluirBaixados = baixados == true
         )
 
         /** Os filtros como parâmetros de link (paginação e exportação); só os escolhidos. */
-        fun org.example.service.FiltroEtiquetas.parametros(): Map<String, Any?> = linkedMapOf<String, Any?>(
+        fun FiltroEtiquetas.parametros(): Map<String, Any?> = linkedMapOf<String, Any?>(
             "situacao" to situacao?.name, "local" to localId, "responsavel" to responsavelId, "baixados" to if (incluirBaixados) true else null
         ).filterValues { it != null }
     }

@@ -2,6 +2,7 @@ package org.example.repository
 
 import org.example.model.InventarioEntity
 import org.example.model.InventarioItemEntity
+import org.example.model.JustificativaInventarioEntity
 import org.example.model.LocalEntity
 import org.example.model.StatusInventario
 import org.springframework.data.domain.Page
@@ -9,6 +10,7 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.time.LocalDateTime
 import java.util.Optional
 
 interface LocalRepository : JpaRepository<LocalEntity, Long> {
@@ -37,12 +39,12 @@ interface InventarioRepository : JpaRepository<InventarioEntity, String> {
     /** Inventário finalizado do local imediatamente antes de [antes] (outro que não [id]): base da comparação na web.
      *  Empate no horário de fim: vale o de maior id, para o resultado não variar. */
     fun findFirstByLocalIdAndStatusAndFinalizadoEmBeforeAndIdNotOrderByFinalizadoEmDescIdDesc(
-        localId: Long, status: StatusInventario, antes: java.time.LocalDateTime, id: String
+        localId: Long, status: StatusInventario, antes: LocalDateTime, id: String
     ): InventarioEntity?
 }
 
-interface JustificativaInventarioRepository : JpaRepository<org.example.model.JustificativaInventarioEntity, Long> {
-    fun findByInventarioId(inventarioId: String): List<org.example.model.JustificativaInventarioEntity>
+interface JustificativaInventarioRepository : JpaRepository<JustificativaInventarioEntity, Long> {
+    fun findByInventarioId(inventarioId: String): List<JustificativaInventarioEntity>
 }
 
 interface InventarioItemRepository : JpaRepository<InventarioItemEntity, Long> {
@@ -57,7 +59,7 @@ interface InventarioItemRepository : JpaRepository<InventarioItemEntity, Long> {
              and i.localId <> :localId and i.finalizadoEm > :desde and i.finalizadoEm < :ate and it.tag in :tags"""
     )
     fun encontradasEmOutroLocal(@Param("tags") tags: Collection<String>, @Param("localId") localId: Long,
-                                @Param("desde") desde: java.time.LocalDateTime, @Param("ate") ate: java.time.LocalDateTime): List<Array<Any?>>
+                                @Param("desde") desde: LocalDateTime, @Param("ate") ate: LocalDateTime): List<Array<Any?>>
 
     /** Último inventário FINALIZADO em que a etiqueta foi encontrada: [nome do local, finalizadoEm] (ficha do bem). */
     @Query(

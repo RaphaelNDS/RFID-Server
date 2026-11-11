@@ -7,8 +7,8 @@ import org.example.repository.UserRepository
 import org.example.request.SetupAdminRequest
 import org.example.service.UsuarioService
 import org.example.suporte.IntegracaoBase
-import org.example.suporte.Perfis
 import org.example.suporte.OperadorTeste
+import org.example.suporte.Perfis
 import org.example.suporte.comoOperador
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test

@@ -1,8 +1,8 @@
 package org.example.model
 
 import com.fasterxml.jackson.annotation.JsonBackReference
-import jakarta.persistence.*
 import com.fasterxml.jackson.annotation.JsonManagedReference
+import jakarta.persistence.*
 
 @Entity
 @Table(name = "marca")

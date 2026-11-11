@@ -1,6 +1,5 @@
 package org.example.service
 
-import org.springframework.transaction.annotation.Transactional
 import org.example.model.*
 import org.example.repository.UserRepository
 import org.example.request.CadastroUsuarioRequest
@@ -9,6 +8,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class UsuarioService(

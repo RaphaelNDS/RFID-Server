@@ -18,11 +18,12 @@ import org.example.request.CadastroRequest
 import org.example.service.ConclusaoManutencao
 import org.example.service.DadosCliente
 import org.example.service.DadosPedido
-import org.example.service.LocacaoService
 import org.example.service.FiltroManutencao
+import org.example.service.LocacaoService
 import org.example.service.ManutencaoService
 import org.example.service.PatrimonioCadastrosService
 import org.example.service.PedidoManutencao
+import org.example.service.ProblemaLeitura
 import org.example.service.RfidService
 import org.example.suporte.IntegracaoBase
 import org.example.suporte.Perfis
@@ -121,7 +122,7 @@ class Versao1110IntegracaoTest : IntegracaoBase() {
         locacao.adicionarLinha(pedido.id, null, null, null, null, "E-MN2-$s")
         val saida = locacao.registrarSaida(pedido.id, listOf("E-MN3-$s", "E-MN2-$s"))
         assertThat(saida.aceitos.map { it.tag!!.tagReal }).containsExactly("E-MN3-$s")
-        assertThat(saida.recusados.single().problema).isEqualTo(org.example.service.ProblemaLeitura.NAO_DISPONIVEL)
+        assertThat(saida.recusados.single().problema).isEqualTo(ProblemaLeitura.NAO_DISPONIVEL)
         assertThatThrownBy { abrir("E-MN3-$s") }.hasMessageContaining("Alugado")
 
         assertThatThrownBy { manutencoes.cancelar(ordem.id, " ") }.hasMessageContaining("motivo")

@@ -11,6 +11,10 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.filter.OncePerRequestFilter
 import java.security.MessageDigest
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Autentica os coletores Android pela chave enviada no header [HEADER].
@@ -24,7 +28,7 @@ import java.security.MessageDigest
  */
 class ChaveDispositivoFilter(
     chavesConfiguradas: String,
-    private val relogio: java.time.Clock = java.time.Clock.systemDefaultZone(),
+    private val relogio: Clock = Clock.systemDefaultZone(),
     /** Chaves erradas por IP, dentro de [JANELA_CHAVES_ERRADAS], até a recusa com 429. */
     private val maximoChavesErradas: Int = MAXIMO_CHAVES_ERRADAS
 ) : OncePerRequestFilter() {
@@ -36,20 +40,20 @@ class ChaveDispositivoFilter(
 
         /** Chaves erradas por IP até a recusa com 429 (quem tenta adivinhar a chave de um coletor). */
         const val MAXIMO_CHAVES_ERRADAS = 20
-        val JANELA_CHAVES_ERRADAS: java.time.Duration = java.time.Duration.ofMinutes(15)
+        val JANELA_CHAVES_ERRADAS: Duration = Duration.ofMinutes(15)
 
         /** Chave que funcionou de um IP há menos que isto continua passando com o IP bloqueado (NAT). */
-        val JANELA_CHAVE_CONHECIDA: java.time.Duration = java.time.Duration.ofHours(24)
+        val JANELA_CHAVE_CONHECIDA: Duration = Duration.ofHours(24)
 
         /** Texto da chave de exemplo (application.properties.exemplo): copiada sem trocar, a chave é pública. */
         private val CHAVE_DE_EXEMPLO = Regex("(?i)troque")
     }
 
     /** IP -> horários das chaves erradas dentro da janela. */
-    private val errosPorIp = java.util.concurrent.ConcurrentHashMap<String, ArrayDeque<java.time.Instant>>()
+    private val errosPorIp = ConcurrentHashMap<String, ArrayDeque<Instant>>()
 
     /** "coletor@IP" -> última vez que a chave daquele coletor funcionou daquele IP (passa mesmo com o IP bloqueado). */
-    private val sucessosPorColetorIp = java.util.concurrent.ConcurrentHashMap<String, java.time.Instant>()
+    private val sucessosPorColetorIp = ConcurrentHashMap<String, Instant>()
 
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -150,7 +154,7 @@ class ChaveDispositivoFilter(
         return ultimo.isAfter(relogio.instant().minus(JANELA_CHAVE_CONHECIDA))
     }
 
-    private fun descartarAntigos(erros: ArrayDeque<java.time.Instant>) {
+    private fun descartarAntigos(erros: ArrayDeque<Instant>) {
         val limite = relogio.instant().minus(JANELA_CHAVES_ERRADAS)
         while (erros.firstOrNull()?.isBefore(limite) == true) erros.removeFirst()
     }

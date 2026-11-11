@@ -11,6 +11,7 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.fileSize
 import kotlin.io.path.getLastModifiedTime
 import kotlin.io.path.isRegularFile
@@ -56,7 +57,7 @@ class BackupBancoService(
     private val log = LoggerFactory.getLogger(javaClass)
 
     /** Nome do dump → (tamanho conferido, resultado). Só INTEIRO e INCOMPLETO ficam guardados: o NAO_CONFERIDO tenta de novo. */
-    private val conferidos = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, ResultadoDump>>()
+    private val conferidos = ConcurrentHashMap<String, Pair<Long, ResultadoDump>>()
 
     private fun conferir(dump: Path): ResultadoDump {
         val c = conferencia?.takeIf { it.ligada } ?: return ResultadoDump.NAO_CONFERIDO

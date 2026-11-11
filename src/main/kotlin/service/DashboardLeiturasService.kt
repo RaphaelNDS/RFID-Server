@@ -6,7 +6,9 @@ import org.springframework.stereotype.Service
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import java.util.Locale
 
 data class PeriodoDashboard(
     val inicio: LocalDate,
@@ -127,8 +129,8 @@ class DashboardLeiturasService(
         const val DIAS_PADRAO = 7L
         /** Maior período do dashboard (um ano e um dia). */
         const val DIAS_MAXIMO = 366L
-        private val FORMATO_AVISO: java.time.format.DateTimeFormatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        private val FORMATO_AVISO: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
         private const val LIMITE_LENTO_MS = 1000L
-        private val LOCALE_BR = java.util.Locale.forLanguageTag("pt-BR")
+        private val LOCALE_BR = Locale.forLanguageTag("pt-BR")
     }
 }

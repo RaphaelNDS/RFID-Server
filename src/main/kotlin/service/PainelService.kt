@@ -104,10 +104,10 @@ class PainelService(
     fun painel(): PainelDoDia {
         val hoje = hoje()
         val amanha = hoje.plusDays(1)
-        val aSeparar = locacao.paraColetor(listOf(SituacaoPedido.ABERTO, SituacaoPedido.EM_SEPARACAO))
+        val aSeparar = locacao.porSituacao(listOf(SituacaoPedido.ABERTO, SituacaoPedido.EM_SEPARACAO))
             .filter { it.quantidade > it.saidos && (it.pedido.saidaPrevista == null || !it.pedido.saidaPrevista!!.isAfter(amanha)) }
             .map(::SaidaDoDia)
-        val naRua = locacao.paraColetor(listOf(SituacaoPedido.EM_SEPARACAO, SituacaoPedido.ENTREGUE, SituacaoPedido.DEVOLVIDO_PARCIAL))
+        val naRua = locacao.porSituacao(listOf(SituacaoPedido.EM_SEPARACAO, SituacaoPedido.ENTREGUE, SituacaoPedido.DEVOLVIDO_PARCIAL))
             .filter { it.naRua > 0 }
         val abertas = manutencoes.findAllByStatusOrderByDataEnvioAsc(StatusManutencao.ABERTA)
         return PainelDoDia(
@@ -134,7 +134,7 @@ class PainelService(
         val voltam = naRua.filter { previsoes[it.pedidoId]?.isAfter(data) == false }.mapNotNull { it.tagId }.toSet()
 
         // Vagas abertas nos pedidos a separar, por tipo (linha por bem específico conta no tipo do bem)
-        val separar = pedidos.paraColetor(listOf(SituacaoPedido.ABERTO, SituacaoPedido.EM_SEPARACAO)).filter { !it.separacaoConcluida }
+        val separar = pedidos.porSituacao(listOf(SituacaoPedido.ABERTO, SituacaoPedido.EM_SEPARACAO)).filter { !it.separacaoConcluida }
         val linhasSeparar = if (separar.isEmpty()) emptyList() else linhas.findAllByPedidoIdIn(separar.map { it.id })
         val saidosPorLinha = if (separar.isEmpty()) emptyMap() else itens.findAllByPedidoIdIn(separar.map { it.id }).groupingBy { it.linhaId }.eachCount()
         val aSepararPorTipo = linhasSeparar.groupBy { it.tipoEquipamentoId }

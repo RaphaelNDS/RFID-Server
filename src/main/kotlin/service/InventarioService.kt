@@ -1,25 +1,27 @@
 package org.example.service
 
-import org.springframework.data.domain.Page
-import org.springframework.http.HttpStatus
-import org.springframework.web.server.ResponseStatusException
-import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Sort
-import org.springframework.transaction.annotation.Transactional
 import org.example.model.InventarioEntity
 import org.example.model.InventarioItemEntity
+import org.example.model.JustificativaInventarioEntity
 import org.example.model.LocalEntity
+import org.example.model.MotivoFalta
+import org.example.model.SituacaoBem
 import org.example.model.StatusInventario
 import org.example.repository.InventarioItemRepository
 import org.example.repository.InventarioRepository
 import org.example.repository.JustificativaInventarioRepository
 import org.example.repository.LocalRepository
-import org.example.model.JustificativaInventarioEntity
-import org.example.model.MotivoFalta
+import org.example.repository.TagRepository
+import org.example.util.HoraColetor
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
+import org.springframework.web.server.ResponseStatusException
 import java.time.Clock
-import java.time.Duration
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -73,7 +75,7 @@ class InventarioService(
     private val justificativas: JustificativaInventarioRepository,
     private val relogio: Clock = Clock.systemDefaultZone(),
     // 1.6.0: o local do bem acompanha o inventário finalizado (opcionais para os testes que montam o serviço à mão)
-    private val tags: org.example.repository.TagRepository? = null,
+    private val tags: TagRepository? = null,
     private val historico: HistoricoEtiquetaService? = null
 ) {
 
@@ -192,11 +194,11 @@ class InventarioService(
         var atualizados = 0
         lidas.chunked(5_000).flatMap { repo.findAllByTagRealIn(it) }.filter { !it.foraDoAcervo }.forEach { tag ->
             val mudarLocal = tag.localId != inventario.localId
-            val achado = tag.situacao == org.example.model.SituacaoBem.EXTRAVIADO
+            val achado = tag.situacao == SituacaoBem.EXTRAVIADO
             if (!mudarLocal && !achado) return@forEach
             val antes = historico?.retrato(tag)
             tag.localId = inventario.localId
-            if (achado) tag.situacao = org.example.model.SituacaoBem.DISPONIVEL
+            if (achado) tag.situacao = SituacaoBem.DISPONIVEL
             repo.save(tag)
             if (antes != null) historico.registrarAlteracao(tag, antes)
             atualizados++
@@ -345,9 +347,9 @@ class InventarioService(
         val agora = LocalDateTime.now(relogio)
         if (hora == null) return agora
 
-        val local = org.example.util.HoraColetor.noFusoDoServidor(hora)
+        val local = HoraColetor.noFusoDoServidor(hora)
 
-        if (org.example.util.HoraColetor.noFuturo(local, agora)) {
+        if (HoraColetor.noFuturo(local, agora)) {
             log.warn("Data no futuro na {} ({}): relógio do coletor adiantado? Usando a hora do recebimento", descricao, hora)
             return agora
         }

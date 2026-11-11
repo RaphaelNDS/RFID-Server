@@ -8,9 +8,9 @@ import org.example.repository.TagRepository
 import org.example.suporte.IntegracaoBase
 import org.example.suporte.Perfis
 import org.hamcrest.Matchers.containsString
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType

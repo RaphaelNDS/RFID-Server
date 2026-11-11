@@ -1,6 +1,7 @@
 package org.example.service
 
 import org.example.response.TagResponse
+import org.example.util.HoraColetor
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.Clock
@@ -137,7 +138,7 @@ class LeituraLoteService(
 
     // Mesma regra do X-Momento (OperadorFilter): sem hora, ou com relógio do coletor adiantado, vale agora. null = sem
     // hora do coletor (a sessão confere com a hora do servidor, sem a margem de relógio do fim da sessão)
-    private fun momentoDaLeitura(lidoEm: OffsetDateTime?): LocalDateTime? = org.example.util.HoraColetor.aceita(lidoEm, LocalDateTime.now(relogio))
+    private fun momentoDaLeitura(lidoEm: OffsetDateTime?): LocalDateTime? = HoraColetor.aceita(lidoEm, LocalDateTime.now(relogio))
 
     // Uma linha por lote (e não por tag): com o gatilho apertado, o coletor manda centenas de leituras
     private fun registrarResumo(resultados: List<ResultadoItemLote>, repetidas: Int, dispositivo: String, operador: String?) {

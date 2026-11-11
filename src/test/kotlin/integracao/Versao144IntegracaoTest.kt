@@ -2,6 +2,7 @@ package org.example.integracao
 
 import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
+import org.example.config.ColetorContatoInterceptor
 import org.example.model.FimSessao
 import org.example.repository.ColetorRepository
 import org.example.repository.SessaoOperadorRepository
@@ -230,7 +231,7 @@ class Versao144IntegracaoTest : IntegracaoBase() {
 
     @Test
     fun `valores de fora sao conferidos um a um`() {
-        val d = org.example.config.ColetorContatoInterceptor.diagnostico { nome ->
+        val d = ColetorContatoInterceptor.diagnostico { nome ->
             mapOf(
                 "X-Fila-Pendentes" to "-3",
                 "X-Espaco-Livre" to "abc",

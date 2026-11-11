@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 
 /** A regra única da hora do coletor (1.5.2). */
 class HoraColetorTest {
@@ -16,7 +17,7 @@ class HoraColetorTest {
         assertThat(HoraColetor.aceita(iso(agora.minusHours(30)), agora)).isEqualTo(agora.minusHours(30))
         assertThat(HoraColetor.aceita(null, agora)).isNull()
         // Outro fuso: a mesma hora, convertida
-        val emUtc = iso(agora.minusMinutes(10)).withOffsetSameInstant(java.time.ZoneOffset.UTC)
+        val emUtc = iso(agora.minusMinutes(10)).withOffsetSameInstant(ZoneOffset.UTC)
         assertThat(HoraColetor.aceita(emUtc, agora)).isEqualTo(agora.minusMinutes(10))
     }
 

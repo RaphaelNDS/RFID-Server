@@ -2,6 +2,7 @@ package org.example.config
 
 import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
+import org.example.repository.LeituraAndroidRepository
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
@@ -22,7 +23,7 @@ class BancoDadosConfigTest {
 
     @org.junit.jupiter.api.Test
     fun `leituras na subida vem da estimativa e nunca do count que varre a tabela`() {
-        val leituras = mockk<org.example.repository.LeituraAndroidRepository>()
+        val leituras = mockk<LeituraAndroidRepository>()
         val config = BancoDadosConfig("jdbc:postgresql://x/rfid", mockk(), mockk(), leituras)
 
         io.mockk.every { leituras.estimativaDoTotal() } returns 1_234_567

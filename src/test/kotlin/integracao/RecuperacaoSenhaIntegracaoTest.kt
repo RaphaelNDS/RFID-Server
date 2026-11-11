@@ -21,6 +21,7 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
+import java.time.LocalDateTime
 import java.util.concurrent.atomic.AtomicInteger
 
 class RecuperacaoSenhaIntegracaoTest : IntegracaoBase() {
@@ -184,7 +185,7 @@ class RecuperacaoSenhaIntegracaoTest : IntegracaoBase() {
         fun `senha temporaria vencida nao entra e a tela diz o motivo`() {
             val temporaria = recuperacao.gerarSenhaTemporaria(bruno.id!!).senha
             // Gerada há mais que o prazo (48 h): antes valia para sempre
-            usuarios.save(recarregar().apply { senhaTemporariaEm = java.time.LocalDateTime.now().minusHours(49) })
+            usuarios.save(recarregar().apply { senhaTemporariaEm = LocalDateTime.now().minusHours(49) })
 
             mvc.perform(post("/login").with(csrf()).with { it.remoteAddr = ip; it }
                 .param("username", "bruno@x.com").param("password", temporaria))

@@ -3,6 +3,7 @@ package org.example.service
 import org.example.model.AreaAuditoria
 import org.example.model.VersaoAppEntity
 import org.example.repository.VersaoAppRepository
+import org.example.util.ApkLido
 import org.example.util.LeitorApk
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -111,7 +112,7 @@ class AtualizacaoAppService(
         }
     }
 
-    private fun conferir(apk: org.example.util.ApkLido, usuario: String): Pair<String, Int> {
+    private fun conferir(apk: ApkLido, usuario: String): Pair<String, Int> {
         require(apk.assinaturaValida) {
             "A assinatura do APK não confere (arquivo corrompido, alterado ou sem assinatura): ${apk.errosAssinatura.take(2).joinToString("; ")}"
         }

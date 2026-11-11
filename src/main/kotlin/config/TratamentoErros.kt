@@ -8,6 +8,7 @@ import org.springframework.core.annotation.Order
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.core.AuthenticationException
 import org.springframework.security.core.context.SecurityContextHolder
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.servlet.ModelAndView
-import org.springframework.http.converter.HttpMessageNotReadableException
+import java.io.IOException
 import java.time.format.DateTimeParseException
 import java.util.UUID
 
@@ -42,7 +43,7 @@ object TradutorErros {
      * voltasse para o Spring, o Tomcat registraria um ERROR com stack trace a cada tela fechada.
      */
     fun clienteDesconectou(ex: Exception, request: HttpServletRequest): Boolean {
-        if (ex !is java.io.IOException) return false
+        if (ex !is IOException) return false
 
         log.debug("Cliente desconectou durante {} {}: {}", request.method, request.requestURI, ex.message)
         return true
@@ -55,7 +56,7 @@ object TradutorErros {
 
         // Navegador fechou a conexão (comum em SSE) ou a resposta já começou a ser enviada:
         // não há como mostrar uma página de erro, então deixa o Spring encerrar a requisição
-        if (ex is java.io.IOException || respostaJaEnviada) throw ex
+        if (ex is IOException || respostaJaEnviada) throw ex
 
         val tratado = when (ex) {
             is IllegalArgumentException ->

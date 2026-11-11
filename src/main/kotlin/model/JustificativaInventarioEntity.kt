@@ -1,6 +1,7 @@
 package org.example.model
 
 import jakarta.persistence.*
+import java.text.Normalizer
 import java.time.LocalDateTime
 
 /** Por que um bem esperado não foi encontrado no inventário (marcado no coletor na finalização). */
@@ -20,7 +21,7 @@ enum class MotivoFalta(val rotulo: String) {
         }
 
         private fun semAcento(s: String) =
-            java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD).replace(Regex("\\p{M}"), "")
+            Normalizer.normalize(s, Normalizer.Form.NFD).replace(Regex("\\p{M}"), "")
     }
 }
 

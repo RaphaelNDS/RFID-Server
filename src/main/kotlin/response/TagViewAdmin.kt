@@ -1,6 +1,8 @@
 package org.example.response
 
 import org.example.model.SituacaoBem
+import java.math.BigDecimal
+import java.time.LocalDate
 
 data class TagViewAdmin(
     val id: Long,
@@ -17,8 +19,8 @@ data class TagViewAdmin(
     val responsavelNome: String? = null,
     val situacao: SituacaoBem = SituacaoBem.DISPONIVEL,
     // Valor (1.8.0)
-    val valorAquisicao: java.math.BigDecimal? = null,
-    val dataAquisicao: java.time.LocalDate? = null,
+    val valorAquisicao: BigDecimal? = null,
+    val dataAquisicao: LocalDate? = null,
     val notaFiscal: String? = null
 ) {
     /** "Notebook Dell Latitude" (o que houver do catálogo) ou null. */

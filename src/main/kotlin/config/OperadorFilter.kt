@@ -7,6 +7,7 @@ import org.example.security.OperadorNoColetor
 import org.example.service.MotivoSessaoInvalida
 import org.example.service.SessaoInvalidaException
 import org.example.service.SessaoOperadorService
+import org.example.util.HoraColetor
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -135,14 +136,14 @@ class OperadorFilter(
         val texto = request.getHeader(HEADER_MOMENTO)?.trim()?.takeIf { it.isNotEmpty() } ?: return null
 
         val momento = try {
-            org.example.util.HoraColetor.noFusoDoServidor(OffsetDateTime.parse(texto))
+            HoraColetor.noFusoDoServidor(OffsetDateTime.parse(texto))
         } catch (e: DateTimeParseException) {
             log.warn("Header {} inválido vindo do coletor {}: '{}'. Usando a hora de agora", HEADER_MOMENTO, dispositivo, texto)
             return null
         }
 
         // Relógio do coletor adiantado: não deixa uma ação "do futuro" usar a sessão além do horário real
-        if (org.example.util.HoraColetor.noFuturo(momento, agora)) {
+        if (HoraColetor.noFuturo(momento, agora)) {
             log.warn("Header {} no futuro vindo do coletor {} ({}): usando a hora de agora", HEADER_MOMENTO, dispositivo, texto)
             return null
         }

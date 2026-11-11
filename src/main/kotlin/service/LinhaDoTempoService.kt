@@ -2,6 +2,7 @@ package org.example.service
 
 import org.example.model.AcaoHistorico
 import org.example.model.EstadoDevolucao
+import org.example.model.ResultadoManutencao
 import org.example.model.StatusManutencao
 import org.example.model.TagEntity
 import org.example.repository.HistoricoEtiquetaRepository
@@ -134,7 +135,7 @@ class LinhaDoTempoService(
                 eventos += EventoBem(fim.atTime(23, 59), TipoEvento.MANUTENCAO,
                     "Manutenção nº ${m.id} ${m.status.rotulo.lowercase()}" + (m.resultado?.let { ": ${it.rotulo.lowercase()}" } ?: ""),
                     listOfNotNull(m.servicoRealizado, m.custo?.let { FormatoBr.reais(it) }).joinToString(" · ").ifBlank { null },
-                    m.concluidaPor, link, alerta = m.resultado == org.example.model.ResultadoManutencao.SEM_CONSERTO)
+                    m.concluidaPor, link, alerta = m.resultado == ResultadoManutencao.SEM_CONSERTO)
             }
         }
 

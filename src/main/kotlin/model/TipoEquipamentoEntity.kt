@@ -3,6 +3,10 @@ package org.example.model
 import com.fasterxml.jackson.annotation.JsonManagedReference
 import jakarta.persistence.*
 
+/**
+ * Tipo de equipamento do catálogo (tabela tipo_equipamento). As colunas vida_util_meses e valor_residual_pct (V25, da
+ * depreciação da 1.8.0) continuam no banco, sem uso desde a 1.12.0; saíram da entidade na 1.18.1.
+ */
 @Entity
 @Table(name = "tipo_equipamento")
 class TipoEquipamentoEntity(
@@ -14,15 +18,7 @@ class TipoEquipamentoEntity(
     @Column(nullable = false, unique = true)
     var nome: String,
 
-    /** 1.8.0 (V25): vida útil em meses para a depreciação linear dos bens deste tipo. Null = não deprecia. */
-    @Column(name = "vida_util_meses")
-    var vidaUtilMeses: Int? = null,
-
-    /** 1.8.0 (V25): valor residual, em % do valor de aquisição (o que sobra no fim da vida útil). Null = 0%. */
-    @Column(name = "valor_residual_pct", precision = 5, scale = 2)
-    var valorResidualPct: java.math.BigDecimal? = null,
-
-    @JsonManagedReference   // ✅
+    @JsonManagedReference
     @OneToMany(mappedBy = "tipo", cascade = [CascadeType.ALL])
     var marcas: List<MarcaEntity> = emptyList()
 )

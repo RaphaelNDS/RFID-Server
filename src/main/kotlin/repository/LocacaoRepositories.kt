@@ -1,9 +1,13 @@
 package org.example.repository
 
+import org.example.model.AcessorioEntity
 import org.example.model.ClienteEntity
+import org.example.model.KitItemEntity
+import org.example.model.PedidoAcessorioEntity
 import org.example.model.PedidoItemEntity
 import org.example.model.PedidoLinhaEntity
 import org.example.model.PedidoLocacaoEntity
+import org.example.model.PedidoProrrogacaoEntity
 import org.example.model.SituacaoPedido
 import org.example.model.VendaEntity
 import org.springframework.data.domain.Page
@@ -41,9 +45,9 @@ interface PedidoLocacaoRepository : JpaRepository<PedidoLocacaoEntity, Long> {
               and exists (select 1 from PedidoItemEntity a where a.pedidoId = p.id and a.devolvidoEm is null)""")
     fun contarAtrasados(@Param("hoje") hoje: LocalDate): Long
 
-    /** Para o coletor: os pedidos nestas situações, pela saída prevista (sem data por último) e o número. */
+    /** Os pedidos nestas situações, pela saída prevista (sem data por último) e o número. */
     @Query("select p from PedidoLocacaoEntity p where p.situacao in :situacoes order by coalesce(p.saidaPrevista, p.previsaoDevolucao), p.id")
-    fun paraColetor(@Param("situacoes") situacoes: Collection<SituacaoPedido>): List<PedidoLocacaoEntity>
+    fun porSituacao(@Param("situacoes") situacoes: Collection<SituacaoPedido>): List<PedidoLocacaoEntity>
 
     fun findAllByClienteIdOrderByIdDesc(clienteId: Long): List<PedidoLocacaoEntity>
 }
@@ -79,27 +83,27 @@ interface VendaRepository : JpaRepository<VendaEntity, Long> {
 }
 
 /** Prorrogações da devolução prevista de um pedido (1.16.0). */
-interface PedidoProrrogacaoRepository : JpaRepository<org.example.model.PedidoProrrogacaoEntity, Long> {
-    fun findAllByPedidoIdOrderByIdAsc(pedidoId: Long): List<org.example.model.PedidoProrrogacaoEntity>
+interface PedidoProrrogacaoRepository : JpaRepository<PedidoProrrogacaoEntity, Long> {
+    fun findAllByPedidoIdOrderByIdAsc(pedidoId: Long): List<PedidoProrrogacaoEntity>
 }
 
 /** 1.18.0: acessórios, kits e os acessórios dos pedidos. */
-interface AcessorioRepository : JpaRepository<org.example.model.AcessorioEntity, Long> {
-    fun findAllByOrderByAtivoDescNomeAsc(): List<org.example.model.AcessorioEntity>
-    fun findFirstByNomeIgnoreCase(nome: String): org.example.model.AcessorioEntity?
+interface AcessorioRepository : JpaRepository<AcessorioEntity, Long> {
+    fun findAllByOrderByAtivoDescNomeAsc(): List<AcessorioEntity>
+    fun findFirstByNomeIgnoreCase(nome: String): AcessorioEntity?
 }
 
-interface KitItemRepository : JpaRepository<org.example.model.KitItemEntity, Long> {
-    fun findAllByTipoEquipamentoId(tipoId: Long): List<org.example.model.KitItemEntity>
+interface KitItemRepository : JpaRepository<KitItemEntity, Long> {
+    fun findAllByTipoEquipamentoId(tipoId: Long): List<KitItemEntity>
     fun countByAcessorioId(acessorioId: Long): Long
 }
 
-interface PedidoAcessorioRepository : JpaRepository<org.example.model.PedidoAcessorioEntity, Long> {
-    fun findAllByPedidoIdOrderByIdAsc(pedidoId: Long): List<org.example.model.PedidoAcessorioEntity>
-    fun findAllByPedidoIdIn(ids: Collection<Long>): List<org.example.model.PedidoAcessorioEntity>
-    fun findAllByLinhaId(linhaId: Long): List<org.example.model.PedidoAcessorioEntity>
+interface PedidoAcessorioRepository : JpaRepository<PedidoAcessorioEntity, Long> {
+    fun findAllByPedidoIdOrderByIdAsc(pedidoId: Long): List<PedidoAcessorioEntity>
+    fun findAllByPedidoIdIn(ids: Collection<Long>): List<PedidoAcessorioEntity>
+    fun findAllByLinhaId(linhaId: Long): List<PedidoAcessorioEntity>
 
     /** Enviados que não voltaram, de todos os pedidos. */
     @Query("select a from PedidoAcessorioEntity a where a.devolvida < a.enviada order by a.pedidoId, a.id")
-    fun pendentes(): List<org.example.model.PedidoAcessorioEntity>
+    fun pendentes(): List<PedidoAcessorioEntity>
 }

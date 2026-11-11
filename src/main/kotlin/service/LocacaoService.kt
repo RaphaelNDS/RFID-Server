@@ -6,6 +6,7 @@ import org.example.model.EstadoDevolucao
 import org.example.model.PedidoItemEntity
 import org.example.model.PedidoLinhaEntity
 import org.example.model.PedidoLocacaoEntity
+import org.example.model.PedidoProrrogacaoEntity
 import org.example.model.SituacaoBem
 import org.example.model.SituacaoPedido
 import org.example.model.TagEntity
@@ -16,8 +17,10 @@ import org.example.repository.ModeloRepository
 import org.example.repository.PedidoItemRepository
 import org.example.repository.PedidoLinhaRepository
 import org.example.repository.PedidoLocacaoRepository
+import org.example.repository.PedidoProrrogacaoRepository
 import org.example.repository.TagRepository
 import org.example.repository.TipoEquipamentoRepository
+import org.example.util.FormatoBr
 import org.example.util.normalizarEpc
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
@@ -29,108 +32,8 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
-/** Por que um equipamento lido não serve ao pedido. */
-enum class ProblemaLeitura(val rotulo: String) {
-    SEM_CADASTRO("Etiqueta sem cadastro"),
-    FORA_DO_PEDIDO("Não faz parte do pedido"),
-    NAO_DISPONIVEL("Não está disponível"),
-    EXCEDENTE("O pedido já tem a quantidade deste item")
-}
-
-/** Um equipamento lido (ou digitado) conferido contra o pedido. */
-data class ItemConferido(
-    val codigo: String,
-    val tag: TagEntity?,
-    val linhaId: Long?,
-    val jaSaiu: Boolean,
-    val problema: ProblemaLeitura?
-) {
-    val aceito: Boolean get() = problema == null && !jaSaiu
-}
-
-/** Uma linha com a quantidade pedida, o que já saiu e o que esta leitura completaria. */
-data class LinhaConferida(val linha: PedidoLinhaEntity, val saidos: Int, val conferidos: Int) {
-    val faltam: Int get() = (linha.quantidade - saidos).coerceAtLeast(0)
-}
-
-data class Conferencia(val itens: List<ItemConferido>, val linhas: List<LinhaConferida>)
-
-data class ResultadoSaida(val conferencia: Conferencia, val aceitos: List<ItemConferido>, val pedido: PedidoLocacaoEntity) {
-    val recusados: List<ItemConferido> get() = conferencia.itens.filter { it.problema != null }
-    /** Aceitos agora mais os que já tinham saído (reenvio): o app conta todos como "saíram". */
-    val saidos: List<ItemConferido> get() = conferencia.itens.filter { it.problema == null }
-}
-
-/** Devolução de equipamentos lidos: recebidos (com o pedido), os sem locação, e os pedidos tocados. */
-data class ResultadoDevolucao(
-    val recebidos: List<Pair<PedidoItemEntity, PedidoLocacaoEntity>>,
-    val semLocacao: List<Pair<String, TagEntity?>>,
-    val pedidos: List<PedidoLocacaoEntity>
-)
-
-data class PedidoResumo(val pedido: PedidoLocacaoEntity, val quantidade: Int, val saidos: Int, val naRua: Int, val diasAtraso: Long) {
-    val atrasado: Boolean get() = diasAtraso > 0
-}
-
-data class PedidoDetalhe(
-    val pedido: PedidoLocacaoEntity,
-    val linhas: List<LinhaConferida>,
-    val itens: List<PedidoItemEntity>,
-    val diasAtraso: Long,
-    /** 1.16.0: as mudanças da devolução prevista, mais antigas primeiro. */
-    val prorrogacoes: List<org.example.model.PedidoProrrogacaoEntity> = emptyList(),
-    /** 1.18.0: os acessórios do pedido (do kit das linhas e avulsos). */
-    val acessorios: List<org.example.model.PedidoAcessorioEntity> = emptyList()
-) {
-    /** Acessórios enviados que ainda não voltaram. */
-    val acessoriosFaltando: Int get() = acessorios.sumOf { it.faltando }
-    val acessoriosAEnviar: Int get() = acessorios.sumOf { it.aEnviar }
-
-    /** A descrição da linha que trouxe o acessório pelo kit (nulo: avulso). */
-    fun linhaDoAcessorio(linhaId: Long?): String? = linhaId?.let { id -> linhas.firstOrNull { it.linha.id == id }?.linha?.descricao }
-
-    val naRua: List<PedidoItemEntity> get() = itens.filter { !it.devolvido }
-    val aguardandoConferencia: List<PedidoItemEntity> get() = itens.filter { it.aguardandoConferencia }
-    val atrasado: Boolean get() = diasAtraso > 0
-    val podeSair: Boolean get() = !pedido.situacao.finalizado && !pedido.separacaoConcluida
-    val editavel: Boolean get() = !pedido.situacao.finalizado
-}
-
-/** Uma linha da folha de separação: o que falta e os equipamentos disponíveis que servem (1.17.0). */
-data class LinhaSeparacao(val linha: LinhaConferida, val candidatos: List<BemTransferivel>)
-
-data class FolhaSeparacao(val detalhe: PedidoDetalhe, val linhas: List<LinhaSeparacao>) {
-    val faltam: Int get() = linhas.sumOf { it.linha.faltam }
-}
-
-/** Filtro da lista de pedidos. */
-enum class FiltroPedido(val rotulo: String, val situacoes: Set<SituacaoPedido>) {
-    ANDAMENTO("Em aberto e na rua", setOf(SituacaoPedido.ABERTO, SituacaoPedido.EM_SEPARACAO, SituacaoPedido.ENTREGUE, SituacaoPedido.DEVOLVIDO_PARCIAL)),
-    SEPARAR("A separar", setOf(SituacaoPedido.ABERTO, SituacaoPedido.EM_SEPARACAO)),
-    NA_RUA("Na rua", setOf(SituacaoPedido.EM_SEPARACAO, SituacaoPedido.ENTREGUE, SituacaoPedido.DEVOLVIDO_PARCIAL)),
-    ATRASADOS("Atrasados", SituacaoPedido.entries.toSet()),
-    ENCERRADOS("Encerrados e cancelados", setOf(SituacaoPedido.ENCERRADO, SituacaoPedido.CANCELADO)),
-    TODOS("Todos", SituacaoPedido.entries.toSet());
-
-    companion object {
-        fun de(texto: String?): FiltroPedido = entries.firstOrNull { it.name.equals(texto?.trim(), ignoreCase = true) } ?: ANDAMENTO
-    }
-}
-
-/** Dados do cliente como vêm da tela. */
-data class DadosCliente(
-    val nome: String?, val documento: String? = null, val contato: String? = null, val telefone: String? = null,
-    val email: String? = null, val endereco: String? = null, val observacao: String? = null
-)
-
-/** Cabeçalho do pedido como vem da tela. */
-data class DadosPedido(
-    val clienteId: Long?, val previsaoDevolucao: LocalDate?, val saidaPrevista: LocalDate? = null,
-    val localEntrega: String? = null, val observacao: String? = null
-)
-
 /**
- * Locadora (1.12.0): clientes, pedidos de locação, saída e devolução (pelo coletor ou pela web) e a conferência da
+ * Locadora (1.12.0): clientes, pedidos de locação, saída e devolução (pela web) e a conferência da
  * devolução. Substitui o empréstimo da 1.10.0.
  *
  * Fluxo do equipamento: Disponível → (saída) Alugado → (devolução) Em devolução → (conferência) Disponível, ou
@@ -158,7 +61,7 @@ class LocacaoService(
     private val auditoria: AuditoriaService,
     private val relogio: Clock,
     // 1.16.0: histórico das prorrogações da devolução prevista
-    private val prorrogacoes: org.example.repository.PedidoProrrogacaoRepository,
+    private val prorrogacoes: PedidoProrrogacaoRepository,
     // 1.17.0: folha de separação (descrição e local dos equipamentos candidatos)
     private val transferencias: TransferenciaService? = null,
     // 1.18.0: o kit de acessórios entra com a linha
@@ -178,7 +81,7 @@ class LocacaoService(
         val p = pedido(pedidoId)
         require(!p.situacao.finalizado) { "O pedido nº $pedidoId está ${p.situacao.rotulo.lowercase()}: a devolução não muda mais" }
         val data = novaData ?: throw IllegalArgumentException("Informe a nova data de devolução")
-        require(data != p.previsaoDevolucao) { "A devolução já está prevista para ${org.example.util.FormatoBr.data(data)}" }
+        require(data != p.previsaoDevolucao) { "A devolução já está prevista para ${FormatoBr.data(data)}" }
         require(!data.isBefore(hoje())) { "A nova devolução não pode ser no passado" }
         p.saidaPrevista?.let { require(!data.isBefore(it)) { "A devolução não pode ser antes da saída prevista" } }
         val obs = texto(motivo, "O motivo", 500) ?: throw IllegalArgumentException("Informe o motivo da prorrogação")
@@ -188,16 +91,16 @@ class LocacaoService(
         return p
     }
 
-    fun prorrogacoesDo(pedidoId: Long): List<org.example.model.PedidoProrrogacaoEntity> = prorrogacoes.findAllByPedidoIdOrderByIdAsc(pedidoId)
+    fun prorrogacoesDo(pedidoId: Long): List<PedidoProrrogacaoEntity> = prorrogacoes.findAllByPedidoIdOrderByIdAsc(pedidoId)
 
     private fun registrarProrrogacao(p: PedidoLocacaoEntity, nova: LocalDate, motivo: String) {
         val anterior = p.previsaoDevolucao
         val usuario = autor()
-        prorrogacoes.save(org.example.model.PedidoProrrogacaoEntity(pedidoId = p.id, dataAnterior = anterior, dataNova = nova, motivo = motivo, registradaPor = usuario))
+        prorrogacoes.save(PedidoProrrogacaoEntity(pedidoId = p.id, dataAnterior = anterior, dataNova = nova, motivo = motivo, registradaPor = usuario))
         val verbo = if (nova.isAfter(anterior)) "prorrogada" else "antecipada"
         log.info("Pedido de locação nº {}: devolução {} de {} para {} por {} ({})", p.id, verbo, anterior, nova, usuario, motivo)
         auditoria.registrar(AreaAuditoria.PATRIMONIO, "Devolução $verbo", "Pedido nº ${p.id}",
-            "${org.example.util.FormatoBr.data(anterior)} → ${org.example.util.FormatoBr.data(nova)}: $motivo")
+            "${FormatoBr.data(anterior)} → ${FormatoBr.data(nova)}: $motivo")
     }
 
     /* ================= CLIENTES ================= */
@@ -256,7 +159,7 @@ class LocacaoService(
             observacao = texto(dados.observacao, "A observação", 500), registradoPor = autor()
         ))
         log.info("Pedido de locação nº {} criado por {}: cliente {}, devolução prevista em {}", p.id, p.registradoPor, cliente.nome, previsao)
-        auditoria.registrar(AreaAuditoria.PATRIMONIO, "Pedido de locação criado", "Pedido nº ${p.id}", "${cliente.nome}, devolução prevista em ${org.example.util.FormatoBr.data(previsao)}")
+        auditoria.registrar(AreaAuditoria.PATRIMONIO, "Pedido de locação criado", "Pedido nº ${p.id}", "${cliente.nome}, devolução prevista em ${FormatoBr.data(previsao)}")
         return p
     }
 
@@ -365,13 +268,6 @@ class LocacaoService(
     }
 
     /* ================= SAÍDA ================= */
-
-    /** Confere os equipamentos lidos contra o pedido, sem gravar nada (o coletor mostra o que falta e o que sobra). */
-    @Transactional(readOnly = true)
-    fun conferir(pedidoId: Long, codigos: Collection<String>): Conferencia {
-        val p = pedido(pedidoId)
-        return distribuir(p, codigos)
-    }
 
     /**
      * Saída dos equipamentos: os aceitos ficam Alugado, ligados ao pedido. Recusados (sem cadastro, fora do pedido,
@@ -518,10 +414,10 @@ class LocacaoService(
             prorrogacoes.findAllByPedidoIdOrderByIdAsc(id), acessorios?.doPedido(id).orEmpty())
     }
 
-    /** Pedidos para o coletor (padrão: a separar). */
+    /** Os pedidos nestas situações, pela saída prevista (padrão: a separar). Painel do dia. */
     @Transactional(readOnly = true)
-    fun paraColetor(situacoes: Collection<SituacaoPedido>): List<PedidoResumo> {
-        val lista = pedidos.paraColetor(situacoes.ifEmpty { listOf(SituacaoPedido.ABERTO, SituacaoPedido.EM_SEPARACAO) })
+    fun porSituacao(situacoes: Collection<SituacaoPedido>): List<PedidoResumo> {
+        val lista = pedidos.porSituacao(situacoes.ifEmpty { listOf(SituacaoPedido.ABERTO, SituacaoPedido.EM_SEPARACAO) })
         val ids = lista.map { it.id }
         val todasLinhas = if (ids.isEmpty()) emptyMap() else linhas.findAllByPedidoIdIn(ids).groupBy { it.pedidoId }
         val todosItens = if (ids.isEmpty()) emptyMap() else itens.findAllByPedidoIdIn(ids).groupBy { it.pedidoId }
@@ -543,22 +439,6 @@ class LocacaoService(
     fun contarAguardandoConferencia(): Long = itens.countByDevolvidoEmIsNotNullAndConferidoEmIsNull()
 
     fun contarAtrasados(): Long = pedidos.contarAtrasados(hoje())
-
-    /** Os nomes do catálogo de um equipamento lido (para o coletor). */
-    fun nomes(tag: TagEntity): Triple<String?, String?, String?> = Triple(
-        tag.tipoEquipamentoId?.let { tipos.findById(it).orElse(null)?.nome },
-        tag.marcaId?.let { marcas.findById(it).orElse(null)?.nome },
-        tag.modeloId?.let { modelos.findById(it).orElse(null)?.nome }
-    )
-
-    /** Os nomes do tipo, da marca e do modelo de uma linha (null = qualquer um). */
-    fun nomesDaLinha(l: PedidoLinhaEntity): Triple<String?, String?, String?> = Triple(
-        l.tipoEquipamentoId?.let { tipos.findById(it).orElse(null)?.nome },
-        l.marcaId?.let { marcas.findById(it).orElse(null)?.nome },
-        l.modeloId?.let { modelos.findById(it).orElse(null)?.nome }
-    )
-
-    fun tagPorId(id: Long): TagEntity? = tags.findById(id).orElse(null)
 
     /**
      * Folha de separação (1.17.0): para cada linha que ainda falta, os equipamentos Disponíveis que servem, com o local
@@ -647,7 +527,12 @@ class LocacaoService(
         return limpos
     }
 
-    private fun descricaoCatalogo(tag: TagEntity): String = nomes(tag).toList().filterNotNull().joinToString(" ")
+    /** "Coletor Zebra MC3300": os nomes do catálogo do equipamento. */
+    private fun descricaoCatalogo(tag: TagEntity): String = listOfNotNull(
+        tag.tipoEquipamentoId?.let { tipos.findById(it).orElse(null)?.nome },
+        tag.marcaId?.let { marcas.findById(it).orElse(null)?.nome },
+        tag.modeloId?.let { modelos.findById(it).orElse(null)?.nome }
+    ).joinToString(" ")
 
     private fun descricaoBem(tag: TagEntity): String =
         (tag.patrimonio.ifBlank { tag.tagReal }) + descricaoCatalogo(tag).takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty()
