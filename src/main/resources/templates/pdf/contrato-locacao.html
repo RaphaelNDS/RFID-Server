@@ -18,6 +18,8 @@
   <tr><th>Local de entrega</th><td th:text="${p.localEntrega} ?: '-'"></td></tr>
   <tr th:if="${p.saidaPrevista != null}"><th>Saída prevista</th><td th:text="${fmt.data(p.saidaPrevista)}"></td></tr>
   <tr><th>Devolução prevista</th><td th:text="${fmt.data(p.previsaoDevolucao)}"></td></tr>
+  <tr th:each="r : ${d.prorrogacoes}"><th>Prorrogação</th>
+    <td th:text="${fmt.data(r.dataAnterior)} + ' → ' + ${fmt.data(r.dataNova)} + ' (' + ${r.motivo} + ', em ' + ${#temporals.format(r.criadaEm, 'dd/MM/yyyy')} + ')'"></td></tr>
   <tr th:if="${p.observacao != null}"><th>Observação</th><td th:text="${p.observacao}"></td></tr>
 </table>
 

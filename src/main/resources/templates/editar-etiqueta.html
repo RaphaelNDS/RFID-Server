@@ -21,6 +21,10 @@
          title="Mudar o local e/ou o responsável com guia de transferência">
         <svg class="ic"><use href="/img/icones.svg#transferir"/></svg>Transferir
       </a>
+      <a th:href="@{/admin/etiquetas/{id}/linha-do-tempo(id=${etiquetaId})}" class="btn btn-ghost"
+         title="Locações, clientes, manutenções, avarias, transferências e inventários deste equipamento">
+        <svg class="ic"><use href="/img/icones.svg#atividade"/></svg>Linha do tempo
+      </a>
       <a th:href="@{/admin/etiquetas/historico(tag=${cadastro.tag})}" class="btn btn-ghost">
         <svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Histórico
       </a>

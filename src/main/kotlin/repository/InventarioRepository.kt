@@ -67,6 +67,14 @@ interface InventarioItemRepository : JpaRepository<InventarioItemEntity, Long> {
     )
     fun ultimoInventarioDaTag(@Param("tag") tag: String, pagina: org.springframework.data.domain.Pageable): List<Array<Any?>>
 
+    /** Linha do tempo do equipamento (1.16.0): os inventários finalizados que o encontraram, [id, local, finalizadoEm]. */
+    @Query(
+        """select i.id, l.nome, i.finalizadoEm from InventarioItemEntity it, InventarioEntity i, LocalEntity l
+           where i.id = it.inventarioId and l.id = i.localId and i.status = org.example.model.StatusInventario.FINALIZADO
+             and it.tag = :tag order by i.finalizadoEm desc"""
+    )
+    fun inventariosDaTag(@Param("tag") tag: String, pagina: org.springframework.data.domain.Pageable): List<Array<Any?>>
+
     fun findByInventarioIdOrderByLidoEmAsc(inventarioId: String): List<InventarioItemEntity>
 
     @Query("select i.tag from InventarioItemEntity i where i.inventarioId = :inventarioId")

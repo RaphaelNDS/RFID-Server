@@ -76,7 +76,9 @@ data class PedidoDetalhe(
     val pedido: PedidoLocacaoEntity,
     val linhas: List<LinhaConferida>,
     val itens: List<PedidoItemEntity>,
-    val diasAtraso: Long
+    val diasAtraso: Long,
+    /** 1.16.0: as mudanças da devolução prevista, mais antigas primeiro. */
+    val prorrogacoes: List<org.example.model.PedidoProrrogacaoEntity> = emptyList()
 ) {
     val naRua: List<PedidoItemEntity> get() = itens.filter { !it.devolvido }
     val aguardandoConferencia: List<PedidoItemEntity> get() = itens.filter { it.aguardandoConferencia }
@@ -138,12 +140,45 @@ class LocacaoService(
     private val manutencoes: ManutencaoService,
     private val historico: HistoricoEtiquetaService,
     private val auditoria: AuditoriaService,
-    private val relogio: Clock
+    private val relogio: Clock,
+    // 1.16.0: histórico das prorrogações da devolução prevista
+    private val prorrogacoes: org.example.repository.PedidoProrrogacaoRepository
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
     fun hoje(): LocalDate = LocalDate.now(relogio)
+
+    /**
+     * Prorroga (ou antecipa) a devolução prevista do pedido, com o motivo (1.16.0). Fica no histórico do pedido, no
+     * contrato e na auditoria. Pedido encerrado ou cancelado não muda.
+     */
+    @Transactional
+    fun prorrogar(pedidoId: Long, novaData: LocalDate?, motivo: String?): PedidoLocacaoEntity {
+        val p = pedido(pedidoId)
+        require(!p.situacao.finalizado) { "O pedido nº $pedidoId está ${p.situacao.rotulo.lowercase()}: a devolução não muda mais" }
+        val data = novaData ?: throw IllegalArgumentException("Informe a nova data de devolução")
+        require(data != p.previsaoDevolucao) { "A devolução já está prevista para ${org.example.util.FormatoBr.data(data)}" }
+        require(!data.isBefore(hoje())) { "A nova devolução não pode ser no passado" }
+        p.saidaPrevista?.let { require(!data.isBefore(it)) { "A devolução não pode ser antes da saída prevista" } }
+        val obs = texto(motivo, "O motivo", 500) ?: throw IllegalArgumentException("Informe o motivo da prorrogação")
+        registrarProrrogacao(p, data, obs)
+        p.previsaoDevolucao = data
+        pedidos.save(p)
+        return p
+    }
+
+    fun prorrogacoesDo(pedidoId: Long): List<org.example.model.PedidoProrrogacaoEntity> = prorrogacoes.findAllByPedidoIdOrderByIdAsc(pedidoId)
+
+    private fun registrarProrrogacao(p: PedidoLocacaoEntity, nova: LocalDate, motivo: String) {
+        val anterior = p.previsaoDevolucao
+        val usuario = autor()
+        prorrogacoes.save(org.example.model.PedidoProrrogacaoEntity(pedidoId = p.id, dataAnterior = anterior, dataNova = nova, motivo = motivo, registradaPor = usuario))
+        val verbo = if (nova.isAfter(anterior)) "prorrogada" else "antecipada"
+        log.info("Pedido de locação nº {}: devolução {} de {} para {} por {} ({})", p.id, verbo, anterior, nova, usuario, motivo)
+        auditoria.registrar(AreaAuditoria.PATRIMONIO, "Devolução $verbo", "Pedido nº ${p.id}",
+            "${org.example.util.FormatoBr.data(anterior)} → ${org.example.util.FormatoBr.data(nova)}: $motivo")
+    }
 
     /* ================= CLIENTES ================= */
 
@@ -215,6 +250,8 @@ class LocacaoService(
         p.clienteId = cliente.id
         p.cliente = cliente.descricao.take(255)
         p.saidaPrevista = dados.saidaPrevista
+        // 1.16.0: mudar a devolução pela edição também fica no histórico das prorrogações
+        if (previsao != p.previsaoDevolucao) registrarProrrogacao(p, previsao, "Alterada nos dados do pedido")
         p.previsaoDevolucao = previsao
         p.localEntrega = texto(dados.localEntrega, "O local de entrega", 300)
         p.observacao = texto(dados.observacao, "A observação", 500)
@@ -455,7 +492,8 @@ class LocacaoService(
         val p = pedido(id)
         val ls = linhas.findAllByPedidoIdOrderByIdAsc(id)
         val its = itens.findAllByPedidoIdOrderByIdAsc(id)
-        return PedidoDetalhe(p, ls.map { l -> LinhaConferida(l, its.count { it.linhaId == l.id }, 0) }, its, atraso(p, its.count { !it.devolvido }, hoje()))
+        return PedidoDetalhe(p, ls.map { l -> LinhaConferida(l, its.count { it.linhaId == l.id }, 0) }, its, atraso(p, its.count { !it.devolvido }, hoje()),
+            prorrogacoes.findAllByPedidoIdOrderByIdAsc(id))
     }
 
     /** Pedidos para o coletor (padrão: a separar). */
