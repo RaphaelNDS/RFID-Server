@@ -77,7 +77,7 @@
         </ul>
       </div>
 
-      <div class="card" th:unless="${#lists.isEmpty(p.manutencoesAtrasadas)}">
+      <div class="card" th:if="${!#lists.isEmpty(p.manutencoesAtrasadas) and @authService.temPermissao('MANUTENCAO','READ')}">
         <div class="card-header empilhar">
           <h2>Manutenções atrasadas</h2>
           <span class="muted" th:text="${p.manutencoesAbertas} + ' aberta(s) no total'"></span>

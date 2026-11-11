@@ -13,7 +13,7 @@
     </div>
     <div class="page-header-acoes">
       <a th:href="@{/admin/manutencoes/nova(tag=${cadastro.tag})}" class="btn btn-ghost"
-         th:if="${pedidoAtual == null and (manutencoes == null or manutencoes.aberta == null) and (etiqueta.situacao.name() == 'DISPONIVEL' or etiqueta.situacao.name() == 'A_VENDA')}"
+         th:if="${@authService.temPermissao('MANUTENCAO','CREATE') and pedidoAtual == null and (manutencoes == null or manutencoes.aberta == null) and (etiqueta.situacao.name() == 'DISPONIVEL' or etiqueta.situacao.name() == 'A_VENDA')}"
          title="Mandar o equipamento para conserto ou revisão">
         <svg class="ic"><use href="/img/icones.svg#lapis"/></svg>Manutenção
       </a>

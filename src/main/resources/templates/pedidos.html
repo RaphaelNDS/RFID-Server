@@ -16,7 +16,7 @@
         <svg class="ic"><use href="/img/icones.svg#ok"/></svg>Devoluções a conferir
         <span class="contador" th:if="${aConferir > 0}" th:text="${aConferir}"></span>
       </a>
-      <a th:href="@{/admin/pedidos/novo}" class="btn btn-primary" th:if="${@authService.temPermissao('RFID','UPDATE')}">
+      <a th:href="@{/admin/pedidos/novo}" class="btn btn-primary" th:if="${@authService.temPermissao('LOCACAO','CREATE')}">
         <svg class="ic"><use href="/img/icones.svg#mais"/></svg>Novo pedido
       </a>
     </div>

@@ -12,13 +12,13 @@ import java.time.LocalDate
 
 /**
  * Disponibilidade dos equipamentos (1.13.0): por tipo e modelo, quantos estão disponíveis, alugados, em devolução ou
- * em manutenção, quantos voltam até uma data e quantos já estão comprometidos em pedidos a separar. RFID · Ver.
+ * em manutenção, quantos voltam até uma data e quantos já estão comprometidos em pedidos a separar. Locação · Ver.
  */
 @Controller
 @RequestMapping("/admin/disponibilidade")
 class DisponibilidadeWebController(private val painel: PainelService, private val catalogo: CatalogoService) {
 
-    @PreAuthorize("@authService.temPermissao('RFID','READ')")
+    @PreAuthorize("@authService.temPermissao('LOCACAO','READ')")
     @GetMapping
     fun disponibilidade(@RequestParam(required = false) ate: String?, @RequestParam(required = false) tipo: Long?, model: Model): String {
         val hoje = painel.hoje()

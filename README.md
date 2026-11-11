@@ -93,10 +93,10 @@ administrador; depois disso essa tela não aparece mais.
 | Nova transferência | `/admin/transferencias/nova` | RFID · Editar |
 | Ação sobre os bens que faltaram (no detalhe do inventário finalizado) | `/admin/inventarios/{id}/divergencias` | RFID · Editar |
 | PDFs (1.8.0): laudo do inventário · guia · termo | `/admin/inventarios/{id}/laudo.pdf` · `/admin/transferencias/{id}/guia.pdf` · `/admin/responsaveis/{id}/termo.pdf` | as mesmas da tela de onde saem (Leituras · Ver; RFID · Ver; Catálogo · Ver e RFID · Ver) |
-| Manutenções (1.11.0): lista (abertas, atrasadas, encerradas) · nova · a ordem (concluir ou cancelar) · ordem em PDF | `/admin/manutencoes` · `/admin/manutencoes/nova` · `/admin/manutencoes/{id}` · `/admin/manutencoes/{id}/ordem.pdf` | RFID · Ver (abrir, concluir e cancelar exigem RFID · Editar) |
-| Pedidos de locação (1.12.0): lista · novo · o pedido (linhas, saída, devolução, conferência) · devoluções a conferir · contrato em PDF | `/admin/pedidos` · `/admin/pedidos/novo` · `/admin/pedidos/{id}` · `/admin/pedidos/devolucoes` · `/admin/pedidos/{id}/contrato.pdf` | RFID · Ver (o resto exige RFID · Editar) |
-| Disponibilidade por tipo e modelo (1.13.0); o painel do dia fica na tela Início (`/dashboard`) | `/admin/disponibilidade` | RFID · Ver |
-| Clientes (1.12.0) | `/admin/clientes` | RFID · Ver (cadastrar e alterar exigem RFID · Editar) |
+| Manutenções (1.11.0): lista (abertas, atrasadas, encerradas) · nova · a ordem (concluir ou cancelar) · ordem em PDF | `/admin/manutencoes` · `/admin/manutencoes/nova` · `/admin/manutencoes/{id}` · `/admin/manutencoes/{id}/ordem.pdf` | Manutenção · Ver (abrir: Criar; concluir e cancelar: Editar) |
+| Pedidos de locação (1.12.0): lista · novo · o pedido (linhas, saída, devolução, conferência) · devoluções a conferir · contrato em PDF | `/admin/pedidos` · `/admin/pedidos/novo` · `/admin/pedidos/{id}` · `/admin/pedidos/devolucoes` · `/admin/pedidos/{id}/contrato.pdf` | Locação · Ver (criar pedido e linha: Criar; o resto: Editar) |
+| Disponibilidade por tipo e modelo (1.13.0); o painel do dia fica na tela Início (`/dashboard`) | `/admin/disponibilidade` | Locação · Ver |
+| Clientes (1.12.0) | `/admin/clientes` | Locação · Ver (cadastrar: Criar; alterar: Editar) |
 | Venda do equipamento (1.12.0), na edição da etiqueta | `/admin/etiquetas/{id}/venda` · `/admin/etiquetas/{id}/venda/desfazer` | RFID · Editar |
 | Fotos e anexos do bem (1.9.0), na edição da etiqueta: enviar e excluir · abrir ou baixar | `/admin/etiquetas/{id}/anexos` · `/admin/etiquetas/{id}/anexos/{anexo}` | RFID · Editar · RFID · Ver |
 | Relatórios (gráficos; avisa quando chegam leituras novas; período de até 366 dias) | `/admin/dashboard` | Relatórios · Ver |
@@ -381,9 +381,19 @@ do coletor, abaixo), e os baixados ficam de fora.
 | **Administrador** | Tudo, inclusive usuários, backup e console do banco. |
 | **Gestor** | Ver, criar e editar em todos os módulos. Não exclui e não gerencia usuários. |
 | **Usuário** | Só consulta (ver) em todos os módulos. |
+| **Expedição** (1.15.0) | Locação: ver, criar e editar (pedidos, clientes, saída e devolução). Ver etiquetas, leituras e catálogo. |
+| **Conferente** (1.15.0) | Locação: ver e editar (devolução e conferência). Manutenção: ver e abrir. Etiquetas: ver e editar (fotos). Ver leituras e catálogo. |
+| **Técnico** (1.15.0) | Manutenção: ver, abrir, concluir e cancelar. Etiquetas: ver e editar (fotos). Ver locação, leituras e catálogo. |
 | **Personalizado** | Os módulos e ações escolhidos no cadastro. |
 
-Módulos: Catálogo, Etiquetas (RFID), Leituras, Relatórios, Usuários. Ações: Ver, Criar, Editar, Excluir.
+Módulos: Catálogo, Etiquetas (RFID), Leituras, Relatórios, **Locação** e **Manutenção** (1.15.0), Usuários. Ações:
+Ver, Criar, Editar, Excluir. Os perfis de função (Expedição, Conferente, Técnico) têm as permissões prontas por módulo,
+para o uso interno; as caixas do formulário não valem para eles.
+
+Na Locação: ver = listas, pedidos, disponibilidade e o painel do dia; criar = pedido, linha e cliente; editar = saída,
+devolução, conferência, encerrar e cancelar. Mandar para a manutenção na conferência pede também Manutenção · Criar.
+Na Manutenção: criar = abrir a ordem; editar = concluir e cancelar. A V31 deu Locação e Manutenção a quem já tinha
+Etiquetas, com as mesmas ações (até a 1.14.0 essas telas pediam as permissões de Etiquetas).
 O menu e os botões só mostram o que o usuário pode usar. Mudanças de permissão valem a partir do
 próximo login (na web) e na próxima requisição (no coletor).
 
@@ -446,10 +456,10 @@ O app funciona sem rede durante a sessão e envia depois o que ficou na fila. Ca
 | `GET /api/android/tags/{epc}` | Ficha do bem: o cadastro e, desde a 1.5.0, `ultimoLocal` e `ultimoInventarioEm` (último inventário finalizado em que foi encontrado), `ultimaLeituraEm` e `ultimaLeituraPor` (opcionais, podem vir `null`); desde a 1.6.0, também `situacao` (código), `situacaoRotulo`, `unidade`, `local` e `responsavel` (opcionais) | operador · Leituras |
 | `GET /api/android/tags/patrimonio/{patrimonio}` | EPC de um patrimônio (localizar equipamento) | operador · Leituras |
 | `POST /api/android/tags/{epc}/transferencia` | Transfere o bem para um local (1.7.0): `{"local","observacao"}`. Só o local muda. Responde `{"local","situacao","situacaoRotulo","transferencia","jaEstava"}`; o bem que já estava no local responde 200 com `jaEstava: true` e sem guia (reenvio). 404 etiqueta sem cadastro, 409 bem baixado, 400 local desconhecido ou desativado | operador · RFID Editar |
-| `GET /api/android/pedidos?situacao=ABERTO,EM_SEPARACAO` · `GET /api/android/pedidos/{id}` | Pedidos de locação (1.12.0) para o coletor: a lista (padrão: a separar) e o pedido com as linhas (`quantidade`, `saidos`) e os equipamentos que já saíram | operador · RFID Editar |
-| `POST /api/android/pedidos/{id}/conferir` | `{"etiquetas":[...]}`: confere as leituras contra o pedido **sem gravar**: por item `linhaId`, `jaSaiu` e `problema` (`SEM_CADASTRO`, `FORA_DO_PEDIDO`, `NAO_DISPONIVEL`, `EXCEDENTE`); por linha `saidos` e `conferidos` | operador · RFID Editar |
-| `POST /api/android/pedidos/{id}/saida` | `{"etiquetas","observacao","idEnvio"}`: saída parcial (soma ao que já saiu). Responde `aceitas`, `recusadas` (`motivo`, `mensagem`), `faltando` e a situação do pedido. Reenvio não duplica. 409 pedido cancelado ou encerrado | operador · RFID Editar |
-| `POST /api/android/devolucoes` | `{"etiquetas","observacao","idEnvio"}`: cada equipamento alugado fica Em devolução. Responde `recebidas` (com o `pedido`), `semLocacao` e, por pedido tocado, o que ainda está com o cliente (`faltando`). Reenvio não duplica | operador · RFID Editar |
+| `GET /api/android/pedidos?situacao=ABERTO,EM_SEPARACAO` · `GET /api/android/pedidos/{id}` | Pedidos de locação (1.12.0) para o coletor: a lista (padrão: a separar) e o pedido com as linhas (`quantidade`, `saidos`) e os equipamentos que já saíram | operador · Locação Editar |
+| `POST /api/android/pedidos/{id}/conferir` | `{"etiquetas":[...]}`: confere as leituras contra o pedido **sem gravar**: por item `linhaId`, `jaSaiu` e `problema` (`SEM_CADASTRO`, `FORA_DO_PEDIDO`, `NAO_DISPONIVEL`, `EXCEDENTE`); por linha `saidos` e `conferidos` | operador · Locação Editar |
+| `POST /api/android/pedidos/{id}/saida` | `{"etiquetas","observacao","idEnvio"}`: saída parcial (soma ao que já saiu). Responde `aceitas`, `recusadas` (`motivo`, `mensagem`), `faltando` e a situação do pedido. Reenvio não duplica. 409 pedido cancelado ou encerrado | operador · Locação Editar |
+| `POST /api/android/devolucoes` | `{"etiquetas","observacao","idEnvio"}`: cada equipamento alugado fica Em devolução. Responde `recebidas` (com o `pedido`), `semLocacao` e, por pedido tocado, o que ainda está com o cliente (`faltando`). Reenvio não duplica | operador · Locação Editar |
 | `POST /api/android/leitura` | Registra a leitura de uma etiqueta | operador · Leituras |
 | `POST /api/android/naocadastrada` | Envia etiqueta desconhecida para Pendentes | operador · Leituras |
 | `POST /api/android/leituras/lote` | Até 500 leituras de um operador numa requisição: classifica e registra cada uma e devolve o resultado por item (`CADASTRADA` com os dados, `NAO_CADASTRADA`, `RECUSADA` ou `ERRO`). Desde a 1.6.2, os dados trazem também `situacao` e `situacaoRotulo`, com os mesmos nomes da ficha (o app avisa quando o bem lido está baixado ou extraviado). A hora de cada leitura é conferida contra a sessão; reenvio da mesma tag com a mesma hora não duplica | operador · Leituras |
@@ -586,6 +596,10 @@ servidor (desativação, senha temporária ou senha trocada) não tem margem.
   recentes (`RFID_BANCO_COPIA_MANTER`).
   - **Sem a senha, não copia:** o dump leva todos os dados e os hashes das senhas e não pode ir aberto para a nuvem.
   - **Tela Status:** mostra a cópia mais recente e avisa se ela falhar ou ficar mais de 24 h sem cópia nova.
+  - **Sem a variável do OneDrive (1.15.0):** se `OneDriveCommercial` (ou `OneDrive`, `OneDriveConsumer`) não chegar ao
+    processo do servidor, ele sobe assim mesmo: a cópia externa fica **desligada** (o Status mostra "INDISPONÍVEL") e o
+    backup do certificado vai para `data\backups`, com aviso no log. Antes, o servidor não subia ("Could not resolve
+    placeholder"). Reinicie o servidor com o OneDrive ativo para voltar ao normal.
   - **Restaurar a partir da cópia:** decifre com `java -jar servidor\rfid-server.jar --decifrar-backup rfid-AAAAMMDD-HHMMSS.dump.cifrado`
     (pede a senha). Depois copie o `.dump` decifrado para `docker\backups\last` e restaure como abaixo, trocando o
     nome do arquivo.

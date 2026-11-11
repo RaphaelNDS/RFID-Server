@@ -40,8 +40,22 @@ class BackupService(
 
     private val log = LoggerFactory.getLogger(javaClass)
 
+    /**
+     * 1.15.0: a pasta configurada usa uma variável do Windows que não chegou ao processo (ex.: OneDriveCommercial). O
+     * backup vai para data/backups (no próprio computador), com aviso, em vez de o servidor não subir (VariaveisAusentes).
+     */
+    val variavelAusente: String? = org.example.config.VariaveisAusentes.pastaIndisponivel(pastaConfigurada)
+
     /** Pasta dos backups: a configurada, ou data/backups (ao lado do certificado no caminho padrão). */
-    val pasta: Path = pastaConfigurada.trim().ifEmpty { null }?.let { Path.of(it) } ?: Path.of("data", "backups")
+    val pasta: Path = pastaConfigurada.trim().ifEmpty { null }?.takeIf { variavelAusente == null }?.let { Path.of(it) } ?: Path.of("data", "backups")
+
+    init {
+        if (variavelAusente != null) {
+            log.error("Backup do certificado HTTPS: a variável do Windows {} não existe neste processo (rfid.backup.pasta = {}). " +
+                "Até reiniciar o servidor com o OneDrive ativo, o backup vai para {} (no próprio computador)",
+                variavelAusente, pastaConfigurada.replace(org.example.config.VariaveisAusentes.MARCADOR, "%"), pasta.toAbsolutePath())
+        }
+    }
 
     /** Sem certificado em disco (HTTPS desligado) não há o que guardar. */
     val ativo: Boolean get() = habilitado && certificado.arquivosParaBackup().isNotEmpty()

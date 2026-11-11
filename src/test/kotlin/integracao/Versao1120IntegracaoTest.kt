@@ -68,7 +68,7 @@ class Versao1120IntegracaoTest : IntegracaoBase() {
     /** Operador do coletor com RFID · Editar (saída e devolução). */
     private val token by lazy {
         val email = "loc-$s@x.com".lowercase()
-        operadores.criarUsuario(email = email, permissoes = arrayOf(Modulo.LEITURA to Acao.READ, Modulo.RFID to Acao.READ, Modulo.RFID to Acao.UPDATE))
+        operadores.criarUsuario(email = email, permissoes = arrayOf(Modulo.LEITURA to Acao.READ, Modulo.RFID to Acao.READ, Modulo.LOCACAO to Acao.READ, Modulo.LOCACAO to Acao.UPDATE))
         // O login devolve a permissão nova (um login só: outro derrubaria esta sessão)
         val resposta = mvc.perform(post("/api/android/login").header(OperadorTeste.HEADER_CHAVE, CHAVE_COLETOR).contentType(MediaType.APPLICATION_JSON)
             .content("""{"email":"$email","senha":"${OperadorTeste.SENHA}"}"""))
