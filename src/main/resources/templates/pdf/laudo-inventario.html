@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<!--
+  Laudo do inventário em PDF (1.8.0): o resumo, os bens que faltaram (com a justificativa do coletor e o valor
+  contábil), os achados em outro local, as assinaturas e, no fim, a lista do que foi lido. Mesmos dados da tela
+  inventario-detalhe.html; os valores vêm do ValorPatrimonialService.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="'Laudo do inventário - ' + ${inventario.local}">Laudo</title>
+  <style th:replace="~{pdf/base :: estilo}"></style>
+</head>
+<body>
+<div th:replace="~{pdf/base :: rodape}"></div>
+<div th:replace="~{pdf/base :: cabecalho('Laudo de inventário', ${inventario.local}, 'Inventário de ' + ${#temporals.format(inventario.iniciadoEm, 'dd/MM/yyyy')})}"></div>
+
+<p class="aviso" th:if="${inventario.status.name() == 'ABERTO'}">
+  Inventário ainda em andamento: este laudo é provisório e a lista do que falta pode mudar até o coletor finalizar.
+</p>
+
+<table class="dados">
+  <tr><th>Local</th><td th:text="${inventario.local}"></td></tr>
+  <tr><th>Início</th><td th:text="${#temporals.format(inventario.iniciadoEm, 'dd/MM/yyyy HH:mm')}"></td></tr>
+  <tr><th>Fim</th><td th:text="${inventario.finalizadoEm != null ? #temporals.format(inventario.finalizadoEm, 'dd/MM/yyyy HH:mm') : 'em andamento'}"></td></tr>
+  <tr><th>Coletor</th><td th:text="${inventario.dispositivo}"></td></tr>
+  <tr th:if="${inventario.operador != null}"><th>Operador</th><td th:text="${inventario.operador}"></td></tr>
+  <tr><th>Comparação</th>
+    <td th:if="${comparacao.referencia.temReferencia and comparacao.referencia.inventarioReferencia != null}"
+        th:text="'Bens cadastrados no local e o inventário de ' + ${#temporals.format(comparacao.referencia.finalizadoEm, 'dd/MM/yyyy HH:mm')}"></td>
+    <td th:if="${comparacao.referencia.temReferencia and comparacao.referencia.inventarioReferencia == null}">Bens cadastrados no local (sem inventário anterior)</td>
+    <td th:unless="${comparacao.referencia.temReferencia}">Primeiro inventário do local, sem comparação</td>
+  </tr>
+</table>
+
+<table class="resumo">
+  <tr>
+    <td><span class="muted">Etiquetas lidas</span><span class="numero" th:text="${inventario.totalLidas}">0</span>
+      <span class="muted" th:text="${inventario.naoCadastradas} + ' sem cadastro'"></span></td>
+    <td><span class="muted">Esperados</span><span class="numero" th:text="${comparacao.referencia.temReferencia ? comparacao.esperadas : '-'}">0</span></td>
+    <td><span class="muted">Encontrados</span><span class="numero" th:text="${comparacao.referencia.temReferencia ? comparacao.encontradas : '-'}">0</span></td>
+    <td><span class="muted">Faltaram</span><span class="numero" th:text="${comparacao.referencia.temReferencia ? #lists.size(comparacao.faltando) : '-'}">0</span>
+      <span class="muted" th:if="${!#lists.isEmpty(comparacao.faltando)}" th:text="${fmt.reais(totalFaltante)} + ' em valor contábil'"></span></td>
+  </tr>
+</table>
+
+<th:block th:if="${comparacao.referencia.temReferencia}">
+  <h2 th:text="'Bens que faltaram (' + ${#lists.size(comparacao.faltando)} + ')'">Bens que faltaram</h2>
+  <p class="muted" th:if="${#lists.isEmpty(comparacao.faltando)}" th:text="'Nada faltou: todos os ' + ${comparacao.esperadas} + ' bens esperados foram lidos.'"></p>
+  <table class="lista" th:unless="${#lists.isEmpty(comparacao.faltando)}">
+    <thead><tr><th>Patrimônio</th><th>Descrição</th><th>Etiqueta</th><th>Situação</th><th>Justificativa</th><th class="num">Valor contábil</th></tr></thead>
+    <tbody>
+    <tr th:each="f : ${comparacao.faltando}" th:with="j=${justificativas[f.tag]}, v=${valores[f.tag]}">
+      <td th:text="${f.patrimonio} ?: (${f.codigoInterno} ?: '-')"></td>
+      <td th:with="d=${#strings.trim((f.tipo ?: '') + ' ' + (f.marca ?: '') + ' ' + (f.modelo ?: ''))}" th:text="${d != '' ? d : '-'}"></td>
+      <td class="mono" th:text="${f.tag}"></td>
+      <td th:text="${f.situacaoRotulo} ?: '-'"></td>
+      <td th:text="${j != null ? j.motivo.rotulo + (j.observacao != null ? ' (' + j.observacao + ')' : '') : '-'}"></td>
+      <td class="num" th:text="${v != null ? fmt.reais(v.valorContabil) : 'sem valor'}"></td>
+    </tr>
+    <tr class="total">
+      <td colspan="5" th:text="'Total' + (${faltantesSemValor} > 0 ? ' (' + ${faltantesSemValor} + ' sem valor de aquisição)' : '')">Total</td>
+      <td class="num" th:text="${fmt.reais(totalFaltante)}"></td>
+    </tr>
+    </tbody>
+  </table>
+</th:block>
+
+<th:block th:unless="${#lists.isEmpty(comparacao.emOutroLocal)}">
+  <h2 th:text="'Encontrados em outro local (' + ${#lists.size(comparacao.emOutroLocal)} + ')'">Encontrados em outro local</h2>
+  <p class="muted">Estavam neste local no inventário anterior e foram achados depois em outro: não contam como faltando.</p>
+  <table class="lista">
+    <thead><tr><th>Patrimônio</th><th>Tipo</th><th>Etiqueta</th><th>Encontrado em</th><th>Quando</th></tr></thead>
+    <tbody>
+    <tr th:each="m : ${comparacao.emOutroLocal}">
+      <td th:text="${m.item.patrimonio} ?: (${m.item.codigoInterno} ?: '-')"></td>
+      <td th:text="${m.item.tipo} ?: '-'"></td>
+      <td class="mono" th:text="${m.item.tag}"></td>
+      <td th:text="${m.local}"></td>
+      <td th:text="${m.encontradoEm != null ? #temporals.format(m.encontradoEm, 'dd/MM/yyyy HH:mm') : 'mudado no cadastro'}"></td>
+    </tr>
+    </tbody>
+  </table>
+</th:block>
+
+<table class="assinaturas">
+  <tr>
+    <td><div class="linha" th:text="${inventario.operador} ?: ' '">&#160;</div><div class="muted">Responsável pela contagem</div></td>
+    <td><div class="linha">&#160;</div><div class="muted">Responsável pelo patrimônio</div></td>
+  </tr>
+</table>
+<p class="local-data">Local e data: ____________________________, ____ / ____ / ________</p>
+
+<h2 style="page-break-before: always" th:text="'Anexo: etiquetas lidas (' + ${#lists.size(itens)} + ')'">Etiquetas lidas</h2>
+<table class="lista">
+  <thead><tr><th>#</th><th>Lida em</th><th>Patrimônio</th><th>Descrição</th><th>Etiqueta</th><th>Cadastro</th></tr></thead>
+  <tbody>
+  <tr th:each="i, n : ${itens}">
+    <td th:text="${n.count}"></td>
+    <td th:text="${#temporals.format(i.lidoEm, 'dd/MM HH:mm:ss')}"></td>
+    <td th:text="${i.patrimonio} ?: (${i.codigoInterno} ?: '-')"></td>
+    <td th:with="d=${#strings.trim((i.tipo ?: '') + ' ' + (i.marca ?: '') + ' ' + (i.modelo ?: ''))}" th:text="${d != '' ? d : '-'}"></td>
+    <td class="mono" th:text="${i.tag}"></td>
+    <td th:text="${i.cadastrada ? 'Cadastrada' : 'Sem cadastro'}"></td>
+  </tr>
+  </tbody>
+</table>
+<p class="muted" th:if="${#lists.isEmpty(itens)}">Nenhuma etiqueta lida.</p>
+</body>
+</html>

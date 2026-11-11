@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!-- Termo de responsabilidade em PDF (1.8.0): o mesmo texto da tela (termo-responsabilidade.html) -->
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="'Termo de responsabilidade - ' + ${responsavel.nome}">Termo</title>
+  <style th:replace="~{pdf/base :: estilo}"></style>
+</head>
+<body>
+<div th:replace="~{pdf/base :: rodape}"></div>
+<div th:replace="~{pdf/base :: cabecalho('Termo de responsabilidade pela guarda de bens', null, 'Emitido em ' + ${fmt.data(hoje)})}"></div>
+
+<table class="dados">
+  <tr><th>Responsável</th><td th:text="${responsavel.nome}"></td></tr>
+  <tr th:if="${responsavel.setor != null}"><th>Setor</th><td th:text="${responsavel.setor}"></td></tr>
+  <tr th:if="${responsavel.matricula != null}"><th>Matrícula</th><td th:text="${responsavel.matricula}"></td></tr>
+  <tr th:if="${responsavel.email != null}"><th>Email</th><td th:text="${responsavel.email}"></td></tr>
+</table>
+
+<p class="texto">
+  Declaro ter recebido os bens relacionados abaixo, em perfeitas condições de uso, e assumo a responsabilidade pela
+  sua guarda e conservação. Comprometo-me a comunicar imediatamente ao setor responsável pelo patrimônio qualquer
+  dano, extravio, furto ou necessidade de transferência, e a devolvê-los quando solicitado ou ao deixar a função.
+</p>
+
+<table class="lista" th:unless="${#lists.isEmpty(bens)}">
+  <thead><tr><th>#</th><th>Patrimônio</th><th>Descrição</th><th>Nº série</th><th>Local</th><th>Situação</th></tr></thead>
+  <tbody>
+  <tr th:each="b, i : ${bens}">
+    <td th:text="${i.count}"></td>
+    <td th:text="${b.patrimonio != '' ? b.patrimonio : b.codigoInterno}"></td>
+    <td th:text="${b.descricao} ?: '-'"></td>
+    <td class="mono" th:text="${b.numeroSerie != '' ? b.numeroSerie : '-'}"></td>
+    <td th:text="${b.localDescricao} ?: '-'"></td>
+    <td th:text="${b.situacao.rotulo}"></td>
+  </tr>
+  </tbody>
+</table>
+<p class="muted" th:if="${#lists.isEmpty(bens)}">Nenhum bem sob a responsabilidade desta pessoa.</p>
+<p class="muted" th:unless="${#lists.isEmpty(bens)}" th:text="'Total: ' + ${#lists.size(bens)} + ' bem(ns).'"></p>
+
+<table class="assinaturas">
+  <tr>
+    <td><div class="linha" th:text="${responsavel.nome}"></div><div class="muted">Responsável pelos bens</div></td>
+    <td><div class="linha">&#160;</div><div class="muted">Responsável pelo patrimônio</div></td>
+  </tr>
+</table>
+<p class="local-data">Local e data: ____________________________, ____ / ____ / ________</p>
+</body>
+</html>

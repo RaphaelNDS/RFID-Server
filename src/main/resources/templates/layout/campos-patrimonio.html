@@ -35,4 +35,27 @@
     </select>
     <span class="field-dica">Para tirar o bem do patrimônio (venda, doação, descarte, furto), use "Dar baixa".</span>
   </div>
+
+  <!-- Valor (1.8.0): a depreciação usa a vida útil e o residual do tipo de equipamento (tela Valor patrimonial) -->
+  <div class="field">
+    <label for="valorAquisicao">Valor de aquisição (R$)</label>
+    <input type="text" id="valorAquisicao" name="valorAquisicao" inputmode="decimal" maxlength="20" placeholder="Ex.: 4.599,90"
+           th:value="${cadastro.valorAquisicao}">
+    <span class="field-dica" th:if="${depreciacao != null}"
+          th:text="'Valor contábil hoje: ' + ${fmt.reais(depreciacao.valorContabil)} + (${depreciacao.semDepreciacao != null}
+            ? ' (não deprecia: ' + ${depreciacao.semDepreciacao} + ')'
+            : ' (' + ${depreciacao.mesesDepreciados} + ' de ' + ${depreciacao.vidaUtilMeses} + ' meses, depreciação de ' + ${fmt.reais(depreciacao.depreciacaoAcumulada)} + ')')"></span>
+    <span class="field-dica" th:if="${depreciacao == null}">Opcional. Sem valor, o bem fica fora dos totais do valor patrimonial.</span>
+  </div>
+
+  <div class="field">
+    <label for="dataAquisicao">Data de aquisição</label>
+    <input type="date" id="dataAquisicao" name="dataAquisicao" th:value="${cadastro.dataAquisicao}" th:max="${#temporals.format(#temporals.createToday(), 'yyyy-MM-dd')}">
+    <span class="field-dica">A depreciação conta os meses completos desde esta data.</span>
+  </div>
+
+  <div class="field">
+    <label for="notaFiscal">Nota fiscal</label>
+    <input type="text" id="notaFiscal" name="notaFiscal" maxlength="60" th:value="${cadastro.notaFiscal}">
+  </div>
 </th:block>

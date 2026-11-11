@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<!-- Bens com valor contábil em PDF (1.8.0): totais por tipo e por local e a lista dos bens. Dados do ValorPatrimonialService -->
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Bens com valor contábil</title>
+  <style th:replace="~{pdf/base :: estilo}"></style>
+  <!-- Muitas colunas: em paisagem -->
+  <style>@page { size: A4 landscape; }</style>
+</head>
+<body>
+<div th:replace="~{pdf/base :: rodape}"></div>
+<div th:replace="~{pdf/base :: cabecalho('Bens com valor contábil', ${filtro}, 'Posição em ' + ${fmt.data(relatorio.referencia)})}"></div>
+
+<table class="resumo">
+  <tr>
+    <td><span class="muted">Bens</span><span class="numero" th:text="${relatorio.total.bens}">0</span>
+      <span class="muted" th:if="${relatorio.total.semValor > 0}" th:text="${relatorio.total.semValor} + ' sem valor de aquisição'"></span></td>
+    <td><span class="muted">Valor de aquisição</span><span class="numero" th:text="${fmt.reais(relatorio.total.valorAquisicao)}">0</span></td>
+    <td><span class="muted">Depreciação acumulada</span><span class="numero" th:text="${fmt.reais(relatorio.total.depreciacaoAcumulada)}">0</span></td>
+    <td><span class="muted">Valor contábil</span><span class="numero" th:text="${fmt.reais(relatorio.total.valorContabil)}">0</span></td>
+  </tr>
+</table>
+<p class="muted">Depreciação linear (CPC 27) pela vida útil e pelo valor residual de cada tipo de equipamento, contando os
+  meses completos desde a data de aquisição. Os bens sem valor de aquisição entram na contagem, mas não nos totais.</p>
+
+<h2>Por tipo de equipamento</h2>
+<table class="lista">
+  <thead><tr><th>Tipo</th><th class="num">Bens</th><th class="num">Sem valor</th><th class="num">Aquisição</th><th class="num">Depreciação acumulada</th><th class="num">Valor contábil</th></tr></thead>
+  <tbody>
+  <tr th:each="t : ${relatorio.porTipo}">
+    <td th:text="${t.nome}"></td>
+    <td class="num" th:text="${t.bens}"></td>
+    <td class="num" th:text="${t.semValor}"></td>
+    <td class="num" th:text="${fmt.reais(t.valorAquisicao)}"></td>
+    <td class="num" th:text="${fmt.reais(t.depreciacaoAcumulada)}"></td>
+    <td class="num" th:text="${fmt.reais(t.valorContabil)}"></td>
+  </tr>
+  <tr class="total">
+    <td>Total</td>
+    <td class="num" th:text="${relatorio.total.bens}"></td>
+    <td class="num" th:text="${relatorio.total.semValor}"></td>
+    <td class="num" th:text="${fmt.reais(relatorio.total.valorAquisicao)}"></td>
+    <td class="num" th:text="${fmt.reais(relatorio.total.depreciacaoAcumulada)}"></td>
+    <td class="num" th:text="${fmt.reais(relatorio.total.valorContabil)}"></td>
+  </tr>
+  </tbody>
+</table>
+
+<h2>Por local</h2>
+<table class="lista">
+  <thead><tr><th>Local</th><th class="num">Bens</th><th class="num">Sem valor</th><th class="num">Aquisição</th><th class="num">Depreciação acumulada</th><th class="num">Valor contábil</th></tr></thead>
+  <tbody>
+  <tr th:each="t : ${relatorio.porLocal}">
+    <td th:text="${t.nome}"></td>
+    <td class="num" th:text="${t.bens}"></td>
+    <td class="num" th:text="${t.semValor}"></td>
+    <td class="num" th:text="${fmt.reais(t.valorAquisicao)}"></td>
+    <td class="num" th:text="${fmt.reais(t.depreciacaoAcumulada)}"></td>
+    <td class="num" th:text="${fmt.reais(t.valorContabil)}"></td>
+  </tr>
+  </tbody>
+</table>
+
+<h2 style="page-break-before: always">Bens</h2>
+<table class="lista">
+  <thead><tr><th>Patrimônio</th><th>Descrição</th><th>Local</th><th>Situação</th><th>Aquisição</th><th>NF</th>
+    <th class="num">Valor</th><th class="num">Meses</th><th class="num">Depreciação</th><th class="num">Contábil</th></tr></thead>
+  <tbody>
+  <tr th:each="l : ${relatorio.linhas}">
+    <td th:text="${l.bem.patrimonio != '' ? l.bem.patrimonio : l.bem.codigoInterno}"></td>
+    <td th:text="${l.bem.descricao} ?: '-'"></td>
+    <td th:text="${l.bem.localDescricao} ?: '-'"></td>
+    <td th:text="${l.bem.situacao.rotulo}"></td>
+    <td class="nowrap" th:text="${l.dataAquisicao != null ? fmt.data(l.dataAquisicao) : '-'}"></td>
+    <td th:text="${l.notaFiscal} ?: '-'"></td>
+    <th:block th:if="${l.depreciacao != null}">
+      <td class="num" th:text="${fmt.reais(l.depreciacao.valorAquisicao)}"></td>
+      <td class="num" th:text="${l.depreciacao.vidaUtilMeses != null and l.depreciacao.semDepreciacao == null ? l.depreciacao.mesesDepreciados + '/' + l.depreciacao.vidaUtilMeses : '-'}"></td>
+      <td class="num" th:text="${fmt.reais(l.depreciacao.depreciacaoAcumulada)}"></td>
+      <td class="num" th:text="${fmt.reais(l.depreciacao.valorContabil)}"></td>
+    </th:block>
+    <td th:if="${l.depreciacao == null}" colspan="4" class="muted">sem valor de aquisição</td>
+  </tr>
+  </tbody>
+</table>
+<p class="muted" th:if="${#lists.isEmpty(relatorio.linhas)}">Nenhum bem neste filtro.</p>
+</body>
+</html>

@@ -53,6 +53,10 @@ class HistoricoEtiquetaService(
             "Local" to tag.localId?.let { id -> locais?.findById(id)?.map { it.nome }?.orElse("#$id") ?: "#$id" },
             "Responsável" to tag.responsavelId?.let { id -> responsaveis?.findById(id)?.map { it.descricao }?.orElse("#$id") ?: "#$id" },
             "Situação" to tag.situacao.rotulo,
+            // 1.8.0: valor e aquisição
+            "Valor de aquisição" to tag.valorAquisicao?.let { org.example.util.FormatoBr.reais(it) },
+            "Data de aquisição" to tag.dataAquisicao?.let { org.example.util.FormatoBr.data(it) },
+            "Nota fiscal" to tag.notaFiscal,
             "Baixa" to tag.baixaMotivo?.let { m ->
                 listOfNotNull(m.rotulo, tag.baixaEm?.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
                     tag.baixaObservacao, tag.baixaPor?.let { "por $it" }).joinToString(" · ")

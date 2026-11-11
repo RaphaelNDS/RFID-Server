@@ -83,6 +83,7 @@ class RfidService(
         validarLocalEResponsavel(req, localAtual = null, responsavelAtual = null)
 
         val hash = hashTag(req.tag)
+        val valor = valorDo(req)
 
         val entity = TagEntity(
             tagHash = hash,
@@ -97,7 +98,10 @@ class RfidService(
 
             localId = req.localId,
             responsavelId = req.responsavelId,
-            situacao = situacaoEscolhida(req.situacao) ?: SituacaoBem.EM_USO
+            situacao = situacaoEscolhida(req.situacao) ?: SituacaoBem.EM_USO,
+            valorAquisicao = valor.valor,
+            dataAquisicao = valor.data,
+            notaFiscal = valor.notaFiscal
         )
 
         val salva = repo.save(entity)
@@ -257,7 +261,10 @@ class RfidService(
                 unidadeNome = local?.unidadeId?.let { unidades[it] },
                 localNome = local?.nome,
                 responsavelNome = tag.responsavelId?.let { responsaveis[it] },
-                situacao = tag.situacao
+                situacao = tag.situacao,
+                valorAquisicao = tag.valorAquisicao,
+                dataAquisicao = tag.dataAquisicao,
+                notaFiscal = tag.notaFiscal
             )
         }
     }
@@ -289,6 +296,7 @@ class RfidService(
         validarLocalEResponsavel(req, localAtual = tag.localId, responsavelAtual = tag.responsavelId)
         // Conferida antes de mexer na etiqueta: recusar depois deixaria a entidade alterada na sessão do JPA
         val novaSituacao = if (tag.baixado) null else situacaoEscolhida(req.situacao)
+        val valor = valorDo(req)
 
         val antes = historico.retrato(tag)
         tag.codigoInterno = req.codigoInterno
@@ -301,6 +309,9 @@ class RfidService(
         tag.responsavelId = req.responsavelId
         // Bem baixado continua baixado (desfazer é pela tela da baixa); vazio = a situação atual
         novaSituacao?.let { tag.situacao = it }
+        tag.valorAquisicao = valor.valor
+        tag.dataAquisicao = valor.data
+        tag.notaFiscal = valor.notaFiscal
         repo.save(tag)
 
         val mudaram = historico.registrarAlteracao(tag, antes)
@@ -310,6 +321,23 @@ class RfidService(
             log.info("Etiqueta {} (patrimônio {}) alterada por {}: {}", tag.tagReal, tag.patrimonio, usuarioAtual(), mudaram.joinToString())
         }
         return mudaram
+    }
+
+    private data class ValorInformado(val valor: java.math.BigDecimal?, val data: java.time.LocalDate?, val notaFiscal: String?)
+
+    /**
+     * Valor, data de aquisição e nota fiscal do pedido (1.8.0), já conferidos: valor não negativo, data que não está
+     * no futuro e nota de até 60 caracteres. Tudo opcional (vazio = sem valor).
+     */
+    private fun valorDo(req: CadastroRequest): ValorInformado {
+        val valor = org.example.util.FormatoBr.lerValor(req.valorAquisicao)
+        val data = org.example.util.FormatoBr.lerData(req.dataAquisicao)
+        require(data == null || !data.isAfter(java.time.LocalDate.now(relogio))) {
+            "A data de aquisição ${org.example.util.FormatoBr.data(data)} está no futuro"
+        }
+        val nota = req.notaFiscal?.trim()?.takeIf { it.isNotEmpty() }
+        require(nota == null || nota.length <= 60) { "A nota fiscal passa de 60 caracteres (tem ${nota!!.length})" }
+        return ValorInformado(valor, data, nota)
     }
 
     private fun normalizar(req: CadastroRequest): CadastroRequest {

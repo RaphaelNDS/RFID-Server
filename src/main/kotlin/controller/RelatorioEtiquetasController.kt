@@ -88,15 +88,17 @@ class RelatorioEtiquetasController(
     private fun planilha(nome: String, etiquetas: List<EtiquetaVista>): Planilha {
         return Planilha(
             nome = nome,
-            // As colunas até "Situação" são as mesmas da importação (ImportacaoEtiquetasService): a planilha exportada
+            // As colunas até "Nota fiscal" (menos a matrícula) são as mesmas da importação (ImportacaoEtiquetasService): a planilha exportada
             // pode ser corrigida e importada de volta
             colunas = listOf("Etiqueta (EPC)", "Código", "Patrimônio", "Tipo", "Marca", "Modelo", "Nº série",
                 "Unidade", "Local", "Responsável", "Situação",
+                "Valor de aquisição", "Data de aquisição", "Nota fiscal",
                 "Última leitura", "Último inventário", "Último local", "Dias sem ser vista"),
             linhas = etiquetas.map { v ->
                 val e = v.etiqueta
                 listOf(e.tag, e.codigoInterno, e.patrimonio, e.tipoNome, e.marcaNome, e.modeloNome, e.numeroSerie,
                     e.unidadeNome, e.localNome, e.responsavelNome, e.situacao.rotulo,
+                    e.valorAquisicao?.let { org.example.util.FormatoBr.numero(it) }, e.dataAquisicao?.let { org.example.util.FormatoBr.data(it) }, e.notaFiscal,
                     v.ultimaLeitura, v.ultimoInventario, v.ultimoLocal,
                     v.diasSemSerVista)
             }

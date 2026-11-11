@@ -16,9 +16,15 @@
       </p>
     </div>
     <!-- Volta para a lista no mesmo local e página de onde veio (linkVoltar, montado e validado no controller) -->
-    <a th:href="@{${linkVoltar}}" class="btn btn-ghost">
-      <svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Voltar
-    </a>
+    <div class="page-header-acoes">
+      <a th:href="@{${linkVoltar}}" class="btn btn-ghost">
+        <svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Voltar
+      </a>
+      <!-- 1.8.0: laudo em PDF, com os faltantes, as justificativas, o valor contábil e as assinaturas -->
+      <a th:href="@{/admin/inventarios/{id}/laudo.pdf(id=${inventario.id})}" class="btn btn-primary" target="_blank" rel="noopener">
+        <svg class="ic"><use href="/img/icones.svg#download"/></svg>Laudo (PDF)
+      </a>
+    </div>
   </div>
 
   <div class="alert alert-ok" th:if="${msg}" role="status">

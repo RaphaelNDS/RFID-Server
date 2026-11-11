@@ -15,7 +15,11 @@ data class TagViewAdmin(
     val unidadeNome: String? = null,
     val localNome: String? = null,
     val responsavelNome: String? = null,
-    val situacao: SituacaoBem = SituacaoBem.EM_USO
+    val situacao: SituacaoBem = SituacaoBem.EM_USO,
+    // Valor (1.8.0)
+    val valorAquisicao: java.math.BigDecimal? = null,
+    val dataAquisicao: java.time.LocalDate? = null,
+    val notaFiscal: String? = null
 ) {
     /** "Notebook Dell Latitude" (o que houver do catálogo) ou null. */
     val descricao: String? get() = listOfNotNull(tipoNome, marcaNome, modeloNome).joinToString(" ").ifBlank { null }
