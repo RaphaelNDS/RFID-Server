@@ -9,7 +9,7 @@
   <div class="page-header">
     <div>
       <h1>Transferências</h1>
-      <p class="subtitulo">Guias de transferência de bens entre locais e responsáveis</p>
+      <p class="subtitulo">Guias de transferência de bens entre locais</p>
     </div>
     <div class="page-header-acoes">
       <a th:href="@{/admin/transferencias/nova}" class="btn btn-primary" th:if="${@authService.temPermissao('RFID','UPDATE')}">
@@ -37,7 +37,7 @@
     <div class="table-wrap">
       <table class="table table-cartoes" th:unless="${#lists.isEmpty(transferencias)}">
         <thead>
-        <tr><th>Nº</th><th>Data</th><th>Bens</th><th>Local de destino</th><th>Responsável de destino</th><th>Solicitante</th><th>Registrada por</th><th></th></tr>
+        <tr><th>Nº</th><th>Data</th><th>Bens</th><th>Local de destino</th><th>Solicitante</th><th>Registrada por</th><th></th></tr>
         </thead>
         <tbody>
         <tr th:each="r : ${transferencias}" th:with="t=${r.transferencia}">
@@ -45,7 +45,6 @@
           <td data-rotulo="Data" class="nowrap" th:text="${#temporals.format(t.data, 'dd/MM/yyyy')}"></td>
           <td data-rotulo="Bens" th:text="${r.quantidade}"></td>
           <td data-rotulo="Local de destino" th:text="${t.localDestino} ?: 'mantido'"></td>
-          <td data-rotulo="Responsável de destino" th:text="${t.responsavelDestino} ?: 'mantido'"></td>
           <td data-rotulo="Solicitante" th:text="${t.solicitante} ?: '—'"></td>
           <td data-rotulo="Registrada por" th:text="${t.registradaPor}"></td>
           <td class="acoes">

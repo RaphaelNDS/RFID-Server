@@ -58,7 +58,6 @@ class TransferenciaWebController(
         @RequestParam(required = false) deResponsavel: Long?,
         @RequestParam(required = false) inventario: String?,
         @RequestParam(required = false) localDestino: Long?,
-        @RequestParam(required = false) responsavelDestino: Long?,
         @RequestParam(required = false) data: String?,
         @RequestParam(required = false) solicitante: String?,
         @RequestParam(required = false) motivo: String?,
@@ -71,7 +70,7 @@ class TransferenciaWebController(
                 rfid.listarTodasParaAdmin(null, FiltroEtiquetas(localId = deLocal, responsavelId = deResponsavel)).map { it.tag }
             else -> emptyList()
         }
-        formulario(model, lista, inventario, localDestino, responsavelDestino, data, solicitante, motivo, null)
+        formulario(model, lista, inventario, localDestino, data, solicitante, motivo, null)
         return "transferencia-nova"
     }
 
@@ -81,7 +80,6 @@ class TransferenciaWebController(
         @RequestParam(required = false) codigos: String?,
         @RequestParam(required = false) inventario: String?,
         @RequestParam(required = false) localDestino: Long?,
-        @RequestParam(required = false) responsavelDestino: Long?,
         @RequestParam(required = false) data: String?,
         @RequestParam(required = false) solicitante: String?,
         @RequestParam(required = false) motivo: String?,
@@ -90,15 +88,15 @@ class TransferenciaWebController(
     ): String {
         val lista = separar(codigos.orEmpty())
         return try {
-            val guia = service.transferir(
-                PedidoTransferencia(lista, localDestino?.takeIf { it > 0 }, responsavelDestino?.takeIf { it > 0 }, dia(data), solicitante, motivo, inventario)
-            )
+            // 1.18.2: a web só muda o local (o responsável de destino saiu da tela)
+            val local = localDestino?.takeIf { it > 0 } ?: throw IllegalArgumentException("Escolha o local de destino")
+            val guia = service.transferir(PedidoTransferencia(lista, local, null, dia(data), solicitante, motivo, inventario))
             redirect.addFlashAttribute("msg", "Transferência nº ${guia.id} registrada. Imprima a guia para as assinaturas.")
             "redirect:/admin/transferencias/${guia.id}"
         } catch (e: IllegalArgumentException) {
             // Volta para o formulário com tudo o que foi digitado (o texto dos bens pode ser longo demais para a URL)
             log.info("Transferência recusada: {}", e.message)
-            formulario(model, lista, inventario, localDestino, responsavelDestino, data, solicitante, motivo, e.message)
+            formulario(model, lista, inventario, localDestino, data, solicitante, motivo, e.message)
             "transferencia-nova"
         }
     }
@@ -113,7 +111,7 @@ class TransferenciaWebController(
     }
 
     private fun formulario(
-        model: Model, lista: List<String>, inventario: String?, localDestino: Long?, responsavelDestino: Long?,
+        model: Model, lista: List<String>, inventario: String?, localDestino: Long?,
         data: String?, solicitante: String?, motivo: String?, erro: String?
     ) {
         val limpos = lista.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
@@ -125,13 +123,11 @@ class TransferenciaWebController(
         model.addAttribute("maximo", TransferenciaService.MAXIMO_BENS)
         model.addAttribute("inventario", inventario?.takeIf { it.isNotBlank() })
         model.addAttribute("localDestino", localDestino)
-        model.addAttribute("responsavelDestino", responsavelDestino)
         model.addAttribute("data", runCatching { dia(data) }.getOrNull() ?: LocalDate.now(relogio))
         model.addAttribute("hoje", LocalDate.now(relogio))
         model.addAttribute("solicitante", solicitante)
         model.addAttribute("motivo", motivo)
         model.addAttribute("opcoesLocal", cadastros.opcoesDeLocal())
-        model.addAttribute("opcoesResponsavel", cadastros.responsaveisAtivos())
         if (erro != null) model.addAttribute("erro", erro)
         if (limpos.size > TransferenciaService.MAXIMO_BENS) model.addAttribute("erro", "No máximo ${TransferenciaService.MAXIMO_BENS} bens por transferência (informados ${limpos.size})")
     }

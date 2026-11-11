@@ -97,6 +97,9 @@ class Versao161IntegracaoTest : IntegracaoBase() {
         assertThat(itens.getValue("E-TR1-$s").localAnterior).isEqualTo("Matriz $s › Sala 1 $s")
         assertThat(itens.getValue("E-TR1-$s").responsavelAnterior).isEqualTo("Ana $s")
         assertThat(itens.getValue("E-TR2-$s").responsavelAnterior).isNull()
+        // Guia antiga, com responsável: a tela continua mostrando (1.18.2)
+        mvc.perform(get("/admin/transferencias/${guia.id}").with(Perfis.usuario()))
+            .andExpect(content().string(containsString("Responsável de destino"))).andExpect(content().string(containsString("Bia $s (RH)")))
 
         val linhas = historico.findByTagRealOrderByMomentoDescIdDesc("E-TR1-$s").filter { it.campo == "Local" || it.campo == "Responsável" }
         assertThat(linhas).hasSize(2)
@@ -239,13 +242,16 @@ class Versao161IntegracaoTest : IntegracaoBase() {
 
         // Transferência pela tela: recusa volta ao formulário com o texto; certa vai para a guia
         mvc.perform(post("/admin/transferencias").with(Perfis.gestor()).with(csrf()).param("codigos", "E-W1-$s\nNAO-$s"))
-            .andExpect(status().isOk).andExpect(content().string(containsString("Escolha o local ou o responsável")))
+            .andExpect(status().isOk).andExpect(content().string(containsString("Escolha o local de destino")))
             .andExpect(content().string(containsString("NAO-$s")))
         val resposta = mvc.perform(post("/admin/transferencias").with(Perfis.gestor()).with(csrf())
             .param("codigos", "E-W1-$s").param("localDestino", destino.id.toString()).param("data", LocalDate.now().toString())
             .param("solicitante", "Chefe $s")).andExpect(status().is3xxRedirection).andReturn().response
         val urlGuia = resposta.redirectedUrl!!
         mvc.perform(get(urlGuia).with(Perfis.usuario())).andExpect(status().isOk)
+            // 1.18.2: sem responsável na transferência pela tela, a guia não mostra o responsável
+            .andExpect(content().string(not(containsString("Responsável anterior"))))
+            .andExpect(content().string(not(containsString("Responsável de destino"))))
             .andExpect(content().string(containsString("Guia de transferência de bens")))
             .andExpect(content().string(containsString("Destino W $s")))
             .andExpect(content().string(containsString("Chefe $s")))

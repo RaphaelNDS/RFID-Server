@@ -298,6 +298,13 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Transferência só por local (1.18.2)
+
+- O **responsável de destino** saiu da transferência: do formulário (onde já estava escondido), da rota e da coluna da
+  lista. A transferência pela tela pede o **local de destino** (obrigatório).
+- A guia (tela e PDF) só mostra "Responsável de destino" e "Responsável anterior" nas guias antigas que mudaram o
+  responsável, para não perder o histórico. O responsável continua no cadastro da etiqueta e no banco.
+
 ### Limpeza e organização do código (1.18.1)
 
 Sem mudança no uso nem no banco (nenhuma migração; os dados antigos ficam como estão).
