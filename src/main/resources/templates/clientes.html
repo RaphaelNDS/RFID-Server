@@ -11,6 +11,11 @@
       <h1>Clientes</h1>
       <p class="subtitulo">Quem aluga os equipamentos (pedidos de locação) e quem compra (vendas)</p>
     </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/clientes/importar}" class="btn btn-ghost" th:if="${@authService.temPermissao('LOCACAO','CREATE')}">
+        <svg class="ic"><use href="/img/icones.svg#download"/></svg>Importar planilha
+      </a>
+    </div>
   </div>
 
   <div class="alert alert-ok" th:if="${msg}" role="status">

@@ -298,6 +298,24 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Cadastro em lote e importação de clientes (1.29.0)
+
+**Cadastrar pendentes em lote** (Etiquetas · Criar): na tela **Pendentes**, marque as etiquetas (ou use "Cadastrar todas
+em lote", até 500 das mais antigas) e escolha uma vez o tipo, a marca, o modelo, o local e a situação.
+
+- O **código interno** (obrigatório) e o **patrimônio** (opcional) saem em sequência: prefixo + número inicial, e os zeros
+  contam (`GER-` e `001` geram GER-001, GER-002...). A tela mostra a prévia de cada etiqueta.
+- **Tudo ou nada**: se uma etiqueta não puder ser cadastrada (patrimônio que já existe, por exemplo), nenhuma é, e o aviso
+  diz qual e por quê. Cada etiqueta vai para o histórico, e o lote, para a auditoria.
+
+**Importar clientes por planilha** (Locação · Criar; atualizar pede Locação · Editar): botão **Importar planilha** em
+Clientes, igual à importação de etiquetas, com o modelo para baixar, a conferência linha a linha e a confirmação.
+
+- Colunas pelo nome do cabeçalho: **Nome** (obrigatória), CPF/CNPJ, Contato, Telefone, Email, Endereço e Observação.
+- O cliente que já existe é achado pelo **CPF/CNPJ** (sem documento, pelo nome) e é atualizado; célula vazia não apaga.
+- Documento que não tem 11 nem 14 dígitos, CPF/CNPJ ou nome repetido na planilha e email sem @ ficam de fora, com o motivo.
+- Sem migração no banco.
+
 ### Painel para TV do depósito (1.28.0)
 
 Menu **Painel para TV** (Ver na Locação; abre em outra aba). É o painel do dia em **tela cheia**, escuro, com letras

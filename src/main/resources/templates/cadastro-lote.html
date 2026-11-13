@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Cadastrar em lote · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Cadastrar em lote</h1>
+      <p class="subtitulo" th:text="${#lists.size(etiquetas)} + ' etiqueta(s) pendente(s) com o mesmo tipo, marca, modelo e local, e o código em sequência'"></p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/tags-pendentes}" class="btn btn-ghost"><svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Pendentes</a>
+    </div>
+  </div>
+
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <form class="card" th:action="@{/admin/tags-pendentes/lote}" th:object="${cadastro}" method="post" id="form-lote">
+    <input type="hidden" name="etiquetas" th:each="e : ${etiquetas}" th:value="${e}">
+    <input type="hidden" id="marcaValor" name="marcaId" th:value="${cadastro.marcaId}">
+    <input type="hidden" id="modeloValor" name="modeloId" th:value="${cadastro.modeloId}">
+    <div class="card-body">
+      <div class="alert alert-erro" id="catalogoErro" role="alert" hidden>
+        <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+        <span>Não foi possível carregar as marcas e os modelos do catálogo. Recarregue a página para escolhê-los.</span>
+      </div>
+      <div class="form-grid">
+
+        <div class="field">
+          <label for="codigoPrefixo">Código interno: prefixo</label>
+          <input type="text" id="codigoPrefixo" name="codigoPrefixo" maxlength="100" th:value="${codigoPrefixo}" placeholder="Ex.: GER-">
+        </div>
+        <div class="field">
+          <label for="codigoInicio">Código interno: número inicial <span class="obrigatorio">*</span></label>
+          <input type="text" id="codigoInicio" name="codigoInicio" maxlength="12" inputmode="numeric" pattern="[0-9]+" required th:value="${codigoInicio}">
+          <span class="field-dica">Os zeros contam: 001 gera 001, 002, 003...</span>
+        </div>
+
+        <div class="field">
+          <label for="patrimonioPrefixo">Patrimônio: prefixo</label>
+          <input type="text" id="patrimonioPrefixo" name="patrimonioPrefixo" maxlength="100" th:value="${patrimonioPrefixo}">
+        </div>
+        <div class="field">
+          <label for="patrimonioInicio">Patrimônio: número inicial</label>
+          <input type="text" id="patrimonioInicio" name="patrimonioInicio" maxlength="12" inputmode="numeric" pattern="[0-9]+" th:value="${patrimonioInicio}">
+          <span class="field-dica">Vazio (e sem prefixo): sem patrimônio.</span>
+        </div>
+
+        <div class="field">
+          <label for="tipoSelect">Tipo de equipamento</label>
+          <select id="tipoSelect" name="tipoEquipamentoId">
+            <option value="">Selecione o tipo</option>
+            <option th:each="t : ${tipos}" th:value="${t.id}" th:text="${t.nome}"
+                    th:selected="${cadastro.tipoEquipamentoId != null and t.id == cadastro.tipoEquipamentoId}"></option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="marcaSelect">Marca</label>
+          <select id="marcaSelect" disabled><option value="">Escolha o tipo primeiro</option></select>
+        </div>
+        <div class="field">
+          <label for="modeloSelect">Modelo</label>
+          <select id="modeloSelect" disabled><option value="">Escolha a marca primeiro</option></select>
+        </div>
+
+        <th:block th:replace="~{layout/campos-patrimonio :: campos}"></th:block>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>#</th><th>Etiqueta (EPC)</th><th>Código interno</th><th>Patrimônio</th></tr></thead>
+        <tbody>
+        <tr th:each="e, st : ${etiquetas}" th:attr="data-i=${st.index}">
+          <td th:text="${st.count}"></td>
+          <td class="mono principal" th:text="${e}"></td>
+          <td class="mono previa-codigo">—</td>
+          <td class="mono previa-patrimonio">—</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card-footer">
+      <span class="muted" style="margin-right:auto">Tudo ou nada: se uma etiqueta não puder ser cadastrada, nenhuma é, e o aviso diz qual.</span>
+      <a th:href="@{/admin/tags-pendentes}" class="btn btn-ghost">Cancelar</a>
+      <button type="submit" class="btn btn-primary" th:text="'Cadastrar ' + ${#lists.size(etiquetas)} + ' etiqueta(s)'">Cadastrar</button>
+    </div>
+  </form>
+
+  <script th:replace="~{layout/catalogo-selects :: script}"></script>
+  <script th:attr="nonce=${cspNonce}">
+    // Prévia da numeração (o servidor calcula de novo ao gravar)
+    (function () {
+      function seq(prefixo, inicio, i) {
+        if (!prefixo && !inicio) return "—";
+        inicio = inicio || "1";
+        if (!/^[0-9]+$/.test(inicio)) return "número inválido";
+        return prefixo + String(BigInt(inicio) + BigInt(i)).padStart(inicio.length, "0");
+      }
+      const campos = ["codigoPrefixo", "codigoInicio", "patrimonioPrefixo", "patrimonioInicio"].map(id => document.getElementById(id));
+      function atualizar() {
+        const [cp, ci, pp, pi] = campos.map(c => c.value.trim());
+        document.querySelectorAll("tr[data-i]").forEach(function (tr) {
+          const i = Number(tr.dataset.i);
+          tr.querySelector(".previa-codigo").textContent = seq(cp, ci, i);
+          tr.querySelector(".previa-patrimonio").textContent = seq(pp, pi, i);
+        });
+      }
+      campos.forEach(c => c.addEventListener("input", atualizar));
+      atualizar();
+    })();
+  </script>
+
+</section>
+</html>
