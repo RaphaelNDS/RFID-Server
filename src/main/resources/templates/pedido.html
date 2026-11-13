@@ -36,6 +36,14 @@
   <div class="alert alert-erro" th:if="${erro}" role="alert">
     <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
   </div>
+  <!-- 1.19.0: cliente bloqueado ou só com aprovação -->
+  <div class="alert alert-aviso" th:if="${impedimento != null and !p.situacao.finalizado}" role="note">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+    <span th:text="${impedimento}"></span>
+    <form th:if="${podeAprovar and p.aprovadoEm == null and restricaoCliente.name() == 'APROVACAO'}" th:action="@{/admin/pedidos/{id}/aprovar(id=${p.id})}" method="post" style="margin-left:auto">
+      <button type="submit" class="btn btn-primary btn-sm">Aprovar pedido</button>
+    </form>
+  </div>
 
   <div class="grid grid-2">
     <!-- Dados do pedido -->
@@ -50,6 +58,7 @@
           <div th:if="${p.observacao != null}"><dt>Observação</dt><dd th:text="${p.observacao}"></dd></div>
           <div th:if="${p.cancelamentoMotivo != null}"><dt>Cancelado</dt><dd th:text="${p.cancelamentoMotivo}"></dd></div>
           <div><dt>Registrado por</dt><dd th:text="${p.registradoPor} + ' em ' + ${#temporals.format(p.criadoEm, 'dd/MM/yyyy HH:mm')}"></dd></div>
+          <div th:if="${p.aprovadoEm != null}"><dt>Aprovado por</dt><dd th:text="${p.aprovadoPor} + ' em ' + ${#temporals.format(p.aprovadoEm, 'dd/MM/yyyy HH:mm')}"></dd></div>
         </dl>
       </div>
       <details class="card-footer" th:if="${pode and d.editavel}">

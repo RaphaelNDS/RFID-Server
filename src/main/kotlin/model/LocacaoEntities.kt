@@ -41,7 +41,19 @@ class ClienteEntity(
     @Column(nullable = false)
     val criadoEm: LocalDateTime = LocalDateTime.now(),
 
-    val origemResponsavelId: Long? = null
+    val origemResponsavelId: Long? = null,
+
+    /** 1.19.0: bloqueado ou só com aprovação (V34). */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    var restricao: RestricaoCliente = RestricaoCliente.NENHUMA,
+
+    @Column(length = 300)
+    var motivoRestricao: String? = null,
+
+    var restricaoEm: LocalDateTime? = null,
+
+    var restricaoPor: String? = null
 ) {
     /** "Construtora X (CNPJ 12.345.678/0001-90)". */
     val descricao: String get() = nome + (documentoFormatado?.let { " ($it)" } ?: "")
@@ -53,6 +65,13 @@ class ClienteEntity(
             else -> d
         }
     }
+}
+
+/** 1.19.0: restrição do cliente (V34). A devolução nunca é barrada. */
+enum class RestricaoCliente(val rotulo: String, val descricao: String) {
+    NENHUMA("Sem restrição", "Aluga normalmente."),
+    APROVACAO("Só com aprovação", "O pedido só tem saída depois que um administrador ou gestor aprova."),
+    BLOQUEADO("Bloqueado", "Não abre pedido novo e nada sai para ele; a devolução continua normal.")
 }
 
 enum class SituacaoPedido(val rotulo: String) {
@@ -109,7 +128,12 @@ class PedidoLocacaoEntity(
     val registradoPor: String,
 
     @Column(nullable = false)
-    val criadoEm: LocalDateTime = LocalDateTime.now()
+    val criadoEm: LocalDateTime = LocalDateTime.now(),
+
+    /** 1.19.0: aprovação do pedido de cliente "só com aprovação" (V34). */
+    var aprovadoPor: String? = null,
+
+    var aprovadoEm: LocalDateTime? = null
 )
 
 /** O que o pedido pede (tabela pedido_linhas, V29): N de um tipo/marca/modelo, ou um bem específico. */

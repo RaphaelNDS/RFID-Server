@@ -29,7 +29,9 @@
           <label for="cliente">Cliente <span class="obrigatorio">*</span></label>
           <select id="cliente" name="cliente" required>
             <option value="">Escolha o cliente</option>
-            <option th:each="c : ${clientes}" th:value="${c.id}" th:text="${c.descricao}"
+            <option th:each="c : ${clientes}" th:value="${c.id}"
+                    th:text="${c.descricao} + (${c.restricao.name() == 'NENHUMA'} ? '' : ' — ' + ${c.restricao.rotulo.toLowerCase()})"
+                    th:disabled="${c.restricao.name() == 'BLOQUEADO'}"
                     th:selected="${dados.clienteId != null and c.id == dados.clienteId}"></option>
           </select>
           <span class="field-dica"><a th:href="@{/admin/clientes}">Clientes</a></span>

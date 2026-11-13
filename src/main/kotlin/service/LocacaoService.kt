@@ -7,6 +7,7 @@ import org.example.model.PedidoItemEntity
 import org.example.model.PedidoLinhaEntity
 import org.example.model.PedidoLocacaoEntity
 import org.example.model.PedidoProrrogacaoEntity
+import org.example.model.RestricaoCliente
 import org.example.model.SituacaoBem
 import org.example.model.SituacaoPedido
 import org.example.model.TagEntity
@@ -65,7 +66,9 @@ class LocacaoService(
     // 1.17.0: folha de separação (descrição e local dos equipamentos candidatos)
     private val transferencias: TransferenciaService? = null,
     // 1.18.0: o kit de acessórios entra com a linha
-    private val acessorios: AcessorioService? = null
+    private val acessorios: AcessorioService? = null,
+    // 1.19.0: quem pode aprovar pedido e mudar a restrição do cliente
+    private val auth: AuthService = AuthService()
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -148,17 +151,81 @@ class LocacaoService(
         return c
     }
 
+    /**
+     * 1.19.0: quem aprova pedido de cliente "só com aprovação" e muda a restrição do cliente: administrador, gestor
+     * ou quem tem Excluir na Locação. A Expedição (cria e dá saída) não aprova o próprio pedido.
+     */
+    fun podeAprovar(): Boolean = auth.isAdmin() || auth.temRole("GESTOR") || auth.temPermissao("LOCACAO", "DELETE")
+
+    /** 1.19.0: bloqueia, exige aprovação ou libera o cliente. O motivo é obrigatório para restringir. */
+    @Transactional
+    fun definirRestricao(id: Long, restricao: RestricaoCliente, motivo: String?): ClienteEntity {
+        require(podeAprovar()) { "Só um administrador ou gestor muda a restrição do cliente" }
+        val c = cliente(id)
+        val texto = texto(motivo, "O motivo", 300)
+        require(restricao == RestricaoCliente.NENHUMA || texto != null) { "Informe o motivo da restrição" }
+        if (c.restricao == restricao && c.motivoRestricao == texto) return c
+        val anterior = c.restricao
+        c.restricao = restricao
+        c.motivoRestricao = if (restricao == RestricaoCliente.NENHUMA) null else texto
+        c.restricaoEm = LocalDateTime.now(relogio)
+        c.restricaoPor = autor()
+        clientes.save(c)
+        log.info("Cliente {}: restrição de '{}' para '{}' por {}{}", c.nome, anterior.rotulo, restricao.rotulo, c.restricaoPor, texto?.let { " ($it)" } ?: "")
+        auditoria.registrar(AreaAuditoria.PATRIMONIO, "Restrição do cliente", c.descricao,
+            "${anterior.rotulo} → ${restricao.rotulo}" + (texto?.let { ": $it" } ?: ""))
+        return c
+    }
+
+    /** 1.19.0: aprova o pedido de um cliente "só com aprovação" (libera a saída). */
+    @Transactional
+    fun aprovarPedido(id: Long): PedidoLocacaoEntity {
+        require(podeAprovar()) { "Só um administrador ou gestor aprova o pedido" }
+        val p = pedido(id)
+        require(!p.situacao.finalizado) { "O pedido nº $id está ${p.situacao.rotulo.lowercase()}: não precisa mais de aprovação" }
+        val c = cliente(p.clienteId)
+        require(c.restricao != RestricaoCliente.BLOQUEADO) { "O cliente ${c.nome} está bloqueado: tire o bloqueio antes de aprovar (${c.motivoRestricao ?: "sem motivo"})" }
+        if (p.aprovadoEm != null) return p
+        p.aprovadoPor = autor()
+        p.aprovadoEm = LocalDateTime.now(relogio)
+        pedidos.save(p)
+        log.info("Pedido de locação nº {} aprovado por {} (cliente {}: {})", id, p.aprovadoPor, c.nome, c.restricao.rotulo)
+        auditoria.registrar(AreaAuditoria.PATRIMONIO, "Pedido aprovado", "Pedido nº $id", "${c.nome} (${c.restricao.rotulo.lowercase()})")
+        return p
+    }
+
+    /** 1.19.0: o que impede a saída do pedido agora pela restrição do cliente, ou null. */
+    fun impedimentoSaida(p: PedidoLocacaoEntity): String? {
+        val c = clientes.findById(p.clienteId).orElse(null) ?: return null
+        return when (c.restricao) {
+            RestricaoCliente.BLOQUEADO -> "O cliente ${c.nome} está bloqueado: nada sai para ele (${c.motivoRestricao ?: "sem motivo"})"
+            RestricaoCliente.APROVACAO -> if (p.aprovadoEm == null)
+                "O cliente ${c.nome} só aluga com aprovação: um administrador ou gestor precisa aprovar o pedido nº ${p.id} antes da saída (${c.motivoRestricao ?: "sem motivo"})" else null
+            RestricaoCliente.NENHUMA -> null
+        }
+    }
+
     /* ================= PEDIDOS ================= */
 
     @Transactional
     fun criarPedido(dados: DadosPedido): PedidoLocacaoEntity {
         val (cliente, previsao) = validarCabecalho(dados, null)
+        // 1.19.0: cliente bloqueado não abre pedido; "só com aprovação" abre, e quem pode aprovar já aprova ao criar
+        require(cliente.restricao != RestricaoCliente.BLOQUEADO) {
+            "O cliente ${cliente.nome} está bloqueado e não abre pedido novo (${cliente.motivoRestricao ?: "sem motivo"})"
+        }
+        val autoAprovado = cliente.restricao == RestricaoCliente.APROVACAO && podeAprovar()
         val p = pedidos.save(PedidoLocacaoEntity(
             clienteId = cliente.id, cliente = cliente.descricao.take(255), saidaPrevista = dados.saidaPrevista,
             previsaoDevolucao = previsao, localEntrega = texto(dados.localEntrega, "O local de entrega", 300) ?: cliente.endereco,
             observacao = texto(dados.observacao, "A observação", 500), registradoPor = autor()
-        ))
-        log.info("Pedido de locação nº {} criado por {}: cliente {}, devolução prevista em {}", p.id, p.registradoPor, cliente.nome, previsao)
+        ).also { if (autoAprovado) { it.aprovadoPor = it.registradoPor; it.aprovadoEm = LocalDateTime.now(relogio) } })
+        log.info("Pedido de locação nº {} criado por {}: cliente {}, devolução prevista em {}{}", p.id, p.registradoPor, cliente.nome, previsao,
+            when {
+                cliente.restricao != RestricaoCliente.APROVACAO -> ""
+                autoAprovado -> " (cliente só com aprovação: aprovado por quem criou)"
+                else -> " (cliente só com aprovação: a saída espera a aprovação)"
+            })
         auditoria.registrar(AreaAuditoria.PATRIMONIO, "Pedido de locação criado", "Pedido nº ${p.id}", "${cliente.nome}, devolução prevista em ${FormatoBr.data(previsao)}")
         return p
     }
@@ -170,6 +237,15 @@ class LocacaoService(
         val (cliente, previsao) = validarCabecalho(dados, p)
         val saiu = itens.findAllByPedidoIdOrderByIdAsc(id).isNotEmpty()
         require(!saiu || cliente.id == p.clienteId) { "Já saiu equipamento neste pedido: o cliente não muda (cancele e faça outro)" }
+        if (cliente.id != p.clienteId) {
+            // 1.19.0: trocar para cliente bloqueado não vale; a aprovação era do cliente anterior
+            require(cliente.restricao != RestricaoCliente.BLOQUEADO) {
+                "O cliente ${cliente.nome} está bloqueado e não recebe pedido (${cliente.motivoRestricao ?: "sem motivo"})"
+            }
+            val aprovado = cliente.restricao == RestricaoCliente.APROVACAO && podeAprovar()
+            p.aprovadoPor = if (aprovado) autor() else null
+            p.aprovadoEm = if (aprovado) LocalDateTime.now(relogio) else null
+        }
         p.clienteId = cliente.id
         p.cliente = cliente.descricao.take(255)
         p.saidaPrevista = dados.saidaPrevista
@@ -277,6 +353,10 @@ class LocacaoService(
     fun registrarSaida(pedidoId: Long, codigos: Collection<String>, observacao: String? = null, origem: String = "Web"): ResultadoSaida {
         val p = pedido(pedidoId)
         if (p.situacao.finalizado) throw IllegalStateException("O pedido nº $pedidoId está ${p.situacao.rotulo.lowercase()}: não sai mais nada")
+        impedimentoSaida(p)?.let {
+            log.warn("Saída do pedido de locação nº {} recusada para {} ({}): {}", pedidoId, autor(), origem, it)
+            throw IllegalStateException(it)
+        }
         val conferencia = distribuir(p, codigos)
         val agora = LocalDateTime.now(relogio)
         val usuario = autor()
