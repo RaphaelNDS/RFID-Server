@@ -98,6 +98,13 @@ class HistoricoEtiquetaService(
         salvar(tag.id, tag.tagReal, AcaoHistorico.ALTERACAO, "Anexo", antigo, novo, usuario, origem)
     }
 
+    /** Campo personalizado alterado (1.22.0): uma linha com o nome do campo. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    fun registrarCampo(tag: TagEntity, campo: String, antigo: String?, novo: String?) {
+        val (usuario, origem) = autor()
+        salvar(tag.id, tag.tagReal, AcaoHistorico.ALTERACAO, campo, antigo, novo, usuario, origem)
+    }
+
     @Transactional(propagation = Propagation.MANDATORY)
     fun registrarExclusao(tagId: Long, tagReal: String, antes: RetratoEtiqueta) {
         val (usuario, origem) = autor()

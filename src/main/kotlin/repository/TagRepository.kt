@@ -35,7 +35,8 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
            or lower(t.patrimonio) like :padrao escape '\'
            or lower(t.numeroSerie) like :padrao escape '\'
            or t.tipoEquipamentoId in :tipos or t.marcaId in :marcas or t.modeloId in :modelos
-           or t.localId in :locais or t.responsavelId in :responsaveis)
+           or t.localId in :locais or t.responsavelId in :responsaveis
+           or t.id in :porCampo)
            and t.situacao in :situacoes
            and (:localId = -1 or t.localId = :localId)
            and (:responsavelId = -1 or t.responsavelId = :responsavelId)"""
@@ -47,6 +48,8 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
         @Param("modelos") modelos: Collection<Long>,
         @Param("locais") locais: Collection<Long>,
         @Param("responsaveis") responsaveis: Collection<Long>,
+        // 1.22.0: etiquetas com algum campo personalizado que contém a busca
+        @Param("porCampo") porCampo: Collection<Long>,
         @Param("situacoes") situacoes: Collection<SituacaoBem>,
         @Param("localId") localId: Long,
         @Param("responsavelId") responsavelId: Long,

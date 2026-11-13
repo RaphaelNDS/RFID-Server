@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Campos personalizados · Sistema RFID</title>
+
+<section class="page"
+         th:with="podeCriar=${@authService.temPermissao('CATALOGO','CREATE')},podeEditar=${@authService.temPermissao('CATALOGO','UPDATE')}">
+
+  <div class="page-header">
+    <div>
+      <h1>Campos personalizados</h1>
+      <p class="subtitulo">Campos próprios de cada tipo de equipamento (ex.: voltagem e firmware no PDV). Aparecem na edição da
+        etiqueta, entram na busca e viram colunas na exportação.</p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/catalogo}" class="btn btn-ghost"><svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Catálogo</a>
+    </div>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <form class="card" style="margin-bottom:20px" th:action="@{/admin/catalogo/campos}" method="post" th:if="${podeCriar and !#lists.isEmpty(tipos)}">
+    <div class="card-header"><h2>Novo campo</h2></div>
+    <div class="toolbar" style="border:0">
+      <div class="field"><label for="n-tipo">Tipo <span class="obrigatorio">*</span></label>
+        <select id="n-tipo" name="tipoId" required>
+          <option value="">Escolha o tipo</option>
+          <option th:each="t : ${tipos}" th:value="${t.tipoId}" th:text="${t.tipo}"></option>
+        </select></div>
+      <div class="field" style="flex:2 1 200px"><label for="n-nome">Nome <span class="obrigatorio">*</span></label>
+        <input id="n-nome" name="nome" maxlength="80" required placeholder="Ex.: Voltagem"></div>
+      <div class="field"><label for="n-formato">Formato</label>
+        <select id="n-formato" name="formato">
+          <option th:each="f : ${formatos}" th:value="${f.name()}" th:text="${f.rotulo}"></option>
+        </select></div>
+      <div class="field" style="flex:3 1 260px"><label for="n-opcoes">Opções (só na lista)</label>
+        <input id="n-opcoes" name="opcoes" maxlength="1000" placeholder="Separadas por ponto e vírgula: 110V; 220V; Bivolt"></div>
+      <label class="chip" style="align-self:center"><input type="checkbox" name="obrigatorio" value="true"><span>Obrigatório</span></label>
+      <button type="submit" class="btn btn-primary">Criar campo</button>
+    </div>
+  </form>
+
+  <div class="vazio card" th:if="${#lists.isEmpty(tipos)}">Cadastre os tipos de equipamento no Catálogo primeiro.</div>
+
+  <div class="card" style="margin-bottom:16px" th:each="t : ${tipos}" th:unless="${#lists.isEmpty(t.campos)}">
+    <div class="card-header"><h2 th:text="${t.tipo}"></h2></div>
+    <div class="table-wrap">
+      <table class="table table-cartoes">
+        <thead><tr><th>Campo</th><th>Formato</th><th>Opções</th><th>Obrigatório</th><th class="acoes"><span class="sr-only">Ações</span></th></tr></thead>
+        <tbody>
+        <tr th:each="c : ${t.campos}" th:classappend="${!c.ativo} ? 'inativo'">
+          <td class="principal cartao-titulo"><span th:text="${c.nome}"></span>
+            <span class="badge badge-inativo" th:unless="${c.ativo}">desativado</span></td>
+          <td data-rotulo="Formato" th:text="${c.formato.rotulo}"></td>
+          <td data-rotulo="Opções" th:text="${c.opcoes != null} ? ${#strings.replace(c.opcoes, ';', '; ')} : '—'"></td>
+          <td data-rotulo="Obrigatório" th:text="${c.obrigatorio} ? 'Sim' : 'Não'"></td>
+          <td class="acoes">
+            <details th:if="${podeEditar}" style="display:inline-block">
+              <summary class="btn btn-ghost btn-sm">Editar</summary>
+              <form class="toolbar" style="border:0;padding:10px 0 0;justify-content:flex-end" th:action="@{/admin/catalogo/campos/{id}(id=${c.id})}" method="post">
+                <div class="field"><label th:for="'cn-' + ${c.id}">Nome</label><input th:id="'cn-' + ${c.id}" name="nome" maxlength="80" required th:value="${c.nome}"></div>
+                <div class="field"><label th:for="'cf-' + ${c.id}">Formato</label>
+                  <select th:id="'cf-' + ${c.id}" name="formato">
+                    <option th:each="f : ${formatos}" th:value="${f.name()}" th:text="${f.rotulo}" th:selected="${f == c.formato}"></option>
+                  </select></div>
+                <div class="field"><label th:for="'co-' + ${c.id}">Opções</label><input th:id="'co-' + ${c.id}" name="opcoes" maxlength="1000" th:value="${c.opcoes}"></div>
+                <div class="field"><label th:for="'cd-' + ${c.id}">Ordem</label><input th:id="'cd-' + ${c.id}" name="ordem" type="number" style="width:80px" th:value="${c.ordem}"></div>
+                <label class="chip" style="align-self:center"><input type="checkbox" name="obrigatorio" value="true" th:checked="${c.obrigatorio}"><span>Obrigatório</span></label>
+                <button type="submit" class="btn btn-secondary btn-sm">Salvar</button>
+              </form>
+            </details>
+            <form th:if="${podeEditar}" th:action="@{/admin/catalogo/campos/{id}/ativo(id=${c.id})}" method="post" style="display:inline-block">
+              <input type="hidden" name="ativo" th:value="${!c.ativo}">
+              <button type="submit" class="btn btn-ghost btn-sm" th:text="${c.ativo} ? 'Desativar' : 'Reativar'"></button>
+            </form>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+</html>

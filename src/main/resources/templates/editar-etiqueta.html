@@ -128,7 +128,32 @@
 
         <th:block th:replace="~{layout/campos-patrimonio :: campos}"></th:block>
 
+        <!-- 1.22.0: campos personalizados do tipo -->
+        <div class="field" th:each="cv : ${camposPersonalizados}"
+             th:with="c=${cv.campo},nomeCampo=${'campo_' + cv.campo.id},
+                      atual=${camposDigitados != null and camposDigitados.containsKey(cv.campo.id)} ? ${camposDigitados.get(cv.campo.id)} : ${cv.valor}">
+          <label th:for="${nomeCampo}">
+            <span th:text="${c.nome}"></span><span class="obrigatorio" th:if="${c.obrigatorio}"> *</span>
+          </label>
+          <input th:if="${c.formato.name() == 'TEXTO'}" type="text" th:id="${nomeCampo}" th:name="${nomeCampo}" maxlength="500" th:value="${atual}">
+          <input th:if="${c.formato.name() == 'NUMERO'}" type="text" inputmode="decimal" th:id="${nomeCampo}" th:name="${nomeCampo}" maxlength="25" th:value="${atual}">
+          <input th:if="${c.formato.name() == 'DATA'}" type="date" th:id="${nomeCampo}" th:name="${nomeCampo}" th:value="${atual}">
+          <select th:if="${c.formato.name() == 'LISTA'}" th:id="${nomeCampo}" th:name="${nomeCampo}">
+            <option value="">—</option>
+            <option th:each="o : ${c.listaOpcoes}" th:value="${o}" th:text="${o}" th:selected="${atual != null and #strings.equalsIgnoreCase(o, atual)}"></option>
+          </select>
+          <select th:if="${c.formato.name() == 'SIM_NAO'}" th:id="${nomeCampo}" th:name="${nomeCampo}">
+            <option value="">—</option>
+            <option value="Sim" th:selected="${atual == 'Sim'}">Sim</option>
+            <option value="Não" th:selected="${atual == 'Não'}">Não</option>
+          </select>
+        </div>
+
       </div>
+      <p class="muted" style="font-size:12px;margin:8px 0 0" th:if="${!#lists.isEmpty(camposPersonalizados)}">
+        Os campos depois do nº de série são do tipo de equipamento (<a th:href="@{/admin/catalogo/campos}">campos personalizados</a>).
+        Mudando o tipo, os campos do tipo novo aparecem na próxima edição.
+      </p>
     </div>
 
     <div class="card-footer">
