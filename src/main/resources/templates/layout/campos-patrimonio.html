@@ -2,8 +2,7 @@
   Local e situação do equipamento, no cadastro e na edição da etiqueta. O modelo precisa de "cadastro"
   (CadastroRequest), "opcoesLocal" (OpcaoLocal) e "situacoesEditaveis". Desativados só aparecem se já forem os do bem.
 
-  A situação só aparece para escolher quando é uma das editáveis (No estoque, Extraviado); "Fora do estoque" vem das
-  movimentações (saída e entrada) e "Baixado", de "Dar baixa".
+  A situação só aparece para escolher quando é uma das editáveis (No estoque, Extraviado); "Baixado" vem de "Dar baixa".
 -->
 <th:block th:fragment="campos" xmlns:th="http://www.thymeleaf.org">
   <div class="field">
@@ -25,12 +24,12 @@
         <option th:each="s : ${situacoesEditaveis}" th:value="${s.name()}" th:text="${s.rotulo}"
                 th:selected="${(cadastro.situacao == null and s.name() == 'DISPONIVEL') or s.name() == cadastro.situacao}"></option>
       </select>
-      <span class="field-dica">"Fora do estoque" vem das movimentações (saída e entrada); "Baixado", de "Dar baixa".</span>
+      <span class="field-dica">"Baixado" vem de "Dar baixa", na edição da etiqueta.</span>
     </div>
     <div class="field" th:unless="${editavel}">
       <label>Situação</label>
       <input type="text" th:value="${T(org.example.model.SituacaoBem).valueOf(cadastro.situacao).rotulo}" readonly>
-      <span class="field-dica">Muda pela entrada do equipamento (Movimentações) ou pela baixa.</span>
+      <span class="field-dica">Volta para "No estoque" por "Desfazer baixa".</span>
     </div>
   </th:block>
 </th:block>

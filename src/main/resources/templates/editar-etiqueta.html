@@ -12,10 +12,6 @@
       <p class="subtitulo">A mudança fica registrada no histórico da etiqueta (quem, quando, valor antigo e novo)</p>
     </div>
     <div class="page-header-acoes">
-      <a th:href="@{/admin/movimentos(busca=${cadastro.tag})}" class="btn btn-ghost"
-         th:if="${@authService.temPermissao('MOVIMENTO','READ')}" title="Saídas e entradas deste equipamento">
-        <svg class="ic"><use href="/img/icones.svg#transferir"/></svg>Movimentações
-      </a>
       <a th:href="@{/admin/etiquetas/historico(tag=${cadastro.tag})}" class="btn btn-ghost">
         <svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Histórico
       </a>
@@ -27,12 +23,6 @@
   </div>
   <div class="alert alert-ok" th:if="${msg}" role="status">
     <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
-  </div>
-  <div class="alert alert-aviso" th:if="${etiqueta.situacao.name() == 'FORA'}" role="note">
-    <svg class="ic"><use href="/img/icones.svg#transferir"/></svg>
-    <span>Equipamento <strong>fora do estoque</strong><span th:if="${ultimaSaida != null}"
-        th:text="' desde ' + ${#temporals.format(ultimaSaida.dataHora, 'dd/MM/yyyy HH:mm')} + ' (destino: ' + ${ultimaSaida.destino} + ')'"></span>.
-      Ele volta para o estoque pela <a th:href="@{/admin/movimentos/entrada}">entrada</a>.</span>
   </div>
   <div class="alert alert-aviso" th:if="${baixado}" role="note">
     <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>

@@ -4,7 +4,6 @@ import org.example.model.AreaAuditoria
 import org.example.service.AuditoriaService
 import org.example.service.EsperadoInventarioService
 import org.example.service.InventarioService
-import org.example.service.MovimentoService
 import org.example.service.PdfService
 import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
@@ -18,8 +17,8 @@ import java.text.Normalizer
 import java.time.format.DateTimeFormatter
 
 /**
- * Os PDFs, com as mesmas permissões das telas de onde saem: laudo do inventário (Leituras) e comprovante da
- * movimentação (Movimentações · Ver). Abrem no navegador (inline); o laudo vai para a auditoria, como as exportações.
+ * Os PDFs, com as mesmas permissões das telas de onde saem: laudo do inventário (Leituras). Abre no navegador
+ * (inline) e vai para a auditoria, como as exportações. 2.1.0: o comprovante da movimentação saiu.
  */
 @RestController
 @RequestMapping("/admin")
@@ -27,8 +26,7 @@ class PdfWebController(
     private val pdf: PdfService,
     private val inventarios: InventarioService,
     private val esperados: EsperadoInventarioService,
-    private val auditoria: AuditoriaService,
-    private val movimentos: MovimentoService
+    private val auditoria: AuditoriaService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -52,16 +50,6 @@ class PdfWebController(
         return pdf.resposta(bytes, "laudo-inventario-${nomeArquivo(local)}-${detalhe.resumo.iniciadoEm.format(DIA)}.pdf")
     }
 
-    /** Comprovante da movimentação (2.0.0): os equipamentos que saíram ou entraram, o destino e as assinaturas. */
-    @PreAuthorize("@authService.temPermissao('MOVIMENTO','READ')")
-    @GetMapping("/movimentos/{id}/comprovante.pdf")
-    fun comprovante(@PathVariable id: Long, auth: Authentication): ResponseEntity<ByteArray> {
-        val detalhe = movimentos.detalhar(id)
-        val bytes = pdf.gerar("pdf/comprovante-movimento", mapOf("movimento" to detalhe.movimento, "itens" to detalhe.itens))
-        log.info("{} gerou o comprovante da {} nº {} em PDF ({} equipamento(s))", auth.name,
-            detalhe.movimento.tipo.rotulo.lowercase(), id, detalhe.itens.size)
-        return pdf.resposta(bytes, "comprovante-${nomeArquivo(detalhe.movimento.tipo.rotulo)}-$id.pdf")
-    }
 
     companion object {
         private val DIA = DateTimeFormatter.ofPattern("yyyy-MM-dd")

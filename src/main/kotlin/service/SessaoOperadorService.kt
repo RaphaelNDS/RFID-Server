@@ -33,8 +33,6 @@ data class SessaoCriada(
     val podeLer: Boolean,
     /** Operador com RFID/CREATE E coletor liberado em rfid.dispositivos.cadastro. */
     val podeCadastrar: Boolean,
-    /** 2.0.0: operador com Movimentações · Criar: o app pode registrar saída e entrada (POST /api/android/movimentos). */
-    val podeMovimentar: Boolean = false,
     /** A senha não atende mais à política de senha: o app sugere trocar na web. */
     val senhaFraca: Boolean
 )
@@ -141,12 +139,11 @@ class SessaoOperadorService(
         sessoes.save(SessaoOperadorEntity(hash(token), principal.id, dispositivo, agora, expiraEm))
 
         val podeCadastrar = temPermissao(principal, "RFID_CREATE") && cadastroColetor.podeCadastrar(dispositivo)
-        val podeMovimentar = temPermissao(principal, "MOVIMENTO_CREATE")
         val senhaFraca = politicaSenha.problemas(senha, usuario.email, usuario.nome).isNotEmpty()
 
         log.info(
-            "Operador {} ({}) entrou no coletor {} até {} (IP {}; pode cadastrar: {}; pode movimentar: {})",
-            principal.nome, principal.email, dispositivo, expiraEm, ip, if (podeCadastrar) "sim" else "não", if (podeMovimentar) "sim" else "não"
+            "Operador {} ({}) entrou no coletor {} até {} (IP {}; pode cadastrar: {})",
+            principal.nome, principal.email, dispositivo, expiraEm, ip, if (podeCadastrar) "sim" else "não"
         )
         if (senhaFraca) log.info("Operador {} usa senha fora da política de senha: o app vai sugerir a troca", principal.email)
 
@@ -157,7 +154,6 @@ class SessaoOperadorService(
             email = principal.email,
             podeLer = true,
             podeCadastrar = podeCadastrar,
-            podeMovimentar = podeMovimentar,
             senhaFraca = senhaFraca
         )
     }

@@ -164,17 +164,14 @@ class ImportacaoEtiquetasService(
             }
         } else if (nomeUnidade.isNotEmpty()) throw IllegalArgumentException("a unidade $nomeUnidade foi informada sem o local")
 
-        // Situação: BAIXADO só pela baixa (na tela da etiqueta); FORA só pela saída e pela entrada (Movimentações)
+        // Situação: BAIXADO só pela baixa (na tela da etiqueta). "Fora do estoque" (planilha da 2.0.0) vira "No estoque"
         valor(Coluna.SITUACAO).takeIf { it.isNotEmpty() }?.let { texto ->
             val s = SituacaoBem.de(texto) ?: throw IllegalArgumentException("situação inválida: $texto")
-            val estaFora = existente?.situacao == SituacaoBem.FORA
             when {
                 s == SituacaoBem.BAIXADO && existente?.baixado == true -> {}   // já baixado: mantém
                 s == SituacaoBem.BAIXADO -> throw IllegalArgumentException("para baixar um bem use \"Dar baixa\" na tela da etiqueta")
                 existente?.baixado == true -> throw IllegalArgumentException("o bem está baixado: desfaça a baixa na tela da etiqueta antes de mudar a situação")
-                s == SituacaoBem.FORA && estaFora -> {}   // já fora do estoque: mantém
-                s == SituacaoBem.FORA -> throw IllegalArgumentException("para tirar um equipamento do estoque use \"Nova saída\" em Movimentações")
-                estaFora -> throw IllegalArgumentException("o equipamento está fora do estoque: registre a entrada em Movimentações antes de mudar a situação")
+
                 else -> pedido.situacao = s.name
             }
         }

@@ -19,16 +19,11 @@ val ultimaLeituraEm: OffsetDateTime? = null,
 val ultimaLeituraPor: String? = null,
 
 // Opcionais: o app antigo ignora
-/** Código da situação (DISPONIVEL, FORA, EXTRAVIADO, BAIXADO) e o nome dela ("No estoque", "Fora do estoque"...). */
+/** Código da situação (DISPONIVEL, EXTRAVIADO, BAIXADO) e o nome dela ("No estoque", "Extraviado", "Baixado"). */
 val situacao: String? = null,
 val situacaoRotulo: String? = null,
 /** Onde o bem está pelo cadastro (o ultimoLocal é o do último inventário que o encontrou). */
 val unidade: String? = null,
-val local: String? = null,
-
-// 2.0.0: preenchidos quando o equipamento está fora do estoque (situação FORA), com a saída que o levou
-/** Para onde foi (o destino da saída). */
-val destino: String? = null,
-/** Quando saiu. */
-val saidaEm: OffsetDateTime? = null
+val local: String? = null
+// 2.1.0: os dois campos da saída das Movimentações (2.0.0) saíram da ficha
 )

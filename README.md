@@ -1,13 +1,14 @@
 # RFID Server
 
-Servidor do sistema de **entrada e saída de equipamentos RFID e inventário** (versão 2.0.0). Ele guarda o
-cadastro das etiquetas (qual equipamento cada etiqueta identifica), registra a **saída** e a **entrada** dos
-equipamentos no estoque, recebe as leituras e os inventários feitos pelos coletores Android e oferece as telas web
-de administração e relatórios.
+Servidor do sistema **simples de etiquetas RFID e inventário** (versão 2.1.0). Ele lê as etiquetas pelos coletores
+Android, guarda o cadastro delas (qual equipamento cada etiqueta identifica), recebe as leituras e os inventários e
+oferece as telas web: etiquetas, pendentes, cadastro, leituras, inventários, locais, catálogo, relatórios, coletores,
+app dos coletores, usuários, auditoria e status do servidor.
 
 > **Versão completa de locação:** clientes, pedidos de locação, vendas, kits e acessórios, manutenção, transferências,
 > fotos e anexos, linha do tempo e os perfis Expedição/Conferente/Técnico vivem na branch
 > [`locadora`](https://github.com/RaphaelNDS/RFID-Server/tree/locadora) (1.18.x). Esta (`master`) é a versão simples.
+> As **Movimentações** (saída e entrada de equipamentos) da 2.0.0 saíram na 2.1.0 (ver a V35, abaixo).
 > O jar desta versão **se recusa a subir** sobre o banco da locadora (ver
 > [Banco de dados, migrações e backup](#banco-de-dados-migrações-e-backup)).
 
@@ -52,7 +53,6 @@ O app dos coletores fica em outro repositório: **RFID-SERVER-ANDROID** (pasta `
 | **Pendente** | Etiqueta lida por um coletor que ainda não está cadastrada. Aparece em "Pendentes" para alguém cadastrar. |
 | **Leitura** | Registro de que um coletor leu uma etiqueta cadastrada (data/hora, coletor, operador). Alimenta os relatórios. |
 | **Inventário** | Conferência feita num **local**: o operador abre o inventário no coletor, lê as etiquetas e finaliza. |
-| **Movimentação** | **Saída** (o equipamento sai do estoque para um destino e fica "Fora do estoque") ou **entrada** (volta para "No estoque"), pela web ou pelo coletor, com comprovante em PDF. |
 | **Coletor** | Dispositivo Android identificado por uma **chave** configurada no servidor. |
 | **Operador** | Usuário do sistema que fez login no coletor. Usa as permissões do próprio usuário. |
 
@@ -82,7 +82,7 @@ administrador; depois disso essa tela não aparece mais.
 
 | Tela | Endereço | Permissão |
 |---|---|---|
-| Início (quantos no estoque e fora, últimas movimentações, último inventário e atalhos, conforme as permissões) | `/dashboard` | logado |
+| Início (etiquetas cadastradas e extraviadas, pendentes, último inventário, coletores em uso agora — só o ADMIN — e atalhos, conforme as permissões) | `/dashboard` | logado |
 | Etiquetas cadastradas (50 por página, busca no servidor; filtros de situação e local; exportar Excel/CSV) | `/admin/tags-cadastradas` | RFID · Ver |
 | Importar planilha de etiquetas (xlsx ou csv; simula antes de gravar) | `/admin/tags-cadastradas/importar` | RFID · Criar (atualizar as existentes exige também Editar) |
 | Etiquetas não vistas há N dias (sem leitura nem inventário; exportar) | `/admin/etiquetas/nao-vistas` | RFID · Ver |
@@ -96,9 +96,7 @@ administrador; depois disso essa tela não aparece mais.
 | Catálogo | `/admin/catalogo` | Catálogo · Ver (criar/excluir exigem Criar/Excluir) |
 | Locais (unidades e locais; desativar sem apagar) | `/admin/locais` | Catálogo · Ver (criar/alterar exigem Criar/Editar) |
 | Ação sobre os bens que faltaram (no detalhe do inventário finalizado) | `/admin/inventarios/{id}/divergencias` | RFID · Editar |
-| Movimentações (2.0.0): lista com filtro por tipo, data e equipamento · a movimentação | `/admin/movimentos` · `/admin/movimentos/{id}` | Movimentações · Ver |
-| Nova saída · nova entrada (2.0.0) | `/admin/movimentos/saida` · `/admin/movimentos/entrada` | Movimentações · Criar |
-| PDFs: laudo do inventário · comprovante da movimentação | `/admin/inventarios/{id}/laudo.pdf` · `/admin/movimentos/{id}/comprovante.pdf` | as mesmas da tela de onde saem (Leituras · Ver; Movimentações · Ver) |
+| Laudo do inventário em PDF | `/admin/inventarios/{id}/laudo.pdf` | Leituras · Ver |
 | Relatórios (gráficos; avisa quando chegam leituras novas; período de até 366 dias) | `/admin/dashboard` | Relatórios · Ver |
 | Usuários (+ pedidos de nova senha e senha temporária; editar perfil e permissões; desativar e reativar) | `/admin/usuarios` | somente ADMIN |
 | Coletores (último contato, IP, versão do app, operador, fila de envio e estado do aparelho de cada coletor) | `/admin/coletores` | somente ADMIN |
@@ -221,10 +219,11 @@ chave, sem operador): `GET /api/android/atualizacao` e `GET /api/android/atualiz
 - **Unidades e locais:** cada local pode pertencer a uma unidade (ex.: Matriz › Sala 101). O nome do local
   continua único no sistema inteiro, porque o coletor abre o inventário pelo nome. Local desativado sai das listas
   de escolha, mas os bens e os inventários dele continuam como estão.
-- **Situação (2.0.0):** `No estoque` (código `DISPONIVEL`), `Fora do estoque` (`FORA`), `Extraviado` e `Baixado`.
-  A edição da etiqueta só escolhe entre No estoque e Extraviado; Fora do estoque vem da **saída** e volta pela
-  **entrada** (Movimentações), e Baixado vem de "Dar baixa". Ao finalizar um inventário, os bens encontrados passam a
+- **Situação (2.1.0):** `No estoque` (código `DISPONIVEL`), `Extraviado` e `Baixado`. A edição da etiqueta escolhe
+  entre No estoque e Extraviado, e Baixado vem de "Dar baixa". Ao finalizar um inventário, os bens encontrados passam a
   ter o local do inventário, e um bem `Extraviado` encontrado volta para o estoque. As mudanças ficam no histórico.
+  O `Fora do estoque` (`FORA`) da 2.0.0 não existe mais: a V35 devolveu esses bens ao estoque, e o texto "Fora do
+  estoque" numa planilha ou num app antigo é lido como "No estoque".
 - **Baixa:** na tela de edição, com motivo (venda, doação, sucata, furto/roubo, perda, outro), data e observação.
   O bem baixado sai do esperado, mas continua no banco e a baixa pode ser desfeita. A lista de etiquetas só mostra
   os baixados com "Incluir baixados" ou com a situação `Baixado` no filtro.
@@ -233,26 +232,8 @@ chave, sem operador): `GET /api/android/atualizacao` e `GET /api/android/atualiz
   simula e mostra o que cada linha vai fazer (nova, atualizada, sem mudança ou erro). Nada é gravado até
   confirmar. Com "criar o que faltar", os tipos, marcas, modelos, unidades e locais que ainda não existem são
   criados. EPC em notação científica (ex.: `1,23E+23`, de uma planilha que virou número) é recusado. A situação da
-  planilha não tira nem devolve equipamento ao estoque (isso é pela saída e pela entrada); colunas de versões
-  anteriores (Responsável, Matrícula, Valor de aquisição...) são ignoradas.
-
-### Movimentações: saída e entrada (2.0.0)
-
-Menu **Movimentações**. Cada movimentação tem número, tipo (**saída** ou **entrada**), data e hora, quem registrou
-e por onde (web ou coletor), a observação e os equipamentos.
-
-- **Nova saída:** os equipamentos (patrimônio ou EPC, um por linha; dá para colar uma coluna do Excel ou procurar
-  pela busca da tela) e o **destino**, obrigatório (cliente, obra, filial, técnico...). Eles ficam **Fora do estoque**.
-- **Nova entrada:** os equipamentos que estão fora voltam para **No estoque**.
-- **Recusas:** na saída, o que já está fora; na entrada, o que já está no estoque; nas duas, o baixado, o extraviado
-  e o que não está cadastrado. Na web é tudo ou nada: com um recusado, nada é gravado e a tela volta com o motivo de
-  cada um. No coletor, os aceitos são movimentados e os recusados voltam com o motivo.
-- Cada equipamento movimentado ganha uma linha no **histórico da etiqueta** (Situação, com "Saída nº X (destino:
-  ...)") e a movimentação vai para a **auditoria** (área Movimentações). O **comprovante em PDF** traz os
-  equipamentos e as assinaturas de quem entrega e de quem recebe.
-- O que está fora do estoque fica de fora do **esperado do inventário** (não conta como faltando) e não muda de
-  situação pela edição da etiqueta. A tela **Início** mostra quantos estão no estoque, quantos estão fora, as últimas
-  movimentações e o último inventário.
+  planilha aceita No estoque e Extraviado (Baixado só pela tela da etiqueta); colunas de versões anteriores
+  (Responsável, Matrícula, Valor de aquisição...) são ignoradas.
 
 ### Divergências do inventário (1.6.1)
 
@@ -269,7 +250,6 @@ Gerados pelo servidor (openhtmltopdf), abrem no navegador e trazem no rodapé qu
 - **Laudo do inventário** (botão no detalhe do inventário): o resumo, os bens que faltaram com a justificativa do
   coletor, os achados em outro local, as assinaturas e, em anexo, as etiquetas lidas. Inventário em andamento sai
   marcado como provisório. Vai para a auditoria (Exportações), como as planilhas.
-- **Comprovante da movimentação** (2.0.0): botão na lista e na tela de cada movimentação.
 
 
 ### Inventário: o que faltou
@@ -292,11 +272,11 @@ do coletor, abaixo), e os baixados ficam de fora.
 | **Usuário** | Só consulta (ver) em todos os módulos. |
 | **Personalizado** | Os módulos e ações escolhidos no cadastro. |
 
-Módulos: Catálogo, Etiquetas (RFID), Leituras, Relatórios, **Movimentações** (2.0.0), Usuários. Ações: Ver, Criar,
-Editar, Excluir. Em Movimentações: ver = a lista, a movimentação e o comprovante; criar = registrar saída e entrada
-(na web e no coletor). Os perfis de função da versão de locação (Expedição, Conferente, Técnico) saíram: a V34 passou
-quem os tinha para **Personalizado**, com as mesmas permissões (as de Locação e Manutenção viraram as de
-Movimentações, com a mesma ação).
+Módulos: Catálogo, Etiquetas (RFID), Leituras, Relatórios, Usuários. Ações: Ver, Criar, Editar, Excluir. Os perfis de
+função da versão de locação (Expedição, Conferente, Técnico) saíram na 2.0.0: a V34 passou quem os tinha para
+**Personalizado**. O módulo **Movimentações** (2.0.0) saiu na 2.1.0: a V35 apagou as permissões dele, e quem tinha
+Movimentações · Ver e não via as etiquetas ganhou Etiquetas · Ver (criar, editar e excluir movimentações não viraram
+nenhuma permissão).
 
 O menu e os botões só mostram o que o usuário pode usar. Mudanças de permissão valem a partir do
 próximo login (na web) e na próxima requisição (no coletor).
@@ -335,9 +315,8 @@ Usada pelo app Android. Tudo em `/api/android/**`, sempre em HTTPS, JSON, sem se
 2. **Operador** — `POST /api/android/login` com email e senha de um usuário do sistema devolve um token de
    sessão (12 h). As demais chamadas enviam `X-Sessao-Operador: <token>`. A sessão vale só no coletor em
    que foi criada, e o operador usa as **permissões do próprio usuário** (Leituras para ler e inventariar,
-   RFID · Criar para cadastrar, Movimentações · Criar para saída e entrada). A resposta do login diz o que o
-   operador pode fazer: `podeLer`, `podeCadastrar` e, desde a 2.0.0, `podeMovimentar` (o `podeTransferir` da 1.7.0
-   saiu com a transferência).
+   RFID · Criar para cadastrar). A resposta do login diz o que o operador pode fazer: `podeLer` e `podeCadastrar`
+   (o `podeTransferir` da 1.7.0 saiu na 2.0.0; o `podeMovimentar` da 2.0.0 saiu na 2.1.0).
 
 ### Trabalho offline
 
@@ -358,9 +337,8 @@ O app funciona sem rede durante a sessão e envia depois o que ficou na fila. Ca
 | `GET /api/android/ping` | Testa a conexão e a chave | chave |
 | `POST /api/android/login` · `POST /api/android/logout` | Sessão do operador | chave |
 | `POST /api/android/esqueci-senha` | Pede uma senha nova ao ADMIN (**202**, mesma resposta exista ou não o email) | chave |
-| `GET /api/android/tags/{epc}` | Ficha do bem: o cadastro e, desde a 1.5.0, `ultimoLocal` e `ultimoInventarioEm` (último inventário finalizado em que foi encontrado), `ultimaLeituraEm` e `ultimaLeituraPor` (opcionais, podem vir `null`); desde a 1.6.0, também `situacao` (código: `DISPONIVEL`, `FORA`, `EXTRAVIADO` ou `BAIXADO`), `situacaoRotulo`, `unidade` e `local`; desde a 2.0.0, `destino` e `saidaEm` (a saída que levou o bem, só quando está `FORA`). O `responsavel` e os campos da locação (`pedido`, `cliente`, `previsaoDevolucao`, `localEntrega`) saíram na 2.0.0 | operador · Leituras |
+| `GET /api/android/tags/{epc}` | Ficha do bem: o cadastro e, desde a 1.5.0, `ultimoLocal` e `ultimoInventarioEm` (último inventário finalizado em que foi encontrado), `ultimaLeituraEm` e `ultimaLeituraPor` (opcionais, podem vir `null`); desde a 1.6.0, também `situacao` (código: `DISPONIVEL`, `EXTRAVIADO` ou `BAIXADO`; o `FORA` saiu na 2.1.0), `situacaoRotulo`, `unidade` e `local`. O `responsavel` e os campos da locação (`pedido`, `cliente`, `previsaoDevolucao`, `localEntrega`) saíram na 2.0.0; o `destino` e o `saidaEm` (Movimentações) saíram na 2.1.0 | operador · Leituras |
 | `GET /api/android/tags/patrimonio/{patrimonio}` | EPC de um patrimônio (localizar equipamento) | operador · Leituras |
-| `POST /api/android/movimentos` | Saída ou entrada (2.0.0): `{"tipo":"SAIDA"\|"ENTRADA","destino","observacao","epcs":[...]}` (destino obrigatório na saída; até 1.000 EPCs; repetidos contam uma vez). Os aceitos viram uma movimentação só; os recusados voltam com o motivo. Responde 200 `{"movimento","tipo","aceitos","recusados","resultados":[{"epc","aceito","motivo","patrimonio","descricao"}]}` (`movimento` nulo quando nenhum foi aceito; reenviar recusa como "Já está fora do estoque"/"Já está no estoque"). 400 tipo inválido, saída sem destino ou lista vazia. A hora vem do `X-Momento`. A rota `POST /api/android/tags/{epc}/transferencia` (1.7.0) saiu | operador · Movimentações Criar |
 | `POST /api/android/leitura` | Registra a leitura de uma etiqueta | operador · Leituras |
 | `POST /api/android/naocadastrada` | Envia etiqueta desconhecida para Pendentes | operador · Leituras |
 | `POST /api/android/leituras/lote` | Até 500 leituras de um operador numa requisição: classifica e registra cada uma e devolve o resultado por item (`CADASTRADA` com os dados, `NAO_CADASTRADA`, `RECUSADA` ou `ERRO`). Desde a 1.6.2, os dados trazem também `situacao` e `situacaoRotulo`, com os mesmos nomes da ficha (o app avisa quando o bem lido está baixado ou extraviado). A hora de cada leitura é conferida contra a sessão; reenvio da mesma tag com a mesma hora não duplica | operador · Leituras |
@@ -473,6 +451,7 @@ servidor (desativação, senha temporária ou senha trocada) não tem margem.
   | V25 | `db/migration/V25__valor_depreciacao.sql` | Valor e depreciação: vida útil (meses) e residual (%) no tipo de equipamento; valor, data de aquisição e nota fiscal no bem |
   | V26–V33 | `db/migration/V26__...` a `V33__...` | Da versão de locação (1.9.0 a 1.18.0): anexos, empréstimos, manutenções, locadora (clientes, pedidos, vendas), catálogo inicial, módulos de locação e manutenção, prorrogações, kits e acessórios. Continuam aqui sem mudança (os checksums precisam bater com os bancos já migrados) |
   | V34 | `db/migration/V34__movimentacao_simples.sql` | **2.0.0**: ver abaixo |
+  | V35 | `db/migration/V35__simples_sem_movimentacao.sql` | **2.1.0**: ver abaixo |
 
   **O que a V34 faz (2.0.0):**
   - cria `movimentos` (número, tipo `SAIDA`/`ENTRADA`, data e hora, destino — obrigatório na saída —, observação,
@@ -490,12 +469,25 @@ servidor (desativação, senha temporária ou senha trocada) não tem margem.
     as colunas `tags.responsavel_id`, `valor_aquisicao`, `data_aquisicao`, `nota_fiscal` e
     `tipo_equipamento.vida_util_meses`, `valor_residual_pct` ficam no banco, **sem uso** por esta versão.
 
-  **Trava contra o banco da versão completa (2.0.0):** antes de migrar (e mesmo sem migração pendente), o servidor
-  confere o banco e **se recusa a subir, sem migrar nada**, quando: a tabela `pedidos_locacao` tem algum pedido; há
-  migração aplicada depois da V34 (a branch `locadora` continua numerando); ou a V34 aplicada tem outra descrição. O
-  log diz "Este banco é da versão completa (branch locadora): ... Use o jar da locadora com este banco, ou aponte
-  este servidor para outro banco" (`TravaVersaoCompleta`). Um banco da 1.18 que nunca teve pedido de locação migra
-  normalmente para a 2.0.0.
+  **O que a V35 faz (2.1.0):**
+  - os equipamentos `FORA` ("Fora do estoque") voltam para `DISPONIVEL` ("No estoque"), com uma linha no histórico
+    da etiqueta por "sistema" (origem "Atualização 2.1.0 (V35)") e a versão da etiqueta nova (uma tela de edição
+    aberta antes não grava por cima). A coluna passa a aceitar só `DISPONIVEL`, `EXTRAVIADO` e `BAIXADO`
+    (`ck_tags_situacao`);
+  - apaga as permissões do módulo `MOVIMENTO`; quem tinha `MOVIMENTO_READ` e não tinha `RFID_READ` ganha
+    `RFID_READ` (via os equipamentos que saíam e entravam). Criar, editar e excluir movimentações não viram nada;
+  - **não apaga** `movimentos` nem `movimento_itens`: as saídas e entradas registradas na 2.0.0 ficam no banco,
+    **sem uso** por esta versão (nenhuma tela as mostra). Os registros antigos da auditoria com a área
+    "Movimentações (até a 2.0.0)" continuam na tela de auditoria.
+
+  **Trava contra o banco da versão completa:** antes de migrar (e mesmo sem migração pendente), o servidor confere
+  o banco e **se recusa a subir, sem migrar nada**, quando: a tabela `pedidos_locacao` tem algum pedido; há migração
+  aplicada depois da V35 (a branch `locadora` continua numerando: V36 "campos personalizados", V37 "comprovantes
+  entrega"...); ou a V34 ou a V35 aplicadas têm outra descrição que não `movimentacao simples` e
+  `simples sem movimentacao` (a locadora tem V34 "restricao clientes" e V35 "revisao automatica"). O log diz "Este
+  banco é da versão completa (branch locadora): ... Use o jar da locadora com este banco, ou aponte este servidor
+  para outro banco" (`TravaVersaoCompleta`). Um banco da 1.18 que nunca teve pedido de locação e um banco da 2.0.0
+  migram normalmente para a 2.1.0.
 
   > **Atualizar uma instalação com muitas leituras (centenas de milhares ou mais):** a V16 reescreve a tabela de
   > leituras inteira ao subir, numa transação só: o servidor fica alguns minutos sem responder e a tabela cresce no

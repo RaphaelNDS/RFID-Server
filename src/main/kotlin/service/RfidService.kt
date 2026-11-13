@@ -19,8 +19,6 @@ import org.springframework.data.domain.Sort
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import org.example.model.TipoMovimento
-import java.time.ZoneId
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.LocalDate
@@ -58,9 +56,7 @@ class RfidService(
     private val relogio: Clock = Clock.systemDefaultZone(),
     // Gestão de patrimônio (1.6.0). Opcionais para os testes que montam o serviço à mão
     private val locaisRepo: LocalRepository? = null,
-    private val unidadesRepo: UnidadeRepository? = null,
-    // 2.0.0: a saída que levou o equipamento, na ficha do coletor
-    private val movimentoItens: MovimentoItemRepository? = null
+    private val unidadesRepo: UnidadeRepository? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -132,9 +128,6 @@ class RfidService(
             ?.nome
 
         val local = tag.localId?.let { id -> locaisRepo?.findById(id)?.orElse(null) }
-        // Fora do estoque: para onde foi e quando (a saída mais recente)
-        val saida = if (tag.situacao != SituacaoBem.FORA) null
-        else movimentoItens?.ultimosDoTipo(tag.id, TipoMovimento.SAIDA, PageRequest.of(0, 1))?.firstOrNull()
         return TagResponse(
             codigoInterno = tag.codigoInterno,
             tipo = tipoNome,
@@ -145,9 +138,7 @@ class RfidService(
             situacao = tag.situacao.name,
             situacaoRotulo = tag.situacao.rotulo,
             unidade = local?.unidadeId?.let { id -> unidadesRepo?.findById(id)?.orElse(null)?.nome },
-            local = local?.nome,
-            destino = saida?.destino,
-            saidaEm = saida?.dataHora?.atZone(ZoneId.systemDefault())?.toOffsetDateTime()
+            local = local?.nome
         )
     }
 
@@ -163,14 +154,13 @@ class RfidService(
     }
 
     /**
-     * A situação escolhida no formulário; vazio = não escolheu. Só as editáveis: "Fora do estoque" vem da saída
-     * (Movimentações) e "Baixado", da baixa.
+     * A situação escolhida no formulário; vazio = não escolheu. Só as editáveis: "Baixado" vem da baixa.
      */
     private fun situacaoEscolhida(texto: String?): SituacaoBem? {
         if (texto.isNullOrBlank()) return null
         val s = SituacaoBem.de(texto) ?: throw IllegalArgumentException("Situação inválida: $texto")
         require(s != SituacaoBem.BAIXADO) { "Para baixar o bem use \"Dar baixa\", com o motivo" }
-        require(s in SituacaoBem.EDITAVEIS) { "\"${s.rotulo}\" vem da saída do equipamento (Movimentações), não da edição" }
+        require(s in SituacaoBem.EDITAVEIS) { "Situação inválida: $texto" }
         return s
     }
 
@@ -292,7 +282,7 @@ class RfidService(
         recusarPatrimonioRepetido(req.patrimonio, idAtual = tag.id)
         validarLocal(req, localAtual = tag.localId)
         // Conferida antes de mexer na etiqueta: recusar depois deixaria a entidade alterada na sessão do JPA
-        // Fora das editáveis (fora do estoque, baixado): fica como está; muda pela entrada ou pela baixa
+        // Fora das editáveis (baixado): fica como está; muda por "Desfazer baixa"
         val novaSituacao = if (tag.situacao !in SituacaoBem.EDITAVEIS) null else situacaoEscolhida(req.situacao)
 
         val antes = historico.retrato(tag)
