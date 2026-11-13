@@ -1180,54 +1180,11 @@ code.quebra, .quebra { overflow-wrap: anywhere; word-break: break-all; }
   .table .acoes .btn-sm:has(.texto-celular) { width: 32px; padding: 0; justify-content: center; }
 }
 
-/* Fotos e anexos do bem (1.9.0), na edição da etiqueta */
-.anexos { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.anexo {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-.anexo-previa {
-  flex-shrink: 0;
-  width: 72px;
-  height: 72px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  border-radius: var(--radius-sm);
-  background: var(--surface-hover);
-}
-.anexo-previa img { width: 100%; height: 100%; object-fit: cover; }
-.anexo-pdf { font-weight: 700; font-size: 13px; color: var(--danger); }
-.anexo-dados { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
-.anexo-dados .muted { font-size: 13px; }
-.anexo-acoes { display: flex; gap: 4px; flex-shrink: 0; }
-.anexo-envio { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.anexo-envio input[type="text"] { flex: 1; min-width: 180px; }
-#anexos .vazio { padding: 16px; }
-
-/* Painel do dia e disponibilidade (1.13.0) */
+/* Resumo da tela Início e listas curtas */
 a.stat { color: inherit; text-decoration: none; }
 a.stat:hover { border-color: var(--border-strong); }
 .painel-lista { margin: 0; padding: 4px 16px 12px; list-style: none; }
 .painel-lista li { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .painel-lista li:last-child { border-bottom: 0; }
-.table.disponibilidade .num { text-align: right; white-space: nowrap; }
-.table.disponibilidade tr.grupo td { background: var(--surface-hover); }
-.table.disponibilidade tr.sub td:first-child { padding-left: 28px; }
 .positivo { color: var(--success); }
 .negativo { color: var(--danger); }
-
-/* Linha do tempo do equipamento (1.16.0) */
-.linha-tempo { list-style: none; margin: 0; padding: 8px 16px; }
-.linha-tempo li { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
-.linha-tempo li:last-child { border-bottom: 0; }
-.linha-tempo .lt-icone { flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--surface-hover); }
-.linha-tempo li.alerta .lt-icone { background: var(--danger-soft); color: var(--danger); }
-.linha-tempo .lt-corpo { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
-.linha-tempo .lt-topo { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
-.linha-tempo .lt-por { font-size: 12.5px; }

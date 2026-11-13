@@ -47,17 +47,8 @@ class TelasLayoutTest : IntegracaoBase() {
             "/perfil", "/perfil/senha", "/perfil/email",
             // 1.6.0: gestão de patrimônio
             "/admin/locais", "/admin/tags-cadastradas/importar",
-            // 1.6.1: transferências
-            "/admin/transferencias", "/admin/transferencias/nova",
-            // 1.11.0: manutenção; 1.12.0: locadora (o valor patrimonial da 1.8.0 saiu)
-            "/admin/manutencoes", "/admin/manutencoes/nova",
-            "/admin/pedidos", "/admin/pedidos/novo", "/admin/pedidos/devolucoes", "/admin/clientes",
-            // 1.13.0: painel do dia (na tela inicial) e disponibilidade
-            "/dashboard", "/admin/disponibilidade",
-            // 1.17.0: relatórios da locação
-            "/admin/relatorios-locacao",
-            // 1.18.0: acessórios e kits
-            "/admin/acessorios"
+            // 2.0.0: movimentações (a locação, a manutenção e as transferências saíram)
+            "/admin/movimentos", "/admin/movimentos/saida", "/admin/movimentos/entrada"
         ).forEach { url ->
             val resposta = mvc.perform(get(url).with(admin)).andReturn().response
             conferir(url, resposta)

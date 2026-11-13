@@ -57,14 +57,6 @@
                   th:selected="${filtro.localId == l.id}"></option>
         </select>
       </div>
-      <!-- Responsável fora da tela desde a 1.12.0 (locadora); o filtro por ?responsavel= continua na URL -->
-      <div class="field" style="flex:0 1 190px" th:if="false">
-        <label for="f-responsavel">Responsável</label>
-        <select id="f-responsavel" name="responsavel">
-          <option value="">Todos</option>
-          <option th:each="r : ${opcoesResponsavel}" th:value="${r.id}" th:text="${r.nome}" th:selected="${filtro.responsavelId == r.id}"></option>
-        </select>
-      </div>
       <label class="chip" style="align-self:center" th:if="${filtro.situacao == null}">
         <input type="checkbox" name="baixados" value="true" th:checked="${filtro.incluirBaixados}"><span>Incluir baixados</span>
       </label>
@@ -78,12 +70,6 @@
       </a>
       <a th:if="${total > 0}" th:href="${linkExportarCsv}"
          class="btn btn-ghost btn-sm" title="Para importar em outros sistemas. No Excel, use o botão Excel: o CSV perde zeros à esquerda do patrimônio">CSV</a>
-      <!-- 1.6.1: filtrado por local ou responsável, transfere todos os bens do filtro (ex.: pessoa que saiu da empresa) -->
-      <a th:if="${total > 0 and (filtro.localId != null or filtro.responsavelId != null) and @authService.temPermissao('RFID','UPDATE')}"
-         th:href="@{/admin/transferencias/nova(deLocal=${filtro.localId},deResponsavel=${filtro.responsavelId})}"
-         class="btn btn-ghost btn-sm" title="Transferir todos os bens deste local ou responsável (menos os baixados)">
-        <svg class="ic"><use href="/img/icones.svg#transferir"/></svg>Transferir estes
-      </a>
     </form>
 
     <div class="table-wrap">
@@ -101,7 +87,7 @@
         </tr>
         </thead>
         <tbody>
-        <tr th:each="t : ${tags}" th:classappend="${t.situacao.name() == 'BAIXADO' or t.situacao.name() == 'VENDIDO'} ? 'inativo'">
+        <tr th:each="t : ${tags}" th:classappend="${t.situacao.name() == 'BAIXADO'} ? 'inativo'">
           <td class="mono cartao-titulo" th:text="${t.tag}"></td>
           <td data-rotulo="Código" class="principal" th:text="${t.codigoInterno}"></td>
           <td data-rotulo="Patrimônio" th:text="${t.patrimonio}"></td>

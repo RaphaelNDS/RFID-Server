@@ -6,16 +6,12 @@ import org.example.model.MotivoBaixa
 import org.example.model.SituacaoBem
 import org.example.repository.HistoricoEtiquetaRepository
 import org.example.repository.TagRepository
-import org.example.repository.TransferenciaItemRepository
-import org.example.repository.TransferenciaRepository
 import org.example.request.CadastroRequest
 import org.example.service.AcaoDivergencia
 import org.example.service.DivergenciaInventarioService
 import org.example.service.EsperadoInventarioService
 import org.example.service.PatrimonioCadastrosService
-import org.example.service.PedidoTransferencia
 import org.example.service.RfidService
-import org.example.service.TransferenciaService
 import org.example.suporte.IntegracaoBase
 import org.example.suporte.OperadorTeste
 import org.example.suporte.Perfis
@@ -37,16 +33,13 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
 import java.util.UUID
 
-/** 1.6.1: transferência de bens com guia e ação sobre as divergências do inventário. */
+/** 1.6.1: ação sobre as divergências do inventário (a transferência saiu na 2.0.0). */
 class Versao161IntegracaoTest : IntegracaoBase() {
 
     @Autowired lateinit var cadastros: PatrimonioCadastrosService
     @Autowired lateinit var rfid: RfidService
     @Autowired lateinit var tags: TagRepository
     @Autowired lateinit var historico: HistoricoEtiquetaRepository
-    @Autowired lateinit var transferencias: TransferenciaService
-    @Autowired lateinit var guias: TransferenciaRepository
-    @Autowired lateinit var itensGuia: TransferenciaItemRepository
     @Autowired lateinit var divergencias: DivergenciaInventarioService
     @Autowired lateinit var esperados: EsperadoInventarioService
     @Autowired lateinit var operadores: OperadorTeste
@@ -56,9 +49,9 @@ class Versao161IntegracaoTest : IntegracaoBase() {
 
     private fun tag(epc: String) = tags.findByTagReal(epc).get()
 
-    private fun cadastrar(epc: String, localId: Long? = null, responsavelId: Long? = null, situacao: String? = null, patrimonio: String = "P-$epc") =
+    private fun cadastrar(epc: String, localId: Long? = null, situacao: String? = null, patrimonio: String = "P-$epc") =
         rfid.cadastrarTag(CadastroRequest(tag = epc, codigoInterno = "TI-$epc", patrimonio = patrimonio,
-            localId = localId, responsavelId = responsavelId, situacao = situacao))
+            localId = localId, situacao = situacao))
 
     private fun coletor(url: String, json: String) =
         mvc.perform(post(url).comoOperador(token).contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isOk)
@@ -69,74 +62,6 @@ class Versao161IntegracaoTest : IntegracaoBase() {
         coletor("/api/android/inventarios/$id/itens", """{"itens":[${epcs.joinToString { """{"tag":"$it"}""" }}]}""")
         if (finalizar) coletor("/api/android/inventarios/$id/finalizar", "{}")
         return id
-    }
-
-    // ---------- Transferência ----------
-
-    @Test
-    fun `transferencia muda local e responsavel grava a guia com a origem e o historico`() {
-        val matriz = cadastros.salvarUnidade(null, "Matriz $s")
-        val sala = cadastros.salvarLocal(null, "Sala 1 $s", matriz.id)
-        val almox = cadastros.salvarLocal(null, "Almox $s", matriz.id)
-        val ana = cadastros.salvarResponsavel(null, "Ana $s", "TI", null, null)
-        val bia = cadastros.salvarResponsavel(null, "Bia $s", "RH", null, null)
-        cadastrar("E-TR1-$s", localId = sala.id, responsavelId = ana.id)
-        cadastrar("E-TR2-$s", localId = sala.id, situacao = "EXTRAVIADO")
-
-        // Pela etiqueta e pelo patrimônio, sem diferenciar maiúsculas na etiqueta
-        val guia = transferencias.transferir(PedidoTransferencia(listOf("e-tr1-$s", "P-E-TR2-$s"), almox.id, bia.id,
-            solicitante = "Gerente $s", motivo = "Mudança de setor"))
-
-        assertThat(tag("E-TR1-$s").localId).isEqualTo(almox.id)
-        assertThat(tag("E-TR1-$s").responsavelId).isEqualTo(bia.id)
-        assertThat(tag("E-TR2-$s").situacao).isEqualTo(SituacaoBem.DISPONIVEL)   // extraviado que muda de local foi achado
-        assertThat(guia.localDestino).isEqualTo("Matriz $s › Almox $s")
-        assertThat(guia.responsavelDestino).isEqualTo("Bia $s (RH)")
-        assertThat(guia.data).isEqualTo(LocalDate.now())
-        val itens = itensGuia.findAllByTransferenciaIdOrderByIdAsc(guia.id).associateBy { it.tagReal }
-        assertThat(itens.getValue("E-TR1-$s").localAnterior).isEqualTo("Matriz $s › Sala 1 $s")
-        assertThat(itens.getValue("E-TR1-$s").responsavelAnterior).isEqualTo("Ana $s")
-        assertThat(itens.getValue("E-TR2-$s").responsavelAnterior).isNull()
-        // Guia antiga, com responsável: a tela continua mostrando (1.18.2)
-        mvc.perform(get("/admin/transferencias/${guia.id}").with(Perfis.usuario()))
-            .andExpect(content().string(containsString("Responsável de destino"))).andExpect(content().string(containsString("Bia $s (RH)")))
-
-        val linhas = historico.findByTagRealOrderByMomentoDescIdDesc("E-TR1-$s").filter { it.campo == "Local" || it.campo == "Responsável" }
-        assertThat(linhas).hasSize(2)
-        assertThat(linhas).allSatisfy { assertThat(it.origem).endsWith("Transferência nº ${guia.id}") }
-
-        // Só o responsável: o local de cada bem fica como está
-        val so = transferencias.transferir(PedidoTransferencia(listOf("E-TR1-$s"), null, ana.id))
-        assertThat(so.localDestino).isNull()
-        assertThat(tag("E-TR1-$s").localId).isEqualTo(almox.id)
-        assertThat(tag("E-TR1-$s").responsavelId).isEqualTo(ana.id)
-    }
-
-    @Test
-    fun `transferencia recusada nao muda nada`() {
-        val sala = cadastros.salvarLocal(null, "Sala R $s", null)
-        val outra = cadastros.salvarLocal(null, "Outra R $s", null)
-        val fechada = cadastros.salvarLocal(null, "Fechada R $s", null).let { cadastros.salvarLocal(it.id, it.nome, null, ativo = false) }
-        cadastrar("E-REC1-$s", localId = sala.id)
-        cadastrar("E-REC2-$s", localId = outra.id)
-        cadastrar("E-BAIX-$s")
-        rfid.darBaixa(tag("E-BAIX-$s").id, MotivoBaixa.VENDA, null, null)
-        val antes = guias.count()
-
-        fun recusa(pedido: PedidoTransferencia, mensagem: String) =
-            assertThatThrownBy { transferencias.transferir(pedido) }.isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining(mensagem)
-
-        recusa(PedidoTransferencia(listOf("E-REC1-$s"), null, null), "Escolha o local ou o responsável")
-        recusa(PedidoTransferencia(emptyList(), outra.id, null), "Informe os bens")
-        recusa(PedidoTransferencia(listOf("E-REC1-$s", "NAO-EXISTE-$s"), outra.id, null), "NAO-EXISTE-$s")
-        recusa(PedidoTransferencia(listOf("E-REC1-$s", "E-BAIX-$s"), outra.id, null), "baixado")
-        // E-REC2 já está na Outra: a guia não lista bem que não saiu do lugar, e o E-REC1 também não muda
-        recusa(PedidoTransferencia(listOf("E-REC1-$s", "E-REC2-$s"), outra.id, null), "Já está(ão) no destino: P-E-REC2-$s")
-        recusa(PedidoTransferencia(listOf("E-REC1-$s"), fechada.id, null), "desativado")
-        recusa(PedidoTransferencia(listOf("E-REC1-$s"), outra.id, null, data = LocalDate.now().plusDays(1)), "futuro")
-
-        assertThat(tag("E-REC1-$s").localId).isEqualTo(sala.id)
-        assertThat(guias.count()).isEqualTo(antes)
     }
 
     // ---------- Divergências ----------
@@ -184,36 +109,10 @@ class Versao161IntegracaoTest : IntegracaoBase() {
             .andExpect(content().string(not(containsString("Com os marcados"))))
     }
 
-    @Test
-    fun `transferir os que faltaram pelo inventario liga a guia ao inventario e eles saem do que faltou`() {
-        val sala = cadastros.salvarLocal(null, "Sala X $s", null)
-        val achado = cadastros.salvarLocal(null, "Sala Y $s", null)
-        cadastrar("E-TX1-$s", localId = sala.id)
-        cadastrar("E-TX2-$s", localId = sala.id)
-        val id = inventario("Sala X $s", "E-TX1-$s")
-
-        // O botão Transferir manda os marcados para o formulário, que já confere os bens
-        mvc.perform(post("/admin/transferencias/nova").with(Perfis.gestor()).with(csrf()).param("tags", "E-TX2-$s").param("inventario", id))
-            .andExpect(status().isOk)
-            .andExpect(content().string(containsString("P-E-TX2-$s")))
-            .andExpect(content().string(containsString("Sala X $s")))
-            .andExpect(content().string(containsString("name=\"inventario\"")))
-
-        mvc.perform(post("/admin/transferencias").with(Perfis.gestor()).with(csrf())
-            .param("codigos", "E-TX2-$s").param("inventario", id).param("localDestino", achado.id.toString()))
-            .andExpect(status().is3xxRedirection).andExpect(redirectedUrlPattern("/admin/transferencias/*"))
-
-        assertThat(tag("E-TX2-$s").localId).isEqualTo(achado.id)
-        val comparacao = esperados.faltandoNoInventario(id)
-        assertThat(comparacao.faltando).isEmpty()
-        mvc.perform(get("/admin/inventarios/$id").with(Perfis.gestor())).andExpect(status().isOk)
-            .andExpect(content().string(containsString("Transferências feitas a partir deste inventário")))
-    }
-
     // ---------- Telas e permissões ----------
 
     @Test
-    fun `telas de transferencia divergencias e permissoes`() {
+    fun `telas de divergencias e permissoes`() {
         val sala = cadastros.salvarLocal(null, "Sala W $s", null)
         val destino = cadastros.salvarLocal(null, "Destino W $s", null)
         cadastrar("E-W1-$s", localId = sala.id)
@@ -240,34 +139,5 @@ class Versao161IntegracaoTest : IntegracaoBase() {
         mvc.perform(post("/admin/inventarios/$id/divergencias").with(Perfis.usuario()).with(csrf()).param("tags", "E-W1-$s").param("acao", "extraviado"))
             .andExpect(status().isForbidden)
 
-        // Transferência pela tela: recusa volta ao formulário com o texto; certa vai para a guia
-        mvc.perform(post("/admin/transferencias").with(Perfis.gestor()).with(csrf()).param("codigos", "E-W1-$s\nNAO-$s"))
-            .andExpect(status().isOk).andExpect(content().string(containsString("Escolha o local de destino")))
-            .andExpect(content().string(containsString("NAO-$s")))
-        val resposta = mvc.perform(post("/admin/transferencias").with(Perfis.gestor()).with(csrf())
-            .param("codigos", "E-W1-$s").param("localDestino", destino.id.toString()).param("data", LocalDate.now().toString())
-            .param("solicitante", "Chefe $s")).andExpect(status().is3xxRedirection).andReturn().response
-        val urlGuia = resposta.redirectedUrl!!
-        mvc.perform(get(urlGuia).with(Perfis.usuario())).andExpect(status().isOk)
-            // 1.18.2: sem responsável na transferência pela tela, a guia não mostra o responsável
-            .andExpect(content().string(not(containsString("Responsável anterior"))))
-            .andExpect(content().string(not(containsString("Responsável de destino"))))
-            .andExpect(content().string(containsString("Guia de transferência de bens")))
-            .andExpect(content().string(containsString("Destino W $s")))
-            .andExpect(content().string(containsString("Chefe $s")))
-            .andExpect(content().string(containsString("Sala W $s")))
-        mvc.perform(get("/admin/transferencias").param("busca", "p-e-w1-$s").with(Perfis.usuario())).andExpect(status().isOk)
-            .andExpect(content().string(containsString(urlGuia)))
-        mvc.perform(get("/admin/transferencias/nova").with(Perfis.usuario())).andExpect(status().isForbidden)
-        mvc.perform(post("/admin/transferencias").with(Perfis.usuario()).with(csrf()).param("codigos", "E-W1-$s").param("localDestino", sala.id.toString()))
-            .andExpect(status().isForbidden)
-
-        // Atalhos: ficha do bem e lista filtrada por local
-        mvc.perform(get("/admin/etiquetas/${tag("E-W1-$s").id}/editar").with(Perfis.gestor()))
-            .andExpect(content().string(containsString("/admin/transferencias/nova?tags=E-W1-$s")))
-        mvc.perform(get("/admin/tags-cadastradas").param("local", destino.id.toString()).with(Perfis.gestor()))
-            .andExpect(content().string(containsString("/admin/transferencias/nova?deLocal=${destino.id}")))
-        mvc.perform(get("/admin/transferencias/nova").param("deLocal", destino.id.toString()).with(Perfis.gestor()))
-            .andExpect(content().string(containsString("E-W1-$s")))
     }
 }

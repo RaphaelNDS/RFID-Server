@@ -8,7 +8,6 @@ import org.example.service.AuditoriaService
 import org.example.service.DivergenciaInventarioService
 import org.example.service.EsperadoInventarioService
 import org.example.service.InventarioService
-import org.example.service.TransferenciaService
 import org.example.util.FormatoPlanilha
 import org.example.util.Planilha
 import org.example.util.respostaPlanilha
@@ -30,9 +29,8 @@ class InventarioWebController(
     private val service: InventarioService,
     private val esperados: EsperadoInventarioService,
     private val auditoria: AuditoriaService,
-    // 1.6.1: ação sobre as divergências (bens que faltaram) e as transferências que saíram delas
-    private val divergencias: DivergenciaInventarioService,
-    private val transferencias: TransferenciaService
+    // 1.6.1: ação sobre as divergências (bens que faltaram)
+    private val divergencias: DivergenciaInventarioService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -67,9 +65,8 @@ class InventarioWebController(
         val comparacao = esperados.faltandoNoInventario(id)
         model.addAttribute("comparacao", comparacao)
         model.addAttribute("justificativas", service.justificativasDo(id))
-        // Divergências (1.6.1): como cada bem que faltou está AGORA no cadastro e o que já foi feito a partir daqui
+        // Divergências (1.6.1): como cada bem que faltou está AGORA no cadastro
         model.addAttribute("atuais", divergencias.situacaoAtual(comparacao.faltando.map { it.tag }))
-        model.addAttribute("transferenciasDoInventario", transferencias.doInventario(id))
         model.addAttribute("motivosBaixa", MotivoBaixa.entries)
         model.addAttribute("idLocal", detalhe.resumo.localId)
         // "Voltar" leva ao mesmo filtro de local e página da lista (antes voltava para a lista limpa). Só esses dois
@@ -85,8 +82,7 @@ class InventarioWebController(
     }
 
     /**
-     * Ação sobre os bens que faltaram (1.6.1): marcar como extraviados ou dar baixa nos marcados. A transferência vai
-     * pelo botão "Transferir", que manda os marcados para o formulário de transferência (/admin/transferencias/nova).
+     * Ação sobre os bens que faltaram (1.6.1): marcar como extraviados ou dar baixa nos marcados.
      */
     @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
     @org.springframework.web.bind.annotation.PostMapping("/{id}/divergencias")

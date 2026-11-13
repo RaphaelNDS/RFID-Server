@@ -127,8 +127,6 @@ class UsuarioService(
             Role.GESTOR -> modulosComEfeito.flatMap { m -> listOf(Acao.READ, Acao.CREATE, Acao.UPDATE).map { m to it } }
             Role.USER -> modulosComEfeito.map { it to Acao.READ }
             Role.CUSTOM -> modulosCustom.flatMap { m -> acoesCustom.map { m to it } }
-            // 1.15.0: perfis de função, com as permissões prontas por módulo
-            Role.EXPEDICAO, Role.CONFERENTE, Role.TECNICO -> role.permissoesFixas()
         }
         return pares.map { (modulo, acao) -> PermissaoEntity(modulo = modulo, acao = acao, usuario = usuario) }
     }

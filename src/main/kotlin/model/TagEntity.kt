@@ -1,7 +1,6 @@
 package org.example.model
 
 import jakarta.persistence.*
-import java.math.BigDecimal
 import java.time.LocalDate
 
 @Entity
@@ -43,9 +42,6 @@ class TagEntity(
     @Column(name = "local_id")
     var localId: Long? = null,
 
-    @Column(name = "responsavel_id")
-    var responsavelId: Long? = null,
-
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     var situacao: SituacaoBem = SituacaoBem.DISPONIVEL,
@@ -59,22 +55,14 @@ class TagEntity(
     @Column(length = 500)
     var baixaObservacao: String? = null,
 
-    var baixaPor: String? = null,
+    var baixaPor: String? = null
 
-    // Valor de aquisição, data e nota fiscal (1.8.0, V25): fora da tela desde a 1.12.0, continuam no banco
-
-    @Column(name = "valor_aquisicao", precision = 14, scale = 2)
-    var valorAquisicao: BigDecimal? = null,
-
-    @Column(name = "data_aquisicao")
-    var dataAquisicao: LocalDate? = null,
-
-    @Column(name = "nota_fiscal", length = 60)
-    var notaFiscal: String? = null
+    // 2.0.0: as colunas responsavel_id (V23), valor_aquisicao, data_aquisicao e nota_fiscal (V25) continuam no
+    // banco, sem uso (a versão completa, branch locadora, ainda as tem)
 ) {
     val baixado: Boolean get() = situacao == SituacaoBem.BAIXADO
 
-    /** Baixado ou vendido (1.12.0): não está mais no acervo da locadora. */
+    /** Baixado: não está mais no acervo. */
     val foraDoAcervo: Boolean get() = situacao in SituacaoBem.FORA_DO_ACERVO
 }
 

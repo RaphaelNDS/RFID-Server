@@ -4,17 +4,13 @@ import org.example.model.AreaAuditoria
 import org.example.model.MotivoBaixa
 import org.example.model.SituacaoBem
 import org.example.request.CadastroRequest
-import org.example.service.AnexoBemService
 import org.example.service.AuditoriaService
 import org.example.service.CatalogoService
 import org.example.service.EdicaoConcorrenteException
 import org.example.service.HistoricoEtiquetaService
-import org.example.service.LocacaoService
-import org.example.service.ManutencaoService
+import org.example.service.MovimentoService
 import org.example.service.PatrimonioCadastrosService
 import org.example.service.RfidService
-import org.example.service.VendaService
-import org.example.util.FormatoBr
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -39,49 +35,10 @@ class EtiquetaWebController(
     private val historico: HistoricoEtiquetaService,
     private val cadastros: PatrimonioCadastrosService? = null,
     private val auditoria: AuditoriaService? = null,
-    // 1.9.0: fotos e anexos do bem
-    private val anexos: AnexoBemService? = null,
-    // 1.11.0: manutenções do bem
-    private val manutencoes: ManutencaoService? = null,
-    // 1.12.0: venda e clientes (locadora)
-    private val vendas: VendaService? = null,
-    private val locacao: LocacaoService? = null
+    // 2.0.0: "Fora do estoque desde ..., destino ..." na edição
+    private val movimentos: MovimentoService? = null
 ) {
 
-    /** Venda (1.12.0): cliente opcional, valor como a pessoa digitou, data vazia = hoje. */
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
-    @PostMapping("/{id}/venda")
-    fun vender(
-        @PathVariable id: Long,
-        @RequestParam(required = false) cliente: Long?,
-        @RequestParam(required = false) valor: String?,
-        @RequestParam(required = false) data: String?,
-        @RequestParam(required = false) observacao: String?,
-        redirect: RedirectAttributes
-    ): String {
-        try {
-            val dia = data?.trim()?.takeIf { it.isNotEmpty() }?.let {
-                runCatching { LocalDate.parse(it) }.getOrElse { throw IllegalArgumentException("Data da venda inválida") }
-            }
-            val v = requireNotNull(vendas).vender(id, cliente?.takeIf { it > 0 }, valor, dia, observacao)
-            redirect.addFlashAttribute("msg", "Venda registrada (nº ${v.id}): o equipamento está Vendido.")
-        } catch (e: IllegalArgumentException) {
-            redirect.addFlashAttribute("erro", e.message)
-        }
-        return "redirect:/admin/etiquetas/$id/editar"
-    }
-
-    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
-    @PostMapping("/{id}/venda/desfazer")
-    fun desfazerVenda(@PathVariable id: Long, redirect: RedirectAttributes): String {
-        try {
-            requireNotNull(vendas).desfazer(id)
-            redirect.addFlashAttribute("msg", "Venda desfeita: o equipamento voltou para À venda.")
-        } catch (e: IllegalArgumentException) {
-            redirect.addFlashAttribute("erro", e.message)
-        }
-        return "redirect:/admin/etiquetas/$id/editar"
-    }
 
     @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
     @GetMapping("/{id}/editar")
@@ -95,9 +52,7 @@ class EtiquetaWebController(
         model.addAttribute("cadastro", CadastroRequest(
             tag = tag.tagReal, codigoInterno = tag.codigoInterno, patrimonio = tag.patrimonio, numeroSerie = tag.numeroSerie,
             tipoEquipamentoId = tag.tipoEquipamentoId, marcaId = tag.marcaId, modeloId = tag.modeloId, versao = tag.versao,
-            localId = tag.localId, responsavelId = tag.responsavelId, situacao = tag.situacao.name,
-            valorAquisicao = tag.valorAquisicao?.let { FormatoBr.numero(it) },
-            dataAquisicao = tag.dataAquisicao?.toString(), notaFiscal = tag.notaFiscal
+            localId = tag.localId, situacao = tag.situacao.name
         ))
         return formulario(id, RetornoLista.de(busca, pagina), model)
     }
@@ -149,7 +104,7 @@ class EtiquetaWebController(
         redirect.addFlashAttribute("msg", "Etiqueta ${tag.tagReal} excluída. O histórico dela continua disponível.")
         "redirect:/admin/tags-cadastradas"
     } catch (e: IllegalArgumentException) {
-        // Bem emprestado (1.10.0): volta para a edição com o motivo
+        // Recusada: volta para a edição com o motivo
         redirect.addFlashAttribute("erro", e.message)
         "redirect:/admin/etiquetas/$id/editar"
     }
@@ -193,7 +148,7 @@ class EtiquetaWebController(
     fun desfazerBaixa(@PathVariable id: Long, redirect: RedirectAttributes): String = try {
         val tag = rfidService.desfazerBaixa(id)
         auditoria?.registrar(AreaAuditoria.CATALOGO, "Baixa de bem desfeita", "${tag.tagReal} (patrimônio ${tag.patrimonio.ifBlank { "—" }})")
-        redirect.addFlashAttribute("msg", "Baixa desfeita: o bem ${tag.patrimonio.ifBlank { tag.tagReal }} voltou a ficar Em uso.")
+        redirect.addFlashAttribute("msg", "Baixa desfeita: o bem ${tag.patrimonio.ifBlank { tag.tagReal }} voltou para o estoque.")
         "redirect:/admin/etiquetas/$id/editar"
     } catch (e: IllegalArgumentException) {
         redirect.addFlashAttribute("erro", e.message)
@@ -210,18 +165,10 @@ class EtiquetaWebController(
         model.addAttribute("tipos", catalogoService.listarTipos())
         // Gestão de patrimônio (1.6.0): inclui os desativados (o bem pode já estar num deles)
         model.addAttribute("opcoesLocal", cadastros?.opcoesDeLocal(incluirInativos = true).orEmpty())
-        model.addAttribute("opcoesResponsavel", cadastros?.listarResponsaveis().orEmpty())
         model.addAttribute("situacoesEditaveis", SituacaoBem.EDITAVEIS)
         model.addAttribute("motivosBaixa", MotivoBaixa.entries)
         model.addAttribute("hoje", LocalDate.now())
-        model.addAttribute("fmt", FormatoBr)
-        model.addAttribute("anexos", anexos?.listar(id).orEmpty())
-        model.addAttribute("anexoMaximo", anexos?.maximoRotulo)
-        model.addAttribute("anexoMaximoPorBem", anexos?.maximoPorBem)
-        model.addAttribute("pedidoAtual", rfidService.pedidoAtual(id))
-        model.addAttribute("venda", vendas?.vendaAtual(id))
-        model.addAttribute("clientesVenda", locacao?.clientesAtivos().orEmpty())
-        model.addAttribute("manutencoes", manutencoes?.doBem(id))
+        model.addAttribute("ultimaSaida", if (etiqueta.situacao == SituacaoBem.FORA) movimentos?.ultimaSaida(id) else null)
         return "editar-etiqueta"
     }
 }

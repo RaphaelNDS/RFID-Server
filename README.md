@@ -1,8 +1,15 @@
 # RFID Server
 
-Servidor do sistema de controle de equipamentos por etiquetas RFID. Ele guarda o cadastro das etiquetas
-(qual equipamento cada etiqueta identifica), recebe as leituras e os inventários feitos pelos coletores
-Android e oferece as telas web de administração e relatórios.
+Servidor do sistema de **entrada e saída de equipamentos RFID e inventário** (versão 2.0.0). Ele guarda o
+cadastro das etiquetas (qual equipamento cada etiqueta identifica), registra a **saída** e a **entrada** dos
+equipamentos no estoque, recebe as leituras e os inventários feitos pelos coletores Android e oferece as telas web
+de administração e relatórios.
+
+> **Versão completa de locação:** clientes, pedidos de locação, vendas, kits e acessórios, manutenção, transferências,
+> fotos e anexos, linha do tempo e os perfis Expedição/Conferente/Técnico vivem na branch
+> [`locadora`](https://github.com/RaphaelNDS/RFID-Server/tree/locadora) (1.18.x). Esta (`master`) é a versão simples.
+> O jar desta versão **se recusa a subir** sobre o banco da locadora (ver
+> [Banco de dados, migrações e backup](#banco-de-dados-migrações-e-backup)).
 
 O app dos coletores fica em outro repositório: **RFID-SERVER-ANDROID** (pasta `RFIDServer`).
 
@@ -45,6 +52,7 @@ O app dos coletores fica em outro repositório: **RFID-SERVER-ANDROID** (pasta `
 | **Pendente** | Etiqueta lida por um coletor que ainda não está cadastrada. Aparece em "Pendentes" para alguém cadastrar. |
 | **Leitura** | Registro de que um coletor leu uma etiqueta cadastrada (data/hora, coletor, operador). Alimenta os relatórios. |
 | **Inventário** | Conferência feita num **local**: o operador abre o inventário no coletor, lê as etiquetas e finaliza. |
+| **Movimentação** | **Saída** (o equipamento sai do estoque para um destino e fica "Fora do estoque") ou **entrada** (volta para "No estoque"), pela web ou pelo coletor, com comprovante em PDF. |
 | **Coletor** | Dispositivo Android identificado por uma **chave** configurada no servidor. |
 | **Operador** | Usuário do sistema que fez login no coletor. Usa as permissões do próprio usuário. |
 
@@ -74,8 +82,8 @@ administrador; depois disso essa tela não aparece mais.
 
 | Tela | Endereço | Permissão |
 |---|---|---|
-| Início (atalhos conforme as permissões) | `/dashboard` | logado |
-| Etiquetas cadastradas (50 por página, busca no servidor; filtros de situação, local e responsável; exportar Excel/CSV) | `/admin/tags-cadastradas` | RFID · Ver |
+| Início (quantos no estoque e fora, últimas movimentações, último inventário e atalhos, conforme as permissões) | `/dashboard` | logado |
+| Etiquetas cadastradas (50 por página, busca no servidor; filtros de situação e local; exportar Excel/CSV) | `/admin/tags-cadastradas` | RFID · Ver |
 | Importar planilha de etiquetas (xlsx ou csv; simula antes de gravar) | `/admin/tags-cadastradas/importar` | RFID · Criar (atualizar as existentes exige também Editar) |
 | Etiquetas não vistas há N dias (sem leitura nem inventário; exportar) | `/admin/etiquetas/nao-vistas` | RFID · Ver |
 | Pendentes (50 por página, busca pelo EPC) | `/admin/tags-pendentes` | RFID · Ver |
@@ -87,16 +95,10 @@ administrador; depois disso essa tela não aparece mais.
 | Inventários (50 por página) | `/admin/inventarios` | Leituras · Ver |
 | Catálogo | `/admin/catalogo` | Catálogo · Ver (criar/excluir exigem Criar/Excluir) |
 | Locais (unidades e locais; desativar sem apagar) | `/admin/locais` | Catálogo · Ver (criar/alterar exigem Criar/Editar) |
-| Transferências (guias numeradas; busca por etiqueta ou patrimônio) e a guia para imprimir | `/admin/transferencias` · `/admin/transferencias/{id}` | RFID · Ver |
-| Nova transferência | `/admin/transferencias/nova` | RFID · Editar |
 | Ação sobre os bens que faltaram (no detalhe do inventário finalizado) | `/admin/inventarios/{id}/divergencias` | RFID · Editar |
-| PDFs (1.8.0): laudo do inventário · guia | `/admin/inventarios/{id}/laudo.pdf` · `/admin/transferencias/{id}/guia.pdf` | as mesmas da tela de onde saem (Leituras · Ver; RFID · Ver) |
-| Manutenções (1.11.0): lista (abertas, atrasadas, encerradas) · nova · a ordem (concluir ou cancelar) · ordem em PDF | `/admin/manutencoes` · `/admin/manutencoes/nova` · `/admin/manutencoes/{id}` · `/admin/manutencoes/{id}/ordem.pdf` | Manutenção · Ver (abrir: Criar; concluir e cancelar: Editar) |
-| Pedidos de locação (1.12.0): lista · novo · o pedido (linhas, saída, devolução, conferência) · devoluções a conferir · contrato em PDF | `/admin/pedidos` · `/admin/pedidos/novo` · `/admin/pedidos/{id}` · `/admin/pedidos/devolucoes` · `/admin/pedidos/{id}/contrato.pdf` | Locação · Ver (criar pedido e linha: Criar; o resto: Editar) |
-| Disponibilidade por tipo e modelo (1.13.0); o painel do dia fica na tela Início (`/dashboard`) | `/admin/disponibilidade` | Locação · Ver |
-| Clientes (1.12.0) | `/admin/clientes` | Locação · Ver (cadastrar: Criar; alterar: Editar) |
-| Venda do equipamento (1.12.0), na edição da etiqueta | `/admin/etiquetas/{id}/venda` · `/admin/etiquetas/{id}/venda/desfazer` | RFID · Editar |
-| Fotos e anexos do bem (1.9.0), na edição da etiqueta: enviar e excluir · abrir ou baixar | `/admin/etiquetas/{id}/anexos` · `/admin/etiquetas/{id}/anexos/{anexo}` | RFID · Editar · RFID · Ver |
+| Movimentações (2.0.0): lista com filtro por tipo, data e equipamento · a movimentação | `/admin/movimentos` · `/admin/movimentos/{id}` | Movimentações · Ver |
+| Nova saída · nova entrada (2.0.0) | `/admin/movimentos/saida` · `/admin/movimentos/entrada` | Movimentações · Criar |
+| PDFs: laudo do inventário · comprovante da movimentação | `/admin/inventarios/{id}/laudo.pdf` · `/admin/movimentos/{id}/comprovante.pdf` | as mesmas da tela de onde saem (Leituras · Ver; Movimentações · Ver) |
 | Relatórios (gráficos; avisa quando chegam leituras novas; período de até 366 dias) | `/admin/dashboard` | Relatórios · Ver |
 | Usuários (+ pedidos de nova senha e senha temporária; editar perfil e permissões; desativar e reativar) | `/admin/usuarios` | somente ADMIN |
 | Coletores (último contato, IP, versão do app, operador, fila de envio e estado do aparelho de cada coletor) | `/admin/coletores` | somente ADMIN |
@@ -219,213 +221,56 @@ chave, sem operador): `GET /api/android/atualizacao` e `GET /api/android/atualiz
 - **Unidades e locais:** cada local pode pertencer a uma unidade (ex.: Matriz › Sala 101). O nome do local
   continua único no sistema inteiro, porque o coletor abre o inventário pelo nome. Local desativado sai das listas
   de escolha, mas os bens e os inventários dele continuam como estão.
-- **Responsável e situação:** o cadastro da etiqueta ganha o local, o responsável (pessoa cadastrada em
-  Responsáveis) e a situação (`Em uso`, `Em estoque`, `Em manutenção`, `Emprestado`, `Extraviado`). Ao finalizar
-  um inventário, os bens encontrados passam a ter o local do inventário, e um bem `Extraviado` encontrado volta
-  para `Em uso`. As duas mudanças ficam no histórico da etiqueta.
+- **Situação (2.0.0):** `No estoque` (código `DISPONIVEL`), `Fora do estoque` (`FORA`), `Extraviado` e `Baixado`.
+  A edição da etiqueta só escolhe entre No estoque e Extraviado; Fora do estoque vem da **saída** e volta pela
+  **entrada** (Movimentações), e Baixado vem de "Dar baixa". Ao finalizar um inventário, os bens encontrados passam a
+  ter o local do inventário, e um bem `Extraviado` encontrado volta para o estoque. As mudanças ficam no histórico.
 - **Baixa:** na tela de edição, com motivo (venda, doação, sucata, furto/roubo, perda, outro), data e observação.
-  O bem baixado sai do esperado e do termo, mas continua no banco e a baixa pode ser desfeita. A lista de
-  etiquetas só mostra os baixados com "Incluir baixados" ou com a situação `Baixado` no filtro.
-- **Termo de responsabilidade:** página com os bens de um responsável (sem os baixados), pronta para imprimir ou
-  salvar em PDF pelo navegador.
+  O bem baixado sai do esperado, mas continua no banco e a baixa pode ser desfeita. A lista de etiquetas só mostra
+  os baixados com "Incluir baixados" ou com a situação `Baixado` no filtro.
 - **Importar planilha:** xlsx ou csv (`;` ou `,`, UTF-8 ou Windows-1252), até 5.000 linhas e 10 MB. As colunas são
   reconhecidas pelo cabeçalho (o modelo para baixar tem todas), e célula vazia mantém o valor atual. O envio só
   simula e mostra o que cada linha vai fazer (nova, atualizada, sem mudança ou erro). Nada é gravado até
-  confirmar. Com "criar o que faltar", os tipos, marcas, modelos, unidades, locais e responsáveis que ainda não
-  existem são criados. EPC em notação científica (ex.: `1,23E+23`, de uma planilha que virou número) é recusado.
+  confirmar. Com "criar o que faltar", os tipos, marcas, modelos, unidades e locais que ainda não existem são
+  criados. EPC em notação científica (ex.: `1,23E+23`, de uma planilha que virou número) é recusado. A situação da
+  planilha não tira nem devolve equipamento ao estoque (isso é pela saída e pela entrada); colunas de versões
+  anteriores (Responsável, Matrícula, Valor de aquisição...) são ignoradas.
 
-### Transferência de bens (1.6.1)
+### Movimentações: saída e entrada (2.0.0)
 
-Muda o local e/ou o responsável de um ou mais bens (até 1.000) e grava uma **guia numerada**, com a data, o
-solicitante, o motivo e a origem de cada bem (local e responsável anteriores). A guia sai pronta para imprimir ou
-salvar em PDF, com as assinaturas de quem entrega e de quem recebe. No histórico de cada bem, a mudança aparece com a
-origem "Transferência nº X".
+Menu **Movimentações**. Cada movimentação tem número, tipo (**saída** ou **entrada**), data e hora, quem registrou
+e por onde (web ou coletor), a observação e os equipamentos.
 
-- Os bens são informados pela etiqueta (EPC) ou pelo patrimônio, um por linha (dá para colar uma coluna do Excel).
-  "Conferir bens" mostra onde cada um está antes de transferir.
-- Atalhos: botão **Transferir** na edição da etiqueta, **Transferir estes** na lista de etiquetas filtrada por local
-  ou responsável (ex.: todos os bens de quem saiu da empresa) e **Transferir** nas divergências do inventário.
-- Recusa a transferência inteira (nada muda) quando um código não existe, quando o bem está baixado, quando o bem já
-  está no destino, quando o local ou o responsável está desativado ou quando a data está no futuro.
-- Bem **extraviado** que muda de local volta para "Em uso": foi achado.
-- **Pelo coletor (1.7.0):** no inventário, o operador com RFID · Editar toca num bem lido que é de outro local e
-  escolhe "Transferir para este local". Gera a mesma guia (registrada pelo operador, com o motivo "Pelo coletor
-  ..."), o mesmo histórico e a mesma auditoria. Só o local muda; o responsável fica.
+- **Nova saída:** os equipamentos (patrimônio ou EPC, um por linha; dá para colar uma coluna do Excel ou procurar
+  pela busca da tela) e o **destino**, obrigatório (cliente, obra, filial, técnico...). Eles ficam **Fora do estoque**.
+- **Nova entrada:** os equipamentos que estão fora voltam para **No estoque**.
+- **Recusas:** na saída, o que já está fora; na entrada, o que já está no estoque; nas duas, o baixado, o extraviado
+  e o que não está cadastrado. Na web é tudo ou nada: com um recusado, nada é gravado e a tela volta com o motivo de
+  cada um. No coletor, os aceitos são movimentados e os recusados voltam com o motivo.
+- Cada equipamento movimentado ganha uma linha no **histórico da etiqueta** (Situação, com "Saída nº X (destino:
+  ...)") e a movimentação vai para a **auditoria** (área Movimentações). O **comprovante em PDF** traz os
+  equipamentos e as assinaturas de quem entrega e de quem recebe.
+- O que está fora do estoque fica de fora do **esperado do inventário** (não conta como faltando) e não muda de
+  situação pela edição da etiqueta. A tela **Início** mostra quantos estão no estoque, quantos estão fora, as últimas
+  movimentações e o último inventário.
 
 ### Divergências do inventário (1.6.1)
 
 No detalhe de um inventário **finalizado**, quem pode editar etiquetas marca os bens que faltaram e escolhe o que
-fazer: **transferir** (achados em outro lugar; a guia fica ligada ao inventário), **marcar como extraviados** ou
-**dar baixa** (com o motivo). Cada bem mostra a situação atual no cadastro, ao lado da justificativa do coletor. A
-ação vale só para os bens que faltaram naquele inventário, e no histórico de cada bem a origem diz de qual inventário
-ela saiu. Os baixados e os transferidos para outro local saem da lista do que faltou; os extraviados continuam nela.
+fazer: **marcar como extraviados** ou **dar baixa** (com o motivo). Cada bem mostra a situação atual no cadastro, ao
+lado da justificativa do coletor. A ação vale só para os bens que faltaram naquele inventário, e no histórico de cada
+bem a origem diz de qual inventário ela saiu. Os baixados saem da lista do que faltou; os extraviados continuam nela.
 Etiqueta lida sem cadastro ganha o botão **Cadastrar**, que abre o cadastro já com o local do inventário.
 
-### Valor de aquisição (1.8.0; o valor patrimonial saiu na 1.12.0)
-
-O bem tem **valor de aquisição**, **data de aquisição** e **nota fiscal** (opcionais). Desde a 1.12.0 (locadora)
-eles **não aparecem nas telas** e a tela Valor patrimonial, o PDF de bens com valor contábil e o valor no laudo do
-inventário **saíram**. Os dados continuam no banco (a edição da etiqueta os manda de volta como estão) e na
-importação e exportação da planilha (colunas `Valor de aquisição`, `Data de aquisição` e `Nota fiscal`). A vida útil
-e o residual do tipo (V25) também ficam no banco, sem uso.
-
-### PDFs (1.8.0)
+### PDFs
 
 Gerados pelo servidor (openhtmltopdf), abrem no navegador e trazem no rodapé quem gerou, quando e a versão:
 
 - **Laudo do inventário** (botão no detalhe do inventário): o resumo, os bens que faltaram com a justificativa do
   coletor, os achados em outro local, as assinaturas e, em anexo, as etiquetas lidas. Inventário em andamento sai
-  marcado como provisório.
-- **Guia de transferência** e **termo de responsabilidade**: as mesmas páginas de imprimir, em PDF.
-- **Contrato de locação** (1.12.0) e **ordem de manutenção** (1.11.0).
+  marcado como provisório. Vai para a auditoria (Exportações), como as planilhas.
+- **Comprovante da movimentação** (2.0.0): botão na lista e na tela de cada movimentação.
 
-O laudo vai para a auditoria (Exportações), como as planilhas.
-
-### Manutenção do bem (1.11.0)
-
-Menu **Manutenções**, ou o botão **Manutenção** na edição da etiqueta. Cada **ordem de manutenção** é numerada e
-vale para um bem: tipo (**corretiva** ou **preventiva**), o problema ou o que revisar, o fornecedor ou técnico, a
-data de envio e a previsão de retorno.
-
-- Só vai bem **Em uso** ou **Em estoque**. Com a ordem aberta, ele fica **Em manutenção**; ao **concluir** (resultado,
-  serviço realizado, custo e data do retorno) ou **cancelar** (com o motivo), volta para a situação de antes.
-- "Sem conserto" também devolve a situação anterior: a baixa (sucata) é uma decisão à parte, pela edição da etiqueta.
-- A lista filtra **abertas**, **atrasadas** (previsão de retorno vencida), **concluídas e canceladas** ou todas, e
-  busca por etiqueta, patrimônio ou fornecedor. A **ordem em PDF** acompanha o bem até o fornecedor.
-- A edição da etiqueta mostra a ordem aberta e o **histórico de manutenções** do bem, com o **custo total**.
-- Com a ordem aberta, o bem não recebe baixa, não é excluído, a situação não muda pela edição e ele não pode ser
-  emprestado. Nas divergências do inventário, o bem em manutenção que faltou fica como está.
-- Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
-  (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
-
-### Transferência só por local (1.18.2)
-
-- O **responsável de destino** saiu da transferência: do formulário (onde já estava escondido), da rota e da coluna da
-  lista. A transferência pela tela pede o **local de destino** (obrigatório).
-- A guia (tela e PDF) só mostra "Responsável de destino" e "Responsável anterior" nas guias antigas que mudaram o
-  responsável, para não perder o histórico. O responsável continua no cadastro da etiqueta e no banco.
-
-### Limpeza e organização do código (1.18.1)
-
-Sem mudança no uso nem no banco (nenhuma migração; os dados antigos ficam como estão).
-
-- **Saiu o código sem uso:**
-  - a API de saída e devolução pelo coletor (`/api/android/pedidos`, `/conferir`, `/saida`, `/devolucoes`): o coletor
-    só faz inventário e consulta, e a saída e a devolução são pela web;
-  - a tela de Responsáveis e o termo de responsabilidade (tela e PDF), que estavam fora do menu desde a 1.12.0;
-  - a regra de depreciação e os campos dela no tipo de equipamento.
-- **Código organizado:**
-  - os nomes completos de classe no meio do código (`org.example.service.X`) viraram imports;
-  - os imports sem uso saíram, e os imports estão em ordem;
-  - os tipos da locação foram para `LocacaoTipos.kt`, e o `FormatoBr` foi para o próprio arquivo.
-- Continuam no banco e no cadastro da etiqueta: o responsável, o valor, a data de aquisição e a nota fiscal; e as
-  tabelas antigas de empréstimos (os dados já estão nos pedidos).
-
-### Kits e acessórios (1.18.0)
-
-- **Acessórios e kits** (menu, Locação · Ver; cadastrar e pôr no kit: Criar; alterar e tirar do kit: Editar):
-  cadastro dos acessórios (carregador, bateria, berço, cabo...), que são **contados**, sem etiqueta. O **kit** diz
-  quantos de cada acessório acompanham um equipamento de um **tipo**, ou de um **modelo** (o kit do modelo vale antes
-  do kit do tipo). Acessório desativado não entra em kits nem em pedidos novos (V33).
-- No **pedido**, ao acrescentar uma linha, o kit entra junto (quantidade do kit × quantidade da linha); dá para
-  acrescentar acessório **avulso**. Para cada acessório ficam o pedido, os **enviados**, os **devolvidos** e o que
-  **falta** voltar, com os botões "Tudo enviado" e "Tudo devolvido". Devolvido não passa do enviado; o que já foi
-  enviado não sai do pedido; com o pedido encerrado só a devolução muda (acessório que chegou depois). Tirar a linha
-  leva junto os acessórios dela que não foram enviados.
-- O pedido com os equipamentos de volta e acessório faltando mostra o aviso "Faltam N acessório(s)". A **folha de
-  separação** lista os acessórios a separar; o **contrato** lista os acessórios com enviados e devolvidos; os
-  **Relatórios da locação** mostram os **acessórios que não voltaram** (pedidos encerrados ou com a devolução vencida).
-
-### Folha de separação e relatórios da locação (1.17.0)
-
-- **Folha de separação** (botão no pedido enquanto falta sair algo, Locação · Ver): PDF com o cliente, o local de
-  entrega e as datas, e, para cada item que ainda falta, quantos separar e os equipamentos **Disponíveis** que servem,
-  com o **local** de cada um e uma caixa para marcar (até 30 por item; um equipamento aparece em um item só). Espaço
-  para "Separado por" e "Conferido por".
-- **Relatórios da locação** (menu, Locação · Ver), por período (padrão: últimos 90 dias):
-  - **Uso por modelo:** equipamentos no acervo, pedidos, dias alugado no período e a **ocupação** (dias com clientes ÷
-    equipamentos × dias do período).
-  - **Parados:** Disponíveis sem sair há N dias ou mais (padrão 60; nunca alugado conta desde o cadastro), com link para
-    a linha do tempo: candidatos à venda ou realocação.
-  - **Avarias e manutenção por modelo:** devoluções conferidas, com avaria, faltando acessório, manutenções e o custo.
-  - **Pontualidade dos clientes:** devoluções, quantas atrasaram (contra a devolução prevista já com as prorrogações),
-    o atraso médio e quantos equipamentos estão atrasados agora.
-
-### Linha do tempo do equipamento e prorrogação do pedido (1.16.0)
-
-- **Linha do tempo** (botão na edição da etiqueta, Etiquetas · Ver): tudo o que aconteceu com o equipamento numa
-  lista só, do mais novo para o mais antigo: cadastro e alterações feitas à mão, cada saída e devolução de locação
-  (com o cliente, o local de entrega e os dias de atraso), a conferência (avarias em destaque), as manutenções com o
-  resultado e o custo, as transferências, os inventários que o encontraram e as vendas. No topo, o resumo: quantas
-  locações, para quantos clientes, quantos dias alugado, quantas manutenções e o custo total, quantas avarias e o
-  último cliente. As mudanças de situação que vêm desses fluxos não aparecem de novo como alteração.
-- **Prorrogar o pedido** (na tela do pedido, Locação · Editar): nova devolução prevista e o motivo (obrigatório).
-  Cada mudança fica no histórico do pedido (data de antes, nova, motivo, quem e quando), no contrato em PDF e na
-  auditoria; mudar a data pela edição dos dados do pedido também entra no histórico (V32). Não aceita data no
-  passado nem pedido encerrado ou cancelado.
-
-### Painel do dia e disponibilidade (1.13.0)
-
-Pensados para o uso interno da equipe. Só leitura, com RFID · Ver.
-
-- **Painel do dia** (tela **Início**): quantos equipamentos estão disponíveis, alugados, esperando a conferência e em
-  manutenção; os pedidos a **separar e entregar** (saída prevista até amanhã, já passada ou sem data, com quantos
-  faltam); as **devoluções** atrasadas e as previstas para hoje; e as **manutenções** com o retorno atrasado. Cada
-  número leva à tela correspondente.
-- **Disponibilidade** (menu): por tipo e por marca/modelo, quantos estão disponíveis, alugados, em devolução, em
-  manutenção e à venda; quantos alugados **voltam até** uma data escolhida; quantos já estão **comprometidos** nas
-  vagas dos pedidos a separar; e os **livres** (disponíveis menos os comprometidos, por tipo; negativo = os pedidos
-  abertos pedem mais do que há). Filtro por tipo.
-
-### Locadora: clientes, pedidos de locação e venda (1.12.0)
-
-Desde a 1.12.0 o sistema é de **locadora**: os equipamentos são alugados a clientes, vendidos ou voltam do aluguel.
-O empréstimo para responsável da 1.10.0 virou o pedido de locação (a V29 converteu os empréstimos em pedidos com o
-mesmo número e os responsáveis deles em clientes).
-
-**Situações do equipamento:** Disponível, Alugado, Em devolução, Em manutenção, À venda, Vendido, Extraviado e
-Baixado. Na edição só se escolhe Disponível, À venda, Em manutenção ou Extraviado; as outras vêm dos pedidos, da
-venda e da baixa. A V29 trocou Em uso e Em estoque por **Disponível** e Emprestado por **Alugado** (a planilha e o
-app antigos ainda podem mandar os nomes antigos). Vendido e Baixado saem das listas e do esperado dos inventários;
-Alugado sai do esperado (está com o cliente).
-
-**Fora da tela:** responsável, valor de aquisição, data de aquisição e nota fiscal (decisão do usuário). Os dados
-continuam no banco (a edição os manda de volta como estão). As telas Responsáveis, Termo de responsabilidade e Valor
-patrimonial saíram (a do valor na 1.12.0; Responsáveis e o termo, com as rotas, na limpeza da 1.18.1).
-
-- **Clientes** (menu Clientes): nome, CPF ou CNPJ (sem repetir), contato, telefone, email, endereço e observação.
-- **Pedido de locação** (menu Pedidos de locação): cliente, saída prevista, **devolução prevista**, local de entrega
-  (vazio = o endereço do cliente) e as **linhas**: N de um tipo (marca e modelo opcionais: qualquer um serve) ou um
-  equipamento específico.
-- **Saída** pelo coletor (o operador abre o pedido e lê; o app mostra o que falta e o que sobra) ou pela web. É
-  parcial e soma ao que já saiu: o pedido fica Em separação até preencher as vagas (ou a web encerrar a separação) e
-  então Entregue. O equipamento fica **Alugado**. Recusados: sem cadastro, fora do pedido, não disponível, excedente.
-- **Devolução** pelo coletor ou pela web: o equipamento fica **Em devolução**; o pedido fica Devolvido em parte ou
-  Encerrado.
-- **Conferência da devolução** (fila em Pedidos › Devoluções a conferir, ou no pedido): o estado (sem avarias, com
-  avaria, faltando acessório) e o destino: **Disponível** ou a **manutenção** (abre a ordem com o que foi observado).
-  Fotos: nos anexos da etiqueta.
-- **Contrato de locação** em PDF, e aviso de **devolução atrasada** (lista e pedido).
-- **Venda** (edição da etiqueta, equipamento Disponível ou À venda): cliente, valor, data e observação; fica
-  **Vendido**. Desfazer volta para À venda.
-- Do momento da saída até a conferência, o equipamento não recebe baixa, não é excluído, não é vendido e a situação
-  não muda pela edição; e só está em um pedido por vez (índice único no banco).
-- Tudo vai para o histórico de cada equipamento e para a auditoria (Patrimônio).
-- Saída e devolução são feitas pela web. O coletor só faz inventário e consulta (a ficha mostra o pedido e o
-  cliente); a API de saída e devolução pelo coletor saiu na limpeza da 1.18.1.
-
-### Fotos e anexos do bem (1.9.0)
-
-Na edição da etiqueta, o card **Fotos e anexos** guarda a foto do equipamento, a nota fiscal, o laudo etc.
-
-- Aceita fotos **JPEG, PNG e WebP** e **PDF**, reconhecidos pelos primeiros bytes do arquivo (não pela extensão):
-  um arquivo de outro tipo é recusado, e o nome ganha a extensão do tipo real.
-- Até **10 MB** por arquivo e **20** por bem (`RFID_ANEXOS_MAX_BYTES` e `RFID_ANEXOS_MAX_POR_BEM`).
-- Os arquivos ficam **no banco** (V26, tabelas `anexos_bem` e `anexos_bem_conteudo`): o backup diário e a cópia
-  cifrada fora do computador já os levam. Cada foto aumenta o tamanho dos dumps.
-- Enviar e excluir vão para o histórico da etiqueta (campo "Anexo", com o nome e o tamanho). Excluir a etiqueta
-  apaga os anexos dela; os nomes continuam no histórico.
-- O envio só é aceito de quem tem RFID · Editar, conferido antes de o servidor ler o arquivo (EnvioArquivoFilter).
 
 ### Inventário: o que faltou
 
@@ -445,19 +290,14 @@ do coletor, abaixo), e os baixados ficam de fora.
 | **Administrador** | Tudo, inclusive usuários, backup e console do banco. |
 | **Gestor** | Ver, criar e editar em todos os módulos. Não exclui e não gerencia usuários. |
 | **Usuário** | Só consulta (ver) em todos os módulos. |
-| **Expedição** (1.15.0) | Locação: ver, criar e editar (pedidos, clientes, saída e devolução). Ver etiquetas, leituras e catálogo. |
-| **Conferente** (1.15.0) | Locação: ver e editar (devolução e conferência). Manutenção: ver e abrir. Etiquetas: ver e editar (fotos). Ver leituras e catálogo. |
-| **Técnico** (1.15.0) | Manutenção: ver, abrir, concluir e cancelar. Etiquetas: ver e editar (fotos). Ver locação, leituras e catálogo. |
 | **Personalizado** | Os módulos e ações escolhidos no cadastro. |
 
-Módulos: Catálogo, Etiquetas (RFID), Leituras, Relatórios, **Locação** e **Manutenção** (1.15.0), Usuários. Ações:
-Ver, Criar, Editar, Excluir. Os perfis de função (Expedição, Conferente, Técnico) têm as permissões prontas por módulo,
-para o uso interno; as caixas do formulário não valem para eles.
+Módulos: Catálogo, Etiquetas (RFID), Leituras, Relatórios, **Movimentações** (2.0.0), Usuários. Ações: Ver, Criar,
+Editar, Excluir. Em Movimentações: ver = a lista, a movimentação e o comprovante; criar = registrar saída e entrada
+(na web e no coletor). Os perfis de função da versão de locação (Expedição, Conferente, Técnico) saíram: a V34 passou
+quem os tinha para **Personalizado**, com as mesmas permissões (as de Locação e Manutenção viraram as de
+Movimentações, com a mesma ação).
 
-Na Locação: ver = listas, pedidos, disponibilidade e o painel do dia; criar = pedido, linha e cliente; editar = saída,
-devolução, conferência, encerrar e cancelar. Mandar para a manutenção na conferência pede também Manutenção · Criar.
-Na Manutenção: criar = abrir a ordem; editar = concluir e cancelar. A V31 deu Locação e Manutenção a quem já tinha
-Etiquetas, com as mesmas ações (até a 1.14.0 essas telas pediam as permissões de Etiquetas).
 O menu e os botões só mostram o que o usuário pode usar. Mudanças de permissão valem a partir do
 próximo login (na web) e na próxima requisição (no coletor).
 
@@ -495,8 +335,9 @@ Usada pelo app Android. Tudo em `/api/android/**`, sempre em HTTPS, JSON, sem se
 2. **Operador** — `POST /api/android/login` com email e senha de um usuário do sistema devolve um token de
    sessão (12 h). As demais chamadas enviam `X-Sessao-Operador: <token>`. A sessão vale só no coletor em
    que foi criada, e o operador usa as **permissões do próprio usuário** (Leituras para ler e inventariar,
-   RFID · Criar para cadastrar, RFID · Editar para transferir). A resposta do login diz o que o operador pode
-   fazer: `podeLer`, `podeCadastrar` e, desde a 1.7.0, `podeTransferir`.
+   RFID · Criar para cadastrar, Movimentações · Criar para saída e entrada). A resposta do login diz o que o
+   operador pode fazer: `podeLer`, `podeCadastrar` e, desde a 2.0.0, `podeMovimentar` (o `podeTransferir` da 1.7.0
+   saiu com a transferência).
 
 ### Trabalho offline
 
@@ -517,9 +358,9 @@ O app funciona sem rede durante a sessão e envia depois o que ficou na fila. Ca
 | `GET /api/android/ping` | Testa a conexão e a chave | chave |
 | `POST /api/android/login` · `POST /api/android/logout` | Sessão do operador | chave |
 | `POST /api/android/esqueci-senha` | Pede uma senha nova ao ADMIN (**202**, mesma resposta exista ou não o email) | chave |
-| `GET /api/android/tags/{epc}` | Ficha do bem: o cadastro e, desde a 1.5.0, `ultimoLocal` e `ultimoInventarioEm` (último inventário finalizado em que foi encontrado), `ultimaLeituraEm` e `ultimaLeituraPor` (opcionais, podem vir `null`); desde a 1.6.0, também `situacao` (código), `situacaoRotulo`, `unidade`, `local` e `responsavel` (opcionais) | operador · Leituras |
+| `GET /api/android/tags/{epc}` | Ficha do bem: o cadastro e, desde a 1.5.0, `ultimoLocal` e `ultimoInventarioEm` (último inventário finalizado em que foi encontrado), `ultimaLeituraEm` e `ultimaLeituraPor` (opcionais, podem vir `null`); desde a 1.6.0, também `situacao` (código: `DISPONIVEL`, `FORA`, `EXTRAVIADO` ou `BAIXADO`), `situacaoRotulo`, `unidade` e `local`; desde a 2.0.0, `destino` e `saidaEm` (a saída que levou o bem, só quando está `FORA`). O `responsavel` e os campos da locação (`pedido`, `cliente`, `previsaoDevolucao`, `localEntrega`) saíram na 2.0.0 | operador · Leituras |
 | `GET /api/android/tags/patrimonio/{patrimonio}` | EPC de um patrimônio (localizar equipamento) | operador · Leituras |
-| `POST /api/android/tags/{epc}/transferencia` | Transfere o bem para um local (1.7.0): `{"local","observacao"}`. Só o local muda. Responde `{"local","situacao","situacaoRotulo","transferencia","jaEstava"}`; o bem que já estava no local responde 200 com `jaEstava: true` e sem guia (reenvio). 404 etiqueta sem cadastro, 409 bem baixado, 400 local desconhecido ou desativado | operador · RFID Editar |
+| `POST /api/android/movimentos` | Saída ou entrada (2.0.0): `{"tipo":"SAIDA"\|"ENTRADA","destino","observacao","epcs":[...]}` (destino obrigatório na saída; até 1.000 EPCs; repetidos contam uma vez). Os aceitos viram uma movimentação só; os recusados voltam com o motivo. Responde 200 `{"movimento","tipo","aceitos","recusados","resultados":[{"epc","aceito","motivo","patrimonio","descricao"}]}` (`movimento` nulo quando nenhum foi aceito; reenviar recusa como "Já está fora do estoque"/"Já está no estoque"). 400 tipo inválido, saída sem destino ou lista vazia. A hora vem do `X-Momento`. A rota `POST /api/android/tags/{epc}/transferencia` (1.7.0) saiu | operador · Movimentações Criar |
 | `POST /api/android/leitura` | Registra a leitura de uma etiqueta | operador · Leituras |
 | `POST /api/android/naocadastrada` | Envia etiqueta desconhecida para Pendentes | operador · Leituras |
 | `POST /api/android/leituras/lote` | Até 500 leituras de um operador numa requisição: classifica e registra cada uma e devolve o resultado por item (`CADASTRADA` com os dados, `NAO_CADASTRADA`, `RECUSADA` ou `ERRO`). Desde a 1.6.2, os dados trazem também `situacao` e `situacaoRotulo`, com os mesmos nomes da ficha (o app avisa quando o bem lido está baixado ou extraviado). A hora de cada leitura é conferida contra a sessão; reenvio da mesma tag com a mesma hora não duplica | operador · Leituras |
@@ -630,6 +471,31 @@ servidor (desativação, senha temporária ou senha trocada) não tem margem.
   | V23 | `db/migration/V23__gestao_patrimonio.sql` | Gestão de patrimônio: unidades, locais com unidade e ativo, responsáveis, e local, responsável, situação e baixa no cadastro da etiqueta |
   | V24 | `db/migration/V24__transferencias.sql` | Transferências de bens: a guia (`transferencias`, com o destino pelo id e pelo nome) e os bens dela com a origem (`transferencia_itens`) |
   | V25 | `db/migration/V25__valor_depreciacao.sql` | Valor e depreciação: vida útil (meses) e residual (%) no tipo de equipamento; valor, data de aquisição e nota fiscal no bem |
+  | V26–V33 | `db/migration/V26__...` a `V33__...` | Da versão de locação (1.9.0 a 1.18.0): anexos, empréstimos, manutenções, locadora (clientes, pedidos, vendas), catálogo inicial, módulos de locação e manutenção, prorrogações, kits e acessórios. Continuam aqui sem mudança (os checksums precisam bater com os bancos já migrados) |
+  | V34 | `db/migration/V34__movimentacao_simples.sql` | **2.0.0**: ver abaixo |
+
+  **O que a V34 faz (2.0.0):**
+  - cria `movimentos` (número, tipo `SAIDA`/`ENTRADA`, data e hora, destino — obrigatório na saída —, observação,
+    quem registrou, origem `WEB`/`COLETOR`) e `movimento_itens` (equipamento, EPC, patrimônio e descrição no momento);
+  - converte as situações: `ALUGADO`, `EM_DEVOLUCAO` e `EM_MANUTENCAO` (e o antigo `EMPRESTADO`) viram `FORA`;
+    `A_VENDA` (e os antigos `EM_USO`, `EM_ESTOQUE`) viram `DISPONIVEL`; `VENDIDO` vira `BAIXADO` com o motivo
+    Venda, na data da venda (cada conversão fica no histórico da etiqueta, por "sistema"). A coluna passa a aceitar só
+    `DISPONIVEL`, `FORA`, `EXTRAVIADO` e `BAIXADO` (`ck_tags_situacao`);
+  - perfis Expedição, Conferente e Técnico viram Personalizado; as permissões de Locação e Manutenção viram as de
+    Movimentações com a mesma ação (e são apagadas); Administrador, Gestor e Usuário ganham Movimentações como os
+    outros módulos;
+  - **não apaga nada da locação:** `clientes`, `pedidos_locacao`, `pedido_linhas`, `pedido_itens`,
+    `pedido_prorrogacoes`, `vendas`, `acessorios`, `kit_itens`, `pedido_acessorios`, `manutencoes`, `transferencias`,
+    `transferencia_itens`, `anexos_bem`, `anexos_bem_conteudo`, `responsaveis`, `emprestimos`, `emprestimo_itens` e
+    as colunas `tags.responsavel_id`, `valor_aquisicao`, `data_aquisicao`, `nota_fiscal` e
+    `tipo_equipamento.vida_util_meses`, `valor_residual_pct` ficam no banco, **sem uso** por esta versão.
+
+  **Trava contra o banco da versão completa (2.0.0):** antes de migrar (e mesmo sem migração pendente), o servidor
+  confere o banco e **se recusa a subir, sem migrar nada**, quando: a tabela `pedidos_locacao` tem algum pedido; há
+  migração aplicada depois da V34 (a branch `locadora` continua numerando); ou a V34 aplicada tem outra descrição. O
+  log diz "Este banco é da versão completa (branch locadora): ... Use o jar da locadora com este banco, ou aponte
+  este servidor para outro banco" (`TravaVersaoCompleta`). Um banco da 1.18 que nunca teve pedido de locação migra
+  normalmente para a 2.0.0.
 
   > **Atualizar uma instalação com muitas leituras (centenas de milhares ou mais):** a V16 reescreve a tabela de
   > leituras inteira ao subir, numa transação só: o servidor fica alguns minutos sem responder e a tabela cresce no
@@ -934,8 +800,6 @@ Todas têm padrão no `application.yml`; normalmente só as de coletores precisa
 | `RFID_BACKUP_CRON` | `0 0 2 * * *` | Horário (todo dia às 02:00) |
 | `RFID_SESSAO_WEB_TIMEOUT` | `30m` | Tempo sem uso até a sessão das telas acabar (ex.: `45m`) |
 | `RFID_WEB_MAX_CORPO_BYTES` | `1048576` | Tamanho máximo do corpo das requisições das telas que não são upload (1 MB) |
-| `RFID_ANEXOS_MAX_BYTES` | `10485760` | Tamanho máximo de cada foto ou anexo do bem (10 MB) |
-| `RFID_ANEXOS_MAX_POR_BEM` | `20` | Quantos anexos cada bem pode ter |
 | `RFID_BACKUP_MANTER` | `14` | Quantos backups do certificado guardar |
 | `RFID_LOG_ARQUIVO` | `./data/logs/rfid-server.log` | Arquivo de log (vazio = só console); um por dia, guarda 30 dias |
 | `RFID_MOSTRAR_SQL` | `false` | Mostra no log cada SQL executado (só para investigar problema) |

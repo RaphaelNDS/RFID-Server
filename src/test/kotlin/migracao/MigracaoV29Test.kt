@@ -53,7 +53,7 @@ class MigracaoV29Test {
                 "values (4, 'E4', 'CORRETIVA', 'Não liga', date '2026-11-02', 'EM_ESTOQUE', 'ABERTA', 'ana@x.com')"
         )
 
-        assertThat(flyway().migrate().success).isTrue()
+        assertThat(flyway("29").migrate().success).isTrue()
 
         assertThat(linhas("select tag_real, situacao from tags order by id")).containsExactly(
             listOf("E1", "ALUGADO"), listOf("E2", "DISPONIVEL"), listOf("E3", "DISPONIVEL"), listOf("E4", "EM_MANUTENCAO"))
@@ -82,7 +82,7 @@ class MigracaoV29Test {
     @Test
     fun `banco sem emprestimos migra e numera os pedidos a partir de 1`() {
         flyway("28").migrate()
-        assertThat(flyway().migrate().success).isTrue()
+        assertThat(flyway("29").migrate().success).isTrue()
         sql(
             "insert into clientes (nome) values ('Cliente')",
             "insert into pedidos_locacao (cliente_id, cliente, previsao_devolucao, situacao, registrado_por) select id, nome, date '2026-12-01', 'ABERTO', 'x' from clientes"

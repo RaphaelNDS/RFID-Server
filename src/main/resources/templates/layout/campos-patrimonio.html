@@ -1,10 +1,9 @@
 <!--
-  Local e situação do equipamento (1.6.0), no cadastro e na edição da etiqueta. O modelo precisa de "cadastro"
+  Local e situação do equipamento, no cadastro e na edição da etiqueta. O modelo precisa de "cadastro"
   (CadastroRequest), "opcoesLocal" (OpcaoLocal) e "situacoesEditaveis". Desativados só aparecem se já forem os do bem.
 
-  Locadora (1.12.0): responsável, valor de aquisição, data de aquisição e nota fiscal saíram da tela (decisão do
-  usuário), mas continuam no banco: vão como campos ocultos com o valor atual, para salvar não apagar o que já existe.
-  A situação só aparece para escolher quando é uma das editáveis; alugado, em devolução e vendido vêm das telas próprias.
+  A situação só aparece para escolher quando é uma das editáveis (No estoque, Extraviado); "Fora do estoque" vem das
+  movimentações (saída e entrada) e "Baixado", de "Dar baixa".
 -->
 <th:block th:fragment="campos" xmlns:th="http://www.thymeleaf.org">
   <div class="field">
@@ -26,18 +25,12 @@
         <option th:each="s : ${situacoesEditaveis}" th:value="${s.name()}" th:text="${s.rotulo}"
                 th:selected="${(cadastro.situacao == null and s.name() == 'DISPONIVEL') or s.name() == cadastro.situacao}"></option>
       </select>
-      <span class="field-dica">Alugado e Em devolução vêm dos pedidos de locação; Vendido, da venda; Baixado, de "Dar baixa".</span>
+      <span class="field-dica">"Fora do estoque" vem das movimentações (saída e entrada); "Baixado", de "Dar baixa".</span>
     </div>
     <div class="field" th:unless="${editavel}">
       <label>Situação</label>
       <input type="text" th:value="${T(org.example.model.SituacaoBem).valueOf(cadastro.situacao).rotulo}" readonly>
-      <span class="field-dica">Muda pela tela do pedido, da venda ou da baixa.</span>
+      <span class="field-dica">Muda pela entrada do equipamento (Movimentações) ou pela baixa.</span>
     </div>
   </th:block>
-
-  <!-- Fora da tela desde a 1.12.0: o valor atual vai junto para não ser apagado ao salvar -->
-  <input type="hidden" name="responsavelId" th:value="${cadastro.responsavelId}">
-  <input type="hidden" name="valorAquisicao" th:value="${cadastro.valorAquisicao}">
-  <input type="hidden" name="dataAquisicao" th:value="${cadastro.dataAquisicao}">
-  <input type="hidden" name="notaFiscal" th:value="${cadastro.notaFiscal}">
 </th:block>

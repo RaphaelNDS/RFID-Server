@@ -6,7 +6,12 @@ import org.example.model.MotivoBaixa
 import org.example.model.SituacaoBem
 import org.example.model.StatusInventario
 import org.example.repository.InventarioRepository
+import org.example.model.TagEntity
 import org.example.repository.LocalRepository
+import org.example.repository.MarcaRepository
+import org.example.repository.ModeloRepository
+import org.example.repository.TipoEquipamentoRepository
+import org.example.repository.UnidadeRepository
 import org.example.repository.TagRepository
 import org.example.util.normalizarEpc
 import org.slf4j.LoggerFactory
@@ -15,14 +20,25 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-/** Ação sobre os bens que faltaram num inventário. A transferência tem tela própria (TransferenciaService). */
+/** Ação sobre os bens que faltaram num inventário. */
 enum class AcaoDivergencia { EXTRAVIADO, BAIXA }
 
 data class ResultadoDivergencia(val tratados: Int, val ignorados: List<String>)
 
+/** Um bem que faltou, como está agora no cadastro (tela do inventário). */
+data class BemAtual(
+    val id: Long,
+    val tag: String,
+    val patrimonio: String?,
+    val codigoInterno: String?,
+    val descricao: String?,
+    val local: String?,
+    val situacao: SituacaoBem
+)
+
 /**
  * Ação sobre as divergências de um inventário FINALIZADO (1.6.1): os bens que faltaram podem ser marcados como
- * extraviados, baixados ou transferidos (para onde foram achados). Só vale para os bens que faltaram NESTE inventário
+ * extraviados ou baixados. Só vale para os bens que faltaram NESTE inventário
  * (a lista vem do EsperadoInventarioService, a mesma da tela), para um formulário adulterado não mexer em outro bem.
  * No histórico de cada bem, a origem diz de que inventário saiu a ação.
  */
@@ -35,16 +51,19 @@ class DivergenciaInventarioService(
     private val rfid: RfidService,
     private val historico: HistoricoEtiquetaService,
     private val auditoria: AuditoriaService,
-    private val transferencias: TransferenciaService
+    private val tipos: TipoEquipamentoRepository,
+    private val marcas: MarcaRepository,
+    private val modelos: ModeloRepository,
+    private val unidades: UnidadeRepository
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    /** Os bens que faltaram como estão AGORA no cadastro (situação, local e responsável), pela etiqueta. */
+    /** Os bens que faltaram como estão AGORA no cadastro (situação e local), pela etiqueta. */
     @Transactional(readOnly = true)
-    fun situacaoAtual(etiquetas: Collection<String>): Map<String, BemTransferivel> =
+    fun situacaoAtual(etiquetas: Collection<String>): Map<String, BemAtual> =
         if (etiquetas.isEmpty()) emptyMap()
-        else transferencias.descrever(etiquetas.distinct().chunked(5_000).flatMap { tags.findAllByTagRealIn(it) }).associateBy { it.tag }
+        else descrever(etiquetas.distinct().chunked(5_000).flatMap { tags.findAllByTagRealIn(it) }).associateBy { it.tag }
 
     /**
      * As etiquetas escolhidas que faltaram neste inventário. Inventário em andamento é recusado: a lista ainda muda
@@ -73,10 +92,10 @@ class DivergenciaInventarioService(
         val origem = "Inventário de $nomeLocal (${inventario.iniciadoEm.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))})"
 
         val bens = etiquetas.chunked(5_000).flatMap { tags.findAllByTagRealIn(it) }
-        // Já baixado ou vendido: não há o que fazer. Já extraviado: marcar de novo não muda nada. Alugado, em devolução
-        // (1.12.0) ou em manutenção (1.11.0): faltou porque está fora; a volta é pelo pedido ou pela manutenção
+        // Já baixado: não há o que fazer. Já extraviado: marcar de novo não muda nada. Fora do estoque: faltou porque
+        // saiu (Movimentações); a volta é pela entrada
         val ignorados = bens.filter {
-            it.foraDoAcervo || it.situacao in setOf(SituacaoBem.ALUGADO, SituacaoBem.EM_DEVOLUCAO, SituacaoBem.EM_MANUTENCAO) ||
+            it.foraDoAcervo || it.situacao == SituacaoBem.FORA ||
                 (acao == AcaoDivergencia.EXTRAVIADO && it.situacao == SituacaoBem.EXTRAVIADO)
         }
         val tratar = bens - ignorados.toSet()
@@ -102,5 +121,24 @@ class DivergenciaInventarioService(
             auditoria.registrar(AreaAuditoria.PATRIMONIO, "Divergências do inventário", "$nomeLocal ($inventarioId)", "${tratar.size} bem(ns) $descricao")
         }
         return ResultadoDivergencia(tratar.size, ignorados.map { it.patrimonio.ifBlank { it.tagReal } })
+    }
+
+    /** Os bens com os nomes do catálogo e o local ("Matriz › Sala 101"), por patrimônio. */
+    private fun descrever(lista: List<TagEntity>): List<BemAtual> {
+        if (lista.isEmpty()) return emptyList()
+        val nomesTipo = tipos.findAllById(lista.mapNotNull { it.tipoEquipamentoId }.toSet()).associate { it.id to it.nome }
+        val nomesMarca = marcas.findAllById(lista.mapNotNull { it.marcaId }.toSet()).associate { it.id to it.nome }
+        val nomesModelo = modelos.findAllById(lista.mapNotNull { it.modeloId }.toSet()).associate { it.id to it.nome }
+        val nomesUnidade = unidades.findAll().associate { it.id to it.nome }
+        val nomesLocal = locais.findAllById(lista.mapNotNull { it.localId }.toSet())
+            .associate { l -> l.id to (l.unidadeId?.let(nomesUnidade::get)?.let { "$it › ${l.nome}" } ?: l.nome) }
+        return lista.map { t ->
+            BemAtual(
+                id = t.id, tag = t.tagReal, patrimonio = t.patrimonio.ifBlank { null }, codigoInterno = t.codigoInterno.ifBlank { null },
+                descricao = listOfNotNull(t.tipoEquipamentoId?.let(nomesTipo::get), t.marcaId?.let(nomesMarca::get), t.modeloId?.let(nomesModelo::get))
+                    .joinToString(" ").ifBlank { null },
+                local = t.localId?.let(nomesLocal::get), situacao = t.situacao
+            )
+        }
     }
 }

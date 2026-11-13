@@ -48,11 +48,6 @@
             <option value="USER" th:selected="${perfilForm == 'USER'}">Usuário</option>
             <option value="GESTOR" th:selected="${perfilForm == 'GESTOR'}">Gestor</option>
             <option value="ADMIN" th:selected="${perfilForm == 'ADMIN'}">Administrador</option>
-            <optgroup label="Por função (uso interno)">
-              <option value="EXPEDICAO" th:selected="${perfilForm == 'EXPEDICAO'}">Expedição</option>
-              <option value="CONFERENTE" th:selected="${perfilForm == 'CONFERENTE'}">Conferente</option>
-              <option value="TECNICO" th:selected="${perfilForm == 'TECNICO'}">Técnico</option>
-            </optgroup>
             <option value="CUSTOM" th:selected="${perfilForm == 'CUSTOM'}">Personalizado</option>
           </select>
           <span class="field-dica" id="perfilDescricao"></span>
@@ -65,8 +60,7 @@
             <label class="chip"><input type="checkbox" name="telas" value="RFID" th:checked="${telas.contains('RFID')}"><span>Etiquetas (RFID)</span></label>
             <label class="chip"><input type="checkbox" name="telas" value="LEITURA" th:checked="${telas.contains('LEITURA')}"><span>Leituras</span></label>
             <label class="chip"><input type="checkbox" name="telas" value="DASHBOARD" th:checked="${telas.contains('DASHBOARD')}"><span>Relatórios</span></label>
-            <label class="chip"><input type="checkbox" name="telas" value="LOCACAO" th:checked="${telas.contains('LOCACAO')}"><span>Locação</span></label>
-            <label class="chip"><input type="checkbox" name="telas" value="MANUTENCAO" th:checked="${telas.contains('MANUTENCAO')}"><span>Manutenção</span></label>
+            <label class="chip"><input type="checkbox" name="telas" value="MOVIMENTO" th:checked="${telas.contains('MOVIMENTO')}"><span>Movimentações</span></label>
           </div>
         </fieldset>
 
@@ -101,10 +95,6 @@
         USER:   { acoes: ["READ"], texto: "Só consulta: vê tudo, não altera nada." },
         GESTOR: { acoes: ["READ", "CREATE", "UPDATE"], texto: "Consulta, cadastra e edita. Não exclui nem gerencia usuários." },
         ADMIN:  { acoes: ["READ", "CREATE", "UPDATE", "DELETE"], texto: "Acesso total, inclusive gestão de usuários." },
-        // 1.15.0: perfis de função, com as permissões prontas por módulo (Role.permissoesFixas)
-        EXPEDICAO:  { funcao: true, texto: "Pedidos de locação: cria, separa e registra a saída e a devolução. Vê etiquetas, leituras e catálogo." },
-        CONFERENTE: { funcao: true, texto: "Recebe e confere as devoluções, anexa fotos e manda para a manutenção. Vê etiquetas, leituras e catálogo." },
-        TECNICO:    { funcao: true, texto: "Manutenções: abre, conclui e cancela; edita a etiqueta e anexa fotos. Vê leituras, catálogo e pedidos." },
         CUSTOM: { texto: "Escolha os módulos e o que o usuário pode fazer neles." }
       };
 
@@ -116,13 +106,6 @@
         if (perfil.value === "CUSTOM") {
           modulos.forEach(m => { m.disabled = false; if (!inicial) m.checked = false; });
           permissoes.forEach(a => { a.disabled = false; if (!inicial) a.checked = false; });
-          return;
-        }
-
-        // Perfil de função: as permissões são por módulo (não cabem nas caixas): só o texto explica
-        if (p.funcao) {
-          modulos.forEach(m => { m.checked = false; m.disabled = true; });
-          permissoes.forEach(a => { a.checked = false; a.disabled = true; });
           return;
         }
 

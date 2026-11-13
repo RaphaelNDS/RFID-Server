@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!--
+  Comprovante da movimentação em PDF (2.0.0): saída ou entrada, o destino, a observação, os equipamentos e as
+  assinaturas de quem entregou e de quem recebeu.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="'Comprovante de ' + ${#strings.toLowerCase(movimento.tipo.rotulo)} + ' nº ' + ${movimento.id}">Comprovante</title>
+  <style th:replace="~{pdf/base :: estilo}"></style>
+</head>
+<body>
+<div th:replace="~{pdf/base :: rodape}"></div>
+<th:block th:with="titulo=${'Comprovante de ' + #strings.toLowerCase(movimento.tipo.rotulo) + ' de equipamentos'},
+                    sub=${movimento.tipo.name() == 'SAIDA' ? 'Os equipamentos abaixo saíram do estoque' : 'Os equipamentos abaixo voltaram ao estoque'},
+                    dir=${'Nº ' + movimento.id + ' · ' + #temporals.format(movimento.dataHora, 'dd/MM/yyyy HH:mm')}">
+  <div th:replace="~{pdf/base :: cabecalho(${titulo}, ${sub}, ${dir})}"></div>
+</th:block>
+
+<table class="dados">
+  <tr><th>Tipo</th><td th:text="${movimento.tipo.rotulo}"></td></tr>
+  <tr><th>Data e hora</th><td th:text="${#temporals.format(movimento.dataHora, 'dd/MM/yyyy HH:mm')}"></td></tr>
+  <tr th:if="${movimento.destino != null}"><th>Destino</th><td th:text="${movimento.destino}"></td></tr>
+  <tr th:if="${movimento.observacao != null}"><th>Observação</th><td th:text="${movimento.observacao}"></td></tr>
+  <tr><th>Registrado por</th><td th:text="${movimento.registradoPor} + ' (' + ${movimento.origem.rotulo} + ')'"></td></tr>
+  <tr><th>Equipamentos</th><td th:text="${#lists.size(itens)}"></td></tr>
+</table>
+
+<h2 th:text="'Equipamentos (' + ${#lists.size(itens)} + ')'">Equipamentos</h2>
+<table class="lista">
+  <thead><tr><th class="num">#</th><th>Patrimônio</th><th>Descrição</th><th>Etiqueta (EPC)</th></tr></thead>
+  <tbody>
+  <tr th:each="i, st : ${itens}">
+    <td class="num" th:text="${st.count}"></td>
+    <td th:text="${i.patrimonio} ?: '-'"></td>
+    <td th:text="${i.descricao} ?: '-'"></td>
+    <td class="mono" th:text="${i.tagReal}"></td>
+  </tr>
+  </tbody>
+</table>
+
+<p class="local-data">Local e data: ______________________________, ____/____/________</p>
+
+<table class="assinaturas">
+  <tr>
+    <td><div class="linha">&#160;</div><div class="muted" th:text="${movimento.tipo.name() == 'SAIDA'} ? 'Entregue por' : 'Devolvido por'">Entregue por</div></td>
+    <td><div class="linha">&#160;</div><div class="muted" th:text="${movimento.tipo.name() == 'SAIDA'} ? 'Recebido por' : 'Recebido no estoque por'">Recebido por</div></td>
+  </tr>
+</table>
+</body>
+</html>

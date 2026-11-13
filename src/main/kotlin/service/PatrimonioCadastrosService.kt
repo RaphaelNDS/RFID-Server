@@ -2,10 +2,8 @@ package org.example.service
 
 import org.example.model.AreaAuditoria
 import org.example.model.LocalEntity
-import org.example.model.ResponsavelEntity
 import org.example.model.UnidadeEntity
 import org.example.repository.LocalRepository
-import org.example.repository.ResponsavelRepository
 import org.example.repository.TagRepository
 import org.example.repository.UnidadeRepository
 import org.slf4j.LoggerFactory
@@ -25,7 +23,7 @@ data class OpcaoLocal(val id: Long, val nome: String, val unidade: String?, val 
 }
 
 /**
- * Cadastros da gestão de patrimônio (1.6.0): unidades, locais e responsáveis. Nomes sem diferenciar maiúsculas nem
+ * Cadastros da gestão de patrimônio (1.6.0): unidades e locais. Nomes sem diferenciar maiúsculas nem
  * espaços repetidos ("sala 101" e " Sala  101 " são o mesmo local, como no inventário). Nada é excluído quando já foi
  * usado: desativar tira das escolhas e mantém os bens e os inventários antigos. Tudo vai para a auditoria.
  */
@@ -33,7 +31,6 @@ data class OpcaoLocal(val id: Long, val nome: String, val unidade: String?, val 
 class PatrimonioCadastrosService(
     private val unidades: UnidadeRepository,
     private val locais: LocalRepository,
-    private val responsaveis: ResponsavelRepository,
     private val tags: TagRepository,
     private val relogio: Clock,
     private val auditoria: AuditoriaService? = null
@@ -101,33 +98,6 @@ class PatrimonioCadastrosService(
         return local
     }
 
-    // ================= RESPONSÁVEIS =================
-
-    fun listarResponsaveis(): List<ResponsavelEntity> = responsaveis.findAllByOrderByNomeAsc()
-
-    fun responsaveisAtivos(): List<ResponsavelEntity> = listarResponsaveis().filter { it.ativo }
-
-    fun responsavel(id: Long): ResponsavelEntity = responsaveis.findById(id).orElseThrow { NoSuchElementException("Responsável $id não encontrado") }
-
-    @Transactional
-    fun salvarResponsavel(id: Long?, nomeInformado: String, setor: String?, matricula: String?, email: String?, ativo: Boolean = true): ResponsavelEntity {
-        val nome = nome(nomeInformado, "do responsável", 160)
-        val mat = opcional(matricula, "A matrícula", 60)
-        val mail = opcional(email, "O email", 160)?.also { require(Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$").matches(it)) { "Email inválido: $it" } }
-        mat?.let { m -> responsaveis.porMatricula(m)?.takeIf { it.id != id }?.let { throw IllegalArgumentException("A matrícula $m já é de ${it.nome}") } }
-        val r = if (id == null) ResponsavelEntity(nome = nome, criadoEm = LocalDateTime.now(relogio)) else responsavel(id)
-        r.nome = nome
-        r.setor = opcional(setor, "O setor", 120)
-        r.matricula = mat
-        r.email = mail
-        r.ativo = ativo
-        val salvo = responsaveis.save(r)
-        log.info("Responsável {} {} (ativo: {})", salvo.descricao, if (id == null) "cadastrado" else "alterado", salvo.ativo)
-        auditoria?.registrar(AreaAuditoria.CATALOGO, if (id == null) "Responsável cadastrado" else "Responsável alterado", salvo.descricao,
-            if (salvo.ativo) null else "Desativado")
-        return salvo
-    }
-
     // ================= IMPORTAÇÃO (procurar ou criar pelo nome) =================
 
     /** A unidade pelo nome; com [criar], cadastra se não existir. null = não existe e não criou. */
@@ -162,17 +132,6 @@ class PatrimonioCadastrosService(
         return if (criar) salvarLocal(null, limpo, unidade?.id) else null
     }
 
-    /** O responsável pela matrícula (se informada) ou pelo nome; com [criar], cadastra se não existir. */
-    @Transactional
-    fun responsavelPor(nome: String?, matricula: String?, criar: Boolean): ResponsavelEntity? {
-        val mat = matricula?.trim()?.takeIf { it.isNotEmpty() }
-        val n = nome?.trim()?.replace(Regex("\\s+"), " ")?.takeIf { it.isNotEmpty() }
-        mat?.let { responsaveis.porMatricula(it) }?.let { return it }
-        n?.let { responsaveis.porNome(it).firstOrNull() }?.let { return it }
-        if (!criar || n == null) return null
-        return salvarResponsavel(null, n, null, mat, null)
-    }
-
     private fun nome(valor: String, de: String, maximo: Int): String {
         val limpo = valor.trim().replace(Regex("\\s+"), " ")
         require(limpo.isNotEmpty()) { "Informe o nome $de" }
@@ -180,9 +139,4 @@ class PatrimonioCadastrosService(
         return limpo
     }
 
-    private fun opcional(valor: String?, campo: String, maximo: Int): String? {
-        val limpo = valor?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-        require(limpo.length <= maximo) { "$campo pode ter no máximo $maximo caracteres" }
-        return limpo
-    }
 }

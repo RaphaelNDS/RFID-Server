@@ -35,10 +35,9 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
            or lower(t.patrimonio) like :padrao escape '\'
            or lower(t.numeroSerie) like :padrao escape '\'
            or t.tipoEquipamentoId in :tipos or t.marcaId in :marcas or t.modeloId in :modelos
-           or t.localId in :locais or t.responsavelId in :responsaveis)
+           or t.localId in :locais)
            and t.situacao in :situacoes
-           and (:localId = -1 or t.localId = :localId)
-           and (:responsavelId = -1 or t.responsavelId = :responsavelId)"""
+           and (:localId = -1 or t.localId = :localId)"""
     )
     fun buscar(
         @Param("padrao") padrao: String,
@@ -46,23 +45,21 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
         @Param("marcas") marcas: Collection<Long>,
         @Param("modelos") modelos: Collection<Long>,
         @Param("locais") locais: Collection<Long>,
-        @Param("responsaveis") responsaveis: Collection<Long>,
         @Param("situacoes") situacoes: Collection<SituacaoBem>,
         @Param("localId") localId: Long,
-        @Param("responsavelId") responsavelId: Long,
         pagina: Pageable
     ): Page<TagEntity>
 
     // Gestão de patrimônio (1.6.0)
     fun countByLocalId(localId: Long): Long
 
-    /** Os bens cadastrados no local fora destas situações (esperado do inventário: sem baixados, vendidos e alugados). */
+    /** Os bens cadastrados no local fora destas situações (esperado do inventário: sem baixados e sem os que estão fora do estoque). */
     fun findAllByLocalIdAndSituacaoNotIn(localId: Long, situacoes: Collection<SituacaoBem>): List<TagEntity>
 
-    @Query("select t.localId, count(t) from TagEntity t where t.localId is not null and t.situacao not in (org.example.model.SituacaoBem.BAIXADO, org.example.model.SituacaoBem.VENDIDO) group by t.localId")
+    @Query("select t.localId, count(t) from TagEntity t where t.localId is not null and t.situacao <> org.example.model.SituacaoBem.BAIXADO group by t.localId")
     fun contarPorLocal(): List<Array<Any>>
 
-    /** Painel do dia (1.13.0): quantos equipamentos em cada situação. */
+    /** Tela Início: quantos equipamentos em cada situação. */
     @Query("select t.situacao, count(t) from TagEntity t group by t.situacao")
     fun contarPorSituacao(): List<Array<Any>>
 
