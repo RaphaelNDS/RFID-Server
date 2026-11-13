@@ -515,6 +515,22 @@ class RfidService(
         }.map { TagNaoCadastradaView(tag = it.tag, dataHora = it.dataHora) }
     }
 
+    /** Tela Pendentes (1.29.1): quantas há ao todo (o botão Limpar apaga todas, não só as da busca). */
+    @Transactional(readOnly = true)
+    fun contarNaoCadastradas(): Long = naoRepo.count()
+
+    /**
+     * Tela Pendentes (1.29.1): apaga todas as etiquetas pendentes (lidas e ainda não cadastradas). Não mexe em nenhuma
+     * etiqueta cadastrada nem nas leituras: a que for lida de novo pelo coletor volta para a lista.
+     */
+    @Transactional
+    fun limparNaoCadastradas(): Long {
+        val total = naoRepo.count()
+        if (total > 0) naoRepo.deleteAllInBatch()
+        log.info("Etiquetas pendentes limpas: {} apagada(s) por {}", total, usuarioAtual())
+        return total
+    }
+
     /* ================= LOTE DO COLETOR ================= */
 
     /**

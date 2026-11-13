@@ -298,7 +298,7 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
-### Cadastro em lote e importação de clientes (1.29.0)
+### Cadastro em lote e importação de clientes (1.29.0) e limpar pendentes (1.29.1)
 
 **Cadastrar pendentes em lote** (Etiquetas · Criar): na tela **Pendentes**, marque as etiquetas (ou use "Cadastrar todas
 em lote", até 500 das mais antigas) e escolha uma vez o tipo, a marca, o modelo, o local e a situação.
@@ -314,6 +314,11 @@ Clientes, igual à importação de etiquetas, com o modelo para baixar, a confer
 - Colunas pelo nome do cabeçalho: **Nome** (obrigatória), CPF/CNPJ, Contato, Telefone, Email, Endereço e Observação.
 - O cliente que já existe é achado pelo **CPF/CNPJ** (sem documento, pelo nome) e é atualizado; célula vazia não apaga.
 - Documento que não tem 11 nem 14 dígitos, CPF/CNPJ ou nome repetido na planilha e email sem @ ficam de fora, com o motivo.
+
+**Limpar pendentes** (1.29.1, Etiquetas · Excluir): botão no topo da tela Pendentes, com confirmação. Apaga toda a lista
+(mesmo durante uma busca) e vai para a auditoria; nenhuma etiqueta cadastrada muda, e a que for lida de novo pelo coletor
+volta para a lista.
+
 - Sem migração no banco.
 
 ### Painel para TV do depósito (1.28.0)
