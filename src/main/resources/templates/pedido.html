@@ -303,6 +303,26 @@
       Fotos da devolução: anexe na edição de cada etiqueta (Fotos e anexos).</p>
   </div>
 
+  <!-- 1.23.0: comprovantes de entrega (assinatura e fotos no local) -->
+  <div class="card" style="margin-top:16px" id="entregas" th:if="${!#lists.isEmpty(entregas) or (pode and !#lists.isEmpty(d.naRua) and !p.situacao.finalizado)}">
+    <div class="card-header empilhar">
+      <h2>Comprovantes de entrega <span class="contagem" th:text="'(' + ${#lists.size(entregas)} + ')'"></span></h2>
+      <a th:if="${pode and !#lists.isEmpty(d.naRua) and !p.situacao.finalizado}" th:href="@{/admin/pedidos/{id}/entregas/nova(id=${p.id})}" class="btn btn-primary btn-sm">
+        Registrar entrega (assinatura e fotos)
+      </a>
+    </div>
+    <p class="vazio" th:if="${#lists.isEmpty(entregas)}">Na entrega, abra no celular ou no tablet: quem recebe assina na tela e você tira as fotos no local.</p>
+    <ul class="lista-simples" style="padding:0 16px 14px" th:unless="${#lists.isEmpty(entregas)}">
+      <li th:each="er : ${entregas}" th:with="e=${er.entrega}">
+        <strong th:text="'Nº ' + ${e.id}"></strong>
+        <span th:text="' · ' + ${#temporals.format(e.registradaEm, 'dd/MM/yyyy HH:mm')} + ' · recebido por ' + ${e.recebidoPor} + ' · ' + ${#lists.size(e.listaEquipamentos)} + ' equipamento(s), ' + ${#lists.size(er.fotos)} + ' foto(s)'"></span>
+        <a th:href="@{/admin/pedidos/{id}/entregas/{e}/comprovante.pdf(id=${p.id},e=${e.id})}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">PDF</a>
+        <a th:each="f, st : ${er.fotos}" th:href="@{/admin/pedidos/{id}/entregas/{e}/fotos/{f}(id=${p.id},e=${e.id},f=${f})}" target="_blank" rel="noopener"
+           class="btn btn-ghost btn-sm" th:text="'Foto ' + ${st.count}"></a>
+      </li>
+    </ul>
+  </div>
+
   <!-- Devolução pela web -->
   <form class="card" style="margin-top:16px" th:if="${pode and !#lists.isEmpty(d.naRua)}"
         th:action="@{/admin/pedidos/{id}/devolucao(id=${p.id})}" method="post" data-enviar-uma-vez>

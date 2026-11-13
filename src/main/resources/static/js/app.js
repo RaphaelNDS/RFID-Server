@@ -262,3 +262,56 @@ document.addEventListener("submit", function (e) {
 });
 // Libera os formulários com data-confirmar (o layout barra o envio deles até esta linha rodar)
 window.confirmacaoPronta = true;
+
+// Quadro de assinatura do comprovante de entrega (1.23.0): desenha com o dedo, a caneta ou o mouse (pointer events) e,
+// no envio, põe o desenho em PNG no campo escondido. Sem nenhum traço, o envio é barrado com um aviso.
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll("canvas[data-assinatura]").forEach(function (quadro) {
+    const form = quadro.closest("form");
+    const campo = form && form.querySelector("[data-assinatura-valor]");
+    const ctx = quadro.getContext("2d");
+    let desenhando = false, assinou = false, ultimo = null;
+    ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#111";
+
+    function ponto(e) {
+      const r = quadro.getBoundingClientRect();
+      return { x: (e.clientX - r.left) * quadro.width / r.width, y: (e.clientY - r.top) * quadro.height / r.height };
+    }
+    quadro.addEventListener("pointerdown", function (e) {
+      desenhando = true; ultimo = ponto(e);
+      try { quadro.setPointerCapture(e.pointerId); } catch (x) { }
+      e.preventDefault();
+    });
+    quadro.addEventListener("pointermove", function (e) {
+      if (!desenhando) return;
+      const p = ponto(e);
+      ctx.beginPath(); ctx.moveTo(ultimo.x, ultimo.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+      ultimo = p; assinou = true;
+      e.preventDefault();
+    });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(function (t) {
+      quadro.addEventListener(t, function () { desenhando = false; });
+    });
+    document.addEventListener("click", function (e) {
+      if (e.target.closest && e.target.closest('[data-acao="limpar-assinatura"]')) {
+        ctx.clearRect(0, 0, quadro.width, quadro.height); assinou = false;
+        if (campo) campo.value = "";
+      }
+    });
+    if (form && campo) {
+      form.addEventListener("submit", function (e) {
+        if (!assinou) {
+          e.preventDefault();
+          alert("Falta a assinatura de quem recebeu.");
+          return;
+        }
+        // Fundo branco: o PNG com transparência fica preto em alguns visualizadores
+        const copia = document.createElement("canvas");
+        copia.width = quadro.width; copia.height = quadro.height;
+        const c2 = copia.getContext("2d");
+        c2.fillStyle = "#fff"; c2.fillRect(0, 0, copia.width, copia.height); c2.drawImage(quadro, 0, 0);
+        campo.value = copia.toDataURL("image/png");
+      });
+    }
+  });
+});
