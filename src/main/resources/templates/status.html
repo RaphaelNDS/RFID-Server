@@ -53,6 +53,7 @@
         <div><dt>Último backup do banco</dt><dd th:text="${info.backupBanco}"></dd></div>
         <div><dt>Cópia do banco fora do computador</dt><dd th:text="${info.copiaExterna}"></dd></div>
         <div><dt>Avisos por email</dt><dd th:text="${info.avisosEmail}"></dd></div>
+        <div><dt>Avisos pelo Telegram</dt><dd th:text="${info.avisosTelegram}"></dd></div>
         <div><dt>Último backup do certificado</dt><dd th:text="${info.ultimoBackup}"></dd></div>
         <div><dt>Certificado HTTPS (SHA-256)</dt><dd class="mono" style="word-break:break-all" th:text="${info.certificadoHttps}"></dd></div>
       </dl>
@@ -62,6 +63,14 @@
         <button type="submit" class="btn btn-secondary">
           <svg class="ic"><use href="/img/icones.svg#email"/></svg>Enviar email de teste
         </button>
+      </form>
+      <form th:action="@{/status/telegram-teste}" method="post" th:if="${info.avisosTelegramLigados}">
+        <button type="submit" class="btn btn-secondary">
+          <svg class="ic"><use href="/img/icones.svg#email"/></svg>Enviar teste pelo Telegram
+        </button>
+      </form>
+      <form th:action="@{/status/telegram-conversas}" method="post" th:if="${info.avisosTelegramConfigurado}">
+        <button type="submit" class="btn btn-ghost">Descobrir conversas do Telegram</button>
       </form>
       <form th:action="@{/admin/backup}" method="post">
         <button type="submit" class="btn btn-secondary">

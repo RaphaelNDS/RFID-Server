@@ -60,7 +60,10 @@ class StatusService(
             copiaExternaComProblema = copia?.comProblema == true,
             avisosEmail = alertas?.situacao() ?: "—",
             avisosEmailLigados = alertas?.ligado == true,
-            avisosEmailComProblema = alertas?.comProblema == true
+            avisosEmailComProblema = alertas?.comProblema == true,
+            avisosTelegram = alertas?.situacaoTelegram() ?: "—",
+            avisosTelegramLigados = alertas?.telegramLigado == true,
+            avisosTelegramConfigurado = alertas?.telegramConfigurado == true
         )
     }
 
