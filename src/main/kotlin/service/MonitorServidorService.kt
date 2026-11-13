@@ -29,7 +29,9 @@ class MonitorServidorService(
     private val alertas: AlertaService,
     private val backupBanco: BackupBancoService,
     private val copiaExterna: CopiaExternaBancoService,
-    private val relogio: Clock
+    private val relogio: Clock,
+    // 1.32.0: aviso de pouco espaço em disco
+    private val disco: DiscoService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -93,6 +95,23 @@ class MonitorServidorService(
                 alertas.resolvido(COPIA_EXTERNA, "Cópia do banco fora do computador", "A cópia fora do computador voltou ao normal: ${copia.resumo}.")
             }
         }.onFailure { log.error("Não foi possível conferir os backups para os avisos", it) }
+        conferirDisco()
+    }
+
+    /** 1.32.0: pouco espaço no disco do servidor (banco, backups e jars antigos disputam o mesmo disco). */
+    fun conferirDisco() {
+        val d = disco ?: return
+        runCatching {
+            val s = d.situacao()
+            if (s.pouco) {
+                alertas.problema(DISCO, "Pouco espaço em disco no servidor",
+                    "Disco ${s.pasta}: ${s.resumo}. " + (if (s.jarsAntigos.isNotEmpty())
+                        "Há ${s.jarsAntigos.size} jar(s) de versões anteriores na pasta servidor que podem ser apagados. " else "") +
+                        "Veja quanto ocupa cada parte na tela Status.")
+            } else {
+                alertas.resolvido(DISCO, "Espaço em disco", "O disco do servidor voltou a ter espaço: ${s.resumo}.")
+            }
+        }.onFailure { log.error("Não foi possível conferir o espaço em disco", it) }
     }
 
     private fun lerUltimaHora(arquivo: Path): LocalDateTime? =
@@ -107,6 +126,7 @@ class MonitorServidorService(
     companion object {
         const val BACKUP_BANCO = "backup-banco"
         const val COPIA_EXTERNA = "copia-externa"
+        const val DISCO = "disco"
         private val FORMATO: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
 
         fun duracao(d: Duration): String = when {

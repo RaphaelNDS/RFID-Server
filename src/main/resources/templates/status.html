@@ -80,5 +80,31 @@
     </div>
   </div>
 
+  <!-- 1.32.0: espaço em disco. Só mede: o servidor não apaga nada -->
+  <div class="card" style="margin-top:20px" th:if="${disco != null}">
+    <div class="card-header">
+      <h2 class="status-linha"><svg class="ic"><use href="/img/icones.svg#download"/></svg>Espaço em disco</h2>
+      <span class="badge" th:classappend="${disco.pouco} ? 'badge-inativo' : 'badge-online'"
+            th:text="${disco.pouco} ? 'Pouco espaço' : (${disco.percentualLivre} + '% livre')"></span>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-erro" th:if="${disco.pouco}" role="alert" style="margin-top:0">
+        <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+        <span>Pouco espaço no disco do servidor. Sem espaço, o banco e os backups param. Apague os jars antigos da pasta
+          <span class="mono">servidor</span> (e a pasta <span class="mono">rfid-server\build\libs</span>, se existir) ou libere espaço no disco.</span>
+      </div>
+      <dl class="dados">
+        <div><dt th:text="'Disco ' + ${disco.pasta}"></dt><dd th:text="${disco.resumo}"></dd></div>
+        <div th:each="p : ${disco.partes}"><dt th:text="${p.nome}"></dt>
+          <dd><span th:text="${T(org.example.service.SituacaoDisco).tamanho(p.bytes)}"></span>
+            <span class="muted" th:if="${p.dica != null}" th:text="' · ' + ${p.dica}"></span></dd></div>
+      </dl>
+      <details th:unless="${#lists.isEmpty(disco.jarsAntigos)}" style="margin-top:12px">
+        <summary class="muted" th:text="'Jars de versões anteriores na pasta servidor (' + ${#lists.size(disco.jarsAntigos)} + ')'"></summary>
+        <ul class="mono" style="font-size:13px"><li th:each="j : ${disco.jarsAntigos}" th:text="${j}"></li></ul>
+      </details>
+    </div>
+  </div>
+
 </section>
 </html>
