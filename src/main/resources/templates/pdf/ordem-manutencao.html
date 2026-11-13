@@ -15,6 +15,7 @@
   <tr><th>Etiqueta</th><td class="mono" th:text="${m.tagReal}"></td></tr>
   <tr><th>Problema / revisão</th><td th:text="${m.problema}"></td></tr>
   <tr><th>Fornecedor / técnico</th><td th:text="${m.fornecedor} ?: '-'"></td></tr>
+  <tr th:if="${m.emGarantia}"><th>Garantia do fabricante</th><td th:text="'NA GARANTIA até ' + ${#temporals.format(m.garantiaAte, 'dd/MM/yyyy')} + (${m.garantiaFornecedor != null} ? ' com ' + ${m.garantiaFornecedor} : '') + ': acionar o fabricante'"></td></tr>
   <tr><th>Envio</th><td th:text="${fmt.data(m.dataEnvio)}"></td></tr>
   <tr><th>Previsão de retorno</th><td th:text="${m.previsaoRetorno != null} ? ${fmt.data(m.previsaoRetorno)} : '-'"></td></tr>
   <tr><th>Aberta por</th><td th:text="${m.registradaPor} + ' em ' + ${#temporals.format(m.criadaEm, 'dd/MM/yyyy HH:mm')}"></td></tr>

@@ -81,7 +81,16 @@ class ManutencaoEntity(
     var concluidaPor: String? = null,
 
     @Column(nullable = false)
-    val criadaEm: LocalDateTime = LocalDateTime.now()
+    val criadaEm: LocalDateTime = LocalDateTime.now(),
+
+    /** 1.26.0 (V39): o bem estava na garantia do fabricante quando a ordem foi aberta (até quando e com quem). */
+    @Column(nullable = false)
+    val emGarantia: Boolean = false,
+
+    val garantiaAte: java.time.LocalDate? = null,
+
+    @Column(length = 160)
+    val garantiaFornecedor: String? = null
 ) {
     val aberta: Boolean get() = status == StatusManutencao.ABERTA
 }

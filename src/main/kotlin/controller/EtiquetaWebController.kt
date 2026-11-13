@@ -48,7 +48,9 @@ class EtiquetaWebController(
     private val vendas: VendaService? = null,
     private val locacao: LocacaoService? = null,
     // 1.22.0: campos personalizados por tipo
-    private val campos: CampoPersonalizadoService? = null
+    private val campos: CampoPersonalizadoService? = null,
+    // 1.26.0: garantia do fabricante
+    private val garantias: org.example.service.GarantiaService? = null
 ) {
 
     /** Venda (1.12.0): cliente opcional, valor como a pessoa digitou, data vazia = hoje. */
@@ -203,6 +205,26 @@ class EtiquetaWebController(
     } catch (e: IllegalArgumentException) {
         redirect.addFlashAttribute("erro", e.message)
         "redirect:/admin/etiquetas/$id/editar"
+    }
+
+    /** Garantia do fabricante (1.26.0): data vazia apaga. */
+    @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
+    @PostMapping("/{id}/garantia")
+    fun garantia(
+        @PathVariable id: Long, @RequestParam(required = false) garantiaAte: String?,
+        @RequestParam(required = false) garantiaFornecedor: String?, redirect: RedirectAttributes
+    ): String {
+        try {
+            val servico = garantias ?: throw IllegalArgumentException("Garantia indisponível")
+            val ate = garantiaAte?.trim()?.takeIf { it.isNotEmpty() }?.let {
+                runCatching { LocalDate.parse(it) }.getOrNull() ?: throw IllegalArgumentException("Data da garantia inválida: $it")
+            }
+            val t = servico.definir(id, ate, garantiaFornecedor)
+            redirect.addFlashAttribute("msg", t.garantiaAte?.let { "Garantia até ${org.example.util.FormatoBr.data(it)} gravada." } ?: "Garantia apagada.")
+        } catch (e: IllegalArgumentException) {
+            redirect.addFlashAttribute("erro", e.message)
+        }
+        return "redirect:/admin/etiquetas/$id/editar#garantia"
     }
 
     @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")

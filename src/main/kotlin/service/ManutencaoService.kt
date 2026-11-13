@@ -102,11 +102,16 @@ class ManutencaoService(
         require(tag.situacao in PODEM_IR) { "Só vai para manutenção equipamento Disponível ou À venda: este está ${tag.situacao.rotulo}" }
 
         val usuario = historico.autor().first
+        // 1.26.0: na garantia do fabricante no dia do envio: fica gravado na ordem (acionar o fabricante, não pagar)
+        val garantia = tag.naGarantia(envio)
         val ordem = manutencoes.save(ManutencaoEntity(
             tagId = tag.id, tagReal = tag.tagReal, patrimonio = bem.patrimonio, descricaoBem = bem.descricao?.take(255),
             tipo = tipo, problema = problema, fornecedor = fornecedor, dataEnvio = envio, previsaoRetorno = pedido.previsaoRetorno,
-            situacaoAnterior = tag.situacao, registradaPor = usuario
+            situacaoAnterior = tag.situacao, registradaPor = usuario,
+            emGarantia = garantia, garantiaAte = if (garantia) tag.garantiaAte else null, garantiaFornecedor = if (garantia) tag.garantiaFornecedor else null
         ))
+        if (garantia) log.info("Bem {} na garantia do fabricante até {}{}: acionar o fabricante", rotulo(ordem), tag.garantiaAte,
+            tag.garantiaFornecedor?.let { " ($it)" } ?: "")
         val antes = historico.retrato(tag)
         tag.situacao = SituacaoBem.EM_MANUTENCAO
         tags.save(tag)

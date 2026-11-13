@@ -66,6 +66,7 @@
           <td data-rotulo="Situação">
             <span th:if="${r.atrasada}" class="badge badge-inativo" th:text="'Atrasada ' + ${r.diasAtraso} + ' dia(s)'"></span>
             <span th:if="${m.aberta and !r.atrasada}" class="badge badge-CUSTOM">Aberta</span>
+            <span th:if="${m.emGarantia}" class="badge badge-online">Na garantia</span>
             <span th:unless="${m.aberta}" class="badge" th:classappend="${m.status.name() == 'CONCLUIDA'} ? 'badge-online' : 'badge-inativo'"
                   th:text="${m.status.rotulo}"></span>
           </td>
@@ -86,6 +87,20 @@
     </div>
 
     <nav th:replace="~{layout/paginacao :: paginacao}"></nav>
+  </div>
+
+  <!-- 1.26.0: garantias do fabricante que vencem nos próximos 30 dias -->
+  <div class="card" style="margin-top:20px" th:unless="${#lists.isEmpty(garantiasVencendo)}">
+    <div class="card-header empilhar">
+      <h2>Garantias vencendo <span class="contagem" th:text="'(' + ${#lists.size(garantiasVencendo)} + ')'"></span></h2>
+      <span class="muted">Nos próximos 30 dias: se algum tem defeito, acione o fabricante antes de vencer</span>
+    </div>
+    <ul class="lista-simples" style="padding:0 16px 14px">
+      <li th:each="t : ${garantiasVencendo}">
+        <a th:href="@{/admin/etiquetas/{id}/editar(id=${t.id})} + '#garantia'" th:text="${t.patrimonio != '' ? t.patrimonio : t.tagReal}"></a>
+        <span class="muted" th:text="'até ' + ${#temporals.format(t.garantiaAte, 'dd/MM/yyyy')} + (${t.garantiaFornecedor != null} ? ' · ' + ${t.garantiaFornecedor} : '')"></span>
+      </li>
+    </ul>
   </div>
 
   <!-- 1.21.0: revisão automática por tipo de equipamento -->
