@@ -58,6 +58,10 @@
           <div th:if="${p.observacao != null}"><dt>Observação</dt><dd th:text="${p.observacao}"></dd></div>
           <div th:if="${p.cancelamentoMotivo != null}"><dt>Cancelado</dt><dd th:text="${p.cancelamentoMotivo}"></dd></div>
           <div><dt>Registrado por</dt><dd th:text="${p.registradoPor} + ' em ' + ${#temporals.format(p.criadoEm, 'dd/MM/yyyy HH:mm')}"></dd></div>
+          <div th:if="${p.entregaResponsavel != null or p.entregaHora != null}"><dt>Entrega (agenda)</dt>
+            <dd th:text="(${p.entregaHora != null} ? ${p.entregaHora} + ' · ' : '') + (${p.entregaResponsavel} ?: 'sem responsável')"></dd></div>
+          <div th:if="${p.retiradaResponsavel != null or p.retiradaHora != null}"><dt>Retirada (agenda)</dt>
+            <dd th:text="(${p.retiradaHora != null} ? ${p.retiradaHora} + ' · ' : '') + (${p.retiradaResponsavel} ?: 'sem responsável')"></dd></div>
           <div th:if="${p.aprovadoEm != null}"><dt>Aprovado por</dt><dd th:text="${p.aprovadoPor} + ' em ' + ${#temporals.format(p.aprovadoEm, 'dd/MM/yyyy HH:mm')}"></dd></div>
         </dl>
       </div>

@@ -44,6 +44,9 @@
         <a th:href="@{/admin/pedidos}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
           <svg class="ic"><use href="/img/icones.svg#calendario"/></svg>Pedidos de locação
         </a>
+        <a th:href="@{/admin/agenda}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
+          <svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Agenda de entregas
+        </a>
         <a th:href="@{/admin/disponibilidade}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
           <svg class="ic"><use href="/img/icones.svg#grafico"/></svg>Disponibilidade
         </a>

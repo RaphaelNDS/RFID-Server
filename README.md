@@ -298,6 +298,19 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Agenda de entregas e retiradas (1.24.0)
+
+Menu **Agenda de entregas** (quem tem Ver na Locação): um dia por vez, com o que **sai** (pedidos abertos ou em
+separação com a **saída prevista** no dia e algo ainda por entregar) e o que **volta** (pedidos com equipamento na rua e a
+**devolução prevista** no dia: a locadora busca no cliente). Em **hoje** aparecem também os **atrasados**.
+
+- Cada compromisso mostra a hora, o pedido e o cliente (contato e telefone), o endereço (local de entrega do pedido ou
+  do cliente) e quantos equipamentos. **Alterar** (Editar na Locação) define **quem leva/busca** e a **hora combinada**
+  (V38: quatro colunas novas em `pedidos_locacao`); isso aparece também na tela do pedido.
+- **Roteiro (PDF)**: os compromissos do dia separados por quem leva, pela hora, com o que entregar (linhas que faltam) ou
+  buscar (patrimônios na rua) e um espaço para a assinatura. É para o motorista.
+- Navegação por dia (anterior, próximo, ir para) e a contagem dos próximos 7 dias.
+
 ### Comprovante de entrega com assinatura e fotos (1.23.0)
 
 Na tela do pedido, **Comprovantes de entrega → Registrar entrega** (quem tem Editar na Locação) abre uma tela feita
