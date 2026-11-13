@@ -70,7 +70,9 @@ class RfidService(
     private val pedidoItens: PedidoItemRepository? = null,
     // Manutenção (1.11.0): mesmas travas
     private val manutencoes: ManutencaoRepository? = null,
-    private val pedidos: PedidoLocacaoRepository? = null
+    private val pedidos: PedidoLocacaoRepository? = null,
+    // 1.22.0: busca nos campos personalizados
+    private val valoresCampo: ValorCampoRepository? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -286,8 +288,11 @@ class RfidService(
         fun ids(nomes: Map<Long, String>) =
             nomes.filterValues { termo.isNotEmpty() && it.lowercase().contains(termo) }.keys.ifEmpty { setOf(-1L) }
 
+        // 1.22.0: busca também nos valores dos campos personalizados
+        val porCampo = (if (padrao.isEmpty()) null else valoresCampo?.tagsComValor(padrao))?.ifEmpty { null }?.toSet() ?: setOf(-1L)
+
         val resultado = paginar { pedido ->
-            repo.buscar(padrao, ids(tipos), ids(marcas), ids(modelos), ids(locais.mapValues { it.value.nome }), ids(responsaveis),
+            repo.buscar(padrao, ids(tipos), ids(marcas), ids(modelos), ids(locais.mapValues { it.value.nome }), ids(responsaveis), porCampo,
                 filtro.situacoes(), filtro.localId ?: -1L, filtro.responsavelId ?: -1L, pedido)
         }
 

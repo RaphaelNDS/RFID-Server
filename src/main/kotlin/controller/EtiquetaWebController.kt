@@ -6,6 +6,7 @@ import org.example.model.SituacaoBem
 import org.example.request.CadastroRequest
 import org.example.service.AnexoBemService
 import org.example.service.AuditoriaService
+import org.example.service.CampoPersonalizadoService
 import org.example.service.CatalogoService
 import org.example.service.EdicaoConcorrenteException
 import org.example.service.HistoricoEtiquetaService
@@ -45,7 +46,9 @@ class EtiquetaWebController(
     private val manutencoes: ManutencaoService? = null,
     // 1.12.0: venda e clientes (locadora)
     private val vendas: VendaService? = null,
-    private val locacao: LocacaoService? = null
+    private val locacao: LocacaoService? = null,
+    // 1.22.0: campos personalizados por tipo
+    private val campos: CampoPersonalizadoService? = null
 ) {
 
     /** Venda (1.12.0): cliente opcional, valor como a pessoa digitou, data vazia = hoje. */
@@ -113,13 +116,21 @@ class EtiquetaWebController(
         @ModelAttribute("cadastro") cadastro: CadastroRequest,
         @RequestParam(required = false) busca: String?,
         @RequestParam(required = false) pagina: String?,
+        @RequestParam parametros: Map<String, String>,
         model: Model,
         redirect: RedirectAttributes
     ): String {
         val retorno = RetornoLista.de(busca, pagina)
+        // 1.22.0: campos personalizados ("campo_<id>"), conferidos antes de gravar qualquer coisa. Mudou o tipo na
+        // mesma tela: os campos mostrados eram do tipo antigo, então os do tipo novo ficam para a próxima edição.
+        val entradas = parametros.filterKeys { it.startsWith(PREFIXO_CAMPO) }
+            .mapNotNull { (k, v) -> k.removePrefix(PREFIXO_CAMPO).toLongOrNull()?.let { it to v } }.toMap()
         return try {
+            val tipoAtual = rfidService.buscarPorId(id).tipoEquipamentoId
+            val mesmoTipo = tipoAtual == cadastro.tipoEquipamentoId
+            val valoresCampos = if (mesmoTipo) campos?.validar(cadastro.tipoEquipamentoId, entradas) else null
             val mudaram = try {
-                rfidService.editarTag(id, cadastro)
+                rfidService.editarTag(id, cadastro) + (valoresCampos?.let { campos?.gravar(rfidService.buscarPorId(id), it) }.orEmpty())
             } catch (e: org.springframework.dao.OptimisticLockingFailureException) {
                 // As duas pessoas salvaram no mesmo instante: a conferência da versão passou para as duas e o banco
                 // recusou a segunda na gravação (@Version). Antes ia para a página genérica de erro, sem o formulário
@@ -138,8 +149,14 @@ class EtiquetaWebController(
             cadastro.tag = atual.tagReal
             // Mudada por outra pessoa: a tela volta com o que foi digitado e a versão atual (salvar de novo grava por cima)
             if (e is EdicaoConcorrenteException) cadastro.versao = atual.versao
+            model.addAttribute("camposDigitados", entradas)
             formulario(id, retorno, model)
         }
+    }
+
+    private companion object {
+        /** Nome dos campos personalizados no formulário: "campo_<id do campo>" (1.22.0). */
+        const val PREFIXO_CAMPO = "campo_"
     }
 
     @PreAuthorize("@authService.temPermissao('RFID','DELETE')")
@@ -222,6 +239,8 @@ class EtiquetaWebController(
         model.addAttribute("venda", vendas?.vendaAtual(id))
         model.addAttribute("clientesVenda", locacao?.clientesAtivos().orEmpty())
         model.addAttribute("manutencoes", manutencoes?.doBem(id))
+        // 1.22.0: campos personalizados do tipo (com o que a pessoa digitou, se a tela voltou com erro)
+        model.addAttribute("camposPersonalizados", campos?.doBem(etiqueta).orEmpty())
         return "editar-etiqueta"
     }
 }

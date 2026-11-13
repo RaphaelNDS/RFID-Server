@@ -24,7 +24,9 @@ import java.time.LocalDate
 class RelatorioEtiquetasController(
     private val relatorio: RelatorioEtiquetasService,
     private val relogio: Clock,
-    private val auditoria: AuditoriaService
+    private val auditoria: AuditoriaService,
+    // 1.22.0: os campos personalizados viram colunas no fim da planilha
+    private val campos: org.example.service.CampoPersonalizadoService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -87,6 +89,9 @@ class RelatorioEtiquetasController(
     }
 
     private fun planilha(nome: String, etiquetas: List<EtiquetaVista>): Planilha {
+        // 1.22.0: uma coluna por campo personalizado ativo (pelo nome), depois das colunas de sempre
+        val extras = campos?.colunas().orEmpty()
+        val valores = if (extras.isEmpty()) emptyMap() else campos!!.valoresPorNome(etiquetas.map { it.etiqueta.id })
         return Planilha(
             nome = nome,
             // As colunas até "Nota fiscal" (menos a matrícula) são as mesmas da importação (ImportacaoEtiquetasService): a planilha exportada
@@ -94,14 +99,15 @@ class RelatorioEtiquetasController(
             colunas = listOf("Etiqueta (EPC)", "Código", "Patrimônio", "Tipo", "Marca", "Modelo", "Nº série",
                 "Unidade", "Local", "Responsável", "Situação",
                 "Valor de aquisição", "Data de aquisição", "Nota fiscal",
-                "Última leitura", "Último inventário", "Último local", "Dias sem ser vista"),
+                "Última leitura", "Último inventário", "Último local", "Dias sem ser vista") + extras,
             linhas = etiquetas.map { v ->
                 val e = v.etiqueta
+                val doBem = valores[e.id].orEmpty()
                 listOf(e.tag, e.codigoInterno, e.patrimonio, e.tipoNome, e.marcaNome, e.modeloNome, e.numeroSerie,
                     e.unidadeNome, e.localNome, e.responsavelNome, e.situacao.rotulo,
                     e.valorAquisicao?.let { FormatoBr.numero(it) }, e.dataAquisicao?.let { FormatoBr.data(it) }, e.notaFiscal,
                     v.ultimaLeitura, v.ultimoInventario, v.ultimoLocal,
-                    v.diasSemSerVista)
+                    v.diasSemSerVista) + extras.map { doBem[it.lowercase()] }
             }
         )
     }

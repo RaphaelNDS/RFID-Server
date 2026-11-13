@@ -298,6 +298,21 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Campos personalizados por tipo (1.22.0)
+
+Em **Catálogo → Campos personalizados**, cada tipo de equipamento ganha campos próprios (ex.: voltagem e versão de
+firmware no PDV, polegadas no monitor). Formatos: **texto**, **número**, **data**, **lista de opções** (separadas por
+ponto e vírgula) e **sim ou não**; cada campo pode ser **obrigatório**. Criar pede Criar no Catálogo; alterar,
+desativar e reativar pedem Editar.
+
+- Os campos aparecem na **edição da etiqueta**, depois do nº de série, conferidos pelo formato. O obrigatório vazio
+  não deixa salvar. Mudando o tipo na mesma tela, os campos do tipo novo aparecem na próxima edição.
+- Cada mudança de valor vai para o **histórico da etiqueta** (com o nome do campo).
+- A **busca** da tela de etiquetas também procura nos valores, e a **exportação** ganha uma coluna por campo ativo,
+  no fim (as colunas de antes continuam iguais, então a planilha ainda volta pela importação).
+- **Desativar** esconde o campo sem apagar os valores. O formato só muda enquanto ninguém tem valor no campo, e a
+  opção de lista em uso não sai da lista. Banco: V36 (`campos_tipo` e `valores_campo`).
+
 ### Revisão automática por uso (1.21.0)
 
 Em **Manutenções → Revisão automática**, cada tipo de equipamento pode ter uma regra: revisar **a cada N locações**
