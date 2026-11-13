@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Compra e venda · Sistema RFID</title>
+
+<section class="page" th:with="podeVender=${@authService.temPermissao('RFID','UPDATE')}">
+
+  <div class="page-header">
+    <div>
+      <h1>Sugestão de compra e venda</h1>
+      <p class="subtitulo" th:text="'De ' + ${fmt.data(s.de)} + ' a ' + ${fmt.data(s.ate)} + ' (' + ${s.diasPeriodo} + ' dias), pelos pedidos de locação'"></p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/relatorios-locacao}" class="btn btn-ghost">Relatórios da locação</a>
+    </div>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <form method="get" class="toolbar card" style="margin-bottom:16px">
+    <div class="field"><label for="de">De</label><input id="de" name="de" type="date" th:value="${s.de}"></div>
+    <div class="field"><label for="ate">Até</label><input id="ate" name="ate" type="date" th:value="${s.ate}" th:max="${s.hoje}"></div>
+    <div class="field"><label for="compra">Comprar com ocupação a partir de (%)</label><input id="compra" name="compra" type="number" min="1" max="100" style="width:90px" th:value="${ocupacaoCompra}"></div>
+    <div class="field"><label for="venda">Vender com ocupação abaixo de (%)</label><input id="venda" name="venda" type="number" min="0" max="100" style="width:90px" th:value="${ocupacaoVenda}"></div>
+    <button type="submit" class="btn btn-secondary">Atualizar</button>
+  </form>
+
+  <!-- Comprar -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header empilhar">
+      <h2>Comprar mais <span class="contagem" th:text="'(' + ${#lists.size(s.compra)} + ')'"></span></h2>
+      <span class="muted">Esgotou (todos com clientes no mesmo dia), faltou num pedido (a separação encerrou com menos) ou ficou muito ocupado</span>
+    </div>
+    <p class="vazio" th:if="${#lists.isEmpty(s.compra)}">Nenhum modelo faltou, esgotou ou passou da ocupação no período.</p>
+    <div class="table-wrap" th:unless="${#lists.isEmpty(s.compra)}">
+      <table class="table table-cartoes">
+        <thead><tr><th>Modelo</th><th>Há</th><th>Pico</th><th>Ocupação</th><th>Por quê</th><th>Sugestão</th></tr></thead>
+        <tbody>
+        <tr th:each="c : ${s.compra}">
+          <td class="principal cartao-titulo" th:text="${c.modelo}"></td>
+          <td data-rotulo="Há" th:text="${c.equipamentos}"></td>
+          <td data-rotulo="Pico" th:text="${c.pico} + ' com clientes'"></td>
+          <td data-rotulo="Ocupação" th:text="${#numbers.formatDecimal(c.ocupacao, 1, 0)} + '%'"></td>
+          <td data-rotulo="Por quê" th:text="${c.motivo}"></td>
+          <td data-rotulo="Sugestão"><strong th:text="'+' + ${c.sugerido}"></strong></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Vender -->
+  <form class="card" th:action="@{/admin/compra-e-venda/a-venda}" method="post"
+        data-confirmar="Os equipamentos marcados vão para À venda e saem da disponibilidade para locação." data-confirmar-botao="Pôr à venda">
+    <div class="card-header empilhar">
+      <h2>Vender a sobra <span class="contagem" th:text="'(' + ${#lists.size(s.venda)} + ')'"></span></h2>
+      <span class="muted">Ocupação baixa e o pico de uso abaixo do que há: a sobra são os Disponíveis parados há mais tempo</span>
+    </div>
+    <p class="vazio" th:if="${#lists.isEmpty(s.venda)}">Nenhum modelo com sobra no período.</p>
+    <div class="table-wrap" th:unless="${#lists.isEmpty(s.venda)}">
+      <table class="table table-cartoes">
+        <thead><tr><th>Modelo</th><th>Há</th><th>Pico</th><th>Ocupação</th><th>Candidatos (parados há mais tempo)</th></tr></thead>
+        <tbody>
+        <tr th:each="v : ${s.venda}">
+          <td class="principal cartao-titulo" th:text="${v.modelo}"></td>
+          <td data-rotulo="Há" th:text="${v.equipamentos} + ' (sobra ' + ${v.sobra} + ')'"></td>
+          <td data-rotulo="Pico" th:text="${v.pico} + ' com clientes'"></td>
+          <td data-rotulo="Ocupação" th:text="${#numbers.formatDecimal(v.ocupacao, 1, 0)} + '%'"></td>
+          <td data-rotulo="Candidatos">
+            <label class="chip" style="margin:2px" th:each="e : ${v.candidatos}">
+              <input type="checkbox" name="tags" th:value="${e.tagId}" th:if="${podeVender}" checked>
+              <span th:text="${e.patrimonio} + ' · ' + (${e.ultimaLocacao == null} ? 'nunca saiu' : 'parado há ' + ${e.diasParado} + ' dias')"></span>
+            </label>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer" th:if="${podeVender and !#lists.isEmpty(s.venda)}">
+      <button type="submit" class="btn btn-primary">Pôr os marcados à venda</button>
+    </div>
+  </form>
+
+</section>
+</html>

@@ -5,11 +5,13 @@ import org.example.model.EstadoDevolucao
 import org.example.model.SituacaoBem
 import org.example.model.StatusManutencao
 import org.example.model.TagEntity
+import org.example.model.SituacaoPedido
 import org.example.repository.HistoricoEtiquetaRepository
 import org.example.repository.ManutencaoRepository
 import org.example.repository.MarcaRepository
 import org.example.repository.ModeloRepository
 import org.example.repository.PedidoItemRepository
+import org.example.repository.PedidoLinhaRepository
 import org.example.repository.PedidoLocacaoRepository
 import org.example.repository.TagRepository
 import org.example.repository.TipoEquipamentoRepository
@@ -30,6 +32,23 @@ data class UsoModelo(val modelo: String, val equipamentos: Int, val locacoes: In
 
 /** Equipamento disponível parado: desde quando não sai (ou nunca saiu). */
 data class EquipamentoParado(val tagId: Long, val patrimonio: String, val modelo: String, val ultimaLocacao: LocalDate?, val diasParado: Long?)
+
+/** 1.25.0: um modelo que vale comprar mais, e por quê. */
+data class SugestaoCompra(
+    val modelo: String, val equipamentos: Int, val ocupacao: Double, val pico: Int, val diasEsgotado: Int,
+    val faltas: Int, val sugerido: Int, val motivo: String
+)
+
+/** 1.25.0: um modelo com sobra, e os equipamentos parados há mais tempo que podem ir para a venda. */
+data class SugestaoVenda(
+    val modelo: String, val equipamentos: Int, val ocupacao: Double, val pico: Int, val sobra: Int,
+    val candidatos: List<EquipamentoParado>
+)
+
+data class Sugestoes(
+    val de: LocalDate, val ate: LocalDate, val diasPeriodo: Long,
+    val compra: List<SugestaoCompra>, val venda: List<SugestaoVenda>, val hoje: LocalDate
+)
 
 /** Avarias na devolução e manutenção de um modelo no período. */
 data class AvariasModelo(val modelo: String, val devolucoes: Int, val avarias: Int, val faltandoAcessorio: Int, val manutencoes: Int, val custo: BigDecimal) {
@@ -68,7 +87,9 @@ class RelatorioLocacaoService(
     private val tipos: TipoEquipamentoRepository,
     private val marcas: MarcaRepository,
     private val modelos: ModeloRepository,
-    private val relogio: Clock
+    private val relogio: Clock,
+    // 1.25.0: faltas dos pedidos (sugestão de compra)
+    private val linhas: PedidoLinhaRepository
 ) {
 
     fun hoje(): LocalDate = LocalDate.now(relogio)
@@ -143,16 +164,77 @@ class RelatorioLocacaoService(
         return RelatorioLocacao(inicio, fim, diasParadoMinimo, uso, parados, avarias, atrasos)
     }
 
+    /**
+     * Sugestão de compra e venda (1.25.0), no período (padrão: últimos 90 dias):
+     *  - Comprar: o modelo que ficou **esgotado** (todos com clientes) em algum dia, com **ocupação** alta, ou que teve
+     *    **falta** (pedido que encerrou a separação com menos do que pediu). Quantos comprar: a maior falta num pedido,
+     *    ou 1 quando só esgotou.
+     *  - Vender: o modelo com ocupação baixa (abaixo de [ocupacaoVenda] %) em que o **pico** de uso ficou abaixo do que
+     *    há: a sobra (equipamentos − pico) são candidatos, escolhidos entre os Disponíveis parados há mais tempo.
+     */
+    @Transactional(readOnly = true)
+    fun sugestoes(de: LocalDate?, ate: LocalDate?, ocupacaoCompra: Double = 80.0, ocupacaoVenda: Double = 30.0): Sugestoes {
+        val r = relatorio(de, ate, diasParadoMinimo = 0)
+        val hoje = hoje()
+        val agora = LocalDateTime.now(relogio)
+        val porId = tags.findAll().associateBy { it.id }
+        val nomes = Nomes(tipos.findAll().associate { it.id to it.nome }, marcas.findAll().associate { it.id to it.nome }, modelos.findAll().associate { it.id to it.nome })
+        val dias = generateSequence(r.de) { it.plusDays(1) }.takeWhile { !it.isAfter(r.ate) }.toList()
+
+        // Quantos de cada modelo estavam com clientes em cada dia do período: o pico e os dias esgotados
+        val itensNoPeriodo = itens.findAll().filter { !it.saidaEm.toLocalDate().isAfter(r.ate) && !(it.devolvidoEm ?: agora).toLocalDate().isBefore(r.de) }
+            .groupBy { nomes.de(it.tagId?.let(porId::get)) }
+        val porDia = itensNoPeriodo.mapValues { (_, l) ->
+            dias.map { d -> l.count { !it.saidaEm.toLocalDate().isAfter(d) && !(it.devolvidoEm ?: agora).toLocalDate().isBefore(d) } }
+        }
+
+        // Faltas: linhas de pedidos (não cancelados) criados no período que encerraram a separação com menos
+        val ped = pedidos.findAll().filter { it.situacao != SituacaoPedido.CANCELADO && !it.criadoEm.toLocalDate().isBefore(r.de) && !it.criadoEm.toLocalDate().isAfter(r.ate) }
+            .associateBy { it.id }
+        val saidosPorLinha = itens.findAllByPedidoIdIn(ped.keys).groupingBy { it.linhaId }.eachCount()
+        val faltas = linhas.findAllByPedidoIdIn(ped.keys)
+            .filter { ped[it.pedidoId]?.separacaoConcluida == true && (saidosPorLinha[it.id] ?: 0) < it.quantidade }
+            .groupBy { l -> if (l.modeloId != null || l.marcaId != null) nomes.deIds(l.tipoEquipamentoId, l.marcaId, l.modeloId) else "${nomes.deIds(l.tipoEquipamentoId, null, null).removeSuffix(" (sem marca)")} (qualquer modelo)" }
+            .mapValues { (_, l) -> l.map { it.quantidade - (saidosPorLinha[it.id] ?: 0) } }
+
+        val compra = (r.uso.map { it.modelo } + faltas.keys).distinct().mapNotNull { m ->
+            val uso = r.uso.firstOrNull { it.modelo == m }
+            val total = uso?.equipamentos ?: 0
+            val serie = porDia[m].orEmpty()
+            val pico = serie.maxOrNull() ?: 0
+            val esgotado = if (total == 0) 0 else serie.count { it >= total }
+            val f = faltas[m].orEmpty()
+            val motivos = listOfNotNull(
+                f.takeIf { it.isNotEmpty() }?.let { "${it.sum()} unidade(s) faltaram em ${it.size} pedido(s)" },
+                esgotado.takeIf { it > 0 }?.let { "esgotado em $it dia(s)" },
+                uso?.ocupacao?.takeIf { it >= ocupacaoCompra }?.let { "ocupação de ${Math.round(it)}%" }
+            )
+            if (motivos.isEmpty()) null
+            else SugestaoCompra(m, total, uso?.ocupacao ?: 0.0, pico, esgotado, f.sum(), (f.maxOrNull() ?: 0).coerceAtLeast(1), motivos.joinToString("; "))
+        }.sortedWith(compareByDescending<SugestaoCompra> { it.faltas }.thenByDescending { it.diasEsgotado }.thenByDescending { it.ocupacao })
+
+        val paradosPorModelo = r.parados.groupBy { it.modelo }
+        val venda = r.uso.filter { it.equipamentos > 0 && it.ocupacao < ocupacaoVenda && faltas[it.modelo].isNullOrEmpty() }.mapNotNull { u ->
+            val pico = porDia[u.modelo].orEmpty().maxOrNull() ?: 0
+            val sobra = u.equipamentos - pico
+            val candidatos = paradosPorModelo[u.modelo].orEmpty().take(sobra.coerceAtLeast(0))
+            if (sobra <= 0 || candidatos.isEmpty()) null else SugestaoVenda(u.modelo, u.equipamentos, u.ocupacao, pico, sobra, candidatos)
+        }.sortedWith(compareByDescending<SugestaoVenda> { it.sobra }.thenBy { it.ocupacao })
+
+        return Sugestoes(r.de, r.ate, r.diasPeriodo, compra, venda, hoje)
+    }
+
     /** Quando o equipamento foi cadastrado (pelo histórico), para quem nunca saiu. */
     private fun cadastroDe(t: TagEntity): LocalDateTime? =
         historico.findByTagRealOrderByMomentoDescIdDesc(t.tagReal).lastOrNull { it.acao == AcaoHistorico.CADASTRO }?.momento
 
     /** "Coletor Zebra MC3300", "Coletor (sem marca)", "Sem tipo". */
     private class Nomes(val tipos: Map<Long, String>, val marcas: Map<Long, String>, val modelos: Map<Long, String>) {
-        fun de(t: TagEntity?): String {
-            if (t == null) return "Equipamento excluído"
-            val tipo = t.tipoEquipamentoId?.let(tipos::get) ?: return "Sem tipo"
-            val resto = listOfNotNull(t.marcaId?.let(marcas::get), t.modeloId?.let(modelos::get)).joinToString(" ")
+        fun de(t: TagEntity?): String = if (t == null) "Equipamento excluído" else deIds(t.tipoEquipamentoId, t.marcaId, t.modeloId)
+
+        fun deIds(tipoId: Long?, marcaId: Long?, modeloId: Long?): String {
+            val tipo = tipoId?.let(tipos::get) ?: return "Sem tipo"
+            val resto = listOfNotNull(marcaId?.let(marcas::get), modeloId?.let(modelos::get)).joinToString(" ")
             return if (resto.isBlank()) "$tipo (sem marca)" else "$tipo $resto"
         }
     }

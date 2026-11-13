@@ -53,6 +53,9 @@
         <a th:href="@{/admin/relatorios-locacao}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
           <svg class="ic"><use href="/img/icones.svg#atividade"/></svg>Relatórios da locação
         </a>
+        <a th:href="@{/admin/compra-e-venda}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
+          <svg class="ic"><use href="/img/icones.svg#grafico"/></svg>Compra e venda
+        </a>
         <a th:href="@{/admin/acessorios}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
           <svg class="ic"><use href="/img/icones.svg#pacote"/></svg>Acessórios e kits
         </a>
