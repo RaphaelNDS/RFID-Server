@@ -20,7 +20,9 @@ import java.time.OffsetDateTime
 @RequestMapping("/api/android")
 class LeituraAndroidController(
     private val leituraService: LeituraAndroidService,
-    private val sessoes: SessaoOperadorService
+    private val sessoes: SessaoOperadorService,
+    // 1.31.0: coletor em treinamento não grava a leitura
+    private val treinamento: org.example.service.TreinamentoColetorService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -42,6 +44,10 @@ class LeituraAndroidController(
                 req.tag, auth.name, req.lidoEm, recusa.message)
             return ResponseEntity.status(HttpStatus.CONFLICT).body(mapOf(
                 "status" to 409, "mensagem" to recusa.message, "motivo" to recusa.motivo.name, "caminho" to request.requestURI))
+        }
+        if (treinamento?.emTreinamento(auth.name) == true) {
+            log.debug("Leitura da tag {} do coletor {} em treinamento: não gravada", req.tag, auth.name)
+            return ResponseEntity.ok().build()
         }
         leituraService.salvarLeitura(req.tag, req.lidoEm, auth.nomeOperador())
         return ResponseEntity.ok().build()

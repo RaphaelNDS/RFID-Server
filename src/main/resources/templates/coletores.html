@@ -13,6 +13,10 @@
     </div>
   </div>
 
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+
   <div class="grid grid-stats">
     <div class="stat">
       <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#sinal"/></svg>Coletores</div>
@@ -72,6 +76,8 @@
             <span class="badge badge-CUSTOM" th:if="${c.situacao.name() == 'SEM_CONTATO' or c.situacao.name() == 'NUNCA' or c.situacao.name() == 'CHAVE_REMOVIDA'}"
                   th:text="${c.situacao.rotulo}"></span>
             <span class="badge" th:if="${c.situacao.name() == 'PARADO'}" th:text="${c.situacao.rotulo}"></span>
+            <span class="badge badge-CUSTOM" th:if="${#sets.contains(emTreinamento, c.nome)}"
+                  title="As leituras e os inventários deste coletor não mudam nada de verdade">Treinamento</span>
           </td>
           <td data-rotulo="Último contato" class="nowrap">
             <span th:if="${c.ultimoContato != null}" th:text="${c.haQuantoTempo}"
@@ -130,6 +136,14 @@
               <button type="submit" class="btn btn-secondary btn-sm" title="Mostrar o QR code para configurar este coletor (leva a chave dele)">
                 <svg class="ic"><use href="/img/icones.svg#chave"/></svg><span class="texto-btn">QR de configuração</span>
               </button>
+            </form>
+            <!-- 1.31.0: modo treinamento (leituras e inventários sem efeito; cadastro e transferência recusados) -->
+            <form th:if="${c.ultimoContato != null}" th:action="@{/admin/coletores/{nome}/treinamento(nome=${c.nome})}" method="post"
+                  th:with="treino=${#sets.contains(emTreinamento, c.nome)}"
+                  th:attr="data-confirmar=${treino} ? ${'Tirar o coletor ' + c.nome + ' do treinamento? As leituras e os inventários dele voltam a valer.'} : ${'Pôr o coletor ' + c.nome + ' em treinamento? As leituras dele não serão gravadas, os inventários não mudam o local dos bens, e cadastro e transferência pelo coletor serão recusados.'}"
+                  data-confirmar-titulo="Modo treinamento" data-confirmar-botao="Confirmar">
+              <input type="hidden" name="ligado" th:value="${!treino}">
+              <button type="submit" class="btn btn-ghost btn-sm" th:text="${treino} ? 'Sair do treinamento' : 'Modo treinamento'">Modo treinamento</button>
             </form>
           </td>
         </tr>

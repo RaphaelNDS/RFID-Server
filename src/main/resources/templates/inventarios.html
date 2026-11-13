@@ -58,6 +58,7 @@
           <td data-rotulo="Situação">
             <span class="badge badge-online" th:if="${i.status.name() == 'ABERTO'}">Em andamento</span>
             <span class="badge" th:unless="${i.status.name() == 'ABERTO'}">Finalizado</span>
+            <span class="badge badge-CUSTOM" th:if="${i.treino}" title="Feito por coletor em treinamento: não mudou o local dos bens nem conta no inventário cíclico">Treino</span>
           </td>
           <td data-rotulo="Fim" class="nowrap" th:text="${i.finalizadoEm != null} ? ${#temporals.format(i.finalizadoEm, 'dd/MM/yyyy HH:mm')} : '—'"></td>
           <td data-rotulo="Lidas" th:text="${i.totalLidas}"></td>

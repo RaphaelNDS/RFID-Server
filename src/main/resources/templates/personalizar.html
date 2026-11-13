@@ -17,6 +17,42 @@
     <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
   </div>
 
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <!-- 1.31.0: padrão das etiquetas da empresa -->
+  <form class="card" style="margin-bottom:20px" th:action="@{/admin/personalizar/etiquetas}" method="post">
+    <div class="card-header empilhar">
+      <h2>Etiquetas da empresa</h2>
+      <span class="muted">Com o padrão preenchido, a etiqueta lida fora dele (de outra coisa no ambiente, de teste) não
+        vira pendente. Nada mais muda: a etiqueta já cadastrada é lida normalmente e qualquer uma ainda pode ser cadastrada à mão.</span>
+    </div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="field">
+          <label for="prefixos">Começa com</label>
+          <input id="prefixos" name="prefixos" class="mono" maxlength="400" placeholder="Ex.: E280, 3034"
+                 th:value="${#strings.listJoin(padrao.prefixos, ', ')}">
+          <span class="field-dica">Os primeiros caracteres do EPC (0 a 9 e A a F), separados por vírgula. Vazio: qualquer começo.</span>
+        </div>
+        <div class="field">
+          <label for="tamanhos">Tamanho (caracteres)</label>
+          <input id="tamanhos" name="tamanhos" class="mono" maxlength="60" placeholder="Ex.: 24"
+                 th:value="${#strings.listJoin(padrao.tamanhos, ', ')}">
+          <span class="field-dica">O EPC de 96 bits tem 24 caracteres. Vazio: qualquer tamanho.</span>
+        </div>
+        <label class="chip span-2"><input type="checkbox" name="limpar" value="true">
+          <span th:text="'Apagar também as pendentes que já estão fora do padrão' + (${padrao.ativo} ? ' (' + ${pendentesFora} + ' agora)' : '')"></span></label>
+      </div>
+      <p class="field-dica" style="margin-top:12px">
+        <span th:text="'Hoje: ' + ${padrao.descricao} + '.'"></span>
+        <span th:if="${ignoradas.total > 0}" th:text="' Ignoradas desde ' + ${#temporals.format(ignoradas.desde, 'dd/MM HH:mm')} + ': ' + ${ignoradas.total} + ' leitura(s); últimas: ' + ${#strings.listJoin(ignoradas.ultimas, ', ')} + '.'"></span>
+      </p>
+    </div>
+    <div class="card-footer"><button type="submit" class="btn btn-primary">Salvar o padrão</button></div>
+  </form>
+
   <!-- Módulos do menu -->
   <form class="card" style="margin-bottom:20px" th:action="@{/admin/personalizar/menu}" method="post">
     <div class="card-header empilhar">

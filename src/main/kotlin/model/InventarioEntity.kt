@@ -38,5 +38,9 @@ class InventarioEntity(
     val recebidoEm: LocalDateTime = LocalDateTime.now(),
 
     /** Nome do operador que abriu o inventário (nulo nos anteriores ao login de operador). */
-    val operador: String? = null
+    val operador: String? = null,
+
+    /** 1.31.0 (V42): feito por um coletor em treinamento. Não muda o local dos bens nem conta no inventário cíclico. */
+    @Column(nullable = false)
+    val treino: Boolean = false
 )

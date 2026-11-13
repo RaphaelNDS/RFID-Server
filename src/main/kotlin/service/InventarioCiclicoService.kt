@@ -90,7 +90,7 @@ class InventarioCiclicoService(
         val cicloDias = c.semanas * 7L
         val bensPorLocal = tags.contarPorLocal().associate { (it[0] as Number).toLong() to (it[1] as Number).toLong() }
         val base = cadastros.opcoesDeLocal().filter { (bensPorLocal[it.id] ?: 0) > 0 }.map { l ->
-            val ultimo = inventarios.findFirstByLocalIdAndStatusOrderByFinalizadoEmDesc(l.id, StatusInventario.FINALIZADO)
+            val ultimo = inventarios.findFirstByLocalIdAndStatusAndTreinoFalseOrderByFinalizadoEmDesc(l.id, StatusInventario.FINALIZADO)
             val quando = ultimo?.finalizadoEm
             val vence = quando?.toLocalDate()?.plusDays(cicloDias)
             val situacao = when {

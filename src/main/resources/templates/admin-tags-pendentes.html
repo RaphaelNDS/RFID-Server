@@ -10,6 +10,7 @@
     <div>
       <h1>Etiquetas pendentes</h1>
       <p class="subtitulo">Etiquetas lidas pelos coletores que ainda não estão vinculadas a um equipamento</p>
+      <p class="muted" th:if="${padraoEtiquetas != null}" style="margin:4px 0 0">Só entram as etiquetas da empresa: <span th:text="${padraoEtiquetas}"></span> (Administração › Personalizar).</p>
     </div>
     <!-- 1.29.1: apaga toda a lista (quem pode excluir etiquetas). A que for lida de novo volta para cá -->
     <div class="page-header-acoes" th:if="${@authService.temPermissao('RFID','DELETE') and totalPendentes > 0}">

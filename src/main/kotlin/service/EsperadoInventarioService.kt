@@ -79,7 +79,7 @@ class EsperadoInventarioService(
         require(limpo.isNotEmpty()) { "Informe o local do inventário" }
 
         val local = locais.findFirstByNomeIgnoreCaseOrderByIdAsc(limpo).orElse(null)
-        val referencia = local?.let { inventarios.findFirstByLocalIdAndStatusOrderByFinalizadoEmDesc(it.id, StatusInventario.FINALIZADO) }
+        val referencia = local?.let { inventarios.findFirstByLocalIdAndStatusAndTreinoFalseOrderByFinalizadoEmDesc(it.id, StatusInventario.FINALIZADO) }
 
         if (local == null) {
             log.info("Coletor {} pediu o esperado do local '{}': local ainda não usado em inventários, sem lista do que é esperado", dispositivo, limpo)

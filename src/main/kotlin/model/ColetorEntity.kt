@@ -49,5 +49,9 @@ class ColetorEntity(
     @Column(length = 100)
     var modelo: String? = null,
     /** Hora do coletor menos a do servidor, em segundos (positivo = coletor adiantado). */
-    var desvioRelogioSegundos: Long? = null
+    var desvioRelogioSegundos: Long? = null,
+
+    /** 1.31.0 (V42): em treinamento, as leituras e os inventários deste coletor não mudam nada de verdade. */
+    @Column(nullable = false)
+    var treinamento: Boolean = false
 )

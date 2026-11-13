@@ -53,7 +53,7 @@ class PrimeirosPassosService(
         PassoImplantacao("Clientes", "Importe a planilha de clientes ou cadastre os primeiros", clientes.count() > 0,
             "/admin/clientes/importar", "Importar clientes"),
         PassoImplantacao("Primeiro inventário", "Conte um local com o coletor e finalize o inventário",
-            inventarios.countByStatus(StatusInventario.FINALIZADO) > 0, "/admin/inventarios", "Abrir os inventários"),
+            inventarios.countByStatusAndTreinoFalse(StatusInventario.FINALIZADO) > 0, "/admin/inventarios", "Abrir os inventários"),
         PassoImplantacao("Backup fora do computador", "Guarde o backup do certificado numa pasta fora deste computador (rfid.backup.pasta, ex.: OneDrive)",
             backupForaDoComputador(), "/status", "Ver o status")
     ))

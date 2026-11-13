@@ -75,6 +75,11 @@ class ConfiguracaoSistemaService(
         auditoria?.registrar(AreaAuditoria.USUARIOS, "Primeiros passos", null, if (ocultar) "Ocultado do painel" else "Mostrado no painel")
     }
 
+    /** Grava a chave, ou apaga quando [novo] é nulo (sem linha = padrão). Dentro da transação de quem chama. */
+    fun gravarOuApagar(chave: String, novo: String?) {
+        if (novo == null) apagar(chave) else if (valor(chave) != novo) gravar(chave, novo)
+    }
+
     private fun gravar(chave: String, valor: String) {
         val c = repo.findById(chave).orElseGet { ConfiguracaoSistemaEntity(chave, valor) }
         c.valor = valor

@@ -298,6 +298,23 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Etiquetas da empresa e modo treinamento do coletor (1.31.0)
+
+**Etiquetas da empresa** (Administração › Personalizar, só o administrador): o padrão do EPC das etiquetas da empresa,
+com os começos aceitos (ex.: `E280, 3034`) e os tamanhos aceitos (ex.: `24`). A etiqueta lida fora do padrão (de outra
+coisa no ambiente, de teste) **não vira pendente**; nada mais muda: a já cadastrada é lida normalmente e qualquer uma
+ainda pode ser cadastrada à mão. Ao salvar, dá para apagar as pendentes que já estão fora do padrão. A tela mostra
+quantas leituras foram ignoradas desde que o servidor subiu e as últimas, para conferir o padrão. Os dois campos vazios
+desligam. A tela Pendentes avisa quando o padrão está ligado.
+
+**Modo treinamento** (Coletores, só o administrador): botão por coletor. Em treinamento, o coletor lê e faz inventário
+normalmente, mas nada muda de verdade:
+- as leituras não são gravadas e as etiquetas lidas não viram pendentes (o app recebe as respostas de sempre);
+- o inventário fica marcado **Treino**: não muda o local dos bens, não conta no inventário cíclico, nem como base do
+  "esperado" do próximo inventário, nem nos Primeiros passos;
+- cadastro e transferência pelo coletor são recusados (HTTP 409) com o aviso "Coletor em modo treinamento".
+- Banco: V42 (`coletores.treinamento`, `inventarios.treino`). Ligar e desligar vai para a auditoria (Coletores).
+
 ### Primeiros passos, telas no menu e dicas dos erros do coletor (1.30.0)
 
 **Primeiros passos** (só o administrador): quadro no painel inicial com o que falta para começar a usar o sistema,

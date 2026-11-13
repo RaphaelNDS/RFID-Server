@@ -27,10 +27,29 @@ class ColetorWebController(
     private val coletores: ColetorService,
     private val erros: ErroColetorService,
     private val configuracao: ConfiguracaoColetorService,
-    private val auditoria: AuditoriaService
+    private val auditoria: AuditoriaService,
+    // 1.31.0: modo treinamento por coletor
+    private val treinamento: org.example.service.TreinamentoColetorService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
+
+    /** 1.31.0: liga ou desliga o modo treinamento do coletor. */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/{nome}/treinamento")
+    fun treinamento(@PathVariable nome: String, @RequestParam ligado: Boolean,
+                    redirect: org.springframework.web.servlet.mvc.support.RedirectAttributes): String {
+        val servico = treinamento ?: throw ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND)
+        try {
+            servico.definir(nome, ligado)
+            redirect.addFlashAttribute("msg", if (ligado)
+                "Coletor $nome em modo treinamento: as leituras e os inventários dele não mudam nada de verdade."
+            else "Coletor $nome fora do modo treinamento: volta a gravar normalmente.")
+        } catch (e: NoSuchElementException) {
+            throw ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, e.message)
+        }
+        return "redirect:/admin/coletores"
+    }
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
@@ -47,6 +66,7 @@ class ColetorWebController(
         model.addAttribute("versaoPublicada", coletores.versaoPublicada()?.let { ColetorService.descreverVersao(it.versaoNome, it.codigo) })
         model.addAttribute("erros24h", erros.contarUltimas24h())
         model.addAttribute("comChave", lista.map { it.nome }.filter(configuracao::temChave).toSet())
+        model.addAttribute("emTreinamento", treinamento?.nomesEmTreinamento().orEmpty())
         return "coletores"
     }
 

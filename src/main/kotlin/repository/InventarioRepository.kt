@@ -28,8 +28,8 @@ interface LocalRepository : JpaRepository<LocalEntity, Long> {
 
 interface InventarioRepository : JpaRepository<InventarioEntity, String> {
 
-    /** 1.30.0: Primeiros passos (primeiro inventário finalizado). */
-    fun countByStatus(status: org.example.model.StatusInventario): Long
+    /** 1.30.0: Primeiros passos (primeiro inventário finalizado; desde a 1.31.0 o de treino não conta). */
+    fun countByStatusAndTreinoFalse(status: org.example.model.StatusInventario): Long
 
     /** Tela de inventários: uma página (a ordem vem no [pagina]). */
     fun findAllBy(pagina: Pageable): Page<InventarioEntity>
@@ -37,7 +37,7 @@ interface InventarioRepository : JpaRepository<InventarioEntity, String> {
     fun findByLocalId(localId: Long, pagina: Pageable): Page<InventarioEntity>
 
     /** Último inventário finalizado do local: base da lista do que é esperado no próximo inventário. */
-    fun findFirstByLocalIdAndStatusOrderByFinalizadoEmDesc(localId: Long, status: StatusInventario): InventarioEntity?
+    fun findFirstByLocalIdAndStatusAndTreinoFalseOrderByFinalizadoEmDesc(localId: Long, status: StatusInventario): InventarioEntity?
 
     /** Inventário finalizado do local imediatamente antes de [antes] (outro que não [id]): base da comparação na web.
      *  Empate no horário de fim: vale o de maior id, para o resultado não variar. */
