@@ -32,11 +32,11 @@
           <label for="arquivo">Arquivo (.xlsx ou .csv, até 10 MB e 5.000 linhas) <span class="obrigatorio">*</span></label>
           <input type="file" id="arquivo" name="arquivo" accept=".xlsx,.csv" required>
           <span class="field-dica">A primeira linha é o cabeçalho. Colunas reconhecidas pelo nome: <strong>Etiqueta (EPC)</strong> (obrigatória),
-            Código, Patrimônio, Tipo, Marca, Modelo, Nº série, Unidade, Local, Responsável, Matrícula e Situação. As outras são
+            Código, Patrimônio, Tipo, Marca, Modelo, Nº série, Unidade, Local e Situação. As outras são
             ignoradas: a planilha exportada pela tela de Etiquetas pode ser corrigida e importada de volta.</span>
         </div>
         <label class="chip span-2"><input type="checkbox" name="criar" value="true"><span>Cadastrar o que não existir
-          (tipo, marca, modelo, unidade, local e responsável)</span></label>
+          (tipo, marca, modelo, unidade e local)</span></label>
       </div>
       <ul class="field-dica" style="margin:14px 0 0;padding-left:18px">
         <li>Etiqueta que já existe é <strong>atualizada</strong>; célula vazia mantém o que está no cadastro (não apaga).</li>

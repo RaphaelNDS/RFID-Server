@@ -40,7 +40,7 @@ class Versao162IntegracaoTest : IntegracaoBase() {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.resultados[0].status").value("CADASTRADA"))
             .andExpect(jsonPath("$.resultados[0].dados.situacao").value("DISPONIVEL"))
-            .andExpect(jsonPath("$.resultados[0].dados.situacaoRotulo").value("Disponível"))
+            .andExpect(jsonPath("$.resultados[0].dados.situacaoRotulo").value("No estoque"))
             .andExpect(jsonPath("$.resultados[1].dados.situacao").value("BAIXADO"))
             .andExpect(jsonPath("$.resultados[1].dados.situacaoRotulo").value("Baixado"))
             .andExpect(jsonPath("$.resultados[1].dados.patrimonio").value("P-L2-$s"))

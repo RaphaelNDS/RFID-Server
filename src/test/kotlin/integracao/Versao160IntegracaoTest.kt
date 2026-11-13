@@ -51,9 +51,9 @@ class Versao160IntegracaoTest : IntegracaoBase() {
 
     private fun tag(epc: String) = tags.findByTagReal(epc).get()
 
-    private fun cadastrar(epc: String, localId: Long? = null, responsavelId: Long? = null, situacao: String? = null) =
+    private fun cadastrar(epc: String, localId: Long? = null, situacao: String? = null) =
         rfid.cadastrarTag(CadastroRequest(tag = epc, codigoInterno = "TI-$epc", patrimonio = "P-$epc",
-            localId = localId, responsavelId = responsavelId, situacao = situacao))
+            localId = localId, situacao = situacao))
 
     private fun coletor(url: String, json: String) =
         mvc.perform(post(url).comoOperador(token).contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isOk)
@@ -69,51 +69,46 @@ class Versao160IntegracaoTest : IntegracaoBase() {
     // ---------- Cadastros ----------
 
     @Test
-    fun `unidades locais e responsaveis com nomes unicos e desativacao`() {
+    fun `unidades e locais com nomes unicos e desativacao`() {
         val matriz = cadastros.salvarUnidade(null, "Matriz $s")
         assertThatThrownBy { cadastros.salvarUnidade(null, " matriz  $s ") }.hasMessageContaining("Já existe a unidade")
         val sala = cadastros.salvarLocal(null, "Sala  101 $s", matriz.id)
         assertThat(sala.nome).isEqualTo("Sala 101 $s")
         assertThatThrownBy { cadastros.salvarLocal(null, "sala 101 $s", null) }.hasMessageContaining("Já existe o local")
-        val maria = cadastros.salvarResponsavel(null, "Maria $s", "TI", "M$s", "maria@x.com")
-        assertThatThrownBy { cadastros.salvarResponsavel(null, "Outra", null, "m$s", null) }.hasMessageContaining("matrícula")
-        assertThatThrownBy { cadastros.salvarResponsavel(null, "Outra", null, null, "sem-arroba") }.hasMessageContaining("Email inválido")
 
         cadastros.salvarLocal(sala.id, sala.nome, matriz.id, ativo = false)
         assertThat(cadastros.opcoesDeLocal().map { it.id }).doesNotContain(sala.id)
         assertThat(cadastros.opcoesDeLocal(incluirInativos = true).first { it.id == sala.id }.descricao).isEqualTo("Matriz $s › Sala 101 $s")
         // Local desativado não pode ser escolhido num bem novo
         assertThatThrownBy { cadastrar("E-DESAT-$s", localId = sala.id) }.hasMessageContaining("desativado")
-        assertThat(maria.descricao).isEqualTo("Maria $s (TI, mat. M$s)")
     }
 
     // ---------- Etiqueta: local, responsável, situação, histórico e ficha ----------
 
     @Test
-    fun `etiqueta com local responsavel e situacao no historico e na ficha do coletor`() {
+    fun `etiqueta com local e situacao no historico e na ficha do coletor`() {
         val unidade = cadastros.salvarUnidade(null, "Filial $s")
         val local = cadastros.salvarLocal(null, "Almox $s", unidade.id)
         val outro = cadastros.salvarLocal(null, "Sala 2 $s", unidade.id)
-        val joao = cadastros.salvarResponsavel(null, "João $s", "Financeiro", null, null)
-        cadastrar("E-BEM-$s", localId = local.id, responsavelId = joao.id, situacao = "EM_ESTOQUE")
+        cadastrar("E-BEM-$s", localId = local.id, situacao = "EM_ESTOQUE")
         val t = tag("E-BEM-$s")
         assertThat(t.situacao).isEqualTo(SituacaoBem.DISPONIVEL)
 
         rfid.editarTag(t.id, CadastroRequest(codigoInterno = t.codigoInterno, patrimonio = t.patrimonio, localId = outro.id,
-            responsavelId = joao.id, situacao = "EM_MANUTENCAO"))
+            situacao = "EXTRAVIADO"))
         val linhas = historico.findByTagRealOrderByMomentoDescIdDesc("E-BEM-$s").filter { it.campo != null }.associateBy { it.campo }
         assertThat(linhas.getValue("Local").valorAntigo).isEqualTo("Almox $s")
         assertThat(linhas.getValue("Local").valorNovo).isEqualTo("Sala 2 $s")
-        assertThat(linhas.getValue("Situação").valorNovo).isEqualTo("Em manutenção")
+        assertThat(linhas.getValue("Situação").valorNovo).isEqualTo("Extraviado")
         assertThatThrownBy { rfid.editarTag(t.id, CadastroRequest(codigoInterno = "X", situacao = "BAIXADO")) }.hasMessageContaining("Dar baixa")
         assertThat(tag("E-BEM-$s").codigoInterno).isEqualTo("TI-E-BEM-$s")   // a recusa não deixou nada alterado
 
         mvc.perform(get("/api/android/tags/E-BEM-$s").comoOperador(token))
-            .andExpect(jsonPath("$.situacao").value("EM_MANUTENCAO"))
-            .andExpect(jsonPath("$.situacaoRotulo").value("Em manutenção"))
+            .andExpect(jsonPath("$.situacao").value("EXTRAVIADO"))
+            .andExpect(jsonPath("$.situacaoRotulo").value("Extraviado"))
             .andExpect(jsonPath("$.local").value("Sala 2 $s"))
             .andExpect(jsonPath("$.unidade").value("Filial $s"))
-            .andExpect(jsonPath("$.responsavel").value("João $s"))
+            .andExpect(jsonPath("$.responsavel").doesNotExist())
     }
 
     // ---------- Baixa ----------
@@ -184,20 +179,18 @@ class Versao160IntegracaoTest : IntegracaoBase() {
     fun `telas de locais e etiquetas com filtros (responsaveis e termo sairam na 1_18_1)`() {
         val unidade = cadastros.salvarUnidade(null, "Unidade $s")
         val local = cadastros.salvarLocal(null, "Sala T $s", unidade.id)
-        val r = cadastros.salvarResponsavel(null, "Ana $s", "Compras", "A$s", null)
-        cadastrar("E-TELA-$s", localId = local.id, responsavelId = r.id)
+        cadastrar("E-TELA-$s", localId = local.id)
 
         mvc.perform(get("/admin/locais").with(Perfis.gestor())).andExpect(status().isOk)
             .andExpect(content().string(containsString("Unidade $s"))).andExpect(content().string(containsString("Sala T $s")))
         mvc.perform(get("/admin/responsaveis").with(Perfis.gestor())).andExpect(status().isNotFound)
-        mvc.perform(get("/admin/responsaveis/${r.id}/termo").with(Perfis.gestor())).andExpect(status().isNotFound)
         mvc.perform(get("/admin/tags-cadastradas").param("local", local.id.toString()).with(Perfis.gestor())).andExpect(status().isOk)
             .andExpect(content().string(containsString("E-TELA-$s")))   // 1.12.0: o responsável saiu da lista
             .andExpect(content().string(containsString("situacao=")).let { content().string(containsString("local=${local.id}")) })
         mvc.perform(get("/admin/etiquetas/${tag("E-TELA-$s").id}/editar").with(Perfis.gestor())).andExpect(status().isOk)
             .andExpect(content().string(containsString("Dar baixa"))).andExpect(content().string(containsString("name=\"localId\"")))
         mvc.perform(get("/admin/cadastro").with(Perfis.gestor())).andExpect(status().isOk)
-            .andExpect(content().string(containsString("name=\"responsavelId\"")))
+            .andExpect(content().string(not(containsString("name=\"responsavelId\""))))
 
         // Cadastrar pela tela e permissão
         mvc.perform(post("/admin/locais").with(Perfis.gestor()).with(csrf()).param("nome", "Sala Web $s").param("unidade", unidade.id.toString()))
@@ -217,7 +210,7 @@ class Versao160IntegracaoTest : IntegracaoBase() {
         val sessao = MockHttpSession()
         val arquivo = MockMultipartFile("arquivo", "carga.csv", "text/csv", csv(
             "E-IMP-1-$s;TI-1;PI-1-$s;Notebook $s;Dell $s;Latitude $s;SN1;Matriz $s;Sala I $s;Carla $s;C$s;Em uso",
-            "E-IMP-EXISTE-$s;;;;;;SN-NOVO;;;;;Em manutenção",
+            "E-IMP-EXISTE-$s;;;;;;SN-NOVO;;;;;Extraviado",
             "E-IMP-1-$s;TI-2;;;;;;;;;;",
             "1.23457E+23;TI-3;;;;;;;;;;",
             ";TI-4;;;;;;;;;;"
@@ -239,11 +232,10 @@ class Versao160IntegracaoTest : IntegracaoBase() {
         assertThat(nova.patrimonio).isEqualTo("PI-1-$s")
         assertThat(nova.modeloId).isNotNull()
         assertThat(cadastros.localPorNome("Sala I $s", null, criar = false)!!.id).isEqualTo(nova.localId)
-        assertThat(cadastros.responsavelPor(null, "C$s", criar = false)!!.id).isEqualTo(nova.responsavelId)
         val existente = tag("E-IMP-EXISTE-$s")
         assertThat(existente.numeroSerie).isEqualTo("SN-NOVO")
         assertThat(existente.codigoInterno).isEqualTo("TI-E-IMP-EXISTE-$s")   // célula vazia não apaga
-        assertThat(existente.situacao).isEqualTo(SituacaoBem.EM_MANUTENCAO)
+        assertThat(existente.situacao).isEqualTo(SituacaoBem.EXTRAVIADO)
         // A planilha some da sessão depois de importada
         mvc.perform(post("/admin/tags-cadastradas/importar/confirmar").session(sessao).with(Perfis.gestor()).with(csrf()))
             .andExpect(content().string(containsString("envie de novo")))

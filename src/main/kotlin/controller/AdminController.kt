@@ -53,7 +53,7 @@ class AdminController(
         return "admin-tags-pendentes"
     }
 
-    /** Etiquetas, com os filtros de gestão de patrimônio (1.6.0): situação, local, responsável e os baixados. */
+    /** Etiquetas, com os filtros: situação, local e os baixados. */
     @PreAuthorize("@authService.temPermissao('RFID','READ')")
     @GetMapping("/tags-cadastradas")
     fun cadastradas(
@@ -61,17 +61,15 @@ class AdminController(
         @RequestParam(defaultValue = "1") pagina: Int,
         @RequestParam(required = false) situacao: String?,
         @RequestParam(required = false) local: Long?,
-        @RequestParam(required = false) responsavel: Long?,
         @RequestParam(required = false) baixados: Boolean?,
         model: Model
     ): String {
-        val filtro = filtro(situacao, local, responsavel, baixados)
+        val filtro = filtro(situacao, local, baixados)
         val resultado = rfidService.listarParaAdmin(busca, pagina - 1, filtro)
         model.addAttribute("tags", resultado.content)
         model.addAttribute("filtro", filtro)
         model.addAttribute("situacoes", SituacaoBem.entries)
         model.addAttribute("opcoesLocal", cadastros?.opcoesDeLocal(incluirInativos = true).orEmpty())
-        model.addAttribute("opcoesResponsavel", cadastros?.listarResponsaveis().orEmpty())
         paginacao(model, resultado, "/admin/tags-cadastradas", busca, filtro.parametros())
         // Exportação com a mesma busca e os mesmos filtros da tela
         fun exportar(formato: String) = org.springframework.web.util.UriComponentsBuilder.fromPath("/admin/tags-cadastradas/exportar")
@@ -93,16 +91,15 @@ class AdminController(
 
     companion object {
         /** Filtros da tela (e da exportação): valor inválido é ignorado, nunca erro. */
-        fun filtro(situacao: String?, local: Long?, responsavel: Long?, baixados: Boolean?) = FiltroEtiquetas(
+        fun filtro(situacao: String?, local: Long?, baixados: Boolean?) = FiltroEtiquetas(
             situacao = SituacaoBem.de(situacao),
             localId = local?.takeIf { it > 0 },
-            responsavelId = responsavel?.takeIf { it > 0 },
             incluirBaixados = baixados == true
         )
 
         /** Os filtros como parâmetros de link (paginação e exportação); só os escolhidos. */
         fun FiltroEtiquetas.parametros(): Map<String, Any?> = linkedMapOf<String, Any?>(
-            "situacao" to situacao?.name, "local" to localId, "responsavel" to responsavelId, "baixados" to if (incluirBaixados) true else null
+            "situacao" to situacao?.name, "local" to localId, "baixados" to if (incluirBaixados) true else null
         ).filterValues { it != null }
     }
 

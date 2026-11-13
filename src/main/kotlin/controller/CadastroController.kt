@@ -106,7 +106,6 @@ class CadastroController(
         model.addAttribute("modelos", catalogoService.listarModelos())
         // Gestão de patrimônio (1.6.0): local, responsável e situação
         model.addAttribute("opcoesLocal", cadastros?.opcoesDeLocal().orEmpty())
-        model.addAttribute("opcoesResponsavel", cadastros?.responsaveisAtivos().orEmpty())
         model.addAttribute("situacoesEditaveis", SituacaoBem.EDITAVEIS)
     }
 }

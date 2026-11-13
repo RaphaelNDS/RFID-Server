@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Movimentação · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1 th:text="${movimento.tipo.rotulo} + ' nº ' + ${movimento.id}">Saída nº 1</h1>
+      <p class="subtitulo" th:text="${movimento.tipo.name() == 'SAIDA'} ? 'Equipamentos que saíram do estoque' : 'Equipamentos que voltaram ao estoque'"></p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/movimentos/{id}/comprovante.pdf(id=${movimento.id})}" class="btn btn-primary" target="_blank" rel="noopener">
+        <svg class="ic"><use href="/img/icones.svg#download"/></svg>Comprovante (PDF)
+      </a>
+      <a th:href="@{/admin/movimentos}" class="btn btn-ghost">
+        <svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Movimentações
+      </a>
+    </div>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-body">
+      <dl class="dados">
+        <div><dt>Tipo</dt><dd th:text="${movimento.tipo.rotulo}"></dd></div>
+        <div><dt>Data e hora</dt><dd th:text="${#temporals.format(movimento.dataHora, 'dd/MM/yyyy HH:mm')}"></dd></div>
+        <div th:if="${movimento.destino != null}"><dt>Destino</dt><dd th:text="${movimento.destino}"></dd></div>
+        <div th:if="${movimento.observacao != null}"><dt>Observação</dt><dd th:text="${movimento.observacao}"></dd></div>
+        <div><dt>Registrado por</dt><dd th:text="${movimento.registradoPor} + ' (' + ${movimento.origem.rotulo} + ')'"></dd></div>
+      </dl>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Equipamentos <span class="contagem" th:text="'(' + ${#lists.size(itens)} + ')'"></span></h2>
+    </div>
+    <div class="table-wrap">
+      <table class="table table-cartoes">
+        <thead><tr><th>Patrimônio</th><th>Equipamento</th><th>Etiqueta (EPC)</th><th></th></tr></thead>
+        <tbody>
+        <tr th:each="i : ${itens}">
+          <td class="principal cartao-titulo" th:text="${i.patrimonio} ?: '—'"></td>
+          <td data-rotulo="Equipamento" th:text="${i.descricao} ?: '—'"></td>
+          <td data-rotulo="Etiqueta (EPC)" class="mono" th:text="${i.tagReal}"></td>
+          <td class="acoes">
+            <a th:href="@{/admin/etiquetas/historico(tag=${i.tagReal})}" class="btn btn-ghost btn-sm" title="Histórico da etiqueta"
+               th:if="${@authService.temPermissao('RFID','READ')}">
+              <svg class="ic"><use href="/img/icones.svg#relogio"/></svg><span class="texto-btn">Histórico</span>
+            </a>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+</html>

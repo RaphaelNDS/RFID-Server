@@ -11,14 +11,12 @@ import org.example.request.CadastroRequest
 import org.example.request.MarcaRequest
 import org.example.request.ModeloRequest
 import org.example.request.TipoEquipamentoRequest
-import org.example.util.FormatoBr
 import org.example.util.LeitorPlanilha
 import org.example.util.Planilha
 import org.example.util.normalizarEpc
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.text.Normalizer
-import java.time.LocalDate
 
 enum class AcaoLinha(val rotulo: String) { NOVA("Nova"), ATUALIZA("Atualiza"), SEM_MUDANCA("Sem mudança"), ERRO("Erro") }
 
@@ -42,10 +40,10 @@ data class ResultadoImportacao(val linhas: List<LinhaImportacao>, val gravado: B
  *
  * Colunas pelo cabeçalho (sem diferenciar maiúsculas nem acento; as outras são ignoradas, então a planilha exportada
  * pela tela de Etiquetas pode ser corrigida e importada de volta): Etiqueta (EPC) (obrigatória), Código, Patrimônio,
- * Tipo, Marca, Modelo, Nº série, Unidade, Local, Responsável, Matrícula, Situação.
+ * Tipo, Marca, Modelo, Nº série, Unidade, Local, Situação.
  *
  * EPC que já existe: atualiza. Célula vazia mantém o que já está no cadastro (não apaga). Com [criarFaltantes], tipo,
- * marca, modelo, unidade, local e responsável que não existirem são cadastrados; sem, a linha dá erro.
+ * marca, modelo, unidade e local que não existirem são cadastrados; sem, a linha dá erro.
  */
 @Service
 class ImportacaoEtiquetasService(
@@ -71,13 +69,7 @@ class ImportacaoEtiquetasService(
         SERIE("N_SERIE", "NO_SERIE", "N_DE_SERIE", "NUMERO_DE_SERIE", "SERIE"),
         UNIDADE("UNIDADE"),
         LOCAL("LOCAL"),
-        RESPONSAVEL("RESPONSAVEL"),
-        MATRICULA("MATRICULA", "MATRICULA_DO_RESPONSAVEL"),
-        SITUACAO("SITUACAO"),
-        // 1.8.0: valor e aquisição
-        VALOR("VALOR_DE_AQUISICAO", "VALOR_AQUISICAO", "VALOR", "VALOR_R"),
-        DATA_AQUISICAO("DATA_DE_AQUISICAO", "DATA_AQUISICAO", "AQUISICAO", "DATA_DA_COMPRA"),
-        NOTA_FISCAL("NOTA_FISCAL", "NF", "N_DA_NOTA_FISCAL", "NUMERO_DA_NOTA_FISCAL")
+        SITUACAO("SITUACAO")
     }
 
     fun processar(nomeArquivo: String, conteudo: ByteArray, criarFaltantes: Boolean, podeAlterar: Boolean, gravar: Boolean): ResultadoImportacao {
@@ -156,7 +148,7 @@ class ImportacaoEtiquetasService(
             pedido.modeloId = modelo(nomeModelo, marcaId, criar, gravar, criados)
         }
 
-        // Local (com a unidade) e responsável
+        // Local (com a unidade)
         val nomeUnidade = valor(Coluna.UNIDADE)
         val nomeLocal = valor(Coluna.LOCAL)
         if (nomeLocal.isNotEmpty()) {
@@ -171,40 +163,21 @@ class ImportacaoEtiquetasService(
                 else -> throw IllegalArgumentException("o local $nomeLocal não existe")
             }
         } else if (nomeUnidade.isNotEmpty()) throw IllegalArgumentException("a unidade $nomeUnidade foi informada sem o local")
-        val nomeResp = valor(Coluna.RESPONSAVEL)
-        val matricula = valor(Coluna.MATRICULA)
-        if (nomeResp.isNotEmpty() || matricula.isNotEmpty()) {
-            val r = cadastros.responsavelPor(nomeResp, matricula, criar && gravar)
-            pedido.responsavelId = when {
-                r != null -> r.id
-                criar && nomeResp.isNotEmpty() -> { criados += "responsável $nomeResp"; -1L }
-                else -> throw IllegalArgumentException("o responsável ${nomeResp.ifEmpty { "de matrícula $matricula" }} não existe")
-            }
-        }
 
-        // Situação: BAIXADO só pela baixa (na tela da etiqueta)
+        // Situação: BAIXADO só pela baixa (na tela da etiqueta); FORA só pela saída e pela entrada (Movimentações)
         valor(Coluna.SITUACAO).takeIf { it.isNotEmpty() }?.let { texto ->
             val s = SituacaoBem.de(texto) ?: throw IllegalArgumentException("situação inválida: $texto")
+            val estaFora = existente?.situacao == SituacaoBem.FORA
             when {
                 s == SituacaoBem.BAIXADO && existente?.baixado == true -> {}   // já baixado: mantém
                 s == SituacaoBem.BAIXADO -> throw IllegalArgumentException("para baixar um bem use \"Dar baixa\" na tela da etiqueta")
                 existente?.baixado == true -> throw IllegalArgumentException("o bem está baixado: desfaça a baixa na tela da etiqueta antes de mudar a situação")
+                s == SituacaoBem.FORA && estaFora -> {}   // já fora do estoque: mantém
+                s == SituacaoBem.FORA -> throw IllegalArgumentException("para tirar um equipamento do estoque use \"Nova saída\" em Movimentações")
+                estaFora -> throw IllegalArgumentException("o equipamento está fora do estoque: registre a entrada em Movimentações antes de mudar a situação")
                 else -> pedido.situacao = s.name
             }
         }
-
-        // Valor e aquisição (1.8.0): conferidos já na simulação; gravados no formato do cadastro, para a comparação
-        // com o que já existe não acusar mudança só porque a planilha escreveu "1234,5" e o cadastro tem "1.234,50"
-        valor(Coluna.VALOR).takeIf { it.isNotEmpty() }?.let { texto ->
-            val v = runCatching { FormatoBr.lerValor(texto) }.getOrElse { throw IllegalArgumentException("valor de aquisição inválido: $texto") }
-            pedido.valorAquisicao = FormatoBr.numero(v)
-        }
-        valor(Coluna.DATA_AQUISICAO).takeIf { it.isNotEmpty() }?.let { texto ->
-            val d = runCatching { FormatoBr.lerData(texto) }.getOrElse { throw IllegalArgumentException("data de aquisição inválida: $texto (use dd/mm/aaaa)") }
-            if (d != null && d.isAfter(LocalDate.now())) throw IllegalArgumentException("a data de aquisição ${FormatoBr.data(d)} está no futuro")
-            pedido.dataAquisicao = d?.toString()
-        }
-        valor(Coluna.NOTA_FISCAL).takeIf { it.isNotEmpty() }?.let { pedido.notaFiscal = it }
 
         val patrimonio = pedido.patrimonio
         val acao = when {
@@ -236,9 +209,7 @@ class ImportacaoEtiquetasService(
     private fun pedidoDe(t: TagEntity) = CadastroRequest(
         tag = t.tagReal, codigoInterno = t.codigoInterno, patrimonio = t.patrimonio, numeroSerie = t.numeroSerie,
         tipoEquipamentoId = t.tipoEquipamentoId, marcaId = t.marcaId, modeloId = t.modeloId,
-        localId = t.localId, responsavelId = t.responsavelId, situacao = if (t.baixado) null else t.situacao.name,
-        valorAquisicao = t.valorAquisicao?.let { FormatoBr.numero(it) }, dataAquisicao = t.dataAquisicao?.toString(),
-        notaFiscal = t.notaFiscal
+        localId = t.localId, situacao = if (t.baixado) null else t.situacao.name
     )
 
     private fun diferencas(antes: CadastroRequest, depois: CadastroRequest): List<String> = listOfNotNull(
@@ -249,11 +220,7 @@ class ImportacaoEtiquetasService(
         "marca".takeIf { antes.marcaId != depois.marcaId },
         "modelo".takeIf { antes.modeloId != depois.modeloId },
         "local".takeIf { antes.localId != depois.localId },
-        "responsável".takeIf { antes.responsavelId != depois.responsavelId },
-        "situação".takeIf { antes.situacao != depois.situacao },
-        "valor".takeIf { antes.valorAquisicao != depois.valorAquisicao },
-        "data de aquisição".takeIf { antes.dataAquisicao != depois.dataAquisicao },
-        "nota fiscal".takeIf { antes.notaFiscal != depois.notaFiscal }
+        "situação".takeIf { antes.situacao != depois.situacao }
     )
 
     // Catálogo pelo nome. Na simulação, o que seria criado volta -1 (não existe ainda) e entra em [criados]
@@ -291,9 +258,9 @@ class ImportacaoEtiquetasService(
     fun modelo(): Planilha = Planilha(
         nome = "Etiquetas",
         colunas = listOf("Etiqueta (EPC)", "Código", "Patrimônio", "Tipo", "Marca", "Modelo", "Nº série",
-            "Unidade", "Local", "Responsável", "Matrícula", "Situação", "Valor de aquisição", "Data de aquisição", "Nota fiscal"),
+            "Unidade", "Local", "Situação"),
         linhas = listOf(listOf("E2801170000002001234ABCD", "TI-0001", "000123", "Notebook", "Dell", "Latitude 5440", "ABC123",
-            "Matriz", "Sala 101", "Maria Souza", "1234", "Em uso", "4.599,90", "15/01/2026", "NF 12345"))
+            "Matriz", "Sala 101", "No estoque"))
     )
 
     companion object {

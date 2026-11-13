@@ -61,7 +61,8 @@ class BackupAntesMigracaoTest {
     // ---------------- estratégia de migração ----------------
 
     private val backup = mockk<BackupAntesMigracao>(relaxed = true)
-    private val estrategia = MigracoesConfig("").estrategia(backup)
+    private val trava = mockk<TravaVersaoCompleta>(relaxed = true)
+    private val estrategia = MigracoesConfig("").estrategia(backup, trava)
 
     private fun flyway(pendentes: Int, versaoAtual: String?): Flyway {
         val flyway = mockk<Flyway>(relaxed = true)

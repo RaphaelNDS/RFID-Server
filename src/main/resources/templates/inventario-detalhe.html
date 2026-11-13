@@ -114,10 +114,6 @@
 
         <div class="barra-divergencias" th:if="${tratar}">
           <span class="muted">Com os marcados:</span>
-          <button type="submit" class="btn btn-secondary btn-sm" th:formaction="@{/admin/transferencias/nova}"
-                  title="Achou os bens em outro lugar? Transfira para o local onde estão">
-            <svg class="ic"><use href="/img/icones.svg#transferir"/></svg>Transferir
-          </button>
           <button type="submit" class="btn btn-secondary btn-sm" name="acao" value="extraviado"
                   data-confirmar="Marcar os bens marcados como extraviados? A situação muda no cadastro e fica no histórico de cada um."
                   data-confirmar-titulo="Marcar como extraviados" data-confirmar-botao="Marcar como extraviados">
@@ -172,29 +168,12 @@
               <th:block th:if="${a != null}">
                 <span class="badge" th:classappend="${a.situacao.name() == 'EXTRAVIADO'} ? 'badge-inativo' : (${a.situacao.name() == 'DISPONIVEL'} ? '' : 'badge-CUSTOM')"
                       th:text="${a.situacao.rotulo}"></span>
-                <div class="muted" style="font-size:12px" th:if="${a.responsavel != null}" th:text="${a.responsavel}"></div>
               </th:block>
             </td>
           </tr>
           </tbody>
         </table>
       </form>
-    </div>
-  </div>
-
-  <!-- Guias de transferência que saíram das divergências deste inventário (1.6.1) -->
-  <div class="card" style="margin-bottom:16px" th:unless="${#lists.isEmpty(transferenciasDoInventario)}">
-    <div class="card-header empilhar">
-      <h2>Transferências feitas a partir deste inventário <span class="contagem" th:text="'(' + ${#lists.size(transferenciasDoInventario)} + ')'"></span></h2>
-      <span class="muted">Os bens transferidos para outro local saem da lista do que faltou</span>
-    </div>
-    <div class="card-body">
-      <ul class="lista-simples">
-        <li th:each="t : ${transferenciasDoInventario}">
-          <a th:href="@{/admin/transferencias/{id}(id=${t.id})}" th:text="'Guia nº ' + ${t.id}"></a>
-          <span class="muted" th:text="' · ' + ${#temporals.format(t.data, 'dd/MM/yyyy')} + ' · para ' + ${t.localDestino ?: t.responsavelDestino} + ' · por ' + ${t.registradaPor}"></span>
-        </li>
-      </ul>
     </div>
   </div>
 

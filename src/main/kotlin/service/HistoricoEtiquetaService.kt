@@ -7,10 +7,8 @@ import org.example.repository.HistoricoEtiquetaRepository
 import org.example.repository.LocalRepository
 import org.example.repository.MarcaRepository
 import org.example.repository.ModeloRepository
-import org.example.repository.ResponsavelRepository
 import org.example.repository.TipoEquipamentoRepository
 import org.example.security.OperadorNoColetor
-import org.example.util.FormatoBr
 import org.slf4j.LoggerFactory
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
@@ -39,8 +37,7 @@ class HistoricoEtiquetaService(
     private val modelos: ModeloRepository,
     private val relogio: Clock,
     // Gestão de patrimônio (1.6.0). Opcionais para os testes que montam o serviço à mão
-    private val locais: LocalRepository? = null,
-    private val responsaveis: ResponsavelRepository? = null
+    private val locais: LocalRepository? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -53,14 +50,9 @@ class HistoricoEtiquetaService(
             "Tipo" to tag.tipoEquipamentoId?.let { id -> tipos.findById(id).map { it.nome }.orElse("#$id") },
             "Marca" to tag.marcaId?.let { id -> marcas.findById(id).map { it.nome }.orElse("#$id") },
             "Modelo" to tag.modeloId?.let { id -> modelos.findById(id).map { it.nome }.orElse("#$id") },
-            // 1.6.0: onde está, com quem e em que situação (a baixa entra com o motivo, a data e quem fez)
+            // Onde está e em que situação (a baixa entra com o motivo, a data e quem fez)
             "Local" to tag.localId?.let { id -> locais?.findById(id)?.map { it.nome }?.orElse("#$id") ?: "#$id" },
-            "Responsável" to tag.responsavelId?.let { id -> responsaveis?.findById(id)?.map { it.descricao }?.orElse("#$id") ?: "#$id" },
             "Situação" to tag.situacao.rotulo,
-            // 1.8.0: valor e aquisição
-            "Valor de aquisição" to tag.valorAquisicao?.let { FormatoBr.reais(it) },
-            "Data de aquisição" to tag.dataAquisicao?.let { FormatoBr.data(it) },
-            "Nota fiscal" to tag.notaFiscal,
             "Baixa" to tag.baixaMotivo?.let { m ->
                 listOfNotNull(m.rotulo, tag.baixaEm?.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
                     tag.baixaObservacao, tag.baixaPor?.let { "por $it" }).joinToString(" · ")
@@ -76,7 +68,7 @@ class HistoricoEtiquetaService(
 
     /**
      * Uma linha por campo que realmente mudou. Devolve os campos alterados (vazio = nada mudou). [motivo] vai junto da
-     * origem (1.6.1), para o histórico dizer por que mudou: "Web · Transferência nº 12".
+     * origem, para o histórico dizer por que mudou: "Web · Saída nº 12 (destino: Obra Centro)".
      */
     @Transactional(propagation = Propagation.MANDATORY)
     fun registrarAlteracao(tag: TagEntity, antes: RetratoEtiqueta, motivo: String? = null): List<String> {
@@ -89,13 +81,6 @@ class HistoricoEtiquetaService(
             salvar(tag.id, tag.tagReal, AcaoHistorico.ALTERACAO, campo, antes.campos[campo], depois.campos[campo], usuario, origem)
         }
         return mudaram
-    }
-
-    /** Foto ou documento enviado ([novo]) ou excluído ([antigo]) (1.9.0): uma linha no campo "Anexo". */
-    @Transactional(propagation = Propagation.MANDATORY)
-    fun registrarAnexo(tag: TagEntity, antigo: String?, novo: String?) {
-        val (usuario, origem) = autor()
-        salvar(tag.id, tag.tagReal, AcaoHistorico.ALTERACAO, "Anexo", antigo, novo, usuario, origem)
     }
 
     @Transactional(propagation = Propagation.MANDATORY)

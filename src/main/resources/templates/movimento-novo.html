@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title th:text="${tipo.name() == 'SAIDA'} ? 'Nova saída · Sistema RFID' : 'Nova entrada · Sistema RFID'">Nova saída · Sistema RFID</title>
+
+<!--
+  Nova saída ou nova entrada (2.0.0). Os equipamentos vão na caixa de texto (um por linha: patrimônio ou EPC), colados
+  de uma planilha ou acrescentados pela busca, que mostra só os que podem ir (no estoque, na saída; fora do estoque,
+  na entrada). O servidor confere tudo: com um equipamento recusado, nada é gravado e a lista volta com o motivo.
+-->
+<section class="page page-estreita" th:with="saida=${tipo.name() == 'SAIDA'}">
+
+  <div class="page-header">
+    <div>
+      <h1 th:text="${saida} ? 'Nova saída' : 'Nova entrada'">Nova saída</h1>
+      <p class="subtitulo" th:text="${saida} ? 'Os equipamentos saem do estoque e ficam como Fora do estoque' : 'Os equipamentos que estão fora voltam para o estoque'"></p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/movimentos}" class="btn btn-ghost">
+        <svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Movimentações
+      </a>
+    </div>
+  </div>
+
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <div class="card" style="margin-bottom:16px" th:if="${recusados != null and !#lists.isEmpty(recusados)}">
+    <div class="card-header"><h2>Equipamentos recusados <span class="contagem" th:text="'(' + ${#lists.size(recusados)} + ')'"></span></h2></div>
+    <div class="table-wrap">
+      <table class="table table-cartoes">
+        <thead><tr><th>Informado</th><th>Equipamento</th><th>Motivo</th></tr></thead>
+        <tbody>
+        <tr th:each="r : ${recusados}">
+          <td class="principal cartao-titulo mono" th:text="${r.identificador}"></td>
+          <td data-rotulo="Equipamento" th:text="${r.patrimonio != null or r.descricao != null} ? ${#strings.trim((r.patrimonio ?: '') + ' ' + (r.descricao ?: ''))} : '—'"></td>
+          <td data-rotulo="Motivo" th:text="${r.motivo}"></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Busca: acrescenta à lista os equipamentos que podem ir -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header empilhar">
+      <h2>Procurar equipamento</h2>
+      <span class="muted" th:text="${saida} ? 'Só aparecem os que estão no estoque' : 'Só aparecem os que estão fora do estoque'"></span>
+    </div>
+    <div class="card-body">
+      <div class="toolbar" style="padding:0">
+        <div class="field" style="flex:1 1 260px">
+          <label for="buscaEquip" class="sr-only">Buscar equipamento</label>
+          <input id="buscaEquip" type="search" autocomplete="off" placeholder="Patrimônio, EPC, código, tipo, marca ou modelo">
+        </div>
+        <button type="button" class="btn btn-secondary" id="buscarEquip">
+          <svg class="ic"><use href="/img/icones.svg#busca"/></svg>Buscar
+        </button>
+      </div>
+      <p class="muted" id="buscaStatus" role="status"></p>
+      <ul class="lista-simples" id="buscaResultado"></ul>
+    </div>
+  </div>
+
+  <form class="card" method="post" th:action="${saida} ? @{/admin/movimentos/saida} : @{/admin/movimentos/entrada}">
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="field span-2">
+          <label for="lista">Equipamentos <span class="obrigatorio">*</span></label>
+          <textarea id="lista" name="lista" rows="8" class="mono" required th:text="${lista}"
+                    placeholder="Um por linha: patrimônio ou EPC (cole direto da planilha)"></textarea>
+          <span class="field-dica" th:text="'Um por linha (ou separados por ponto e vírgula), até ' + ${maximo} + '. Repetidos contam uma vez.'"></span>
+        </div>
+        <div class="field span-2" th:if="${saida}">
+          <label for="destino">Destino <span class="obrigatorio">*</span></label>
+          <input type="text" id="destino" name="destino" maxlength="255" required th:value="${destino}"
+                 placeholder="Para onde vão: cliente, obra, filial, técnico...">
+        </div>
+        <div class="field span-2">
+          <label for="observacao">Observação</label>
+          <input type="text" id="observacao" name="observacao" maxlength="500" th:value="${observacao}"
+                 placeholder="Opcional, ex.: nota 123, retorno previsto na sexta">
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <a th:href="@{/admin/movimentos}" class="btn btn-ghost">Cancelar</a>
+      <button type="submit" class="btn btn-primary" th:text="${saida} ? 'Registrar saída' : 'Registrar entrada'">Registrar saída</button>
+    </div>
+  </form>
+
+  <script th:attr="nonce=${cspNonce},data-tipo=${tipo.name()}" id="scriptMovimento">
+    (function () {
+      const tipo = document.getElementById("scriptMovimento").dataset.tipo;
+      const campo = document.getElementById("buscaEquip");
+      const botao = document.getElementById("buscarEquip");
+      const status = document.getElementById("buscaStatus");
+      const resultado = document.getElementById("buscaResultado");
+      const lista = document.getElementById("lista");
+
+      function linhas() {
+        return lista.value.split(/[\r\n;,\t]+/).map(s => s.trim().toUpperCase()).filter(s => s.length > 0);
+      }
+
+      function acrescentar(valor) {
+        if (linhas().includes(valor.toUpperCase())) return;
+        lista.value = (lista.value.trim() ? lista.value.trim() + "\n" : "") + valor;
+      }
+
+      function buscar() {
+        const termo = campo.value.trim();
+        resultado.textContent = "";
+        status.textContent = "Buscando...";
+        fetch("/admin/movimentos/candidatos?tipo=" + encodeURIComponent(tipo) + "&busca=" + encodeURIComponent(termo),
+              { headers: { "Accept": "application/json" } })
+          .then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+          .then(itens => {
+            status.textContent = itens.length === 0 ? "Nenhum equipamento encontrado."
+              : itens.length + " encontrado(s)" + (itens.length >= 50 ? " (os 50 primeiros: refine a busca)" : "") + ".";
+            itens.forEach(i => {
+              const li = document.createElement("li");
+              const texto = document.createElement("span");
+              texto.textContent = (i.patrimonio || i.epc) + (i.descricao ? " · " + i.descricao : "") + (i.local ? " · " + i.local : "");
+              const add = document.createElement("button");
+              add.type = "button";
+              add.className = "btn btn-ghost btn-sm";
+              add.textContent = "Adicionar";
+              add.addEventListener("click", () => { acrescentar(i.patrimonio || i.epc); add.disabled = true; add.textContent = "Na lista"; });
+              li.appendChild(texto);
+              li.appendChild(document.createTextNode(" "));
+              li.appendChild(add);
+              resultado.appendChild(li);
+            });
+          })
+          .catch(() => { status.textContent = "Não foi possível buscar agora. Digite o patrimônio ou o EPC direto na lista."; });
+      }
+
+      botao.addEventListener("click", buscar);
+      campo.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); buscar(); } });
+    })();
+  </script>
+
+</section>
+</html>

@@ -19,7 +19,9 @@ enum class AreaAuditoria(val rotulo: String) {
     EXPORTACAO("Exportações"),
     COLETORES("Coletores"),
     BACKUP("Backup"),
-    PATRIMONIO("Patrimônio")
+    PATRIMONIO("Patrimônio"),
+    /** 2.0.0: saídas e entradas de equipamentos. */
+    MOVIMENTOS("Movimentações")
 }
 
 /** Uma ação de usuário ou de configuração (tabela auditoria, V13). Somente leitura depois de gravada. */

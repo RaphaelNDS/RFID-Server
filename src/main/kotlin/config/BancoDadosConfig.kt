@@ -72,10 +72,13 @@ class MigracoesConfig(
     private val log = LoggerFactory.getLogger(MigracoesConfig::class.java)
 
     @Bean
-    fun flywayMigrationStrategy() = estrategia(BackupAntesMigracao(comandoBackup))
+    fun flywayMigrationStrategy() = estrategia(BackupAntesMigracao(comandoBackup), TravaVersaoCompleta())
 
-    /** Separado do @Bean para o teste passar um backup próprio. */
-    fun estrategia(backup: BackupAntesMigracao) = FlywayMigrationStrategy { flyway ->
+    /** Separado do @Bean para o teste passar um backup e uma trava próprios. */
+    fun estrategia(backup: BackupAntesMigracao, trava: TravaVersaoCompleta) = FlywayMigrationStrategy { flyway ->
+        // 2.0.0: banco da versão completa (branch locadora) é recusado antes de tudo, com ou sem migração pendente
+        trava.conferir(flyway)
+
         val pendentes = flyway.info().pending()
         val atual = flyway.info().current()
 

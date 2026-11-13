@@ -15,82 +15,38 @@
     <span class="badge badge-online" th:if="${isAdmin and info != null}" th:text="'Servidor ' + ${#strings.toLowerCase(info.status)}">Servidor online</span>
   </div>
 
-  <!-- Painel do dia (1.13.0): o que separar, o que volta, o que conferir e o que está atrasado. Só com RFID · Ver -->
-  <th:block th:if="${painel != null}" th:with="p=${painel}">
-    <div class="grid grid-stats">
-      <a class="stat" th:href="@{/admin/disponibilidade}">
-        <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#ok"/></svg>Disponíveis</div>
-        <div class="stat-valor positivo" th:text="${p.quantos(T(org.example.model.SituacaoBem).DISPONIVEL)}">0</div>
-        <div class="stat-dica" th:text="'de ' + ${p.noAcervo} + ' no acervo'"></div>
-      </a>
-      <a class="stat" th:href="@{/admin/pedidos(situacao='NA_RUA')}">
-        <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#calendario"/></svg>Alugados</div>
-        <div class="stat-valor" th:text="${p.quantos(T(org.example.model.SituacaoBem).ALUGADO)}">0</div>
-        <div class="stat-dica" th:text="${#lists.size(p.atrasados)} + ' pedido(s) atrasado(s)'"></div>
-      </a>
-      <a class="stat" th:href="@{/admin/pedidos/devolucoes}">
-        <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#relogio"/></svg>A conferir</div>
-        <div class="stat-valor" th:classappend="${p.aConferir > 0} ? 'negativo'" th:text="${p.aConferir}">0</div>
-        <div class="stat-dica">Devolvidos esperando a conferência</div>
-      </a>
-      <a class="stat" th:href="@{/admin/manutencoes}">
-        <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#lapis"/></svg>Em manutenção</div>
-        <div class="stat-valor" th:text="${p.quantos(T(org.example.model.SituacaoBem).EM_MANUTENCAO)}">0</div>
-        <div class="stat-dica" th:text="${#lists.size(p.manutencoesAtrasadas)} + ' com o retorno atrasado'"></div>
-      </a>
+  <!-- Resumo (2.0.0): estoque (Etiquetas · Ver), últimas movimentações (Movimentações · Ver) e último inventário (Leituras · Ver) -->
+  <div class="grid grid-stats" th:if="${noEstoque != null or ultimoInventario != null}">
+    <a class="stat" th:if="${noEstoque != null}" th:href="@{/admin/tags-cadastradas(situacao='DISPONIVEL')}">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#ok"/></svg>No estoque</div>
+      <div class="stat-valor positivo" th:text="${#numbers.formatInteger(noEstoque, 1, 'POINT')}">0</div>
+      <div class="stat-dica">Equipamentos disponíveis</div>
+    </a>
+    <a class="stat" th:if="${foraDoEstoque != null}" th:href="@{/admin/tags-cadastradas(situacao='FORA')}">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#transferir"/></svg>Fora do estoque</div>
+      <div class="stat-valor" th:text="${#numbers.formatInteger(foraDoEstoque, 1, 'POINT')}">0</div>
+      <div class="stat-dica" th:text="${extraviados > 0} ? ${extraviados} + ' extraviado(s) à parte' : 'Saíram e ainda não voltaram'"></div>
+    </a>
+    <a class="stat" th:if="${ultimoInventario != null}" th:href="@{/admin/inventarios/{id}(id=${ultimoInventario.id})}">
+      <div class="stat-rotulo"><svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Último inventário</div>
+      <div class="stat-valor texto" th:text="${ultimoInventario.local}">Local</div>
+      <div class="stat-dica" th:text="${#temporals.format(ultimoInventario.iniciadoEm, 'dd/MM/yyyy HH:mm')} + ' · ' + (${ultimoInventario.status.name() == 'ABERTO'} ? 'em andamento' : ${ultimoInventario.totalLidas} + ' lida(s)')"></div>
+    </a>
+  </div>
+
+  <div class="card" style="margin-top:16px" th:if="${ultimasMovimentacoes != null}">
+    <div class="card-header empilhar">
+      <h2>Últimas movimentações</h2>
+      <a th:href="@{/admin/movimentos}" class="muted">Ver todas</a>
     </div>
-
-    <div class="alert alert-ok" style="margin-top:16px" th:if="${p.nadaAFazer}" role="status">
-      <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span>Nada pendente hoje: nenhuma saída para separar, devolução prevista, atraso ou conferência.</span>
-    </div>
-
-    <div class="grid grid-2" style="margin-top:16px" th:unless="${p.nadaAFazer}">
-      <div class="card" th:unless="${#lists.isEmpty(p.saidas)}">
-        <div class="card-header empilhar">
-          <h2>Separar e entregar</h2>
-          <span class="muted">Saída prevista até amanhã, já passada ou sem data</span>
-        </div>
-        <ul class="lista-simples painel-lista">
-          <li th:each="sd : ${p.saidas}" th:with="ped=${sd.resumo.pedido}">
-            <a th:href="@{/admin/pedidos/{id}(id=${ped.id})}" th:text="'Nº ' + ${ped.id} + ' · ' + ${ped.cliente}"></a>
-            <span class="muted" th:text="'faltam ' + ${sd.faltam} + ' · ' + (${ped.saidaPrevista != null} ? (${ped.saidaPrevista == p.hoje} ? 'hoje' : ${#temporals.format(ped.saidaPrevista, 'dd/MM')}) : 'sem data')"></span>
-            <span class="badge badge-inativo" th:if="${sd.atrasada(p.hoje)}">atrasada</span>
-          </li>
-        </ul>
-      </div>
-
-      <div class="card" th:unless="${#lists.isEmpty(p.atrasados) and #lists.isEmpty(p.devolucoesHoje)}">
-        <div class="card-header empilhar">
-          <h2>Devoluções</h2>
-          <span class="muted">Atrasadas e previstas para hoje</span>
-        </div>
-        <ul class="lista-simples painel-lista">
-          <li th:each="r : ${p.atrasados}">
-            <a th:href="@{/admin/pedidos/{id}(id=${r.pedido.id})}" th:text="'Nº ' + ${r.pedido.id} + ' · ' + ${r.pedido.cliente}"></a>
-            <span class="muted" th:text="${r.naRua} + ' equipamento(s) com o cliente'"></span>
-            <span class="badge badge-inativo" th:text="'atrasado ' + ${r.diasAtraso} + ' dia(s)'"></span>
-          </li>
-          <li th:each="r : ${p.devolucoesHoje}">
-            <a th:href="@{/admin/pedidos/{id}(id=${r.pedido.id})}" th:text="'Nº ' + ${r.pedido.id} + ' · ' + ${r.pedido.cliente}"></a>
-            <span class="muted" th:text="${r.naRua} + ' equipamento(s) · volta hoje'"></span>
-          </li>
-        </ul>
-      </div>
-
-      <div class="card" th:if="${!#lists.isEmpty(p.manutencoesAtrasadas) and @authService.temPermissao('MANUTENCAO','READ')}">
-        <div class="card-header empilhar">
-          <h2>Manutenções atrasadas</h2>
-          <span class="muted" th:text="${p.manutencoesAbertas} + ' aberta(s) no total'"></span>
-        </div>
-        <ul class="lista-simples painel-lista">
-          <li th:each="m : ${p.manutencoesAtrasadas}">
-            <a th:href="@{/admin/manutencoes/{id}(id=${m.id})}" th:text="'Nº ' + ${m.id} + ' · ' + (${m.patrimonio} ?: ${m.tagReal})"></a>
-            <span class="muted" th:text="(${m.fornecedor} ?: 'sem fornecedor') + ' · previsto ' + ${#temporals.format(m.previsaoRetorno, 'dd/MM')}"></span>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </th:block>
+    <p class="vazio" style="margin:16px 20px" th:if="${#lists.isEmpty(ultimasMovimentacoes)}">Nenhuma saída ou entrada registrada ainda.</p>
+    <ul class="lista-simples painel-lista" th:unless="${#lists.isEmpty(ultimasMovimentacoes)}">
+      <li th:each="d : ${ultimasMovimentacoes}" th:with="m=${d.movimento}">
+        <a th:href="@{/admin/movimentos/{id}(id=${m.id})}" th:text="${m.tipo.rotulo} + ' nº ' + ${m.id}"></a>
+        <span class="muted" th:text="${#temporals.format(m.dataHora, 'dd/MM HH:mm')} + ' · ' + ${#lists.size(d.itens)} + ' equipamento(s)' + (${m.destino != null} ? ' · ' + ${m.destino} : '')"></span>
+      </li>
+    </ul>
+  </div>
 
   <!-- Atalhos: cada um só aparece com a permissão correspondente -->
   <h2 class="secao-titulo">Acesso rápido</h2>
@@ -119,6 +75,11 @@
     <a th:if="${@authService.temPermissao('LEITURA','READ')}" th:href="@{/admin/inventarios}" class="tile">
       <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#ok"/></svg></span>
       <span><span class="tile-titulo">Inventários</span><span class="tile-desc d-block">Conferências por local feitas nos coletores</span></span>
+    </a>
+
+    <a th:if="${@authService.temPermissao('MOVIMENTO','READ')}" th:href="@{/admin/movimentos}" class="tile">
+      <span class="tile-icone"><svg class="ic"><use href="/img/icones.svg#transferir"/></svg></span>
+      <span><span class="tile-titulo">Movimentações</span><span class="tile-desc d-block">Saída e entrada de equipamentos do estoque</span></span>
     </a>
 
     <a th:if="${@authService.temPermissao('RFID','READ')}" th:href="@{/admin/etiquetas/nao-vistas}" class="tile">

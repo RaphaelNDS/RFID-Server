@@ -41,7 +41,7 @@ class MigracaoV31Test {
             "insert into permissoes (usuario_id, modulo, acao) values (1, 'LOCACAO', 'READ')"
         )
 
-        assertThat(flyway().migrate().success).isTrue()
+        assertThat(flyway("31").migrate().success).isTrue()
 
         assertThat(permissoes(1)).containsExactlyInAnyOrder("RFID_READ", "RFID_UPDATE", "CATALOGO_READ",
             "LOCACAO_READ", "LOCACAO_UPDATE", "MANUTENCAO_READ", "MANUTENCAO_UPDATE")

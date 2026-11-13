@@ -4,7 +4,6 @@ import org.example.model.AreaAuditoria
 import org.example.service.AuditoriaService
 import org.example.service.EtiquetaVista
 import org.example.service.RelatorioEtiquetasService
-import org.example.util.FormatoBr
 import org.example.util.FormatoPlanilha
 import org.example.util.Planilha
 import org.example.util.respostaPlanilha
@@ -37,12 +36,11 @@ class RelatorioEtiquetasController(
         @RequestParam(required = false) formato: String?,
         @RequestParam(required = false) situacao: String?,
         @RequestParam(required = false) local: Long?,
-        @RequestParam(required = false) responsavel: Long?,
         @RequestParam(required = false) baixados: Boolean?,
         auth: Authentication
     ): ResponseEntity<ByteArray> {
         val tipoArquivo = FormatoPlanilha.de(formato)
-        val etiquetas = relatorio.etiquetasComUltimaVez(busca, AdminController.filtro(situacao, local, responsavel, baixados))
+        val etiquetas = relatorio.etiquetasComUltimaVez(busca, AdminController.filtro(situacao, local, baixados))
 
         log.info("{} exportou o cadastro de {} etiqueta(s) em {}{}", auth.name, etiquetas.size,
             tipoArquivo.extensao.uppercase(), busca?.trim()?.takeIf { it.isNotEmpty() }?.let { " (busca: '$it')" } ?: "")
@@ -89,17 +87,15 @@ class RelatorioEtiquetasController(
     private fun planilha(nome: String, etiquetas: List<EtiquetaVista>): Planilha {
         return Planilha(
             nome = nome,
-            // As colunas até "Nota fiscal" (menos a matrícula) são as mesmas da importação (ImportacaoEtiquetasService): a planilha exportada
+            // As colunas até "Situação" são as mesmas da importação (ImportacaoEtiquetasService): a planilha exportada
             // pode ser corrigida e importada de volta
             colunas = listOf("Etiqueta (EPC)", "Código", "Patrimônio", "Tipo", "Marca", "Modelo", "Nº série",
-                "Unidade", "Local", "Responsável", "Situação",
-                "Valor de aquisição", "Data de aquisição", "Nota fiscal",
+                "Unidade", "Local", "Situação",
                 "Última leitura", "Último inventário", "Último local", "Dias sem ser vista"),
             linhas = etiquetas.map { v ->
                 val e = v.etiqueta
                 listOf(e.tag, e.codigoInterno, e.patrimonio, e.tipoNome, e.marcaNome, e.modeloNome, e.numeroSerie,
-                    e.unidadeNome, e.localNome, e.responsavelNome, e.situacao.rotulo,
-                    e.valorAquisicao?.let { FormatoBr.numero(it) }, e.dataAquisicao?.let { FormatoBr.data(it) }, e.notaFiscal,
+                    e.unidadeNome, e.localNome, e.situacao.rotulo,
                     v.ultimaLeitura, v.ultimoInventario, v.ultimoLocal,
                     v.diasSemSerVista)
             }

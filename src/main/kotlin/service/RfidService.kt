@@ -1,20 +1,14 @@
 package org.example.service
 
 import org.example.model.MotivoBaixa
-import org.example.model.PedidoLocacaoEntity
 import org.example.model.SituacaoBem
-import org.example.model.StatusManutencao
 import org.example.model.TagEntity
 import org.example.model.TagNaoCadastradaEntity
 import org.example.repository.*
-import org.example.repository.ManutencaoRepository
-import org.example.repository.PedidoItemRepository
-import org.example.repository.PedidoLocacaoRepository
 import org.example.request.CadastroRequest
 import org.example.request.TagNaoCadastradaView
 import org.example.response.TagResponse
 import org.example.response.TagViewAdmin
-import org.example.util.FormatoBr
 import org.example.util.normalizarEpc
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
@@ -25,7 +19,8 @@ import org.springframework.data.domain.Sort
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.math.BigDecimal
+import org.example.model.TipoMovimento
+import java.time.ZoneId
 import java.security.MessageDigest
 import java.time.Clock
 import java.time.LocalDate
@@ -35,13 +30,12 @@ import java.time.LocalDateTime
 class EdicaoConcorrenteException(mensagem: String) : IllegalArgumentException(mensagem)
 
 /**
- * Filtros da tela de etiquetas (1.6.0). Por padrão, todas as situações menos BAIXADO e VENDIDO (1.12.0). [situacao] escolhe uma só
+ * Filtros da tela de etiquetas (1.6.0). Por padrão, todas as situações menos BAIXADO. [situacao] escolhe uma só
  * (inclusive BAIXADO); [incluirBaixados] junta os baixados às demais.
  */
 data class FiltroEtiquetas(
     val situacao: SituacaoBem? = null,
     val localId: Long? = null,
-    val responsavelId: Long? = null,
     val incluirBaixados: Boolean = false
 ) {
     fun situacoes(): List<SituacaoBem> = when {
@@ -50,7 +44,7 @@ data class FiltroEtiquetas(
         else -> SituacaoBem.NO_ACERVO
     }
 
-    val ativo: Boolean get() = situacao != null || localId != null || responsavelId != null || incluirBaixados
+    val ativo: Boolean get() = situacao != null || localId != null || incluirBaixados
 }
 
 @Service
@@ -65,31 +59,11 @@ class RfidService(
     // Gestão de patrimônio (1.6.0). Opcionais para os testes que montam o serviço à mão
     private val locaisRepo: LocalRepository? = null,
     private val unidadesRepo: UnidadeRepository? = null,
-    private val responsaveisRepo: ResponsavelRepository? = null,
-    // Locação (1.12.0): equipamento num pedido não recebe baixa, não é excluído e a situação não muda pela edição
-    private val pedidoItens: PedidoItemRepository? = null,
-    // Manutenção (1.11.0): mesmas travas
-    private val manutencoes: ManutencaoRepository? = null,
-    private val pedidos: PedidoLocacaoRepository? = null
+    // 2.0.0: a saída que levou o equipamento, na ficha do coletor
+    private val movimentoItens: MovimentoItemRepository? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
-
-    /**
-     * O bem está fora num pedido de locação ou numa manutenção aberta: [onde] ("no pedido de locação nº 3"), o que
-     * encerra ([fim]) e o que fazer antes de mexer nele ([acao]). A situação dele não muda pela edição enquanto isso.
-     */
-    data class Ocupacao(val onde: String, val fim: String, val acao: String)
-
-    fun ocupacao(tagId: Long): Ocupacao? {
-        pedidoItens?.findFirstByTagIdAndConferidoEmIsNull(tagId)?.let {
-            return Ocupacao("no pedido de locação nº ${it.pedidoId}", "a devolução for conferida", "registre a devolução e a conferência")
-        }
-        manutencoes?.findFirstByTagIdAndStatus(tagId, StatusManutencao.ABERTA)?.let {
-            return Ocupacao("na manutenção nº ${it.id}", "a manutenção for concluída", "conclua a manutenção")
-        }
-        return null
-    }
 
     /* ================= CADASTRO NORMAL ================= */
 
@@ -109,10 +83,9 @@ class RfidService(
         require(req.codigoInterno.isNotBlank()) { "Informe o código interno" }
         validarCatalogo(req)
         recusarPatrimonioRepetido(req.patrimonio, idAtual = null)
-        validarLocalEResponsavel(req, localAtual = null, responsavelAtual = null)
+        validarLocal(req, localAtual = null)
 
         val hash = hashTag(req.tag)
-        val valor = valorDo(req)
 
         val entity = TagEntity(
             tagHash = hash,
@@ -126,11 +99,7 @@ class RfidService(
             modeloId = req.modeloId,
 
             localId = req.localId,
-            responsavelId = req.responsavelId,
             situacao = situacaoEscolhida(req.situacao) ?: SituacaoBem.DISPONIVEL,
-            valorAquisicao = valor.valor,
-            dataAquisicao = valor.data,
-            notaFiscal = valor.notaFiscal
         )
 
         val salva = repo.save(entity)
@@ -163,7 +132,9 @@ class RfidService(
             ?.nome
 
         val local = tag.localId?.let { id -> locaisRepo?.findById(id)?.orElse(null) }
-        val locacao = pedidoAtual(tag.id)
+        // Fora do estoque: para onde foi e quando (a saída mais recente)
+        val saida = if (tag.situacao != SituacaoBem.FORA) null
+        else movimentoItens?.ultimosDoTipo(tag.id, TipoMovimento.SAIDA, PageRequest.of(0, 1))?.firstOrNull()
         return TagResponse(
             codigoInterno = tag.codigoInterno,
             tipo = tipoNome,
@@ -175,44 +146,31 @@ class RfidService(
             situacaoRotulo = tag.situacao.rotulo,
             unidade = local?.unidadeId?.let { id -> unidadesRepo?.findById(id)?.orElse(null)?.nome },
             local = local?.nome,
-            responsavel = tag.responsavelId?.let { id -> responsaveisRepo?.findById(id)?.orElse(null)?.nome },
-            // Locação (1.12.0): o pedido em que o equipamento está (alugado ou esperando a conferência da devolução)
-            pedido = locacao?.id,
-            cliente = locacao?.cliente,
-            previsaoDevolucao = locacao?.previsaoDevolucao,
-            localEntrega = locacao?.localEntrega
+            destino = saida?.destino,
+            saidaEm = saida?.dataHora?.atZone(ZoneId.systemDefault())?.toOffsetDateTime()
         )
     }
 
-    /** O pedido de locação em que o equipamento está agora (saiu e a devolução ainda não foi conferida), ou null. */
-    fun pedidoAtual(tagId: Long): PedidoLocacaoEntity? =
-        pedidoItens?.findFirstByTagIdAndConferidoEmIsNull(tagId)?.let { pedidos?.findById(it.pedidoId)?.orElse(null) }
-
     /**
-     * Local e responsável escolhidos existem; os desativados só valem se já eram os do bem (a edição de um bem que
-     * ficou num local desativado não obriga a trocar o local).
+     * O local escolhido existe; o desativado só vale se já era o do bem (a edição de um bem que ficou num local
+     * desativado não obriga a trocar o local).
      */
-    private fun validarLocalEResponsavel(req: CadastroRequest, localAtual: Long?, responsavelAtual: Long?) {
+    private fun validarLocal(req: CadastroRequest, localAtual: Long?) {
         req.localId?.let { id ->
             val local = locaisRepo?.findById(id)?.orElse(null) ?: throw IllegalArgumentException("Local não encontrado")
             require(local.ativo || id == localAtual) { "O local ${local.nome} está desativado" }
         }
-        req.responsavelId?.let { id ->
-            val r = responsaveisRepo?.findById(id)?.orElse(null) ?: throw IllegalArgumentException("Responsável não encontrado")
-            require(r.ativo || id == responsavelAtual) { "O responsável ${r.nome} está desativado" }
-        }
     }
 
     /**
-     * A situação escolhida no formulário; vazio = não escolheu. Só as editáveis: as outras vêm das telas próprias
-     * (baixa, venda e pedido de locação).
+     * A situação escolhida no formulário; vazio = não escolheu. Só as editáveis: "Fora do estoque" vem da saída
+     * (Movimentações) e "Baixado", da baixa.
      */
     private fun situacaoEscolhida(texto: String?): SituacaoBem? {
         if (texto.isNullOrBlank()) return null
         val s = SituacaoBem.de(texto) ?: throw IllegalArgumentException("Situação inválida: $texto")
         require(s != SituacaoBem.BAIXADO) { "Para baixar o bem use \"Dar baixa\", com o motivo" }
-        require(s != SituacaoBem.VENDIDO) { "Para vender o equipamento use \"Registrar venda\", na edição da etiqueta" }
-        require(s in SituacaoBem.EDITAVEIS) { "\"${s.rotulo}\" vem do pedido de locação (saída e devolução), não da edição" }
+        require(s in SituacaoBem.EDITAVEIS) { "\"${s.rotulo}\" vem da saída do equipamento (Movimentações), não da edição" }
         return s
     }
 
@@ -277,18 +235,17 @@ class RfidService(
         val modelos = modeloRepo.findAll().associate { it.id to it.nome }
         val unidades = unidadesRepo?.findAll()?.associate { it.id to it.nome }.orEmpty()
         val locais = locaisRepo?.findAll()?.associateBy { it.id }.orEmpty()
-        val responsaveis = responsaveisRepo?.findAll()?.associate { it.id to it.nome }.orEmpty()
 
         val padrao = padraoBusca(busca)
         val termo = busca?.trim()?.lowercase().orEmpty()
-        // Busca pelo nome do catálogo, do local ou do responsável vira busca pelos ids (cadastros pequenos, já carregados).
+        // Busca pelo nome do catálogo ou do local vira busca pelos ids (cadastros pequenos, já carregados).
         // Lista vazia no IN não é aceita por todos os bancos: -1 não existe
         fun ids(nomes: Map<Long, String>) =
             nomes.filterValues { termo.isNotEmpty() && it.lowercase().contains(termo) }.keys.ifEmpty { setOf(-1L) }
 
         val resultado = paginar { pedido ->
-            repo.buscar(padrao, ids(tipos), ids(marcas), ids(modelos), ids(locais.mapValues { it.value.nome }), ids(responsaveis),
-                filtro.situacoes(), filtro.localId ?: -1L, filtro.responsavelId ?: -1L, pedido)
+            repo.buscar(padrao, ids(tipos), ids(marcas), ids(modelos), ids(locais.mapValues { it.value.nome }),
+                filtro.situacoes(), filtro.localId ?: -1L, pedido)
         }
 
         return resultado.map { tag ->
@@ -304,11 +261,7 @@ class RfidService(
                 numeroSerie = tag.numeroSerie,
                 unidadeNome = local?.unidadeId?.let { unidades[it] },
                 localNome = local?.nome,
-                responsavelNome = tag.responsavelId?.let { responsaveis[it] },
                 situacao = tag.situacao,
-                valorAquisicao = tag.valorAquisicao,
-                dataAquisicao = tag.dataAquisicao,
-                notaFiscal = tag.notaFiscal
             )
         }
     }
@@ -337,16 +290,10 @@ class RfidService(
         require(req.codigoInterno.isNotBlank()) { "Informe o código interno" }
         validarCatalogo(req.copy(tag = tag.tagReal))
         recusarPatrimonioRepetido(req.patrimonio, idAtual = tag.id)
-        validarLocalEResponsavel(req, localAtual = tag.localId, responsavelAtual = tag.responsavelId)
+        validarLocal(req, localAtual = tag.localId)
         // Conferida antes de mexer na etiqueta: recusar depois deixaria a entidade alterada na sessão do JPA
-        // Fora das editáveis (alugado, em devolução, vendido, baixado): fica como está; muda pelas telas próprias
+        // Fora das editáveis (fora do estoque, baixado): fica como está; muda pela entrada ou pela baixa
         val novaSituacao = if (tag.situacao !in SituacaoBem.EDITAVEIS) null else situacaoEscolhida(req.situacao)
-        ocupacao(tag.id)?.let { o ->
-            require(novaSituacao == null || novaSituacao == tag.situacao) {
-                "Este bem está ${o.onde}: a situação volta sozinha quando ${o.fim}"
-            }
-        }
-        val valor = valorDo(req)
 
         val antes = historico.retrato(tag)
         tag.codigoInterno = req.codigoInterno
@@ -356,12 +303,8 @@ class RfidService(
         tag.marcaId = req.marcaId
         tag.modeloId = req.modeloId
         tag.localId = req.localId
-        tag.responsavelId = req.responsavelId
         // Bem baixado continua baixado (desfazer é pela tela da baixa); vazio = a situação atual
         novaSituacao?.let { tag.situacao = it }
-        tag.valorAquisicao = valor.valor
-        tag.dataAquisicao = valor.data
-        tag.notaFiscal = valor.notaFiscal
         repo.save(tag)
 
         val mudaram = historico.registrarAlteracao(tag, antes)
@@ -373,22 +316,6 @@ class RfidService(
         return mudaram
     }
 
-    private data class ValorInformado(val valor: BigDecimal?, val data: LocalDate?, val notaFiscal: String?)
-
-    /**
-     * Valor, data de aquisição e nota fiscal do pedido (1.8.0), já conferidos: valor não negativo, data que não está
-     * no futuro e nota de até 60 caracteres. Tudo opcional (vazio = sem valor).
-     */
-    private fun valorDo(req: CadastroRequest): ValorInformado {
-        val valor = FormatoBr.lerValor(req.valorAquisicao)
-        val data = FormatoBr.lerData(req.dataAquisicao)
-        require(data == null || !data.isAfter(LocalDate.now(relogio))) {
-            "A data de aquisição ${FormatoBr.data(data)} está no futuro"
-        }
-        val nota = req.notaFiscal?.trim()?.takeIf { it.isNotEmpty() }
-        require(nota == null || nota.length <= 60) { "A nota fiscal passa de 60 caracteres (tem ${nota!!.length})" }
-        return ValorInformado(valor, data, nota)
-    }
 
     private fun normalizar(req: CadastroRequest): CadastroRequest {
         val limpo = req.copy(
@@ -425,8 +352,6 @@ class RfidService(
     fun darBaixa(id: Long, motivo: MotivoBaixa, data: LocalDate?, observacao: String?, origem: String? = null): TagEntity {
         val tag = buscarPorId(id)
         require(!tag.baixado) { "Este bem já foi baixado em ${tag.baixaEm} (${tag.baixaMotivo?.rotulo})" }
-        require(tag.situacao != SituacaoBem.VENDIDO) { "Este equipamento foi vendido: desfaça a venda antes de dar baixa" }
-        ocupacao(tag.id)?.let { o -> throw IllegalArgumentException("Este bem está ${o.onde}: ${o.acao} antes da baixa") }
         val hoje = LocalDate.now(relogio)
         val dia = data ?: hoje
         require(!dia.isAfter(hoje)) { "A data da baixa não pode ser no futuro" }
@@ -445,7 +370,7 @@ class RfidService(
         return tag
     }
 
-    /** Desfaz a baixa (lançada por engano): o bem volta "Em uso". Fica no histórico. */
+    /** Desfaz a baixa (lançada por engano): o bem volta para o estoque. Fica no histórico. */
     @Transactional
     fun desfazerBaixa(id: Long): TagEntity {
         val tag = buscarPorId(id)
@@ -466,7 +391,6 @@ class RfidService(
     @Transactional
     fun excluirTag(id: Long): TagEntity {
         val tag = buscarPorId(id)
-        ocupacao(tag.id)?.let { o -> throw IllegalArgumentException("Este bem está ${o.onde}: ${o.acao} antes de excluir") }
         val antes = historico.retrato(tag)
 
         repo.delete(tag)
