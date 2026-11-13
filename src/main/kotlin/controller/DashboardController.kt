@@ -14,7 +14,9 @@ class DashboardController(
     // 1.27.0: inventário cíclico (quantos locais contar nesta semana)
     private val ciclico: org.example.service.InventarioCiclicoService? = null,
     // 1.30.0: o que falta para começar a usar o sistema (só o administrador vê)
-    private val primeirosPassos: org.example.service.PrimeirosPassosService? = null
+    private val primeirosPassos: org.example.service.PrimeirosPassosService? = null,
+    // 1.33.0: problemas que ninguém recebeu porque os avisos estão desligados
+    private val alertas: org.example.service.AlertaService? = null
 ) {
 
     @GetMapping("/dashboard")
@@ -23,7 +25,10 @@ class DashboardController(
         model.addAttribute("isAdmin", authService.temRole("ADMIN"))
         if (authService.temPermissao("LOCACAO", "READ")) model.addAttribute("painel", painel?.painel())
         if (authService.temPermissao("LEITURA", "READ")) model.addAttribute("cicloSemana", ciclico?.locaisDaSemana())
-        if (authService.temRole("ADMIN")) model.addAttribute("primeirosPassos", primeirosPassos?.paraOPainel())
+        if (authService.temRole("ADMIN")) {
+            model.addAttribute("primeirosPassos", primeirosPassos?.paraOPainel())
+            model.addAttribute("problemasSemAviso", alertas?.takeIf { !it.algumLigado }?.problemasAbertos()?.takeIf { it.isNotEmpty() })
+        }
 
         return "dashboard"
     }

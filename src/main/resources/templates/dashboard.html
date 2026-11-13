@@ -19,6 +19,15 @@
     <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
   </div>
 
+  <!-- 1.33.0: problemas detectados que ninguém recebeu (email e Telegram desligados). Só o administrador -->
+  <div class="alert alert-erro" th:if="${problemasSemAviso != null}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+    <span><strong th:text="${#lists.size(problemasSemAviso)} + ' problema(s) sem aviso: '"></strong>
+      <span th:text="${#strings.listJoin(problemasSemAviso, '; ')}"></span>.
+      Os avisos estão desligados (nem email nem Telegram), então só aparecem aqui e no log.
+      <a th:href="@{/status}">Ver na tela Status</a>.</span>
+  </div>
+
   <!-- Primeiros passos (1.30.0): o que falta para começar a usar o sistema. Só o administrador; some quando tudo estiver
        feito ou quando ele ocultar (Administração · Personalizar) -->
   <div class="card" style="margin-bottom:20px" th:if="${primeirosPassos != null}" th:with="pp=${primeirosPassos}">

@@ -22,6 +22,22 @@ fun main(args: Array<String>) {
     if (args.firstOrNull() == "--decifrar-backup") {
         kotlin.system.exitProcess(decifrarBackup(args.drop(1)))
     }
+    // 1.33.0: uma cópia só por pasta, decidido antes de qualquer coisa (o Spring nem começa na segunda cópia).
+    // RFID_TRAVA_INSTANCIA=false desliga; RFID_TRAVA_ARQUIVO muda o arquivo (padrão ./data/servidor.lock)
+    if (System.getenv("RFID_TRAVA_INSTANCIA")?.trim()?.equals("false", ignoreCase = true) != true) {
+        val arquivo = Path.of(System.getenv("RFID_TRAVA_ARQUIVO")?.takeIf { it.isNotBlank() } ?: "./data/servidor.lock")
+        when (val r = org.example.util.TravaInstancia.adquirir(arquivo)) {
+            is org.example.util.TravaInstancia.Resultado.Ocupada -> {
+                System.err.println("[ERRO] Já tem um servidor RFID rodando nesta pasta" + (r.quem?.let { " ($it)" } ?: "") + ".")
+                System.err.println("       Esta segunda cópia não vai subir: duas ao mesmo tempo disputariam o banco, os backups e a porta.")
+                System.err.println("       Se o outro ainda está subindo, espere ele terminar (pode levar até 1 minuto). Para trocar, pare o outro antes.")
+                kotlin.system.exitProcess(3)
+            }
+            is org.example.util.TravaInstancia.Resultado.SemTrava ->
+                System.err.println("[AVISO] Não foi possível criar a trava de cópia única (${r.motivo}): o servidor sobe sem ela.")
+            org.example.util.TravaInstancia.Resultado.Adquirida -> {}
+        }
+    }
     runApplication<RfidApplication>(*args)
 }
 

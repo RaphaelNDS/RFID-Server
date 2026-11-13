@@ -81,7 +81,7 @@ class Versao1300IntegracaoTest : IntegracaoBase() {
     @Test
     fun `primeiros passos aparecem para o admin ate ele ocultar`() {
         val passos = primeirosPassos.passos()
-        assertThat(passos.total).isEqualTo(8)
+        assertThat(passos.total).isEqualTo(9)
         // Sem rfid.backup.pasta nos testes: o backup fora do computador falta, então o quadro aparece
         assertThat(passos.passos.single { it.titulo == "Backup fora do computador" }.feito).isFalse()
 

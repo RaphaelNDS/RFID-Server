@@ -47,6 +47,15 @@ class AlertaService(
     /** Problemas em aberto: chave → quando o último email dele foi mandado. */
     private val abertos = ConcurrentHashMap<String, LocalDateTime>()
 
+    /** 1.33.0: o assunto de cada problema em aberto, para o painel mostrar o que ninguém recebeu com os avisos desligados. */
+    private val assuntosAbertos = ConcurrentHashMap<String, String>()
+
+    /** 1.33.0: algum canal de aviso funcionando (email ou Telegram). Sem nenhum, os avisos ficam só no log. */
+    val algumLigado: Boolean get() = ligado || telegramLigado
+
+    /** 1.33.0: os problemas avisados que ainda não foram resolvidos (assunto), na ordem em que apareceram. */
+    fun problemasAbertos(): List<String> = assuntosAbertos.entries.sortedBy { abertos[it.key] }.map { it.value }
+
     @Volatile private var ultimoEnvio: LocalDateTime? = null
     @Volatile private var ultimoErro: String? = null
 
@@ -65,6 +74,7 @@ class AlertaService(
     fun problema(chave: String, assunto: String, texto: String) {
         val agora = LocalDateTime.now(relogio)
         val anterior = abertos[chave]
+        assuntosAbertos[chave] = assunto
         if (anterior != null && Duration.between(anterior, agora).toHours() < repetirHoras) return
         abertos[chave] = agora
         log.warn("Aviso ({}): {} — {}", chave, assunto, texto.lineSequence().first())
@@ -73,6 +83,7 @@ class AlertaService(
 
     /** O problema [chave] sumiu: manda um "resolvido" só se ele tinha sido avisado. */
     fun resolvido(chave: String, assunto: String, texto: String) {
+        assuntosAbertos.remove(chave)
         if (abertos.remove(chave) == null) return
         log.info("Aviso ({}) resolvido: {}", chave, assunto)
         enviar("Resolvido: $assunto", texto, "")
