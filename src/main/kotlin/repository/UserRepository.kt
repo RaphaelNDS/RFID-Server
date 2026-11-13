@@ -34,6 +34,9 @@ interface UserRepository : JpaRepository<UsuarioEntity, Long> {
 
     fun countBySenhaPedidaEmIsNotNull(): Long
 
+    /** 1.30.0: Primeiros passos (equipe com usuário próprio). */
+    fun countByAtivoTrue(): Long
+
     @Query("""
         SELECT u FROM UsuarioEntity u
         LEFT JOIN FETCH u.permissoes

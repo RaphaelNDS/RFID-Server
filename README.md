@@ -298,6 +298,24 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Primeiros passos, telas no menu e dicas dos erros do coletor (1.30.0)
+
+**Primeiros passos** (só o administrador): quadro no painel inicial com o que falta para começar a usar o sistema,
+conferido sozinho a partir do banco: catálogo, locais, um usuário para cada pessoa (2 ou mais ativos), coletor ligado,
+equipamentos cadastrados, clientes, primeiro inventário finalizado e backup do certificado fora do computador
+(`rfid.backup.pasta`). Some quando tudo estiver feito ou com "Ocultar este quadro".
+
+**Personalizar** (Administração, só o administrador): escolhe quais telas aparecem no menu de todos: inventário cíclico,
+transferências, agenda, painel para TV, disponibilidade, relatórios da locação, compra e venda, acessórios e manutenções.
+Desligar só tira do menu: a tela, as rotas, as permissões e os dados continuam, e marcar de novo traz de volta. A mesma
+tela mostra o quadro Primeiros passos completo e volta a mostrá-lo no painel.
+
+**Dicas dos erros do coletor**: na tela de erros do coletor, os erros conhecidos ganham, acima da mensagem técnica, o
+que fazer em português: coletor no carregador ("Charging in Progress"), leitura ainda em andamento, bateria fraca, leitor
+quente, região não configurada, leitor desconectado, certificado, sem conexão com o servidor, espaço cheio e relógio errado.
+
+- Banco: V41 (`configuracoes_sistema`, chave e valor; sem linhas = tudo no menu e o quadro visível).
+
 ### Cadastro em lote e importação de clientes (1.29.0) e limpar pendentes (1.29.1)
 
 **Cadastrar pendentes em lote** (Etiquetas · Criar): na tela **Pendentes**, marque as etiquetas (ou use "Cadastrar todas

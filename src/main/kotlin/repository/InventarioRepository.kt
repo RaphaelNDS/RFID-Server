@@ -28,6 +28,9 @@ interface LocalRepository : JpaRepository<LocalEntity, Long> {
 
 interface InventarioRepository : JpaRepository<InventarioEntity, String> {
 
+    /** 1.30.0: Primeiros passos (primeiro inventário finalizado). */
+    fun countByStatus(status: org.example.model.StatusInventario): Long
+
     /** Tela de inventários: uma página (a ordem vem no [pagina]). */
     fun findAllBy(pagina: Pageable): Page<InventarioEntity>
 

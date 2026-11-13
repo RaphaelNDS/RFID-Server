@@ -62,6 +62,8 @@ class ColetorWebController(
         model.addAttribute("tipos", erros.tiposComErro(nome).associateWith { ErroColetorService.rotuloTipo(it) })
         model.addAttribute("tipoSelecionado", tipo)
         model.addAttribute("rotulosTipo", ErroColetorService.ROTULOS_TIPO)
+        // 1.30.0: o que fazer nos erros conhecidos (mensagem do leitor Zebra em inglês etc.)
+        model.addAttribute("dicas", org.example.service.DicasErroColetor)
         return "coletor-erros"
     }
 

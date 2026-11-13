@@ -75,7 +75,7 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("40") // V40 = inventário cíclico
+        assertThat(resultado.targetSchemaVersion).isEqualTo("41") // V41 = configurações do sistema
     }
 
     @Test
