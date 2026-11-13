@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<!-- Roteiro de entregas e retiradas do dia em PDF (1.24.0): separado por quem leva/busca, para o motorista -->
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="'Roteiro de ' + ${fmt.data(a.dia)}">Roteiro</title>
+  <style th:replace="~{pdf/base :: estilo}"></style>
+</head>
+<body>
+<div th:replace="~{pdf/base :: rodape}"></div>
+<div th:replace="~{pdf/base :: cabecalho('Roteiro de entregas e retiradas', ${fmt.data(a.dia)}, ${#lists.size(a.entregas)} + ' entrega(s), ' + ${#lists.size(a.retiradas)} + ' retirada(s)')}"></div>
+
+<div th:each="grupo : ${a.porResponsavel}">
+  <h2 th:text="${grupo.first} + ' (' + ${#lists.size(grupo.second)} + ')'"></h2>
+  <table class="lista">
+    <thead><tr><th>Hora</th><th>O quê</th><th>Cliente e endereço</th><th>Equipamentos</th><th>Assinatura</th></tr></thead>
+    <tbody>
+    <tr th:each="i : ${grupo.second}">
+      <td th:text="${i.horaTexto}"></td>
+      <td>
+        <span th:text="${i.tipo.rotulo} + ' · pedido nº ' + ${i.pedido.id}"></span>
+        <div th:if="${i.atrasado}" th:text="'ATRASADO (previsto ' + ${fmt.data(i.dia)} + ')'"></div>
+      </td>
+      <td>
+        <strong th:text="${i.pedido.cliente}"></strong>
+        <div th:text="${i.endereco} ?: '-'"></div>
+        <div th:if="${i.cliente != null and (i.cliente.contato != null or i.cliente.telefone != null)}"
+             th:text="${i.cliente.contato ?: ''} + ' ' + ${i.cliente.telefone ?: ''}"></div>
+      </td>
+      <td>
+        <div th:each="linha : ${detalhes.get(i.chave)}" th:text="${linha}"></div>
+      </td>
+      <td style="width:22%"></td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+</body>
+</html>

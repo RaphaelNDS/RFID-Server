@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Agenda · Sistema RFID</title>
+
+<section class="page" th:with="pode=${@authService.temPermissao('LOCACAO','UPDATE')}">
+
+  <div class="page-header">
+    <div>
+      <h1>Agenda de entregas e retiradas</h1>
+      <p class="subtitulo">
+        <span th:text="${fmt.data(a.dia)}"></span>
+        <span class="badge badge-CUSTOM" th:if="${a.dia == a.hoje}">hoje</span>
+        · entrega pela saída prevista do pedido; retirada pela devolução prevista
+      </p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/agenda(dia=${a.dia.minusDays(1)})}" class="btn btn-ghost">‹ Dia anterior</a>
+      <a th:href="@{/admin/agenda}" class="btn btn-ghost" th:unless="${a.dia == a.hoje}">Hoje</a>
+      <a th:href="@{/admin/agenda(dia=${a.dia.plusDays(1)})}" class="btn btn-ghost">Próximo dia ›</a>
+      <a th:href="@{/admin/agenda/roteiro.pdf(dia=${a.dia})}" class="btn btn-secondary" target="_blank" rel="noopener" th:unless="${a.vazia}">
+        <svg class="ic"><use href="/img/icones.svg#download"/></svg>Roteiro (PDF)
+      </a>
+    </div>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <form method="get" class="toolbar card" style="margin-bottom:16px">
+    <div class="field"><label for="dia">Ir para o dia</label><input id="dia" name="dia" type="date" th:value="${a.dia}"></div>
+    <button type="submit" class="btn btn-secondary">Ver</button>
+    <span class="muted" style="align-self:center">Próximos dias:
+      <a th:each="pr : ${a.proximos}" th:href="@{/admin/agenda(dia=${pr.first})}" style="margin-left:8px"
+         th:text="${#temporals.format(pr.first, 'dd/MM')} + ' (' + ${pr.second} + ')'"></a>
+    </span>
+  </form>
+
+  <div class="alert alert-ok" th:if="${a.vazia}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span>Nenhuma entrega ou retirada neste dia.</span>
+  </div>
+
+  <th:block th:each="grupo : ${grupos}">
+    <div class="card" style="margin-bottom:16px" th:unless="${#lists.isEmpty(grupo.second)}">
+      <div class="card-header"><h2 th:text="${grupo.first} + ' (' + ${#lists.size(grupo.second)} + ')'"></h2></div>
+      <div class="table-wrap">
+        <table class="table table-cartoes">
+          <thead><tr><th>Hora</th><th>Pedido</th><th>Endereço</th><th>Quantos</th><th>Quem leva/busca</th><th class="acoes"><span class="sr-only">Alterar</span></th></tr></thead>
+          <tbody>
+          <tr th:each="i : ${grupo.second}">
+            <td class="nowrap" data-rotulo="Hora">
+              <strong th:text="${i.horaTexto}"></strong>
+              <div class="muted" style="font-size:12px" th:text="${i.tipo.rotulo} + (${i.atrasado} ? ' · prevista ' + ${#temporals.format(i.dia, 'dd/MM')} : '')"></div>
+            </td>
+            <td class="principal cartao-titulo">
+              <a th:href="@{/admin/pedidos/{id}(id=${i.pedido.id})}" th:text="'Nº ' + ${i.pedido.id} + ' · ' + ${i.pedido.cliente}"></a>
+              <div class="muted" style="font-size:12px" th:if="${i.cliente != null and (i.cliente.contato != null or i.cliente.telefone != null)}"
+                   th:text="${i.cliente.contato ?: ''} + ' ' + ${i.cliente.telefone ?: ''}"></div>
+            </td>
+            <td data-rotulo="Endereço" th:text="${i.endereco} ?: '—'"></td>
+            <td data-rotulo="Quantos" class="nowrap" th:text="${i.quantidade} + (${i.tipo.name() == 'ENTREGA'} ? ' a entregar' : ' na rua')"></td>
+            <td data-rotulo="Quem leva/busca" th:text="${i.responsavel} ?: '—'"></td>
+            <td class="acoes">
+              <details th:if="${pode}" style="display:inline-block">
+                <summary class="btn btn-ghost btn-sm">Alterar</summary>
+                <form class="toolbar" style="border:0;padding:10px 0 0;justify-content:flex-end"
+                      th:action="@{/admin/agenda/{id}/{t}(id=${i.pedido.id},t=${i.tipo.name().toLowerCase()})}" method="post">
+                  <input type="hidden" name="dia" th:value="${a.dia}">
+                  <div class="field"><label th:for="'r-' + ${i.tipo} + ${i.pedido.id}">Quem</label>
+                    <input th:id="'r-' + ${i.tipo} + ${i.pedido.id}" name="responsavel" maxlength="120" th:value="${i.responsavel}" placeholder="Motorista"></div>
+                  <div class="field"><label th:for="'h-' + ${i.tipo} + ${i.pedido.id}">Hora</label>
+                    <input th:id="'h-' + ${i.tipo} + ${i.pedido.id}" name="hora" type="time" th:value="${i.hora}"></div>
+                  <button type="submit" class="btn btn-secondary btn-sm">Salvar</button>
+                </form>
+              </details>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </th:block>
+
+</section>
+</html>

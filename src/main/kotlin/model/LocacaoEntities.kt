@@ -133,7 +133,18 @@ class PedidoLocacaoEntity(
     /** 1.19.0: aprovação do pedido de cliente "só com aprovação" (V34). */
     var aprovadoPor: String? = null,
 
-    var aprovadoEm: LocalDateTime? = null
+    var aprovadoEm: LocalDateTime? = null,
+
+    /** 1.24.0: agenda de entregas e retiradas (V38): quem leva e a hora combinada; quem busca e a hora. */
+    @Column(length = 120)
+    var entregaResponsavel: String? = null,
+
+    var entregaHora: java.time.LocalTime? = null,
+
+    @Column(length = 120)
+    var retiradaResponsavel: String? = null,
+
+    var retiradaHora: java.time.LocalTime? = null
 )
 
 /** O que o pedido pede (tabela pedido_linhas, V29): N de um tipo/marca/modelo, ou um bem específico. */
