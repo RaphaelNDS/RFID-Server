@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<!-- Painel para a TV do depósito (1.28.0): tela cheia, sem menu, escura e com letras grandes. O miolo (th:fragment
+     "conteudo") é buscado de novo a cada minuto em /admin/painel-tv/conteudo; isso também mantém a sessão viva. -->
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Painel do depósito · Sistema RFID</title>
+  <link rel="icon" th:href="@{/img/favicon.svg}" type="image/svg+xml">
+  <style>
+    :root { --fundo:#0f1419; --cartao:#1a2129; --borda:#2a333d; --texto:#e8edf2; --suave:#95a3b3;
+            --verde:#3ecf8e; --vermelho:#ff6b6b; --amarelo:#ffc857; --azul:#5aa9ff; }
+    * { box-sizing:border-box; }
+    html, body { margin:0; background:var(--fundo); color:var(--texto); font-family:system-ui, "Segoe UI", Roboto, sans-serif; }
+    body { padding:1.6vw 2vw; min-height:100vh; font-size:clamp(14px, 1.25vw, 30px); }
+    header { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:1.4vw; gap:16px; flex-wrap:wrap; }
+    header h1 { margin:0; font-size:2.2em; font-weight:700; }
+    .relogio { font-size:2.6em; font-weight:700; font-variant-numeric:tabular-nums; }
+    .data { color:var(--suave); font-size:1.1em; text-align:right; }
+    .numeros { display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:1vw; margin-bottom:1.4vw; }
+    .numero { background:var(--cartao); border:1px solid var(--borda); border-radius:12px; padding:.8em 1em; }
+    .numero .rotulo { color:var(--suave); font-size:.95em; }
+    .numero .valor { font-size:3em; font-weight:700; line-height:1.1; font-variant-numeric:tabular-nums; }
+    .verde { color:var(--verde); } .vermelho { color:var(--vermelho); } .amarelo { color:var(--amarelo); } .azul { color:var(--azul); }
+    .colunas { display:grid; grid-template-columns:repeat(3, 1fr); gap:1vw; }
+    @media (max-width: 900px) { .colunas { grid-template-columns:1fr; } }
+    .coluna { background:var(--cartao); border:1px solid var(--borda); border-radius:12px; padding:.8em 1em; min-width:0; }
+    .coluna h2 { margin:0 0 .5em; font-size:1.3em; display:flex; justify-content:space-between; }
+    .coluna h2 .qtd { color:var(--suave); font-weight:400; }
+    ul { list-style:none; margin:0; padding:0; }
+    li { padding:.45em 0; border-top:1px solid var(--borda); }
+    li:first-child { border-top:0; }
+    .linha1 { display:flex; justify-content:space-between; gap:12px; }
+    .linha1 .nome { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .linha1 .lado { white-space:nowrap; font-variant-numeric:tabular-nums; }
+    .linha2 { color:var(--suave); font-size:.85em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .atrasado { border-left:4px solid var(--vermelho); padding-left:.6em; }
+    .vazio { color:var(--suave); padding:.4em 0; }
+    .mais { color:var(--suave); font-size:.85em; padding-top:.4em; }
+    footer { margin-top:1.2vw; color:var(--suave); font-size:.85em; display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+    .aviso { display:none; background:var(--vermelho); color:#fff; border-radius:8px; padding:.5em 1em; margin-bottom:1vw; font-weight:600; }
+    .aviso a { color:#fff; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Depósito</h1>
+  </div>
+  <div>
+    <div class="relogio" id="relogio" th:text="${#temporals.format(atualizadoEm, 'HH:mm')}">00:00</div>
+    <div class="data" id="data"></div>
+  </div>
+</header>
+
+<div class="aviso" id="aviso-sessao">A sessão do painel terminou. <a th:href="@{/admin/painel-tv}">Entre de novo</a> para continuar.</div>
+<div class="aviso" id="aviso-rede"></div>
+
+<main id="conteudo">
+<div th:fragment="conteudo" data-painel-tv th:with="hoje=${p.hoje}, SB=${T(org.example.model.SituacaoBem)}">
+
+  <div class="numeros">
+    <div class="numero"><div class="rotulo">Disponíveis</div><div class="valor verde" th:text="${p.quantos(SB.DISPONIVEL)}">0</div></div>
+    <div class="numero"><div class="rotulo">Alugados</div><div class="valor azul" th:text="${p.quantos(SB.ALUGADO)}">0</div></div>
+    <div class="numero"><div class="rotulo">A conferir</div><div class="valor" th:classappend="${p.aConferir > 0} ? 'amarelo'" th:text="${p.aConferir}">0</div></div>
+    <div class="numero"><div class="rotulo">Em manutenção</div><div class="valor" th:text="${p.manutencoesAbertas}">0</div></div>
+    <div class="numero" th:if="${cicloSemana != null}"><div class="rotulo">Inventário da semana</div>
+      <div class="valor" th:classappend="${cicloSemana > 0} ? 'amarelo'" th:text="${cicloSemana} + (${cicloSemana == 1} ? ' local' : ' locais')">0</div></div>
+  </div>
+
+  <div class="colunas">
+
+    <section class="coluna">
+      <h2><span>A separar</span><span class="qtd" th:text="${#lists.size(p.saidas)}"></span></h2>
+      <p class="vazio" th:if="${#lists.isEmpty(p.saidas)}">Nada para separar até amanhã.</p>
+      <ul>
+        <li th:each="s, st : ${p.saidas}" th:if="${st.index < 10}" th:classappend="${s.atrasada(hoje)} ? 'atrasado'"
+            th:with="ped=${s.resumo.pedido}">
+          <div class="linha1">
+            <span class="nome" th:text="'Nº ' + ${ped.id} + ' · ' + ${ped.cliente}"></span>
+            <span class="lado" th:text="${s.faltam} + ' a separar'"></span>
+          </div>
+          <div class="linha2" th:text="${ped.saidaPrevista == null} ? 'Sem data de saída'
+              : ('Sai ' + (${ped.saidaPrevista == hoje} ? 'hoje' : (${ped.saidaPrevista.isBefore(hoje)} ? 'atrasado (' + ${fmt.data(ped.saidaPrevista)} + ')' : 'amanhã'))
+                 + (${ped.entregaHora != null} ? ' às ' + ${#temporals.format(ped.entregaHora, 'HH:mm')} : '')
+                 + (${ped.entregaResponsavel != null} ? ' · ' + ${ped.entregaResponsavel} : ''))"></div>
+        </li>
+      </ul>
+      <div class="mais" th:if="${#lists.size(p.saidas) > 10}" th:text="'e mais ' + ${#lists.size(p.saidas) - 10}"></div>
+    </section>
+
+    <section class="coluna">
+      <h2><span>Voltam hoje</span><span class="qtd" th:text="${#lists.size(p.devolucoesHoje)}"></span></h2>
+      <p class="vazio" th:if="${#lists.isEmpty(p.devolucoesHoje)}">Nenhuma devolução prevista para hoje.</p>
+      <ul>
+        <li th:each="r, st : ${p.devolucoesHoje}" th:if="${st.index < 8}" th:with="ped=${r.pedido}">
+          <div class="linha1">
+            <span class="nome" th:text="'Nº ' + ${ped.id} + ' · ' + ${ped.cliente}"></span>
+            <span class="lado" th:text="${r.naRua} + ' na rua'"></span>
+          </div>
+          <div class="linha2" th:if="${ped.retiradaHora != null or ped.retiradaResponsavel != null}"
+               th:text="'Retirada' + (${ped.retiradaHora != null} ? ' às ' + ${#temporals.format(ped.retiradaHora, 'HH:mm')} : '')
+                  + (${ped.retiradaResponsavel != null} ? ' · ' + ${ped.retiradaResponsavel} : '')"></div>
+        </li>
+      </ul>
+      <div class="mais" th:if="${#lists.size(p.devolucoesHoje) > 8}" th:text="'e mais ' + ${#lists.size(p.devolucoesHoje) - 8}"></div>
+
+      <h2 style="margin-top:.9em"><span class="vermelho">Devolução atrasada</span><span class="qtd" th:text="${#lists.size(p.atrasados)}"></span></h2>
+      <p class="vazio" th:if="${#lists.isEmpty(p.atrasados)}">Nenhuma.</p>
+      <ul>
+        <li class="atrasado" th:each="r, st : ${p.atrasados}" th:if="${st.index < 6}" th:with="ped=${r.pedido}">
+          <div class="linha1">
+            <span class="nome" th:text="'Nº ' + ${ped.id} + ' · ' + ${ped.cliente}"></span>
+            <span class="lado vermelho" th:text="${r.diasAtraso} + (${r.diasAtraso == 1} ? ' dia' : ' dias')"></span>
+          </div>
+          <div class="linha2" th:text="${r.naRua} + ' na rua · devolução era ' + ${fmt.data(ped.previsaoDevolucao)}"></div>
+        </li>
+      </ul>
+      <div class="mais" th:if="${#lists.size(p.atrasados) > 6}" th:text="'e mais ' + ${#lists.size(p.atrasados) - 6}"></div>
+    </section>
+
+    <section class="coluna">
+      <h2><span>Manutenção atrasada</span><span class="qtd" th:text="${#lists.size(p.manutencoesAtrasadas)}"></span></h2>
+      <p class="vazio" th:if="${#lists.isEmpty(p.manutencoesAtrasadas)}">Nenhuma.</p>
+      <ul>
+        <li class="atrasado" th:each="m, st : ${p.manutencoesAtrasadas}" th:if="${st.index < 6}">
+          <div class="linha1">
+            <span class="nome" th:text="${#strings.isEmpty(m.patrimonio)} ? ${m.tagReal} : ${m.patrimonio}"></span>
+            <span class="lado" th:text="'previsto ' + ${fmt.data(m.previsaoRetorno)}"></span>
+          </div>
+          <div class="linha2" th:text="${m.descricaoBem ?: m.problema} + (${m.fornecedor != null} ? ' · ' + ${m.fornecedor} : '')"></div>
+        </li>
+      </ul>
+      <div class="mais" th:if="${#lists.size(p.manutencoesAtrasadas) > 6}" th:text="'e mais ' + ${#lists.size(p.manutencoesAtrasadas) - 6}"></div>
+
+      <h2 style="margin-top:.9em"><span>Revisão vencida</span><span class="qtd" th:text="${#lists.size(p.revisoesVencidas)}"></span></h2>
+      <p class="vazio" th:if="${#lists.isEmpty(p.revisoesVencidas)}">Nenhuma: pode alugar.</p>
+      <ul>
+        <li th:each="r, st : ${p.revisoesVencidas}" th:if="${st.index < 6}">
+          <div class="linha1"><span class="nome amarelo" th:text="${#strings.isEmpty(r.tag.patrimonio)} ? ${r.tag.tagReal} : ${r.tag.patrimonio}"></span></div>
+          <div class="linha2" th:text="${r.motivo}"></div>
+        </li>
+      </ul>
+      <div class="mais" th:if="${#lists.size(p.revisoesVencidas) > 6}" th:text="'e mais ' + ${#lists.size(p.revisoesVencidas) - 6}"></div>
+    </section>
+
+  </div>
+
+  <footer>
+    <span th:text="'Atualizado às ' + ${#temporals.format(atualizadoEm, 'HH:mm:ss')} + ' · a tela se atualiza sozinha a cada minuto'"></span>
+    <span>Para tela cheia, aperte F11</span>
+  </footer>
+</div>
+</main>
+
+<script th:attr="nonce=${cspNonce}">
+  (function () {
+    const DIAS = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
+    const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+    const doisDigitos = n => String(n).padStart(2, "0");
+    function relogio() {
+      const d = new Date();
+      document.getElementById("relogio").textContent = doisDigitos(d.getHours()) + ":" + doisDigitos(d.getMinutes());
+      document.getElementById("data").textContent = DIAS[d.getDay()] + ", " + d.getDate() + " de " + MESES[d.getMonth()];
+    }
+    relogio();
+    setInterval(relogio, 10000);
+
+    const url = document.querySelector("a[href$='/admin/painel-tv']").getAttribute("href") + "/conteudo";
+    const avisoSessao = document.getElementById("aviso-sessao");
+    const avisoRede = document.getElementById("aviso-rede");
+    let semConexaoDesde = null;
+
+    async function atualizar() {
+      try {
+        const r = await fetch(url, { cache: "no-store", credentials: "same-origin" });
+        const html = await r.text();
+        // Sessão encerrada: o servidor manda para o login, que não traz o miolo do painel
+        if (!r.ok || r.redirected || html.indexOf("data-painel-tv") < 0) {
+          if (r.status >= 500) throw new Error("HTTP " + r.status);
+          avisoSessao.style.display = "block";
+          return;
+        }
+        document.getElementById("conteudo").innerHTML = html;
+        avisoSessao.style.display = "none";
+        avisoRede.style.display = "none";
+        semConexaoDesde = null;
+      } catch (e) {
+        if (!semConexaoDesde) semConexaoDesde = new Date();
+        avisoRede.textContent = "Sem conexão com o servidor desde " + doisDigitos(semConexaoDesde.getHours()) + ":" +
+          doisDigitos(semConexaoDesde.getMinutes()) + ". Os números abaixo podem estar desatualizados; tentando de novo.";
+        avisoRede.style.display = "block";
+      }
+    }
+    setInterval(atualizar, 60000);
+  })();
+</script>
+</body>
+</html>

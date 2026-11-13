@@ -298,6 +298,20 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Painel para TV do depósito (1.28.0)
+
+Menu **Painel para TV** (Ver na Locação; abre em outra aba). É o painel do dia em **tela cheia**, escuro, com letras
+grandes e sem menu, para deixar numa TV ou monitor do depósito (aperte F11 no navegador).
+
+- No topo: hora, data e os números de **disponíveis**, **alugados**, **a conferir**, **em manutenção** e, com o inventário
+  cíclico ligado, os **locais para contar na semana**.
+- Três colunas: **a separar** (até amanhã, com hora e quem leva), **voltam hoje** (com hora e quem busca) e **devolução
+  atrasada**; **manutenção atrasada** e **revisão vencida**.
+- Atualiza sozinho a cada minuto, sem recarregar a página. Isso também mantém a sessão aberta. Se o servidor cair, a tela
+  avisa "sem conexão desde…" e continua tentando; se a sessão terminar (servidor reiniciado, usuário desativado), avisa
+  para entrar de novo. Dica: use um usuário só com **Ver na Locação** para a TV.
+- Sem migração no banco.
+
 ### Inventário cíclico (1.27.0)
 
 Menu **Inventário cíclico** (Ver nas Leituras, como os inventários; ligar e mudar o ciclo: Editar nas Leituras). Em vez de
