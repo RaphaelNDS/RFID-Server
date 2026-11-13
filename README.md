@@ -298,6 +298,22 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Uma cópia só do servidor e problemas sem aviso (1.33.0)
+
+**Uma cópia só por pasta**: no primeiro instante, antes do Spring, o servidor trava o arquivo `data\servidor.lock`
+(guarda o PID e a hora de quem está rodando). Uma segunda cópia (outra janela do `iniciar-servidor.bat`, o IntelliJ)
+desiste na hora, com a mensagem de quem está rodando e código de saída 3, sem tocar no banco, nos backups ou nas tarefas
+agendadas. Antes, o .bat só conferia a porta 8443, que abre no fim da subida: em 13/11/2026 duas cópias subiram juntas e
+rodaram as rotinas de início ao mesmo tempo por mais de um minuto. O Windows solta a trava sozinho quando o processo
+acaba (até fechado à força). `RFID_TRAVA_INSTANCIA=false` desliga; `RFID_TRAVA_ARQUIVO` muda o arquivo. Sem conseguir
+criar o arquivo, sobe sem a trava (com aviso).
+
+**Problemas sem aviso**: com o email e o Telegram desligados, os problemas que o servidor detecta (backup do banco, cópia
+fora do computador, disco cheio) aparecem no painel inicial do administrador até serem resolvidos, em vez de ficarem só
+no log. Os Primeiros passos ganharam o passo **Avisos** (Telegram ou email ligado).
+
+- Sem migração no banco.
+
 ### Relatório por operador e espaço em disco (1.32.0)
 
 **Por operador** (menu Gestão, quem vê os Relatórios): quem fez o quê no período (padrão: últimos 7 dias, até um ano),

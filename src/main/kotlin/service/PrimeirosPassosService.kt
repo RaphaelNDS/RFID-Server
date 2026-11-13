@@ -35,7 +35,9 @@ class PrimeirosPassosService(
     private val clientes: ClienteRepository,
     private val inventarios: InventarioRepository,
     private val config: ConfiguracaoSistemaService,
-    private val backup: BackupService? = null
+    private val backup: BackupService? = null,
+    // 1.33.0: avisos ligados (email ou Telegram)
+    private val alertas: AlertaService? = null
 ) {
 
     @Transactional(readOnly = true)
@@ -55,7 +57,9 @@ class PrimeirosPassosService(
         PassoImplantacao("Primeiro inventário", "Conte um local com o coletor e finalize o inventário",
             inventarios.countByStatusAndTreinoFalse(StatusInventario.FINALIZADO) > 0, "/admin/inventarios", "Abrir os inventários"),
         PassoImplantacao("Backup fora do computador", "Guarde o backup do certificado numa pasta fora deste computador (rfid.backup.pasta, ex.: OneDrive)",
-            backupForaDoComputador(), "/status", "Ver o status")
+            backupForaDoComputador(), "/status", "Ver o status"),
+        PassoImplantacao("Avisos", "Ligue os avisos pelo Telegram (RFID_TELEGRAM_TOKEN) ou por email (SMTP): sem eles, backup com problema, " +
+            "disco cheio e servidor parado ficam só no log", alertas?.algumLigado == true, "/status", "Ver o status")
     ))
 
     /** No painel: só enquanto falta algo e o administrador não ocultou. */
