@@ -73,6 +73,23 @@ class VendaService(
         return tag
     }
 
+    /**
+     * 1.25.0: põe à venda os equipamentos escolhidos na sugestão de compra e venda. Só os Disponíveis mudam; os outros
+     * (alugados, em manutenção, já à venda...) ficam como estão. Devolve os que mudaram.
+     */
+    @Transactional
+    fun porAVenda(tagIds: Collection<Long>): List<TagEntity> {
+        require(tagIds.isNotEmpty()) { "Escolha os equipamentos" }
+        val mudaram = tags.findAllById(tagIds.toSet()).filter { it.situacao == SituacaoBem.DISPONIVEL }
+        mudaram.forEach { mudar(it, SituacaoBem.A_VENDA, "Sugestão de venda") }
+        if (mudaram.isNotEmpty()) {
+            val usuario = historico.autor().first
+            log.info("{} equipamento(s) postos À venda por {} pela sugestão de venda: {}", mudaram.size, usuario, mudaram.joinToString { rotulo(it) })
+            auditoria.registrar(AreaAuditoria.PATRIMONIO, "Postos à venda", "${mudaram.size} equipamento(s)", mudaram.joinToString { rotulo(it) }.take(500))
+        }
+        return mudaram
+    }
+
     private fun mudar(tag: TagEntity, situacao: SituacaoBem, motivo: String) {
         val antes = historico.retrato(tag)
         tag.situacao = situacao

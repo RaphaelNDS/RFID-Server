@@ -298,6 +298,18 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Sugestão de compra e venda (1.25.0)
+
+Menu **Compra e venda** (quem tem Ver na Locação), num período (padrão: últimos 90 dias), pelos pedidos de locação:
+
+- **Comprar mais**: o modelo que **faltou** num pedido (a separação encerrou com menos do que o pedido pedia), que
+  **esgotou** (todos com clientes no mesmo dia) ou com a **ocupação** acima do limite (padrão 80%). A sugestão é a
+  maior falta num pedido, ou +1 quando só esgotou. Pedido de linha por tipo, sem modelo, aparece como "(qualquer modelo)".
+- **Vender a sobra**: o modelo com ocupação abaixo do limite (padrão 30%), sem falta, em que o **pico** de uso ficou
+  abaixo do que há. A sobra (equipamentos − pico) vem com os Disponíveis **parados há mais tempo**, já marcados.
+  **Pôr os marcados à venda** (Editar nas Etiquetas) muda só os Disponíveis para À venda, com histórico e auditoria.
+- Os dois limites de ocupação mudam na própria tela. Sem migração.
+
 ### Agenda de entregas e retiradas (1.24.0)
 
 Menu **Agenda de entregas** (quem tem Ver na Locação): um dia por vez, com o que **sai** (pedidos abertos ou em
