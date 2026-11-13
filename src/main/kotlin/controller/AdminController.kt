@@ -50,7 +50,19 @@ class AdminController(
         val resultado = rfidService.listarNaoCadastradas(busca, pagina - 1)
         model.addAttribute("pendentes", resultado.content)
         paginacao(model, resultado, "/admin/tags-pendentes", busca)
+        // 1.29.1: o botão Limpar apaga todas, não só as da busca
+        model.addAttribute("totalPendentes", if (busca.isNullOrBlank()) resultado.totalElements else rfidService.contarNaoCadastradas())
         return "admin-tags-pendentes"
+    }
+
+    /** 1.29.1: botão "Limpar pendentes" (quem pode excluir etiquetas). Só a lista de pendentes; nada cadastrado muda. */
+    @PreAuthorize("@authService.temPermissao('RFID','DELETE')")
+    @PostMapping("/tags-pendentes/limpar")
+    fun limparPendentes(redirect: RedirectAttributes): String {
+        val total = rfidService.limparNaoCadastradas()
+        if (total > 0) auditoria.registrar(AreaAuditoria.CATALOGO, "Etiquetas pendentes limpas", "$total etiqueta(s)")
+        redirect.addFlashAttribute("msg", if (total == 0L) "Não havia etiquetas pendentes." else "$total etiqueta(s) pendente(s) apagada(s).")
+        return "redirect:/admin/tags-pendentes"
     }
 
     /** Etiquetas, com os filtros de gestão de patrimônio (1.6.0): situação, local, responsável e os baixados. */

@@ -11,6 +11,14 @@
       <h1>Etiquetas pendentes</h1>
       <p class="subtitulo">Etiquetas lidas pelos coletores que ainda não estão vinculadas a um equipamento</p>
     </div>
+    <!-- 1.29.1: apaga toda a lista (quem pode excluir etiquetas). A que for lida de novo volta para cá -->
+    <div class="page-header-acoes" th:if="${@authService.temPermissao('RFID','DELETE') and totalPendentes > 0}">
+      <form th:action="@{/admin/tags-pendentes/limpar}" method="post"
+            th:attr="data-confirmar=${'Apagar todas as ' + totalPendentes + ' etiqueta(s) pendente(s)? Nenhuma etiqueta cadastrada muda; a que for lida de novo pelo coletor volta para a lista.'}"
+            data-confirmar-titulo="Limpar pendentes" data-confirmar-botao="Limpar" data-confirmar-perigo>
+        <button type="submit" class="btn btn-ghost"><svg class="ic"><use href="/img/icones.svg#lixeira"/></svg>Limpar pendentes</button>
+      </form>
+    </div>
   </div>
 
   <!-- Ex.: "Etiqueta X cadastrada." ao voltar do cadastro aberto por esta lista -->
