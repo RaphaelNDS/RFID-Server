@@ -33,4 +33,29 @@ class StatusWebController(
             .onFailure { redirect.addFlashAttribute("erro", "O email de teste não foi enviado: ${it.message}") }
         return "redirect:/status"
     }
+
+    /** Mensagem de teste pelo Telegram (1.20.0). */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/status/telegram-teste")
+    fun telegramTeste(auth: Authentication, redirect: RedirectAttributes): String {
+        alertas.enviarTesteTelegram(auth.name)
+            .onSuccess { redirect.addFlashAttribute("msg", "Mensagem de teste enviada pelo Telegram para $it conversa(s).") }
+            .onFailure { redirect.addFlashAttribute("erro", "A mensagem de teste não foi enviada: ${it.message}") }
+        return "redirect:/status"
+    }
+
+    /** Quem mandou mensagem ao robô do Telegram (1.20.0): mostra o número da conversa para pôr em RFID_TELEGRAM_CHATS. */
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/status/telegram-conversas")
+    fun telegramConversas(redirect: RedirectAttributes): String {
+        alertas.descobrirConversasTelegram()
+            .onSuccess { lista ->
+                redirect.addFlashAttribute("msg", if (lista.isEmpty())
+                    "Nenhuma conversa encontrada. Mande uma mensagem ao robô no Telegram (ou ponha ele num grupo e escreva algo) e tente de novo."
+                else "Conversas com o robô: " + lista.joinToString("; ") { "${it.nome} (${it.tipo}) = ${it.id}" } +
+                    ". Ponha os números em RFID_TELEGRAM_CHATS, separados por vírgula, e reinicie o servidor.")
+            }
+            .onFailure { redirect.addFlashAttribute("erro", "Não deu para consultar o Telegram: ${it.message}") }
+        return "redirect:/status"
+    }
 }

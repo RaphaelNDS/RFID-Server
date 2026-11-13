@@ -22,5 +22,9 @@ data class ServerStatusResponse(
     /** Avisos por email (1.5.1): ligados para quem, ou por que estão desligados */
     val avisosEmail: String = "",
     val avisosEmailLigados: Boolean = false,
-    val avisosEmailComProblema: Boolean = false
+    val avisosEmailComProblema: Boolean = false,
+    // 1.20.0: avisos pelo Telegram
+    val avisosTelegram: String = "",
+    val avisosTelegramLigados: Boolean = false,
+    val avisosTelegramConfigurado: Boolean = false
 )

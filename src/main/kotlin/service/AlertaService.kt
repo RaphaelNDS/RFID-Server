@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
 /**
- * Avisos por email (1.5.1): backup do banco com problema, cópia fora do computador falhando e servidor que ficou
+ * Avisos por email (1.5.1) e pelo Telegram (1.20.0, [TelegramService]): backup do banco com problema, cópia fora do computador falhando e servidor que ficou
  * fora do ar. Antes os avisos ficavam só no log e na tela Status, e ninguém era avisado de fora.
  *
  * Liga só com o SMTP configurado (spring.mail.host = RFID_SMTP_HOST) e pelo menos um destinatário
@@ -32,7 +32,9 @@ class AlertaService(
     @Value("\${rfid.alertas.email-para:}") para: String,
     @Value("\${rfid.alertas.email-de:}") de: String,
     @Value("\${rfid.alertas.repetir-horas:24}") private val repetirHoras: Long,
-    private val relogio: Clock
+    private val relogio: Clock,
+    // 1.20.0: o mesmo aviso também pelo Telegram (liga sozinho, sem precisar do email)
+    private val telegram: TelegramService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -47,6 +49,15 @@ class AlertaService(
 
     @Volatile private var ultimoEnvio: LocalDateTime? = null
     @Volatile private var ultimoErro: String? = null
+
+    /** 1.20.0: Telegram ligado (token e conversas). */
+    val telegramLigado: Boolean get() = telegram?.ligado == true
+
+    /** 1.20.0: Telegram com o token, mesmo sem conversa (dá para descobrir as conversas na tela Status). */
+    val telegramConfigurado: Boolean get() = telegram?.configurado == true
+
+    @Volatile private var ultimoEnvioTelegram: LocalDateTime? = null
+    @Volatile private var ultimoErroTelegram: String? = null
 
     private val envio = Executors.newSingleThreadExecutor { Thread(it, "avisos-email").apply { isDaemon = true } }
 
@@ -93,7 +104,35 @@ class AlertaService(
         }
     }
 
-    val comProblema: Boolean get() = ligado && ultimoErro != null
+    val comProblema: Boolean get() = (ligado && ultimoErro != null) || (telegramLigado && ultimoErroTelegram != null)
+
+    /** 1.20.0: texto da tela Status para o Telegram. */
+    fun situacaoTelegram(): String {
+        val t = telegram
+        if (t == null || !t.ligado) return "desligados: ${t?.motivoDesligado() ?: "indisponível"}"
+        return buildString {
+            append("ligados, para ${t.conversas.size} conversa(s)")
+            ultimoEnvioTelegram?.let { append(" (último envio em ${it.format(FORMATO)})") }
+            ultimoErroTelegram?.let { append(" — o último envio FALHOU: $it") }
+        }
+    }
+
+    /** 1.20.0: mensagem de teste pelo Telegram, na hora, para o ADMIN ver o erro, se houver. */
+    fun enviarTesteTelegram(pedidoPor: String): Result<Int> {
+        val t = telegram
+        if (t == null || !t.ligado) return Result.failure(IllegalStateException(t?.motivoDesligado() ?: "Telegram indisponível"))
+        return runCatching {
+            mandarTelegram("Mensagem de teste", "Teste pedido por $pedidoPor na tela Status do servidor RFID. Se chegou, os avisos pelo Telegram estão funcionando.")
+            log.info("Mensagem de teste dos avisos enviada pelo Telegram para {} conversa(s) (pedido por {})", t.conversas.size, pedidoPor)
+            t.conversas.size
+        }.onFailure { registrarErroTelegram(it) }
+    }
+
+    /** 1.20.0: quem mandou mensagem ao robô, para achar o número da conversa. */
+    fun descobrirConversasTelegram(): Result<List<ConversaTelegram>> {
+        val t = telegram ?: return Result.failure(IllegalStateException("Telegram indisponível"))
+        return runCatching { t.descobrirConversas() }
+    }
 
     private fun motivoDesligado(): String = when {
         host.isBlank() -> "defina o servidor de email (RFID_SMTP_HOST, RFID_SMTP_USUARIO, RFID_SMTP_SENHA) e os destinatários (RFID_ALERTAS_EMAIL)"
@@ -103,12 +142,33 @@ class AlertaService(
     }
 
     private fun enviar(assunto: String, texto: String, prefixo: String) {
-        if (!ligado) return
+        val email = ligado
+        val tg = telegramLigado
+        if (!email && !tg) return
         envio.execute {
-            runCatching { mandar(assunto, prefixo + texto) }
-                .onSuccess { log.info("Aviso por email enviado para {}: {}", destinatarios.joinToString(), assunto) }
-                .onFailure { registrarErro(it) }
+            if (email) {
+                runCatching { mandar(assunto, prefixo + texto) }
+                    .onSuccess { log.info("Aviso por email enviado para {}: {}", destinatarios.joinToString(), assunto) }
+                    .onFailure { registrarErro(it) }
+            }
+            if (tg) {
+                runCatching { mandarTelegram(assunto, prefixo + texto) }
+                    .onSuccess { log.info("Aviso pelo Telegram enviado: {}", assunto) }
+                    .onFailure { registrarErroTelegram(it) }
+            }
         }
+    }
+
+    private fun mandarTelegram(assunto: String, texto: String) {
+        val agora = LocalDateTime.now(relogio)
+        telegram!!.enviar("⚠️ Servidor RFID: $assunto\n\n$texto\n\n${agora.format(FORMATO)}")
+        ultimoEnvioTelegram = agora
+        ultimoErroTelegram = null
+    }
+
+    private fun registrarErroTelegram(e: Throwable) {
+        ultimoErroTelegram = e.message?.lineSequence()?.firstOrNull()?.take(200) ?: e.javaClass.simpleName
+        log.warn("Aviso pelo Telegram não foi enviado: {}", ultimoErroTelegram)
     }
 
     private fun mandar(assunto: String, texto: String) {

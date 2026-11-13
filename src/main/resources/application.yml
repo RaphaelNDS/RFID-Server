@@ -125,6 +125,12 @@ rfid:
     email-de: ${RFID_ALERTAS_DE:}
     # O mesmo problema volta a avisar no máximo a cada tantas horas enquanto continuar
     repetir-horas: ${RFID_ALERTAS_REPETIR_HORAS:24}
+    # Avisos pelo Telegram (1.20.0): o mesmo aviso do email, também sem SMTP. Crie o robô no @BotFather, mande uma
+    # mensagem para ele e use "Descobrir conversas" na tela Status para achar o número. Conversas separadas por vírgula.
+    telegram-token: ${RFID_TELEGRAM_TOKEN:}
+    telegram-chats: ${RFID_TELEGRAM_CHATS:}
+    # Resumo diário da locação (devoluções e manutenções atrasadas), só quando há algo atrasado
+    locacao-cron: ${RFID_ALERTAS_LOCACAO_CRON:0 0 8 * * *}
 
   # Fora do ar: a hora é gravada neste arquivo a cada 5 min; ao subir, um buraco maior que "minutos-fora" vira aviso
   monitor:

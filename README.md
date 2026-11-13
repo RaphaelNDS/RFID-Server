@@ -298,6 +298,22 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Avisos pelo Telegram e resumo diário da locação (1.20.0)
+
+Os avisos que já iam por email (backup do banco com problema, cópia fora do computador falhando, servidor que ficou
+fora do ar) vão também pelo **Telegram**, que funciona **sem o SMTP**. Os dois canais são independentes.
+
+1. No Telegram, fale com o **@BotFather**, mande `/newbot` e guarde o **token** que ele devolve.
+2. Mande uma mensagem qualquer para o robô novo (ou ponha o robô num grupo e escreva algo no grupo).
+3. Ponha `rfid.alertas.telegram-token=<token>` no `config\application.properties` (ou `RFID_TELEGRAM_TOKEN`) e
+   reinicie. Na tela **Status**, **Descobrir conversas do Telegram** mostra o número de cada conversa.
+4. Ponha os números em `rfid.alertas.telegram-chats` (ou `RFID_TELEGRAM_CHATS`), separados por vírgula, e
+   reinicie. **Enviar teste pelo Telegram** confere. O token nunca aparece no log nem na tela.
+
+**Resumo diário da locação**: todo dia às 8h (`rfid.alertas.locacao-cron`), se houver **devolução atrasada** ou
+**manutenção com retorno vencido**, sai um aviso com a lista (pedido, cliente, quantos equipamentos, dias de atraso)
+pelos canais ligados. Sem nada atrasado, não manda nada. Sem migração.
+
 ### Cliente com restrição (1.19.0)
 
 Em **Clientes**, o botão **Restrição** (só para administrador, gestor ou quem tem Excluir na Locação) marca o cliente:
