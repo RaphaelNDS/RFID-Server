@@ -66,6 +66,9 @@ interface PedidoItemRepository : JpaRepository<PedidoItemEntity, Long> {
 
     fun findAllByTagIdInAndConferidoEmIsNull(tagIds: Collection<Long>): List<PedidoItemEntity>
 
+    /** 1.21.0: todas as saídas destes equipamentos (contagem de locações da revisão automática). */
+    fun findAllByTagIdIn(tagIds: Collection<Long>): List<PedidoItemEntity>
+
     /** Devolvidos que esperam a conferência, mais antigos primeiro. */
     fun findAllByDevolvidoEmIsNotNullAndConferidoEmIsNullOrderByDevolvidoEmAsc(): List<PedidoItemEntity>
 

@@ -34,11 +34,13 @@ data class PainelDoDia(
     val atrasados: List<PedidoResumo>,
     val aConferir: Long,
     val manutencoesAbertas: Long,
-    val manutencoesAtrasadas: List<ManutencaoEntity>
+    val manutencoesAtrasadas: List<ManutencaoEntity>,
+    /** 1.21.0: no estoque com a revisão automática vencida. */
+    val revisoesVencidas: List<RevisaoVencida> = emptyList()
 ) {
     fun quantos(s: SituacaoBem): Long = porSituacao[s] ?: 0
     val noAcervo: Long get() = porSituacao.filterKeys { it !in SituacaoBem.FORA_DO_ACERVO }.values.sum()
-    val nadaAFazer: Boolean get() = saidas.isEmpty() && devolucoesHoje.isEmpty() && atrasados.isEmpty() && aConferir == 0L && manutencoesAtrasadas.isEmpty()
+    val nadaAFazer: Boolean get() = saidas.isEmpty() && devolucoesHoje.isEmpty() && atrasados.isEmpty() && aConferir == 0L && manutencoesAtrasadas.isEmpty() && revisoesVencidas.isEmpty()
 }
 
 /** Um modelo (ou tipo/marca sem modelo) com quantos estão em cada situação. */
@@ -95,7 +97,9 @@ class PainelService(
     private val marcas: MarcaRepository,
     private val modelos: ModeloRepository,
     private val locacao: LocacaoService,
-    private val relogio: Clock
+    private val relogio: Clock,
+    // 1.21.0: revisões vencidas no estoque
+    private val revisao: RevisaoService? = null
 ) {
 
     fun hoje(): LocalDate = LocalDate.now(relogio)
@@ -118,7 +122,8 @@ class PainelService(
             atrasados = naRua.filter { it.atrasado }.sortedByDescending { it.diasAtraso },
             aConferir = locacao.contarAguardandoConferencia(),
             manutencoesAbertas = abertas.size.toLong(),
-            manutencoesAtrasadas = abertas.filter { it.previsaoRetorno?.isBefore(hoje) == true }
+            manutencoesAtrasadas = abertas.filter { it.previsaoRetorno?.isBefore(hoje) == true },
+            revisoesVencidas = revisao?.vencidasNoEstoque() ?: emptyList()
         )
     }
 

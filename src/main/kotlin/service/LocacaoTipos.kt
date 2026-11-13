@@ -16,7 +16,9 @@ enum class ProblemaLeitura(val rotulo: String) {
     SEM_CADASTRO("Etiqueta sem cadastro"),
     FORA_DO_PEDIDO("Não faz parte do pedido"),
     NAO_DISPONIVEL("Não está disponível"),
-    EXCEDENTE("O pedido já tem a quantidade deste item")
+    EXCEDENTE("O pedido já tem a quantidade deste item"),
+    /** 1.21.0: revisão automática vencida: precisa da preventiva antes de sair. */
+    REVISAO_VENCIDA("Revisão vencida: precisa da manutenção preventiva antes de sair")
 }
 
 /** Um equipamento lido (ou digitado) conferido contra o pedido. */

@@ -249,6 +249,6 @@ class Versao1120IntegracaoTest : IntegracaoBase() {
         locacao.cancelarPedido(p.id, "Cliente desistiu")
         assertThatThrownBy { locacao.registrarSaida(p.id, listOf("X")) }.isInstanceOf(IllegalStateException::class.java)
         mvc.perform(get("/admin/clientes").with(Perfis.usuario())).andExpect(content().string(containsString("CPF 529.982.247-25")))
-        assertThat(ProblemaLeitura.entries).hasSize(4)
+        assertThat(ProblemaLeitura.entries).hasSize(5) // 1.21.0: REVISAO_VENCIDA (só na web; o app não recebe estes motivos)
     }
 }

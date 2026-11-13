@@ -7,6 +7,7 @@ import org.example.service.FiltroManutencao
 import org.example.service.ManutencaoService
 import org.example.service.PdfService
 import org.example.service.PedidoManutencao
+import org.example.service.RevisaoService
 import org.example.util.FormatoBr
 import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
@@ -32,7 +33,8 @@ import java.time.LocalDate
 @RequestMapping("/admin/manutencoes")
 class ManutencaoWebController(
     private val service: ManutencaoService,
-    private val pdf: PdfService
+    private val pdf: PdfService,
+    private val revisao: RevisaoService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -54,14 +56,37 @@ class ManutencaoWebController(
         model.addAttribute("atrasadas", service.contarAtrasadas())
         model.addAttribute("fmt", FormatoBr)
         model.adicionarPaginacao(resultado, "/admin/manutencoes", mapOf("situacao" to filtro.name, "busca" to busca))
+        model.addAttribute("regras", revisao.regrasDaTela())
         return "manutencoes"
     }
 
-    /** Formulário; [tag] vem do botão "Manutenção" na edição da etiqueta. */
+    /** 1.21.0: regra de revisão automática de um tipo; os dois vazios desligam. */
+    @PreAuthorize("@authService.temPermissao('MANUTENCAO','UPDATE')")
+    @PostMapping("/revisao/{tipoId}")
+    fun salvarRegra(
+        @PathVariable tipoId: Long, @RequestParam(required = false) locacoes: String?, @RequestParam(required = false) dias: String?,
+        redirect: RedirectAttributes
+    ): String {
+        try {
+            fun numero(v: String?, campo: String): Int? = v?.trim()?.takeIf { it.isNotEmpty() }?.let {
+                it.toIntOrNull() ?: throw IllegalArgumentException("$campo precisa ser um número inteiro: $it")
+            }
+            val r = revisao.salvarRegra(tipoId, numero(locacoes, "Locações"), numero(dias, "Dias"))
+            redirect.addFlashAttribute("msg", if (r == null) "Revisão automática desligada para o tipo." else "Revisão automática: ${r.descricao}.")
+        } catch (e: IllegalArgumentException) {
+            redirect.addFlashAttribute("erroRegra", e.message)
+        }
+        return "redirect:/admin/manutencoes#revisao-automatica"
+    }
+
+    /** Formulário; [tag] vem do botão "Manutenção" na edição da etiqueta, e [tipo] do painel (revisão vencida, 1.21.0). */
     @PreAuthorize("@authService.temPermissao('MANUTENCAO','CREATE')")
     @GetMapping("/nova")
-    fun nova(@RequestParam(required = false) tag: String?, model: Model): String {
-        formulario(model, tag, null, null, null, null, null, null)
+    fun nova(@RequestParam(required = false) tag: String?, @RequestParam(required = false) tipo: String?, model: Model): String {
+        val tipoValido = TipoManutencao.entries.firstOrNull { it.name == tipo }
+        val motivo = if (tipoValido == TipoManutencao.PREVENTIVA && tag != null)
+            service.localizar(tag.trim()).bens.singleOrNull()?.let { b -> revisao.motivoVencidaPorId(b.id) }?.let { "Revisão automática: $it" } else null
+        formulario(model, tag, tipoValido?.name, motivo, null, null, null, null)
         return "manutencao-nova"
     }
 
