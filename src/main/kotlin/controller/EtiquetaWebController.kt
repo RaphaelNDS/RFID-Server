@@ -8,7 +8,6 @@ import org.example.service.AuditoriaService
 import org.example.service.CatalogoService
 import org.example.service.EdicaoConcorrenteException
 import org.example.service.HistoricoEtiquetaService
-import org.example.service.MovimentoService
 import org.example.service.PatrimonioCadastrosService
 import org.example.service.RfidService
 import org.springframework.security.access.prepost.PreAuthorize
@@ -34,9 +33,7 @@ class EtiquetaWebController(
     private val catalogoService: CatalogoService,
     private val historico: HistoricoEtiquetaService,
     private val cadastros: PatrimonioCadastrosService? = null,
-    private val auditoria: AuditoriaService? = null,
-    // 2.0.0: "Fora do estoque desde ..., destino ..." na edição
-    private val movimentos: MovimentoService? = null
+    private val auditoria: AuditoriaService? = null
 ) {
 
 
@@ -168,7 +165,6 @@ class EtiquetaWebController(
         model.addAttribute("situacoesEditaveis", SituacaoBem.EDITAVEIS)
         model.addAttribute("motivosBaixa", MotivoBaixa.entries)
         model.addAttribute("hoje", LocalDate.now())
-        model.addAttribute("ultimaSaida", if (etiqueta.situacao == SituacaoBem.FORA) movimentos?.ultimaSaida(id) else null)
         return "editar-etiqueta"
     }
 }

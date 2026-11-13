@@ -68,7 +68,7 @@ class HistoricoEtiquetaService(
 
     /**
      * Uma linha por campo que realmente mudou. Devolve os campos alterados (vazio = nada mudou). [motivo] vai junto da
-     * origem, para o histórico dizer por que mudou: "Web · Saída nº 12 (destino: Obra Centro)".
+     * origem, para o histórico dizer por que mudou: "Web · Inventário de Almoxarifado (10/11/2026)".
      */
     @Transactional(propagation = Propagation.MANDATORY)
     fun registrarAlteracao(tag: TagEntity, antes: RetratoEtiqueta, motivo: String? = null): List<String> {

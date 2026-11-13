@@ -32,7 +32,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
 import java.util.UUID
 
-/** 1.8.0: o laudo do inventário em PDF (a guia de transferência saiu na 2.0.0; o comprovante da movimentação tem teste próprio). */
+/** 1.8.0: o laudo do inventário em PDF (a guia de transferência saiu na 2.0.0; o comprovante da movimentação, na 2.1.0). */
 class Versao180IntegracaoTest : IntegracaoBase() {
 
     @Autowired lateinit var cadastros: PatrimonioCadastrosService

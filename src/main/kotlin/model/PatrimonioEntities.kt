@@ -5,12 +5,13 @@ import java.text.Normalizer
 import java.time.LocalDateTime
 
 /**
- * Situação do equipamento (tags.situacao). 2.0.0 (V34): só quatro. DISPONIVEL e EXTRAVIADO mudam pela edição da
- * etiqueta ([EDITAVEIS]); FORA vem da saída (Movimentações) e volta para DISPONIVEL pela entrada; BAIXADO vem da baixa.
+ * Situação do equipamento (tags.situacao). 2.1.0 (V35): só três. DISPONIVEL e EXTRAVIADO mudam pela edição da
+ * etiqueta ([EDITAVEIS]) e pelas divergências do inventário; BAIXADO vem da baixa (e volta pelo "Desfazer baixa").
+ * A situação "Fora do estoque" da 2.0.0 saiu junto com as Movimentações: a V35 passou esses equipamentos para
+ * DISPONIVEL.
  */
 enum class SituacaoBem(val rotulo: String) {
     DISPONIVEL("No estoque"),
-    FORA("Fora do estoque"),
     EXTRAVIADO("Extraviado"),
     BAIXADO("Baixado");
 
@@ -21,19 +22,18 @@ enum class SituacaoBem(val rotulo: String) {
         /** Fora do acervo: não aparecem nas listas por padrão nem no esperado dos inventários. */
         val FORA_DO_ACERVO = setOf(BAIXADO)
 
-        /** Fora do esperado do inventário: além dos baixados, o que saiu do estoque. */
-        val FORA_DO_ESPERADO = FORA_DO_ACERVO + FORA
-
         /** O que a lista de etiquetas mostra sem filtro. */
         val NO_ACERVO = entries.filter { it !in FORA_DO_ACERVO }
 
         /**
-         * Nomes de versões anteriores (planilhas antigas, app antigo): viram os de agora, como a V34 fez no banco.
-         * O que estava com cliente, em devolução ou em manutenção está fora do estoque; à venda continua no estoque.
+         * Nomes de versões anteriores (planilhas antigas, app antigo): viram os de agora, como a V34 e a V35 fizeram
+         * no banco. O que estava fora do estoque (2.0.0), com cliente, em devolução ou em manutenção volta para o
+         * estoque; à venda continua no estoque; vendido é baixado.
          */
         private val ANTIGOS = mapOf(
             "EM_USO" to DISPONIVEL, "EM_ESTOQUE" to DISPONIVEL, "A_VENDA" to DISPONIVEL,
-            "EMPRESTADO" to FORA, "ALUGADO" to FORA, "EM_DEVOLUCAO" to FORA, "EM_MANUTENCAO" to FORA,
+            "FORA" to DISPONIVEL, "FORA_DO_ESTOQUE" to DISPONIVEL,
+            "EMPRESTADO" to DISPONIVEL, "ALUGADO" to DISPONIVEL, "EM_DEVOLUCAO" to DISPONIVEL, "EM_MANUTENCAO" to DISPONIVEL,
             "VENDIDO" to BAIXADO
         )
 

@@ -75,7 +75,7 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("34") // V34 = movimentação simples (2.0.0)
+        assertThat(resultado.targetSchemaVersion).isEqualTo("35") // V35 = simples sem movimentação (2.1.0)
     }
 
     @Test

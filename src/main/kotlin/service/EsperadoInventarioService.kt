@@ -152,9 +152,9 @@ class EsperadoInventarioService(
         // 1.6.0: fora da referência ficam as baixadas e as que o cadastro põe em outro local (o local do bem é o do
         // cadastro, atualizado também pelos inventários finalizados). Entram as cadastradas neste local, mesmo sem
         // terem aparecido na referência (bem novo, ou local que ainda não teve inventário)
-        val doCadastro = tags.findAllByLocalIdAndSituacaoNotIn(localId, SituacaoBem.FORA_DO_ESPERADO)
+        val doCadastro = tags.findAllByLocalIdAndSituacaoNotIn(localId, SituacaoBem.FORA_DO_ACERVO)
         val noCadastro = doCadastro.map { it.tagReal }.toSet()
-        val referenciaNaoBaixada = daReferencia.filter { it.situacao !in SituacaoBem.FORA_DO_ESPERADO && it.tagReal !in noCadastro }
+        val referenciaNaoBaixada = daReferencia.filter { it.situacao !in SituacaoBem.FORA_DO_ACERVO && it.tagReal !in noCadastro }
 
         // Em outro local: o cadastro põe o bem em outro local (mudado na web, ou por um inventário finalizado de lá), ou,
         // sem local no cadastro, um inventário finalizado de outro local o encontrou depois da referência

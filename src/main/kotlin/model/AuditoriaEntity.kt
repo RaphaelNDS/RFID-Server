@@ -20,8 +20,11 @@ enum class AreaAuditoria(val rotulo: String) {
     COLETORES("Coletores"),
     BACKUP("Backup"),
     PATRIMONIO("Patrimônio"),
-    /** 2.0.0: saídas e entradas de equipamentos. */
-    MOVIMENTOS("Movimentações")
+    /**
+     * Saídas e entradas de equipamentos da 2.0.0. As Movimentações saíram na 2.1.0, mas os registros antigos continuam
+     * na auditoria (e no filtro) com esta área.
+     */
+    MOVIMENTOS("Movimentações (até a 2.0.0)")
 }
 
 /** Uma ação de usuário ou de configuração (tabela auditoria, V13). Somente leitura depois de gravada. */

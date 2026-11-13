@@ -5,11 +5,13 @@ import org.flywaydb.core.api.MigrationVersion
 import org.slf4j.LoggerFactory
 
 /**
- * Trava da 2.0.0: o servidor simples (branch master) NUNCA roda sobre o banco da versão completa de locação (branch
- * locadora). Conferida antes de qualquer migração (MigracoesConfig), com ou sem migração pendente:
+ * Trava (2.0.0; numeração revista na 2.1.0): o servidor simples (branch master) NUNCA roda sobre o banco da versão
+ * completa de locação (branch locadora). Conferida antes de qualquer migração (MigracoesConfig), com ou sem migração
+ * pendente:
  *  - a tabela pedidos_locacao com pelo menos um pedido (o banco foi usado pela locação);
  *  - uma migração aplicada depois da [VERSAO] (a locadora continuou numerando, e o Flyway ignoraria as "do futuro");
- *  - uma V34 aplicada com outra descrição (a V34 da locadora não é esta).
+ *  - uma das migrações próprias do master ([PROPRIAS]: V34 e V35) aplicada com outra descrição. A locadora também tem
+ *    V34 ("restricao clientes") e V35 ("revisao automatica"), que não são estas.
  * Qualquer um deles: lança [IllegalStateException], nada é migrado e o servidor não sobe.
  */
 open class TravaVersaoCompleta {
@@ -26,9 +28,9 @@ open class TravaVersaoCompleta {
     }
 
     private fun recusar(motivo: String): Nothing {
-        val mensagem = "Este banco é da versão completa (branch locadora): $motivo. O servidor 2.0.0 (entrada e saída de " +
-            "equipamentos) não roda sobre ele e NADA foi migrado. Use o jar da locadora com este banco, ou aponte este " +
-            "servidor para outro banco."
+        val mensagem = "Este banco é da versão completa (branch locadora): $motivo. O servidor simples $VERSAO_PRODUTO " +
+            "(leitura e cadastro de etiquetas e inventário) não roda sobre ele e NADA foi migrado. Use o jar da locadora " +
+            "com este banco, ou aponte este servidor para outro banco."
         log.error(mensagem)
         throw IllegalStateException(mensagem)
     }
@@ -55,19 +57,31 @@ open class TravaVersaoCompleta {
     }
 
     companion object {
-        /** A migração desta versão: a última que o servidor simples conhece. */
-        const val VERSAO = "34"
-        const val DESCRICAO = "movimentacao simples"
+        /** A última migração que o servidor simples conhece. */
+        const val VERSAO = "35"
 
-        private val V34: MigrationVersion = MigrationVersion.fromVersion(VERSAO)
+        /** Só para a mensagem. */
+        private const val VERSAO_PRODUTO = "2.1.0"
+
+        /**
+         * As migrações que só o master tem, com a descrição de cada uma (o nome do arquivo sem o "V35__", com espaço no
+         * lugar do "_"). Até a V33 as duas branches são iguais.
+         */
+        val PROPRIAS: Map<MigrationVersion, String> = linkedMapOf(
+            MigrationVersion.fromVersion("34") to "movimentacao simples",
+            MigrationVersion.fromVersion("35") to "simples sem movimentacao"
+        )
+
+        private val ULTIMA: MigrationVersion = MigrationVersion.fromVersion(VERSAO)
 
         /** Por que o banco é da versão completa, ou null se este servidor pode usá-lo. */
         fun motivo(aplicadas: List<Aplicada>, pedidosDeLocacao: Long): String? {
             if (pedidosDeLocacao > 0) return "a tabela pedidos_locacao tem pedidos de locação"
             aplicadas.mapNotNull { a -> a.versao?.let { it to a } }.forEach { (versao, a) ->
-                if (versao > V34) return "o banco tem a migração V${versao} (${a.descricao}), posterior à V$VERSAO deste servidor"
-                if (versao == V34 && a.descricao != DESCRICAO) {
-                    return "a V$VERSAO aplicada no banco é \"${a.descricao}\", e não \"$DESCRICAO\""
+                if (versao > ULTIMA) return "o banco tem a migração V${versao} (${a.descricao}), posterior à V$VERSAO deste servidor"
+                val esperada = PROPRIAS[versao]
+                if (esperada != null && a.descricao != esperada) {
+                    return "a V$versao aplicada no banco é \"${a.descricao}\", e não \"$esperada\""
                 }
             }
             return null

@@ -53,7 +53,7 @@ interface TagRepository : JpaRepository<TagEntity, Long> {
     // Gestão de patrimônio (1.6.0)
     fun countByLocalId(localId: Long): Long
 
-    /** Os bens cadastrados no local fora destas situações (esperado do inventário: sem baixados e sem os que estão fora do estoque). */
+    /** Os bens cadastrados no local fora destas situações (esperado do inventário: sem os baixados). */
     fun findAllByLocalIdAndSituacaoNotIn(localId: Long, situacoes: Collection<SituacaoBem>): List<TagEntity>
 
     @Query("select t.localId, count(t) from TagEntity t where t.localId is not null and t.situacao <> org.example.model.SituacaoBem.BAIXADO group by t.localId")

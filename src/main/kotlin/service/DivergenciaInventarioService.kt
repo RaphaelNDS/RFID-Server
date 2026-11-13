@@ -92,11 +92,9 @@ class DivergenciaInventarioService(
         val origem = "Inventário de $nomeLocal (${inventario.iniciadoEm.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))})"
 
         val bens = etiquetas.chunked(5_000).flatMap { tags.findAllByTagRealIn(it) }
-        // Já baixado: não há o que fazer. Já extraviado: marcar de novo não muda nada. Fora do estoque: faltou porque
-        // saiu (Movimentações); a volta é pela entrada
+        // Já baixado: não há o que fazer. Já extraviado: marcar de novo não muda nada
         val ignorados = bens.filter {
-            it.foraDoAcervo || it.situacao == SituacaoBem.FORA ||
-                (acao == AcaoDivergencia.EXTRAVIADO && it.situacao == SituacaoBem.EXTRAVIADO)
+            it.foraDoAcervo || (acao == AcaoDivergencia.EXTRAVIADO && it.situacao == SituacaoBem.EXTRAVIADO)
         }
         val tratar = bens - ignorados.toSet()
         tratar.forEach { tag ->

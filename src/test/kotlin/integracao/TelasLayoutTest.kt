@@ -46,9 +46,8 @@ class TelasLayoutTest : IntegracaoBase() {
             "/admin/usuarios/${olga.id}/editar", "/admin/coletores", "/admin/app", "/admin/auditoria", "/status",
             "/perfil", "/perfil/senha", "/perfil/email",
             // 1.6.0: gestão de patrimônio
-            "/admin/locais", "/admin/tags-cadastradas/importar",
-            // 2.0.0: movimentações (a locação, a manutenção e as transferências saíram)
-            "/admin/movimentos", "/admin/movimentos/saida", "/admin/movimentos/entrada"
+            "/admin/locais", "/admin/tags-cadastradas/importar"
+            // 2.1.0: as movimentações saíram (Versao210IntegracaoTest confere as rotas)
         ).forEach { url ->
             val resposta = mvc.perform(get(url).with(admin)).andReturn().response
             conferir(url, resposta)

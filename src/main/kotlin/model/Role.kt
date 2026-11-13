@@ -4,7 +4,7 @@ package org.example.model
  * Perfil do usuário. ADMIN, GESTOR e USER valem para todos os módulos; CUSTOM é o que o ADMIN marcar.
  *
  * 2.0.0: os perfis de função da versão de locação (EXPEDICAO, CONFERENTE, TECNICO) saíram; a V34 passou quem os tinha
- * para CUSTOM, com as mesmas permissões (as de locação e manutenção viraram as de Movimentações).
+ * para CUSTOM, com as mesmas permissões.
  */
 enum class Role(val rotulo: String, val descricao: String) {
     ADMIN("Administrador", "Acesso total, inclusive gestão de usuários."),
@@ -27,7 +27,6 @@ enum class Modulo(val rotulo: String) {
      * enum porque o banco pode ter permissões antigas gravadas com ele.
      */
     USUARIO("Usuários"),
-    DASHBOARD("Relatórios"),
-    /** 2.0.0: saída e entrada de equipamentos (Ver: a lista e o comprovante; Criar: registrar saída e entrada). */
-    MOVIMENTO("Movimentações")
+    DASHBOARD("Relatórios")
+    // 2.1.0: o módulo das Movimentações (2.0.0) saiu; a V35 apagou as permissões dele (ver o README)
 }
