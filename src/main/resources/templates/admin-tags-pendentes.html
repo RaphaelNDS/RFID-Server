@@ -34,10 +34,20 @@
       <a th:if="${busca != ''}" th:href="@{/admin/tags-pendentes}" class="btn btn-ghost">Limpar</a>
     </form>
 
+    <!-- 1.29.0: cadastro em lote. As caixas da tabela pertencem a este formulário (atributo form) -->
+    <form id="lote" method="get" th:action="@{/admin/tags-pendentes/lote}" class="toolbar" style="border-top:0"
+          th:if="${@authService.temPermissao('RFID','CREATE') and !#lists.isEmpty(pendentes)}">
+      <button type="submit" class="btn btn-secondary">Cadastrar marcadas em lote</button>
+      <a th:href="@{/admin/tags-pendentes/lote(todas=true)}" class="btn btn-ghost"
+         th:text="${total > 500} ? 'Cadastrar as 500 mais antigas em lote' : 'Cadastrar todas em lote'">Cadastrar todas em lote</a>
+      <span class="muted" style="align-self:center">Mesmo tipo, marca, modelo e local, com o código em sequência.</span>
+    </form>
+
     <div class="table-wrap">
       <table class="table" th:unless="${#lists.isEmpty(pendentes)}">
         <thead>
         <tr>
+          <th th:if="${@authService.temPermissao('RFID','CREATE')}" style="width:1%"><input type="checkbox" id="marcar-todas" aria-label="Marcar todas desta página"></th>
           <th>Etiqueta (EPC)</th>
           <th>Primeira leitura</th>
           <th class="acoes"><span class="sr-only">Ações</span></th>
@@ -45,6 +55,7 @@
         </thead>
         <tbody>
         <tr th:each="t : ${pendentes}">
+          <td th:if="${@authService.temPermissao('RFID','CREATE')}"><input type="checkbox" name="etiquetas" form="lote" class="marcar-pendente" th:value="${t.tag}" th:attr="aria-label=${'Marcar ' + t.tag}"></td>
           <td class="mono principal" th:text="${t.tag}"></td>
           <td class="nowrap" th:text="${#temporals.format(t.dataHora, 'dd/MM/yyyy HH:mm')}"></td>
           <td class="acoes">
@@ -73,5 +84,16 @@
     <nav th:replace="~{layout/paginacao :: paginacao}"></nav>
   </div>
 
+
+  <script th:attr="nonce=${cspNonce}">
+    // 1.29.0: marca ou desmarca todas as pendentes desta página para o cadastro em lote
+    (function () {
+      const todas = document.getElementById("marcar-todas");
+      if (!todas) return;
+      todas.addEventListener("change", function () {
+        document.querySelectorAll(".marcar-pendente").forEach(c => { c.checked = todas.checked; });
+      });
+    })();
+  </script>
 </section>
 </html>
