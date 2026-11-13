@@ -298,6 +298,21 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Relatório por operador e espaço em disco (1.32.0)
+
+**Por operador** (menu Gestão, quem vê os Relatórios): quem fez o quê no período (padrão: últimos 7 dias, até um ano),
+juntando o que o sistema já guarda com o nome de quem fez: leituras pelo coletor, inventários abertos e etiquetas lidas
+neles (os de treino não contam), cadastros de etiqueta, saídas, devoluções, conferências, entregas, transferências e
+manutenções. Na web o registro guarda o email e no coletor o nome do operador: o email vira o nome do usuário, para a
+mesma pessoa somar junto. Embaixo, as ações de cada pessoa por dia.
+
+**Espaço em disco** (tela Status): espaço livre do disco do servidor e quanto ocupa o banco, os backups do banco, os
+backups do certificado, os logs e os jars de versões anteriores na pasta `servidor` (com a lista). Com pouco espaço
+(menos de `rfid.disco.minimo-gb`, padrão 5 GB, ou de `rfid.disco.minimo-percentual`, padrão 10%), a tela mostra o
+alerta e, de hora em hora, vai o aviso por email/Telegram (e o "resolvido" quando voltar). O servidor só mede: não apaga nada.
+
+- Sem migração no banco.
+
 ### Etiquetas da empresa e modo treinamento do coletor (1.31.0)
 
 **Etiquetas da empresa** (Administração › Personalizar, só o administrador): o padrão do EPC das etiquetas da empresa,

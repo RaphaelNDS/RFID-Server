@@ -13,7 +13,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 @Controller
 class StatusWebController(
     private val service: StatusService,
-    private val alertas: AlertaService
+    private val alertas: AlertaService,
+    // 1.32.0: espaço em disco
+    private val disco: org.example.service.DiscoService? = null
 ) {
 
     // Só ADMIN, como /api/status: mostra o endereço do banco, a situação dos backups e a instrução docker exec
@@ -21,6 +23,7 @@ class StatusWebController(
     @GetMapping("/status")
     fun status(model: Model): String {
         model.addAttribute("info", service.getStatus())
+        model.addAttribute("disco", disco?.let { runCatching { it.situacao() }.getOrNull() })
         return "status"
     }
 

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Por operador · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Por operador</h1>
+      <p class="subtitulo">Quem fez o quê no período: leituras, inventários, cadastros, saídas, devoluções e o resto</p>
+    </div>
+    <form method="get" class="page-header-acoes" style="align-items:flex-end">
+      <div class="field"><label for="inicio">Início</label><input id="inicio" type="date" name="inicio" th:value="${inicio}"></div>
+      <div class="field"><label for="fim">Fim</label><input id="fim" type="date" name="fim" th:value="${fim}"></div>
+      <button type="submit" class="btn btn-secondary">Ver</button>
+    </form>
+  </div>
+
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header empilhar">
+      <h2 th:text="'De ' + ${fmt.data(r.inicio)} + ' a ' + ${fmt.data(r.fim)}"></h2>
+      <span class="muted">Na web conta o usuário que entrou; no coletor, o operador logado nele. Inventários de treino não contam.</span>
+    </div>
+    <p class="vazio" th:if="${#lists.isEmpty(r.linhas)}">Ninguém registrou nada neste período.</p>
+    <div class="table-wrap" th:unless="${#lists.isEmpty(r.linhas)}">
+      <table class="table table-cartoes">
+        <thead><tr>
+          <th>Pessoa</th>
+          <th th:each="a : ${atividades}" th:text="${a.rotulo}" th:title="${a.dica}"></th>
+          <th>Total</th><th title="Dias do período com alguma ação">Dias</th>
+        </tr></thead>
+        <tbody>
+        <tr th:each="l : ${r.linhas}">
+          <td class="principal cartao-titulo" th:text="${l.pessoa}"></td>
+          <td th:each="a : ${atividades}" th:attr="data-rotulo=${a.rotulo}" th:text="${l.de(a) > 0} ? ${l.de(a)} : '—'"></td>
+          <td data-rotulo="Total"><strong th:text="${l.total}"></strong></td>
+          <td data-rotulo="Dias" th:text="${l.dias}"></td>
+        </tr>
+        </tbody>
+        <tfoot><tr>
+          <th>Total</th>
+          <th th:each="a : ${atividades}" th:text="${r.total(a)}"></th>
+          <th th:text="${r.total}"></th><th></th>
+        </tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" th:unless="${#lists.isEmpty(r.porDia)}">
+    <div class="card-header"><h2>Por dia</h2></div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Dia</th><th>Ações por pessoa</th></tr></thead>
+        <tbody>
+        <tr th:each="d : ${r.porDia}">
+          <td class="nowrap" th:text="${fmt.data(d.first)}"></td>
+          <td>
+            <span th:each="p, st : ${d.second}" th:text="${p.key} + ': ' + ${p.value} + (${st.last} ? '' : ' · ')"></span>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+</html>
