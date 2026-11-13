@@ -40,7 +40,9 @@ class PedidoWebController(
     private val pdf: PdfService,
     private val auth: AuthService,
     // 1.18.0: kits e acessórios
-    private val acessorios: AcessorioService
+    private val acessorios: AcessorioService,
+    // 1.23.0: comprovantes de entrega
+    private val entregas: org.example.service.EntregaService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -107,6 +109,7 @@ class PedidoWebController(
         model.addAttribute("impedimento", service.impedimentoSaida(d.pedido))
         model.addAttribute("podeAprovar", service.podeAprovar())
         model.addAttribute("restricaoCliente", service.cliente(d.pedido.clienteId).restricao)
+        model.addAttribute("entregas", entregas?.doPedido(id).orEmpty())
         return "pedido"
     }
 

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!-- Comprovante de entrega em PDF (1.23.0): quem recebeu, os equipamentos, a assinatura e as fotos no local -->
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <title th:text="'Comprovante de entrega nº ' + ${e.id} + ' - pedido nº ' + ${p.id}">Comprovante</title>
+  <style th:replace="~{pdf/base :: estilo}"></style>
+  <style>
+    .assinatura-img { width: 260px; height: auto; border-bottom: 1px solid #333; }
+    .foto { width: 48%; margin: 0 1% 8px 0; }
+  </style>
+</head>
+<body>
+<div th:replace="~{pdf/base :: rodape}"></div>
+<div th:replace="~{pdf/base :: cabecalho('Comprovante de entrega', ${p.cliente}, 'Pedido nº ' + ${p.id} + ' - entrega nº ' + ${e.id})}"></div>
+
+<table class="dados">
+  <tr><th>Cliente</th><td th:text="${p.cliente}"></td></tr>
+  <tr><th>Local de entrega</th><td th:text="${p.localEntrega} ?: '-'"></td></tr>
+  <tr><th>Entregue em</th><td th:text="${#temporals.format(e.registradaEm, 'dd/MM/yyyy HH:mm')}"></td></tr>
+  <tr><th>Recebido por</th><td th:text="${e.recebidoPor}"></td></tr>
+  <tr th:if="${e.documento != null}"><th>Documento</th><td th:text="${e.documento}"></td></tr>
+  <tr th:if="${e.observacao != null}"><th>Observação</th><td th:text="${e.observacao}"></td></tr>
+  <tr><th>Registrado por</th><td th:text="${e.registradaPor}"></td></tr>
+</table>
+
+<h2 th:text="'Equipamentos entregues (' + ${#lists.size(e.listaEquipamentos)} + ')'">Equipamentos</h2>
+<table class="lista">
+  <thead><tr><th>#</th><th>Equipamento</th></tr></thead>
+  <tbody>
+  <tr th:each="item, st : ${e.listaEquipamentos}">
+    <td th:text="${st.count}"></td>
+    <td th:text="${item}"></td>
+  </tr>
+  </tbody>
+</table>
+
+<h2>Assinatura de quem recebeu</h2>
+<p>Recebi os equipamentos acima em perfeito estado de funcionamento e conservação, salvo o que consta na observação.</p>
+<img class="assinatura-img" th:src="${assinatura}" alt="Assinatura"/>
+<p th:text="${e.recebidoPor} + (${e.documento != null} ? ' - ' + ${e.documento} : '')"></p>
+
+<div th:unless="${#lists.isEmpty(fotos)}">
+  <h2 th:text="'Fotos no local (' + ${#lists.size(fotos)} + ')'">Fotos</h2>
+  <img class="foto" th:each="f : ${fotos}" th:src="${f}" alt="Foto da entrega"/>
+</div>
+</body>
+</html>

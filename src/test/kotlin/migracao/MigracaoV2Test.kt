@@ -75,7 +75,7 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("36") // V36 = campos personalizados
+        assertThat(resultado.targetSchemaVersion).isEqualTo("37") // V37 = comprovantes de entrega
     }
 
     @Test

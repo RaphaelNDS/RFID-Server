@@ -298,6 +298,18 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Comprovante de entrega com assinatura e fotos (1.23.0)
+
+Na tela do pedido, **Comprovantes de entrega → Registrar entrega** (quem tem Editar na Locação) abre uma tela feita
+para o celular ou o tablet: o nome e o documento de quem recebe, a **assinatura com o dedo** num quadro na tela e até
+**5 fotos** no local (a câmera abre direto no celular; JPEG, PNG ou WebP, até 10 MB cada).
+
+- O comprovante guarda a lista dos equipamentos que estavam com o cliente na hora, quem registrou e quando.
+- Pode haver mais de um por pedido (entregas em partes). A tela do pedido lista todos, com o **PDF** (dados,
+  equipamentos, a assinatura e as fotos) e cada foto. Ver pede Ver na Locação.
+- A assinatura e as fotos ficam no banco (V37: `entregas_pedido` e `entrega_fotos`), então vão no backup. O envio
+  das fotos só é aceito de quem tem Editar na Locação, conferido antes de ler o arquivo.
+
 ### Campos personalizados por tipo (1.22.0)
 
 Em **Catálogo → Campos personalizados**, cada tipo de equipamento ganha campos próprios (ex.: voltagem e versão de

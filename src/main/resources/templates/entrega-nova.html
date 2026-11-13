@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Comprovante de entrega · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1 th:text="'Entrega do pedido nº ' + ${p.id}">Entrega</h1>
+      <p class="subtitulo" th:text="${p.cliente}"></p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/pedidos/{id}(id=${p.id})}" class="btn btn-ghost"><svg class="ic"><use href="/img/icones.svg#voltar"/></svg>Pedido</a>
+    </div>
+  </div>
+
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+  <div class="alert alert-aviso" th:if="${#lists.isEmpty(equipamentos)}" role="note">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+    <span>Nenhum equipamento deste pedido está com o cliente: registre a saída antes do comprovante.</span>
+  </div>
+
+  <form class="card" th:action="@{/admin/pedidos/{id}/entregas(id=${p.id})}" method="post" enctype="multipart/form-data"
+        data-assinatura-form th:unless="${#lists.isEmpty(equipamentos)}">
+    <div class="card-body">
+      <h2 style="margin-top:0">Equipamentos entregues (<span th:text="${#lists.size(equipamentos)}"></span>)</h2>
+      <ul class="lista-simples" style="margin-bottom:16px">
+        <li th:each="item : ${equipamentos}" th:text="${item}"></li>
+      </ul>
+
+      <div class="form-grid">
+        <div class="field span-2">
+          <label for="recebidoPor">Recebido por <span class="obrigatorio">*</span></label>
+          <input id="recebidoPor" name="recebidoPor" maxlength="160" required th:value="${recebidoPor}" autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="documento">Documento (RG ou CPF)</label>
+          <input id="documento" name="documento" maxlength="40" th:value="${documento}">
+        </div>
+        <div class="field span-2">
+          <label for="observacao">Observação</label>
+          <input id="observacao" name="observacao" maxlength="500" th:value="${observacao}" placeholder="Ex.: entregue na portaria, caixa lacrada">
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:16px">
+        <label for="quadro-assinatura">Assinatura de quem recebeu <span class="obrigatorio">*</span></label>
+        <canvas id="quadro-assinatura" data-assinatura width="600" height="220"
+                style="width:100%;max-width:600px;height:220px;border:1px solid var(--borda, #ccc);border-radius:8px;background:#fff;touch-action:none;cursor:crosshair"
+                aria-label="Quadro para assinar com o dedo ou a caneta"></canvas>
+        <input type="hidden" name="assinatura" data-assinatura-valor>
+        <div style="margin-top:6px">
+          <button type="button" class="btn btn-ghost btn-sm" data-acao="limpar-assinatura">Limpar assinatura</button>
+          <span class="muted" style="font-size:12px">Assine com o dedo ou a caneta, dentro do quadro.</span>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:16px">
+        <label for="fotos">Fotos no local (opcional)</label>
+        <input id="fotos" name="fotos" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" multiple>
+        <span class="field-dica" th:text="'Até ' + ${maximoFotos} + ' fotos (JPEG, PNG ou WebP), ' + ${maximoFoto} + ' cada.'"></span>
+      </div>
+    </div>
+    <div class="card-footer">
+      <a th:href="@{/admin/pedidos/{id}(id=${p.id})}" class="btn btn-ghost">Cancelar</a>
+      <button type="submit" class="btn btn-primary">Registrar entrega</button>
+    </div>
+  </form>
+
+</section>
+</html>
