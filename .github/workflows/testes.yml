@@ -1,4 +1,4 @@
-# Roda os testes do servidor em pull requests e a cada push na master.
+# Roda os testes do servidor em pull requests e a cada push na master e na locadora (versão completa, a de produção).
 # Antes rodava a cada push em qualquer branch E no pull request: cada commit de um PR rodava duas vezes.
 # Commit só de documentação (*.md, docs/) não roda nada.
 # Se algum teste falhar, o relatório HTML fica disponível para download na página da execução (Artifacts).
@@ -6,7 +6,7 @@ name: Testes
 
 on:
   push:
-    branches: [master]
+    branches: [master, locadora]
     paths-ignore: ['**.md', 'docs/**']
   pull_request:
     paths-ignore: ['**.md', 'docs/**']
