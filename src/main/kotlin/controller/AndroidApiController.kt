@@ -20,7 +20,9 @@ import org.springframework.web.bind.annotation.*
 class AndroidApiController(
     private val service: RfidService,
     private val tagRepository: TagRepository,
-    private val fichas: FichaBemService
+    private val fichas: FichaBemService,
+    // 1.31.0: coletor em treinamento não cria pendentes
+    private val treinamento: org.example.service.TreinamentoColetorService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -91,7 +93,11 @@ class AndroidApiController(
 
     @PreAuthorize("@authService.temPermissao('LEITURA','READ')")
     @PostMapping("/naocadastrada")
-    fun salvarNaoCadastrada(@RequestBody req: TagRequest) {
+    fun salvarNaoCadastrada(@RequestBody req: TagRequest, auth: Authentication) {
+        if (treinamento?.emTreinamento(auth.name) == true) {
+            log.debug("Tag não cadastrada {} do coletor {} em treinamento: não vira pendente", req.tag, auth.name)
+            return
+        }
         service.salvarNaoCadastrada(req.tag)
     }
 }

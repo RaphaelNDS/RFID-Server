@@ -72,7 +72,9 @@ class RfidService(
     private val manutencoes: ManutencaoRepository? = null,
     private val pedidos: PedidoLocacaoRepository? = null,
     // 1.22.0: busca nos campos personalizados
-    private val valoresCampo: ValorCampoRepository? = null
+    private val valoresCampo: ValorCampoRepository? = null,
+    // 1.31.0: etiqueta fora do padrão da empresa não vira pendente
+    private val padraoEtiquetas: PadraoEtiquetasService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -496,6 +498,7 @@ class RfidService(
             log.debug("Tag não cadastrada {} já estava pendente (por {})", tag, usuarioAtual())
             return
         }
+        if (padraoEtiquetas?.estrangeira(tag) == true) return
 
         naoRepo.save(
             TagNaoCadastradaEntity(
@@ -574,6 +577,7 @@ class RfidService(
      * Outro envio ao mesmo tempo pode ter gravado antes: o índice único recusa e conta como já pendente.
      */
     fun registrarPendenteDoLote(tag: String) {
+        if (padraoEtiquetas?.estrangeira(tag) == true) return
         try {
             naoRepo.saveAndFlush(TagNaoCadastradaEntity(tag = tag, dataHora = LocalDateTime.now(relogio)))
             log.info("Tag não cadastrada registrada: {} (por {})", tag, usuarioAtual())

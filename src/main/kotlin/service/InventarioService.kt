@@ -38,7 +38,9 @@ data class InventarioResumo(
     val operador: String? = null,
     val cadastradas: Long,
     /** Id do local (1.6.1: cadastrar a etiqueta lida já neste local). */
-    val localId: Long? = null
+    val localId: Long? = null,
+    /** 1.31.0: feito por coletor em treinamento (não mudou o local dos bens nem conta no inventário cíclico). */
+    val treino: Boolean = false
 ) {
     val naoCadastradas: Long get() = totalLidas - cadastradas
 }
@@ -76,7 +78,9 @@ class InventarioService(
     private val relogio: Clock = Clock.systemDefaultZone(),
     // 1.6.0: o local do bem acompanha o inventário finalizado (opcionais para os testes que montam o serviço à mão)
     private val tags: TagRepository? = null,
-    private val historico: HistoricoEtiquetaService? = null
+    private val historico: HistoricoEtiquetaService? = null,
+    // 1.31.0: inventário de coletor em treinamento fica marcado e não muda o local dos bens
+    private val treinamento: TreinamentoColetorService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -101,11 +105,13 @@ class InventarioService(
                 localId = local.id,
                 dispositivo = dispositivo,
                 iniciadoEm = horaDoColetor(iniciadoEm, "abertura do inventário $id"),
-                operador = operador
+                operador = operador,
+                treino = treinamento?.emTreinamento(dispositivo) == true
             )
         )
 
-        log.info("Inventário {} aberto no local '{}' pelo dispositivo {} (operador {})", id, local.nome, dispositivo, operador ?: "—")
+        log.info("Inventário {} aberto no local '{}' pelo dispositivo {} (operador {}){}", id, local.nome, dispositivo, operador ?: "—",
+            if (inventario.treino) ": TREINO, não muda o local dos bens nem conta no inventário cíclico" else "")
         return inventario
     }
 
@@ -176,7 +182,7 @@ class InventarioService(
         inventario.finalizadoEm = horaDoColetor(finalizadoEm, "finalização do inventário $id")
 
         val total = itens.countByInventarioId(id)
-        val atualizados = atualizarLocalDosBens(inventario)
+        val atualizados = if (inventario.treino) 0 else atualizarLocalDosBens(inventario)
         log.info("Inventário {} finalizado pelo dispositivo {}: {} etiqueta(s) lida(s){}", id, dispositivo, total,
             if (atualizados > 0) "; $atualizados bem(ns) com o local atualizado para o do inventário" else "")
         return inventarios.save(inventario)
@@ -312,7 +318,8 @@ class InventarioService(
         totalLidas = contagem?.first ?: 0,
         cadastradas = contagem?.second ?: 0,
         operador = i.operador,
-        localId = i.localId
+        localId = i.localId,
+        treino = i.treino
     )
 
     private fun buscar(id: String): InventarioEntity =

@@ -75,7 +75,7 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("41") // V41 = configurações do sistema
+        assertThat(resultado.targetSchemaVersion).isEqualTo("42") // V42 = treinamento do coletor
     }
 
     @Test

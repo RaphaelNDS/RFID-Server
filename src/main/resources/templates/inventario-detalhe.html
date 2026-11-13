@@ -40,6 +40,7 @@
       <div class="stat-valor">
         <span class="badge badge-online" th:if="${inventario.status.name() == 'ABERTO'}">Em andamento</span>
         <span class="badge" th:unless="${inventario.status.name() == 'ABERTO'}">Finalizado</span>
+        <span class="badge badge-CUSTOM" th:if="${inventario.treino}" title="Feito por coletor em treinamento: não mudou o local dos bens nem conta no inventário cíclico">Treino</span>
       </div>
       <div class="stat-dica" th:text="${inventario.finalizadoEm != null} ? 'Fim: ' + ${#temporals.format(inventario.finalizadoEm, 'dd/MM/yyyy HH:mm')} : 'Coletor ainda não finalizou'"></div>
     </div>

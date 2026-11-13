@@ -28,7 +28,9 @@ class AdminController(
     private val statusService: StatusService,
     private val backupService: BackupService,
     private val auditoria: AuditoriaService,
-    private val cadastros: PatrimonioCadastrosService? = null
+    private val cadastros: PatrimonioCadastrosService? = null,
+    // 1.31.0: aviso na tela Pendentes de que as etiquetas fora do padrão da empresa não entram
+    private val padraoEtiquetas: org.example.service.PadraoEtiquetasService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -52,6 +54,7 @@ class AdminController(
         paginacao(model, resultado, "/admin/tags-pendentes", busca)
         // 1.29.1: o botão Limpar apaga todas, não só as da busca
         model.addAttribute("totalPendentes", if (busca.isNullOrBlank()) resultado.totalElements else rfidService.contarNaoCadastradas())
+        model.addAttribute("padraoEtiquetas", padraoEtiquetas?.padrao()?.takeIf { it.ativo }?.descricao)
         return "admin-tags-pendentes"
     }
 

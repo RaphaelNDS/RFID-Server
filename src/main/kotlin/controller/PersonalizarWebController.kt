@@ -21,7 +21,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 @PreAuthorize("hasRole('ADMIN')")
 class PersonalizarWebController(
     private val config: ConfiguracaoSistemaService,
-    private val primeirosPassos: PrimeirosPassosService
+    private val primeirosPassos: PrimeirosPassosService,
+    // 1.31.0: padrão das etiquetas da empresa
+    private val padraoEtiquetas: org.example.service.PadraoEtiquetasService
 ) {
 
     @GetMapping
@@ -30,6 +32,10 @@ class PersonalizarWebController(
         model.addAttribute("desligados", config.desligados())
         model.addAttribute("passos", primeirosPassos.passos())
         model.addAttribute("passosOcultos", config.primeirosPassosOcultos())
+        val padrao = padraoEtiquetas.padrao()
+        model.addAttribute("padrao", padrao)
+        model.addAttribute("pendentesFora", padraoEtiquetas.pendentesForaDo(padrao))
+        model.addAttribute("ignoradas", padraoEtiquetas.ignoradas())
         return "personalizar"
     }
 
@@ -40,6 +46,22 @@ class PersonalizarWebController(
         config.definirMenu(escolhidos)
         val fora = ModuloOpcional.entries.size - escolhidos.size
         redirect.addFlashAttribute("msg", if (fora == 0) "Menu salvo: todas as telas aparecem." else "Menu salvo: $fora tela(s) fora do menu.")
+        return "redirect:/admin/personalizar"
+    }
+
+    /** 1.31.0: o padrão das etiquetas da empresa (começos e tamanhos aceitos nas pendentes). */
+    @PostMapping("/etiquetas")
+    fun etiquetas(
+        @RequestParam(required = false) prefixos: String?, @RequestParam(required = false) tamanhos: String?,
+        @RequestParam(defaultValue = "false") limpar: Boolean, redirect: RedirectAttributes
+    ): String {
+        try {
+            val (padrao, apagadas) = padraoEtiquetas.definir(prefixos, tamanhos, limpar)
+            redirect.addFlashAttribute("msg", (if (padrao.ativo) "Padrão das etiquetas salvo: ${padrao.descricao}." else "Padrão das etiquetas desligado: toda etiqueta lida vira pendente.") +
+                (if (apagadas > 0) " $apagadas pendente(s) fora do padrão apagada(s)." else ""))
+        } catch (e: IllegalArgumentException) {
+            redirect.addFlashAttribute("erro", e.message)
+        }
         return "redirect:/admin/personalizar"
     }
 

@@ -20,7 +20,11 @@ import org.springframework.web.bind.annotation.RestController
  */
 @RestController
 @RequestMapping("/api/android")
-class TransferenciaAndroidController(private val service: TransferenciaService) {
+class TransferenciaAndroidController(
+    private val service: TransferenciaService,
+    // 1.31.0: coletor em treinamento não transfere (409 com o aviso)
+    private val treinamento: org.example.service.TreinamentoColetorService? = null
+) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -29,7 +33,9 @@ class TransferenciaAndroidController(private val service: TransferenciaService) 
     @PreAuthorize("@authService.temPermissao('RFID','UPDATE')")
     @PostMapping("/tags/{epc}/transferencia")
     fun transferir(@PathVariable epc: String, @RequestBody pedido: PedidoTransferenciaColetor, auth: Authentication): ResponseEntity<Any> =
-        try {
+        if (treinamento?.emTreinamento(auth.name) == true)
+            recusa(HttpStatus.CONFLICT, IllegalStateException(org.example.service.TreinamentoColetorService.AVISO_TRANSFERENCIA), epc, auth)
+        else try {
             ResponseEntity.ok<Any>(
                 try {
                     service.transferirPeloColetor(epc, pedido.local, pedido.observacao, auth.name)

@@ -48,13 +48,16 @@ class LeituraLoteService(
     private val rfidService: RfidService,
     private val leituraService: LeituraAndroidService,
     private val sessoes: SessaoOperadorService,
-    private val relogio: Clock
+    private val relogio: Clock,
+    // 1.31.0: coletor em treinamento recebe as respostas normais, mas nada é gravado (nem leitura nem pendente)
+    private val treinamento: TreinamentoColetorService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
 
     fun processar(itens: List<ItemLote>, token: String, dispositivo: String, operador: String?): List<ResultadoItemLote> {
         val momentosInvalidos = validarMomentos(itens, token, dispositivo)
+        val treino = treinamento?.emTreinamento(dispositivo) == true
         var repetidas = 0
 
         // Tudo o que o lote precisa consultar, carregado de uma vez (antes: cerca de 6 consultas por leitura)
@@ -81,12 +84,14 @@ class LeituraLoteService(
             try {
                 val cadastrada = cadastradas[tag]
                 if (cadastrada != null) {
-                    val resultado = leituraService.salvarLeituraDoLote(cadastrada, nomes, item.lidoEm, operador, gravadas)
-                    if (resultado == ResultadoLeitura.REPETIDA) repetidas++
+                    if (!treino) {
+                        val resultado = leituraService.salvarLeituraDoLote(cadastrada, nomes, item.lidoEm, operador, gravadas)
+                        if (resultado == ResultadoLeitura.REPETIDA) repetidas++
+                    }
                     ResultadoItemLote(indice, tag, StatusItemLote.CADASTRADA, dados = rfidService.resposta(cadastrada, nomes))
                 } else {
                     // A mesma tag pode vir várias vezes no lote: só a primeira grava a pendência
-                    if (tag !in pendentes) {
+                    if (!treino && tag !in pendentes) {
                         rfidService.registrarPendenteDoLote(tag)
                         pendentes += tag
                     }
@@ -100,7 +105,11 @@ class LeituraLoteService(
             }
         }
 
-        registrarResumo(resultados, repetidas, dispositivo, operador)
+        if (treino) {
+            log.info("Lote de {} leitura(s) do coletor {} em treinamento (operador {}): nada gravado", resultados.size, dispositivo, operador ?: "—")
+        } else {
+            registrarResumo(resultados, repetidas, dispositivo, operador)
+        }
         return resultados
     }
 
