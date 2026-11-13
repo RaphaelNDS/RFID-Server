@@ -26,6 +26,7 @@
         <div class="field span-2">
           <label for="codigo">Bem (etiqueta ou patrimônio) <span class="obrigatorio">*</span></label>
           <input type="text" id="codigo" name="codigo" maxlength="255" class="mono" th:value="${codigo}" required>
+          <span class="badge badge-online" th:if="${garantia != null}" th:text="'Na garantia até ' + ${#temporals.format(garantia.garantiaAte, 'dd/MM/yyyy')} + (${garantia.garantiaFornecedor != null} ? ' com ' + ${garantia.garantiaFornecedor} : '') + ': acione o fabricante'"></span>
           <span class="field-dica" th:if="${bem != null}"
                 th:text="${bem.patrimonio ?: bem.tag} + (${bem.descricao != null} ? ' · ' + ${bem.descricao} : '') + ' · ' + ${bem.situacao.rotulo}"></span>
         </div>

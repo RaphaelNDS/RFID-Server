@@ -34,7 +34,9 @@ import java.time.LocalDate
 class ManutencaoWebController(
     private val service: ManutencaoService,
     private val pdf: PdfService,
-    private val revisao: RevisaoService
+    private val revisao: RevisaoService,
+    // 1.26.0: garantia do fabricante
+    private val garantias: org.example.service.GarantiaService
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -57,6 +59,7 @@ class ManutencaoWebController(
         model.addAttribute("fmt", FormatoBr)
         model.adicionarPaginacao(resultado, "/admin/manutencoes", mapOf("situacao" to filtro.name, "busca" to busca))
         model.addAttribute("regras", revisao.regrasDaTela())
+        model.addAttribute("garantiasVencendo", garantias.vencendo(30))
         return "manutencoes"
     }
 
@@ -177,7 +180,9 @@ class ManutencaoWebController(
         val hoje = service.hoje()
         val limpo = codigo?.trim().orEmpty()
         model.addAttribute("codigo", limpo)
-        model.addAttribute("bem", if (limpo.isEmpty()) null else service.localizar(limpo).bens.singleOrNull())
+        val bem = if (limpo.isEmpty()) null else service.localizar(limpo).bens.singleOrNull()
+        model.addAttribute("bem", bem)
+        model.addAttribute("garantia", bem?.let { garantias.naGarantia(it.id) })
         model.addAttribute("tipos", TipoManutencao.entries)
         model.addAttribute("tipo", tipo ?: TipoManutencao.CORRETIVA.name)
         model.addAttribute("problema", problema)

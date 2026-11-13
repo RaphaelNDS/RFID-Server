@@ -38,6 +38,7 @@
         <div><dt>Etiqueta (EPC)</dt><dd class="mono" th:text="${m.tagReal}"></dd></div>
         <div><dt>Problema / revisão</dt><dd th:text="${m.problema}"></dd></div>
         <div><dt>Fornecedor / técnico</dt><dd th:text="${m.fornecedor} ?: '—'"></dd></div>
+        <div th:if="${m.emGarantia}"><dt>Garantia do fabricante</dt><dd><span class="badge badge-online">Na garantia</span> <span th:text="'até ' + ${#temporals.format(m.garantiaAte, 'dd/MM/yyyy')} + (${m.garantiaFornecedor != null} ? ' com ' + ${m.garantiaFornecedor} : '') + ': acionar o fabricante'"></span></dd></div>
         <div><dt>Envio</dt><dd th:text="${#temporals.format(m.dataEnvio, 'dd/MM/yyyy')}"></dd></div>
         <div><dt>Previsão de retorno</dt><dd th:text="${m.previsaoRetorno != null} ? ${#temporals.format(m.previsaoRetorno, 'dd/MM/yyyy')} : '—'"></dd></div>
         <div><dt>Situação antes</dt><dd th:text="${m.situacaoAnterior.rotulo}"></dd></div>

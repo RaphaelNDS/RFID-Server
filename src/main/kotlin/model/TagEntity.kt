@@ -70,9 +70,19 @@ class TagEntity(
     var dataAquisicao: LocalDate? = null,
 
     @Column(name = "nota_fiscal", length = 60)
-    var notaFiscal: String? = null
+    var notaFiscal: String? = null,
+
+    /** 1.26.0: garantia do fabricante (V39): até quando e com quem. */
+    @Column(name = "garantia_ate")
+    var garantiaAte: LocalDate? = null,
+
+    @Column(name = "garantia_fornecedor", length = 160)
+    var garantiaFornecedor: String? = null
 ) {
     val baixado: Boolean get() = situacao == SituacaoBem.BAIXADO
+
+    /** 1.26.0: na garantia no dia [dia] (inclusive o último dia). */
+    fun naGarantia(dia: LocalDate): Boolean = garantiaAte?.let { !dia.isAfter(it) } == true
 
     /** Baixado ou vendido (1.12.0): não está mais no acervo da locadora. */
     val foraDoAcervo: Boolean get() = situacao in SituacaoBem.FORA_DO_ACERVO

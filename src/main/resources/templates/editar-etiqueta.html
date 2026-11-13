@@ -206,6 +206,27 @@
     </form>
   </div>
 
+  <!-- Garantia do fabricante (1.26.0) -->
+  <form class="card" style="margin-top:16px" id="garantia" th:action="@{/admin/etiquetas/{id}/garantia(id=${etiquetaId})}" method="post">
+    <div class="card-header empilhar">
+      <h2>Garantia do fabricante</h2>
+      <span class="muted" th:if="${etiqueta.garantiaAte == null}">Sem garantia cadastrada.</span>
+      <span th:if="${etiqueta.garantiaAte != null}">
+        <span class="badge" th:classappend="${etiqueta.naGarantia(hoje)} ? 'badge-online' : 'badge-inativo'"
+              th:text="${etiqueta.naGarantia(hoje)} ? 'Na garantia' : 'Garantia vencida'"></span>
+        <span th:text="'até ' + ${#temporals.format(etiqueta.garantiaAte, 'dd/MM/yyyy')} + (${etiqueta.garantiaFornecedor != null} ? ' com ' + ${etiqueta.garantiaFornecedor} : '')"></span>
+      </span>
+    </div>
+    <div class="toolbar" style="border:0">
+      <div class="field"><label for="garantiaAte">Garantia até</label>
+        <input id="garantiaAte" name="garantiaAte" type="date" th:value="${etiqueta.garantiaAte}"></div>
+      <div class="field" style="flex:2 1 240px"><label for="garantiaFornecedor">Fabricante ou fornecedor</label>
+        <input id="garantiaFornecedor" name="garantiaFornecedor" maxlength="160" th:value="${etiqueta.garantiaFornecedor}" placeholder="Quem atende a garantia"></div>
+      <button type="submit" class="btn btn-secondary">Salvar garantia</button>
+    </div>
+    <span class="field-dica" style="padding:0 16px 12px;display:block">A manutenção aberta dentro da garantia fica marcada "Na garantia", para acionar o fabricante em vez de pagar o conserto. A data vazia apaga.</span>
+  </form>
+
   <!-- Manutenções do bem (1.11.0): o histórico das ordens e o custo somado -->
   <div class="card" id="manutencoes" style="margin-top:16px" th:if="${manutencoes != null and !#lists.isEmpty(manutencoes.todas)}">
     <div class="card-header empilhar">

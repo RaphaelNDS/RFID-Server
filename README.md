@@ -298,6 +298,16 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Garantia do fabricante (1.26.0)
+
+Na edição da etiqueta, o quadro **Garantia do fabricante** (Editar nas Etiquetas) guarda **até quando** vai a garantia
+e **com quem** (fabricante ou fornecedor). A data vazia apaga. Cada mudança vai para o histórico da etiqueta.
+
+- Na **manutenção nova**, o bem na garantia aparece com o aviso "Na garantia até … acione o fabricante". A ordem aberta
+  dentro da garantia fica marcada **Na garantia** (na lista, na ordem e no PDF), com a data e o fabricante daquele dia.
+- Em **Manutenções**, o quadro **Garantias vencendo** lista as que vencem nos próximos 30 dias, para acionar antes.
+- Banco: V39 (`tags.garantia_ate`, `tags.garantia_fornecedor` e as mesmas informações gravadas na ordem).
+
 ### Sugestão de compra e venda (1.25.0)
 
 Menu **Compra e venda** (quem tem Ver na Locação), num período (padrão: últimos 90 dias), pelos pedidos de locação:
