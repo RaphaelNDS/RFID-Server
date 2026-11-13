@@ -1,5 +1,6 @@
 package org.example.controller
 
+import org.example.model.RestricaoCliente
 import org.example.service.DadosCliente
 import org.example.service.LocacaoService
 import org.springframework.security.access.prepost.PreAuthorize
@@ -27,6 +28,8 @@ class ClienteWebController(private val service: LocacaoService) {
         })
         model.addAttribute("busca", texto)
         model.addAttribute("total", todos.size)
+        model.addAttribute("restricoes", RestricaoCliente.entries)
+        model.addAttribute("podeAprovar", service.podeAprovar())
         return "clientes"
     }
 
@@ -61,6 +64,23 @@ class ClienteWebController(private val service: LocacaoService) {
             val c = service.salvarCliente(id, DadosCliente(nome, documento, contato, telefone, email, endereco, observacao))
             if (c.ativo != ativo) service.ativarCliente(id, ativo)
             redirect.addFlashAttribute("msg", "Cliente ${c.nome} alterado.")
+        } catch (e: IllegalArgumentException) {
+            redirect.addFlashAttribute("erro", e.message)
+        }
+        return "redirect:/admin/clientes"
+    }
+
+    /** 1.19.0: bloqueia, exige aprovação ou libera. Quem pode: ver LocacaoService.podeAprovar. */
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
+    @PostMapping("/{id}/restricao")
+    fun restricao(
+        @PathVariable id: Long, @RequestParam(required = false) restricao: String?,
+        @RequestParam(required = false) motivo: String?, redirect: RedirectAttributes
+    ): String {
+        try {
+            val r = RestricaoCliente.entries.firstOrNull { it.name == restricao } ?: throw IllegalArgumentException("Escolha a restrição")
+            val c = service.definirRestricao(id, r, motivo)
+            redirect.addFlashAttribute("msg", "Cliente ${c.nome}: ${r.rotulo.lowercase()}.")
         } catch (e: IllegalArgumentException) {
             redirect.addFlashAttribute("erro", e.message)
         }

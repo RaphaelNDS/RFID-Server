@@ -103,7 +103,19 @@ class PedidoWebController(
         model.addAttribute("estados", EstadoDevolucao.entries)
         model.addAttribute("clientes", service.clientesAtivos())
         model.addAttribute("acessoriosAtivos", acessorios.ativos())
+        // 1.19.0: restrição do cliente
+        model.addAttribute("impedimento", service.impedimentoSaida(d.pedido))
+        model.addAttribute("podeAprovar", service.podeAprovar())
+        model.addAttribute("restricaoCliente", service.cliente(d.pedido.clienteId).restricao)
         return "pedido"
+    }
+
+    /** 1.19.0: aprova o pedido de cliente "só com aprovação". Quem pode: ver LocacaoService.podeAprovar. */
+    @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")
+    @PostMapping("/{id}/aprovar")
+    fun aprovar(@PathVariable id: Long, redirect: RedirectAttributes): String = acao(id, redirect) {
+        service.aprovarPedido(id)
+        "Pedido aprovado: a saída está liberada."
     }
 
     @PreAuthorize("@authService.temPermissao('LOCACAO','UPDATE')")

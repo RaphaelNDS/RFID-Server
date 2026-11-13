@@ -54,6 +54,10 @@
           <td class="principal cartao-titulo">
             <span th:text="${c.nome}"></span>
             <span class="badge badge-inativo" th:unless="${c.ativo}">desativado</span>
+            <span class="badge badge-inativo" th:if="${c.restricao.name() == 'BLOQUEADO'}">bloqueado</span>
+            <span class="badge badge-CUSTOM" th:if="${c.restricao.name() == 'APROVACAO'}">só com aprovação</span>
+            <div class="muted" style="font-size:12px" th:if="${c.motivoRestricao != null}"
+                 th:text="${c.restricao.rotulo} + ': ' + ${c.motivoRestricao} + ' (' + ${c.restricaoPor} + ', ' + ${#temporals.format(c.restricaoEm, 'dd/MM/yyyy')} + ')'"></div>
             <div class="muted" style="font-size:12px" th:if="${c.endereco != null}" th:text="${c.endereco}"></div>
           </td>
           <td data-rotulo="Documento" class="mono nowrap" th:text="${c.documentoFormatado} ?: '—'"></td>
@@ -75,6 +79,19 @@
                 <div class="field"><label th:for="'ca-' + ${c.id}">Endereço</label><input th:id="'ca-' + ${c.id}" name="endereco" maxlength="300" th:value="${c.endereco}"></div>
                 <div class="field"><label th:for="'co-' + ${c.id}">Observação</label><input th:id="'co-' + ${c.id}" name="observacao" maxlength="500" th:value="${c.observacao}"></div>
                 <label class="chip" style="align-self:center"><input type="checkbox" name="ativo" value="true" th:checked="${c.ativo}"><span>Ativo</span></label>
+                <button type="submit" class="btn btn-secondary btn-sm">Salvar</button>
+              </form>
+            </details>
+            <!-- 1.19.0: restrição (administrador ou gestor) -->
+            <details th:if="${podeAprovar}" style="display:inline-block">
+              <summary class="btn btn-ghost btn-sm">Restrição</summary>
+              <form class="toolbar" style="border:0;padding:10px 0 0;justify-content:flex-end" th:action="@{/admin/clientes/{id}/restricao(id=${c.id})}" method="post">
+                <div class="field"><label th:for="'cr-' + ${c.id}">Restrição</label>
+                  <select th:id="'cr-' + ${c.id}" name="restricao">
+                    <option th:each="r : ${restricoes}" th:value="${r.name()}" th:text="${r.rotulo}" th:title="${r.descricao}" th:selected="${r == c.restricao}"></option>
+                  </select></div>
+                <div class="field" style="flex:2 1 240px"><label th:for="'cm-' + ${c.id}">Motivo</label>
+                  <input th:id="'cm-' + ${c.id}" name="motivo" maxlength="300" th:value="${c.motivoRestricao}" placeholder="Obrigatório para bloquear ou exigir aprovação"></div>
                 <button type="submit" class="btn btn-secondary btn-sm">Salvar</button>
               </form>
             </details>

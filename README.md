@@ -298,6 +298,20 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Cliente com restrição (1.19.0)
+
+Em **Clientes**, o botão **Restrição** (só para administrador, gestor ou quem tem Excluir na Locação) marca o cliente:
+
+- **Bloqueado**: não abre pedido novo (some da escolha no pedido novo) e **nada sai** para ele, nem nos pedidos já
+  abertos. A **devolução continua normal**.
+- **Só com aprovação**: o pedido abre, mas a **saída fica travada** até um administrador ou gestor clicar em
+  **Aprovar pedido** na tela do pedido. Quem pode aprovar já sai com o pedido aprovado ao criá-lo. Trocar o cliente
+  do pedido desfaz a aprovação.
+- O **motivo** é obrigatório para restringir e aparece na lista de clientes e na recusa. Toda mudança vai para o log
+  e para a auditoria (Patrimônio). Banco: V34 (colunas de restrição em `clientes` e de aprovação em `pedidos_locacao`).
+- A versão completa (locação) vive na branch **locadora**, de onde sai o jar de produção. O master passou a ser o
+  aplicativo simples de entrada e saída e inventário.
+
 ### Transferência só por local (1.18.2)
 
 - O **responsável de destino** saiu da transferência: do formulário (onde já estava escondido), da rota e da coluna da
