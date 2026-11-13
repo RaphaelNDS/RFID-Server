@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Inventário cíclico · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Inventário cíclico</h1>
+      <p class="subtitulo">Cada local é contado pelo coletor pelo menos uma vez por ciclo, uma parte por semana, sem parar a operação</p>
+    </div>
+    <div class="page-header-acoes">
+      <a th:href="@{/admin/inventarios}" class="btn btn-ghost">Inventários</a>
+    </div>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+  <div class="alert alert-erro" th:if="${erro}" role="alert">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erro}"></span>
+  </div>
+
+  <form class="card toolbar" style="margin-bottom:16px" th:action="@{/admin/inventario-ciclico}" method="post"
+        th:if="${@authService.temPermissao('LEITURA','UPDATE')}">
+    <label class="chip" style="align-self:center"><input type="checkbox" name="ativo" value="true" th:checked="${p.config.ativo}"><span>Ligado</span></label>
+    <div class="field"><label for="semanas">Cada local a cada (semanas)</label>
+      <input id="semanas" name="semanas" type="number" min="1" max="52" style="width:90px" th:value="${p.config.semanas}"></div>
+    <button type="submit" class="btn btn-secondary">Salvar</button>
+    <span class="muted" style="align-self:center" th:if="${p.config.alteradoPor != null}"
+          th:text="'Alterado por ' + ${p.config.alteradoPor} + ' em ' + ${#temporals.format(p.config.alteradoEm, 'dd/MM/yyyy HH:mm')}"></span>
+  </form>
+
+  <div class="alert alert-aviso" th:unless="${p.config.ativo}" role="note">
+    <svg class="ic"><use href="/img/icones.svg#alerta"/></svg>
+    <span>O inventário cíclico está desligado: o plano abaixo é só uma prévia e não aparece no painel.</span>
+  </div>
+
+  <div class="grid grid-3" style="margin-bottom:16px">
+    <div class="stat"><div class="stat-rotulo">Acervo em dia</div><div class="stat-valor" th:text="${p.percentualEmDia} + '%'"></div>
+      <div class="stat-dica" th:text="${p.bensEmDia} + ' de ' + ${p.totalBens} + ' bens contados no ciclo'"></div></div>
+    <div class="stat"><div class="stat-rotulo">Esta semana</div><div class="stat-valor" th:text="${#lists.size(p.estaSemana)} + ' local(is)'"></div>
+      <div class="stat-dica" th:text="${p.bensEstaSemana} + ' bens · cota semanal ' + ${p.cota} + ' (' + ${fmt.data(p.inicioSemana)} + ' a ' + ${fmt.data(p.fimSemana)} + ')'"></div></div>
+    <div class="stat"><div class="stat-rotulo">Atrasados ou nunca contados</div><div class="stat-valor" th:text="${p.atrasados}"></div>
+      <div class="stat-dica" th:text="'Ciclo de ' + ${p.config.semanas} + ' semana(s)'"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header empilhar">
+      <h2>Locais</h2>
+      <span class="muted">Os marcados "Esta semana" são os que o coletor deve inventariar até domingo. Um inventário finalizado no local zera a contagem.</span>
+    </div>
+    <p class="vazio" th:if="${#lists.isEmpty(p.locais)}">Nenhum local com bens cadastrados.</p>
+    <div class="table-wrap" th:unless="${#lists.isEmpty(p.locais)}">
+      <table class="table table-cartoes">
+        <thead><tr><th>Local</th><th>Bens</th><th>Último inventário</th><th>Vence em</th><th>Situação</th></tr></thead>
+        <tbody>
+        <tr th:each="l : ${p.locais}" th:classappend="${l.estaSemana} ? 'destaque'">
+          <td class="principal cartao-titulo">
+            <span th:text="${l.local.descricao}"></span>
+            <span class="badge badge-CUSTOM" th:if="${l.estaSemana}">Esta semana</span>
+          </td>
+          <td data-rotulo="Bens" th:text="${l.bens}"></td>
+          <td data-rotulo="Último inventário">
+            <a th:if="${l.inventarioId != null}" th:href="@{/admin/inventarios/{id}(id=${l.inventarioId})}" th:text="${#temporals.format(l.ultimo, 'dd/MM/yyyy')}"></a>
+            <span th:if="${l.inventarioId == null}">—</span>
+          </td>
+          <td data-rotulo="Vence em" th:text="${l.venceEm != null} ? ${fmt.data(l.venceEm)} : '—'"></td>
+          <td data-rotulo="Situação">
+            <span class="badge" th:classappend="${l.situacao.name() == 'EM_DIA'} ? 'badge-online' : (${l.situacao.name() == 'VENCE_ESTA_SEMANA'} ? 'badge-CUSTOM' : 'badge-inativo')"
+                  th:text="${l.situacao.rotulo}"></span>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+</html>

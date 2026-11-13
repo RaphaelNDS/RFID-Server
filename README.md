@@ -298,6 +298,19 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Inventário cíclico (1.27.0)
+
+Menu **Inventário cíclico** (Ver nas Leituras, como os inventários; ligar e mudar o ciclo: Editar nas Leituras). Em vez de
+parar a operação para contar tudo, cada local com bens precisa ser inventariado pelo coletor (como sempre) pelo menos
+**uma vez a cada N semanas** (padrão 4).
+
+- A tela mostra cada local com os bens, o último inventário finalizado, quando vence e a situação: **nunca contado**,
+  **atrasado**, **vence esta semana** ou **em dia**. A porcentagem do acervo em dia aparece no topo.
+- **Esta semana** (segunda a domingo) pede o que é obrigatório (nunca contado, atrasado, vence na semana) e, se ainda
+  faltar para a **cota semanal** (o acervo dividido pelas semanas), os que vencem mais cedo.
+- Ligado, o **painel inicial** avisa quantos locais contar na semana. Um inventário finalizado no local zera a contagem.
+- Banco: V40 (`inventario_ciclico`, uma linha com ligado e semanas; começa desligado).
+
 ### Garantia do fabricante (1.26.0)
 
 Na edição da etiqueta, o quadro **Garantia do fabricante** (Editar nas Etiquetas) guarda **até quando** vai a garantia

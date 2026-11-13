@@ -108,6 +108,15 @@
     </div>
   </th:block>
 
+  <!-- 1.27.0: inventário cíclico ligado: quantos locais contar nesta semana -->
+  <div class="alert" style="margin-top:16px" th:if="${cicloSemana != null}"
+       th:classappend="${cicloSemana > 0} ? 'alert-aviso' : 'alert-ok'" role="status">
+    <svg class="ic"><use href="/img/icones.svg#calendario"/></svg>
+    <span th:if="${cicloSemana > 0}">Inventário cíclico: <strong th:text="${cicloSemana}"></strong> local(is) para contar nesta semana.
+      <a th:href="@{/admin/inventario-ciclico}">Ver quais</a></span>
+    <span th:if="${cicloSemana == 0}">Inventário cíclico em dia nesta semana.</span>
+  </div>
+
   <!-- Atalhos: cada um só aparece com a permissão correspondente -->
   <h2 class="secao-titulo">Acesso rápido</h2>
   <div class="grid grid-tiles">

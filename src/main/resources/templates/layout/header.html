@@ -37,6 +37,9 @@
         <a th:href="@{/admin/inventarios}" th:if="${@authService.temPermissao('LEITURA','READ')}">
           <svg class="ic"><use href="/img/icones.svg#ok"/></svg>Inventários
         </a>
+        <a th:href="@{/admin/inventario-ciclico}" th:if="${@authService.temPermissao('LEITURA','READ')}">
+          <svg class="ic"><use href="/img/icones.svg#calendario"/></svg>Inventário cíclico
+        </a>
         <a th:href="@{/admin/transferencias}" th:if="${@authService.temPermissao('RFID','READ')}">
           <svg class="ic"><use href="/img/icones.svg#transferir"/></svg>Transferências
         </a>
