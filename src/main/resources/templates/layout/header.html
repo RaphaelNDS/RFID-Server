@@ -37,38 +37,38 @@
         <a th:href="@{/admin/inventarios}" th:if="${@authService.temPermissao('LEITURA','READ')}">
           <svg class="ic"><use href="/img/icones.svg#ok"/></svg>Inventários
         </a>
-        <a th:href="@{/admin/inventario-ciclico}" th:if="${@authService.temPermissao('LEITURA','READ')}">
+        <a th:href="@{/admin/inventario-ciclico}" th:if="${@authService.temPermissao('LEITURA','READ') and @configuracaoSistema.noMenu('INVENTARIO_CICLICO')}">
           <svg class="ic"><use href="/img/icones.svg#calendario"/></svg>Inventário cíclico
         </a>
-        <a th:href="@{/admin/transferencias}" th:if="${@authService.temPermissao('RFID','READ')}">
+        <a th:href="@{/admin/transferencias}" th:if="${@authService.temPermissao('RFID','READ') and @configuracaoSistema.noMenu('TRANSFERENCIAS')}">
           <svg class="ic"><use href="/img/icones.svg#transferir"/></svg>Transferências
         </a>
         <!-- Locadora (1.12.0). Valor patrimonial (/admin/valores) e Responsáveis saíram do menu: as rotas continuam -->
         <a th:href="@{/admin/pedidos}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
           <svg class="ic"><use href="/img/icones.svg#calendario"/></svg>Pedidos de locação
         </a>
-        <a th:href="@{/admin/agenda}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
+        <a th:href="@{/admin/agenda}" th:if="${@authService.temPermissao('LOCACAO','READ') and @configuracaoSistema.noMenu('AGENDA')}">
           <svg class="ic"><use href="/img/icones.svg#relogio"/></svg>Agenda de entregas
         </a>
-        <a th:href="@{/admin/painel-tv}" target="_blank" rel="noopener" th:if="${@authService.temPermissao('LOCACAO','READ')}">
+        <a th:href="@{/admin/painel-tv}" target="_blank" rel="noopener" th:if="${@authService.temPermissao('LOCACAO','READ') and @configuracaoSistema.noMenu('PAINEL_TV')}">
           <svg class="ic"><use href="/img/icones.svg#servidor"/></svg>Painel para TV
         </a>
-        <a th:href="@{/admin/disponibilidade}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
+        <a th:href="@{/admin/disponibilidade}" th:if="${@authService.temPermissao('LOCACAO','READ') and @configuracaoSistema.noMenu('DISPONIBILIDADE')}">
           <svg class="ic"><use href="/img/icones.svg#grafico"/></svg>Disponibilidade
         </a>
-        <a th:href="@{/admin/relatorios-locacao}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
+        <a th:href="@{/admin/relatorios-locacao}" th:if="${@authService.temPermissao('LOCACAO','READ') and @configuracaoSistema.noMenu('RELATORIOS_LOCACAO')}">
           <svg class="ic"><use href="/img/icones.svg#atividade"/></svg>Relatórios da locação
         </a>
-        <a th:href="@{/admin/compra-e-venda}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
+        <a th:href="@{/admin/compra-e-venda}" th:if="${@authService.temPermissao('LOCACAO','READ') and @configuracaoSistema.noMenu('COMPRA_E_VENDA')}">
           <svg class="ic"><use href="/img/icones.svg#grafico"/></svg>Compra e venda
         </a>
-        <a th:href="@{/admin/acessorios}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
+        <a th:href="@{/admin/acessorios}" th:if="${@authService.temPermissao('LOCACAO','READ') and @configuracaoSistema.noMenu('ACESSORIOS')}">
           <svg class="ic"><use href="/img/icones.svg#pacote"/></svg>Acessórios e kits
         </a>
         <a th:href="@{/admin/clientes}" th:if="${@authService.temPermissao('LOCACAO','READ')}">
           <svg class="ic"><use href="/img/icones.svg#usuarios"/></svg>Clientes
         </a>
-        <a th:href="@{/admin/manutencoes}" th:if="${@authService.temPermissao('MANUTENCAO','READ')}">
+        <a th:href="@{/admin/manutencoes}" th:if="${@authService.temPermissao('MANUTENCAO','READ') and @configuracaoSistema.noMenu('MANUTENCOES')}">
           <svg class="ic"><use href="/img/icones.svg#lapis"/></svg>Manutenções
         </a>
       </th:block>
@@ -101,6 +101,9 @@
         </a>
         <a th:href="@{/admin/auditoria}">
           <svg class="ic"><use href="/img/icones.svg#escudo"/></svg>Auditoria
+        </a>
+        <a th:href="@{/admin/personalizar}">
+          <svg class="ic"><use href="/img/icones.svg#menu"/></svg>Personalizar
         </a>
         <a th:href="@{/status}">
           <svg class="ic"><use href="/img/icones.svg#atividade"/></svg>Status do servidor

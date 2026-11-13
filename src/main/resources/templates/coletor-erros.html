@@ -69,6 +69,9 @@
                   th:text="${rotulosTipo[e.tipo] != null} ? ${rotulosTipo[e.tipo]} : ${e.tipo}"></span>
           </td>
           <td data-rotulo="Mensagem">
+            <div class="alert alert-aviso" style="margin:0 0 6px;padding:6px 10px" th:if="${dicas.dica(e) != null}">
+              <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><strong th:text="${dicas.dica(e)}"></strong>
+            </div>
             <span th:text="${e.mensagem}"></span>
             <details th:if="${e.detalhe != null}">
               <summary class="muted">Detalhe</summary>

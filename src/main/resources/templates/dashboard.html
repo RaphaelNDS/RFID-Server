@@ -15,6 +15,33 @@
     <span class="badge badge-online" th:if="${isAdmin and info != null}" th:text="'Servidor ' + ${#strings.toLowerCase(info.status)}">Servidor online</span>
   </div>
 
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+
+  <!-- Primeiros passos (1.30.0): o que falta para começar a usar o sistema. Só o administrador; some quando tudo estiver
+       feito ou quando ele ocultar (Administração · Personalizar) -->
+  <div class="card" style="margin-bottom:20px" th:if="${primeirosPassos != null}" th:with="pp=${primeirosPassos}">
+    <div class="card-header empilhar">
+      <h2>Primeiros passos <span class="contagem" th:text="'(' + ${pp.feitos} + ' de ' + ${pp.total} + ' feitos)'"></span></h2>
+      <span class="muted">O que falta para a equipe começar a usar o sistema. Cada passo se marca sozinho quando é feito.</span>
+    </div>
+    <div class="card-body">
+      <ol style="margin:0;padding-left:20px;display:grid;gap:8px">
+        <li th:each="p : ${pp.passos}" th:style="${p.feito} ? 'opacity:.6' : ''">
+          <strong th:text="${p.titulo}"></strong>
+          <span class="badge badge-online" th:if="${p.feito}">Feito</span>
+          <span th:unless="${p.feito}"> · <span th:text="${p.dica}"></span> · <a th:href="@{${p.link}}" th:text="${p.botao}"></a></span>
+        </li>
+      </ol>
+    </div>
+    <form class="card-footer" th:action="@{/admin/personalizar/primeiros-passos}" method="post">
+      <input type="hidden" name="ocultar" value="true"><input type="hidden" name="voltar" value="painel">
+      <span class="muted" style="margin-right:auto">Para mostrar de novo: Administração · Personalizar.</span>
+      <button type="submit" class="btn btn-ghost btn-sm">Ocultar este quadro</button>
+    </form>
+  </div>
+
   <!-- Painel do dia (1.13.0): o que separar, o que volta, o que conferir e o que está atrasado. Só com RFID · Ver -->
   <th:block th:if="${painel != null}" th:with="p=${painel}">
     <div class="grid grid-stats">

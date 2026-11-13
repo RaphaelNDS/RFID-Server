@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/base :: layout(~{::title}, ~{::section})}">
+
+<title>Personalizar · Sistema RFID</title>
+
+<section class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Personalizar</h1>
+      <p class="subtitulo">Quais telas aparecem no menu e o quadro Primeiros passos do painel inicial</p>
+    </div>
+  </div>
+
+  <div class="alert alert-ok" th:if="${msg}" role="status">
+    <svg class="ic"><use href="/img/icones.svg#ok"/></svg><span th:text="${msg}"></span>
+  </div>
+
+  <!-- Módulos do menu -->
+  <form class="card" style="margin-bottom:20px" th:action="@{/admin/personalizar/menu}" method="post">
+    <div class="card-header empilhar">
+      <h2>Telas no menu</h2>
+      <span class="muted">Desmarque o que a equipe ainda não usa. Sai só do menu, para todo mundo: a tela, os dados e as
+        permissões continuam, e marcar de novo traz de volta.</span>
+    </div>
+    <div class="card-body">
+      <div class="grid grid-2">
+        <label th:each="m : ${modulos}" style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;cursor:pointer">
+          <input type="checkbox" name="ligados" style="margin-top:4px" th:value="${m.name()}" th:checked="${!#sets.contains(desligados, m)}">
+          <span><strong th:text="${m.rotulo}"></strong><br><span class="muted" th:text="${m.descricao}"></span></span>
+        </label>
+      </div>
+      <p class="field-dica" style="margin-top:12px">Etiquetas, pendentes, leituras, inventários, pedidos, clientes e a
+        administração ficam sempre no menu.</p>
+    </div>
+    <div class="card-footer"><button type="submit" class="btn btn-primary">Salvar o menu</button></div>
+  </form>
+
+  <!-- Primeiros passos -->
+  <div class="card">
+    <div class="card-header empilhar">
+      <h2>Primeiros passos <span class="contagem" th:text="'(' + ${passos.feitos} + ' de ' + ${passos.total} + ')'"></span></h2>
+      <span class="muted">Conferidos sozinhos. O quadro aparece no painel inicial do administrador até tudo estar feito.</span>
+    </div>
+    <div class="table-wrap">
+      <table class="table table-cartoes">
+        <thead><tr><th>Passo</th><th>O que fazer</th><th>Situação</th><th class="acoes"><span class="sr-only">Ação</span></th></tr></thead>
+        <tbody>
+        <tr th:each="p : ${passos.passos}">
+          <td class="principal cartao-titulo" th:text="${p.titulo}"></td>
+          <td data-rotulo="O que fazer" class="celula-longa" th:text="${p.dica}"></td>
+          <td data-rotulo="Situação"><span class="badge" th:classappend="${p.feito} ? 'badge-online' : 'badge-inativo'" th:text="${p.feito} ? 'Feito' : 'Falta'"></span></td>
+          <td class="acoes"><a class="btn btn-ghost btn-sm" th:href="@{${p.link}}" th:text="${p.botao}"></a></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+    <form class="card-footer" th:action="@{/admin/personalizar/primeiros-passos}" method="post">
+      <input type="hidden" name="ocultar" th:value="${!passosOcultos}">
+      <span class="muted" style="margin-right:auto" th:text="${passosOcultos} ? 'Oculto do painel inicial.' : (${passos.completo} ? 'Tudo feito: o quadro já não aparece no painel.' : 'Aparece no painel inicial.')"></span>
+      <button type="submit" class="btn btn-secondary" th:text="${passosOcultos} ? 'Mostrar no painel' : 'Ocultar do painel'"></button>
+    </form>
+  </div>
+
+</section>
+</html>
