@@ -68,7 +68,9 @@ class LocacaoService(
     // 1.18.0: o kit de acessórios entra com a linha
     private val acessorios: AcessorioService? = null,
     // 1.19.0: quem pode aprovar pedido e mudar a restrição do cliente
-    private val auth: AuthService = AuthService()
+    private val auth: AuthService = AuthService(),
+    // 1.21.0: revisão automática por uso
+    private val revisao: RevisaoService? = null
 ) {
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -451,17 +453,34 @@ class LocacaoService(
             tag.situacao = SituacaoBem.DISPONIVEL
             tags.save(tag)
             historico.registrarAlteracao(tag, antes, "Devolução do pedido de locação nº ${item.pedidoId} conferida (${e.rotulo})")
+            // 1.21.0: revisão vencida vai direto para a preventiva, em vez de voltar Disponível
+            val revisaoVencida = if (paraManutencao) null else revisao?.motivoVencida(tag)
             if (paraManutencao) {
                 val ordem = manutencoes.abrir(PedidoManutencao(tag.tagReal, TipoManutencao.CORRETIVA,
                     listOfNotNull("Devolução do pedido nº ${item.pedidoId}: ${e.rotulo}", obs).joinToString(" · ").take(500)))
                 item.manutencaoId = ordem.id
                 itens.save(item)
+            } else if (revisaoVencida != null) {
+                val ordem = manutencoes.abrir(PedidoManutencao(tag.tagReal, TipoManutencao.PREVENTIVA,
+                    listOfNotNull("Revisão automática: $revisaoVencida", obs).joinToString(" · ").take(500)))
+                item.manutencaoId = ordem.id
+                itens.save(item)
+                log.info("Equipamento {} do pedido nº {} foi para a revisão automática (manutenção nº {}): {}", item.tagReal, item.pedidoId, ordem.id, revisaoVencida)
             }
         }
+        val destino = when {
+            paraManutencao -> ", para a manutenção nº ${item.manutencaoId}"
+            item.manutencaoId != null -> ", para a revisão automática (manutenção nº ${item.manutencaoId})"
+            else -> ", Disponível"
+        }
         log.info("Devolução do item {} do pedido nº {} conferida por {}: {}{}{}", item.tagReal, item.pedidoId, usuario, e.rotulo,
-            if (paraManutencao) ", para a manutenção nº ${item.manutencaoId}" else ", Disponível", obs?.let { " ($it)" } ?: "")
+            destino, obs?.let { " ($it)" } ?: "")
         auditoria.registrar(AreaAuditoria.PATRIMONIO, "Devolução conferida", "Pedido nº ${item.pedidoId}",
-            "${item.patrimonio ?: item.tagReal}: ${e.rotulo}" + if (paraManutencao) ", para a manutenção" else "")
+            "${item.patrimonio ?: item.tagReal}: ${e.rotulo}" + when {
+                paraManutencao -> ", para a manutenção"
+                item.manutencaoId != null -> ", para a revisão automática"
+                else -> ""
+            })
         return item
     }
 
@@ -528,7 +547,10 @@ class LocacaoService(
     @Transactional(readOnly = true)
     fun separacao(pedidoId: Long): FolhaSeparacao {
         val d = detalhar(pedidoId)
-        val disponiveis = tags.findAll().filter { it.situacao == SituacaoBem.DISPONIVEL }
+        val noEstoque = tags.findAll().filter { it.situacao == SituacaoBem.DISPONIVEL }
+        // 1.21.0: a revisão vencida não entra na folha (seria recusada na saída)
+        val vencidas = revisao?.vencidas(noEstoque)?.keys ?: emptySet()
+        val disponiveis = noEstoque.filter { it.id !in vencidas }
         val usados = mutableSetOf<Long>()
         val linhas = d.linhas.sortedBy { if (it.linha.especifico) 0 else 1 }.map { lc ->
             val candidatos = if (lc.faltam == 0) emptyList() else disponiveis
@@ -564,6 +586,8 @@ class LocacaoService(
             val candidatas = ls.filter { it.combina(tag) }
             if (candidatas.isEmpty()) return@map ItemConferido(codigo, tag, null, false, ProblemaLeitura.FORA_DO_PEDIDO)
             if (tag.situacao != SituacaoBem.DISPONIVEL) return@map ItemConferido(codigo, tag, candidatas.first().id, false, ProblemaLeitura.NAO_DISPONIVEL)
+            // 1.21.0: revisão vencida (parado no estoque além do prazo) não sai
+            if (revisao?.motivoVencida(tag) != null) return@map ItemConferido(codigo, tag, candidatas.first().id, false, ProblemaLeitura.REVISAO_VENCIDA)
             val linha = candidatas.firstOrNull { (vagas[it.id] ?: 0) > 0 }
                 ?: return@map ItemConferido(codigo, tag, candidatas.first().id, false, ProblemaLeitura.EXCEDENTE)
             vagas[linha.id] = vagas.getValue(linha.id) - 1

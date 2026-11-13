@@ -298,6 +298,20 @@ data de envio e a previsão de retorno.
 - Abertura, conclusão e cancelamento vão para o histórico do bem ("Manutenção nº X") e para a auditoria
   (Patrimônio). Um bem só tem uma ordem aberta por vez (índice único no banco, V28).
 
+### Revisão automática por uso (1.21.0)
+
+Em **Manutenções → Revisão automática**, cada tipo de equipamento pode ter uma regra: revisar **a cada N locações**
+e/ou **a cada D dias** (quem tem Editar na Manutenção). A contagem começa na última **manutenção preventiva concluída
+como "Consertado / revisado"** ou, sem nenhuma, no cadastro do bem. Os dois campos vazios desligam a regra.
+
+- **Na conferência da devolução**, o equipamento que venceu a revisão vai direto para uma **ordem preventiva**
+  ("Revisão automática: 5 locação(ões) desde a última revisão…"), em vez de voltar Disponível.
+- **Na saída**, o equipamento Disponível com a revisão vencida (parado no estoque além dos dias) é **recusado**
+  ("Revisão vencida"), e ele não entra na folha de separação.
+- O **painel do dia** lista os vencidos no estoque, com o link para abrir a preventiva já preenchida, e o **resumo
+  diário** dos avisos (8h) também.
+- Concluir a preventiva como "Consertado / revisado" zera a contagem. Banco: V35 (`regras_revisao`).
+
 ### Avisos pelo Telegram e resumo diário da locação (1.20.0)
 
 Os avisos que já iam por email (backup do banco com problema, cópia fora do computador falhando, servidor que ficou

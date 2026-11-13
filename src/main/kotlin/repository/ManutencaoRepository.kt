@@ -39,4 +39,7 @@ interface ManutencaoRepository : JpaRepository<ManutencaoEntity, Long> {
     fun findAllByStatusOrderByDataEnvioAsc(status: StatusManutencao): List<ManutencaoEntity>
 
     fun findAllByTagIdOrderByDataEnvioDescIdDesc(tagId: Long): List<ManutencaoEntity>
+
+    /** 1.21.0: as revisões (preventivas) concluídas destes equipamentos. */
+    fun findAllByTagIdInAndTipoAndStatus(tagIds: Collection<Long>, tipo: org.example.model.TipoManutencao, status: StatusManutencao): List<ManutencaoEntity>
 }

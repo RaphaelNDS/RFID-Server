@@ -88,5 +88,39 @@
     <nav th:replace="~{layout/paginacao :: paginacao}"></nav>
   </div>
 
+  <!-- 1.21.0: revisão automática por tipo de equipamento -->
+  <div class="card" style="margin-top:20px" id="revisao-automatica">
+    <div class="card-header empilhar">
+      <h2>Revisão automática</h2>
+      <span class="muted">Por tipo: a cada tantas locações e/ou tantos dias desde a última preventiva concluída (ou do cadastro).
+        Vencida, o equipamento vai para a preventiva na conferência da devolução e não sai do estoque. Os dois vazios desligam.</span>
+    </div>
+    <div class="alert alert-erro" th:if="${erroRegra}" role="alert">
+      <svg class="ic"><use href="/img/icones.svg#alerta"/></svg><span th:text="${erroRegra}"></span>
+    </div>
+    <div class="table-wrap">
+      <table class="table table-cartoes" th:unless="${#lists.isEmpty(regras)}">
+        <thead><tr><th>Tipo</th><th>Regra atual</th><th class="acoes"><span class="sr-only">Alterar</span></th></tr></thead>
+        <tbody>
+        <tr th:each="r : ${regras}">
+          <td class="principal cartao-titulo" th:text="${r.tipo}"></td>
+          <td data-rotulo="Regra" th:text="${r.regra != null} ? ${r.regra.descricao} : '—'"></td>
+          <td class="acoes">
+            <form th:if="${@authService.temPermissao('MANUTENCAO','UPDATE')}" class="toolbar" style="border:0;padding:0;justify-content:flex-end"
+                  th:action="@{/admin/manutencoes/revisao/{id}(id=${r.tipoId})}" method="post">
+              <div class="field"><label th:for="'rl-' + ${r.tipoId}">Locações</label>
+                <input th:id="'rl-' + ${r.tipoId}" name="locacoes" type="number" min="1" max="1000" style="width:90px" th:value="${r.regra?.aCadaLocacoes}"></div>
+              <div class="field"><label th:for="'rd-' + ${r.tipoId}">Dias</label>
+                <input th:id="'rd-' + ${r.tipoId}" name="dias" type="number" min="1" max="3650" style="width:90px" th:value="${r.regra?.aCadaDias}"></div>
+              <button type="submit" class="btn btn-secondary btn-sm">Salvar</button>
+            </form>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+      <div class="vazio" th:if="${#lists.isEmpty(regras)}">Cadastre os tipos de equipamento no Catálogo para definir a revisão.</div>
+    </div>
+  </div>
+
 </section>
 </html>

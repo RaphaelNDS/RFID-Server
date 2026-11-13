@@ -11,4 +11,10 @@ interface HistoricoEtiquetaRepository : JpaRepository<HistoricoEtiquetaEntity, L
 
     /** As últimas mudanças em todas as etiquetas (tela de histórico sem filtro). */
     fun findTop200ByOrderByMomentoDescIdDesc(): List<HistoricoEtiquetaEntity>
+
+    /** 1.21.0: quando cada etiqueta foi cadastrada (o primeiro CADASTRO), para a revisão automática. */
+    @org.springframework.data.jpa.repository.Query(
+        "select h.tagReal, min(h.momento) from HistoricoEtiquetaEntity h where h.acao = org.example.model.AcaoHistorico.CADASTRO and h.tagReal in :reais group by h.tagReal"
+    )
+    fun cadastros(@org.springframework.data.repository.query.Param("reais") reais: Collection<String>): List<Array<Any>>
 }

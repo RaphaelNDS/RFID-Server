@@ -6,7 +6,8 @@ import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 
 /**
- * Resumo diário da locação pelos avisos (1.20.0): pedidos com devolução atrasada e manutenções com retorno vencido.
+ * Resumo diário da locação pelos avisos (1.20.0): pedidos com devolução atrasada, manutenções com retorno vencido e
+ * (1.21.0) equipamentos no estoque com a revisão automática vencida.
  * Sai uma vez por dia (rfid.alertas.locacao-cron, padrão 8h) e só quando há algo atrasado. Vai pelos canais ligados
  * (email e/ou Telegram); sem nenhum, fica só no log.
  */
@@ -28,7 +29,7 @@ class AvisoLocacaoService(
     /** Assunto e texto do resumo, ou null quando não há nada atrasado. */
     fun montar(): Pair<String, String>? {
         val p = painel.painel()
-        if (p.atrasados.isEmpty() && p.manutencoesAtrasadas.isEmpty()) return null
+        if (p.atrasados.isEmpty() && p.manutencoesAtrasadas.isEmpty() && p.revisoesVencidas.isEmpty()) return null
         val partes = mutableListOf<String>()
         if (p.atrasados.isNotEmpty()) {
             partes += "Devoluções atrasadas (${p.atrasados.size}):\n" + p.atrasados.take(MAXIMO).joinToString("\n") {
@@ -40,10 +41,17 @@ class AvisoLocacaoService(
                 "• Ordem nº ${it.id}" + (it.fornecedor?.let { f -> " — $f" } ?: "") + (it.previsaoRetorno?.let { d -> ", retorno previsto em ${FormatoBr.data(d)}" } ?: "")
             } + resto(p.manutencoesAtrasadas.size)
         }
+        // 1.21.0: revisão automática vencida no estoque
+        if (p.revisoesVencidas.isNotEmpty()) {
+            partes += "Revisão vencida no estoque (${p.revisoesVencidas.size}):\n" + p.revisoesVencidas.take(MAXIMO).joinToString("\n") {
+                "• ${it.tag.patrimonio.ifBlank { it.tag.tagReal }}: ${it.motivo}"
+            } + resto(p.revisoesVencidas.size)
+        }
         val assunto = listOfNotNull(
             p.atrasados.size.takeIf { it > 0 }?.let { "$it devolução(ões) atrasada(s)" },
-            p.manutencoesAtrasadas.size.takeIf { it > 0 }?.let { "$it manutenção(ões) atrasada(s)" }
-        ).joinToString(" e ")
+            p.manutencoesAtrasadas.size.takeIf { it > 0 }?.let { "$it manutenção(ões) atrasada(s)" },
+            p.revisoesVencidas.size.takeIf { it > 0 }?.let { "$it revisão(ões) vencida(s)" }
+        ).joinToString(", ")
         return "Locação: $assunto" to partes.joinToString("\n\n") + "\n\nDetalhes na tela Início do sistema."
     }
 

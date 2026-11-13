@@ -75,7 +75,7 @@ class MigracaoV2Test {
         val resultado = flyway().migrate()
 
         assertThat(resultado.success).isTrue()
-        assertThat(resultado.targetSchemaVersion).isEqualTo("34") // V34 = restrição do cliente
+        assertThat(resultado.targetSchemaVersion).isEqualTo("35") // V35 = revisão automática
     }
 
     @Test

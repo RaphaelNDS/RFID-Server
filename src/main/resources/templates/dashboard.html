@@ -89,6 +89,22 @@
           </li>
         </ul>
       </div>
+
+      <!-- 1.21.0: revisão automática vencida (no estoque; não sai até a preventiva) -->
+      <div class="card" th:if="${!#lists.isEmpty(p.revisoesVencidas) and @authService.temPermissao('MANUTENCAO','READ')}">
+        <div class="card-header empilhar">
+          <h2>Revisão vencida</h2>
+          <span class="muted">No estoque; não sai até a manutenção preventiva</span>
+        </div>
+        <ul class="lista-simples painel-lista">
+          <li th:each="r : ${p.revisoesVencidas}">
+            <a th:if="${@authService.temPermissao('MANUTENCAO','CREATE')}" th:href="@{/admin/manutencoes/nova(tag=${r.tag.tagReal},tipo='PREVENTIVA')}"
+               th:text="${r.tag.patrimonio != null and r.tag.patrimonio != ''} ? ${r.tag.patrimonio} : ${r.tag.tagReal}"></a>
+            <span th:unless="${@authService.temPermissao('MANUTENCAO','CREATE')}" th:text="${r.tag.patrimonio != null and r.tag.patrimonio != ''} ? ${r.tag.patrimonio} : ${r.tag.tagReal}"></span>
+            <span class="muted" th:text="${r.motivo}"></span>
+          </li>
+        </ul>
+      </div>
     </div>
   </th:block>
 
